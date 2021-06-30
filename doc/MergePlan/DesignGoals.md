@@ -48,7 +48,42 @@ Note that this is not detailed documentation of the classes!
         * HMC parameters
 
 ```
-class HMC {
+// list of configs
+using NSL::Ensemble = std::deque<NSL::ConfigBase>
+
+class MarkovChain{
+    private:
+        NSL::Ensemble MC;
+
+        ProposalMachineBase * pmb;
+
+    public:
+        NSL::ConfigBase & get_recent_config(){
+            return *(MC.end()-1);
+        }
+
+        // call operator() of pmb and store config at end of MC
+        void update();
+        // call update N_MC times
+        void generate_ensemble(size_t N_MC);
+
+        // return the idx^th config
+        NSL::ConfigBase operator[](size_t idx){
+            return MC[idx];
+        }
+
+        // std access function
+};
+
+class ProposalMachineBase{
+    std::list<NSL::RNG &> rng;
+
+    public:
+        // Computes config + Accept Reject
+        virtual NSL::ConfigBase & operator()(NSL::ConfigBase * in_config) = 0;
+}
+
+class HMC: public ProposalMachineBase {
     private:
         // omelyan, leapfrog
         NSL::IntegratorBase * integrator;
@@ -57,10 +92,15 @@ class HMC {
         NSL::ActionBase * action;
 
         // Parameters used during HMC
-        NSL::ParameterBase * param;
+        NSL::ParameterDict * param;
 
     public:
-        void operator()(...);
+        // make up momenta
+        // integrate EoM
+        // compute action difference
+        // accept reject
+        // return result
+        NSL::ConfigBase & operator()(NSL::ConfigBase * config)
 };
 ```
 2. `NSL::Integrator`
@@ -70,7 +110,7 @@ class HMC {
         * Integrator parameters
 
 ```
-class Integrator{
+class FieldIntegratorBase{
     private:
         // Fermion Matrix
         NSL::FermionMatrixBase * FermMat;  
@@ -79,10 +119,11 @@ class Integrator{
         NSL::ActionBase * action;
 
         // parameters used during integration
-        NSL::ParameterBase * param;
+        NSL::ParameterDict * param;
 
     public:
-        FermField operator()(...);
+        // integrates
+        NSL::ConfigBase * operator()(NSL::ConfigBase *, size_t steps = 1);
 };
 ```
 3. `NSL::Action`
@@ -91,19 +132,16 @@ class Integrator{
         * Action parameters
 
 ```
-class Action{
+class ActionBase{
     private:
-        // Fermion Matrix
-        NSL::FermionMatrixBase * FermMat;
-
         // parameters used during action
-        NSL::ParameterBase * param;
-
+        NSL::ParameterDict * param;
 
     public:
 
-    FermField operator()(...);
-    FermField force(...);
+    Complex operator()(NSL::ConfigBase * config);
+    NSL::ConfigBase * force(NSL::ConfigBase * config);
+    NSL::ConfigBase * grad(NSL::ConfigBase * config);
 }
 ```
 4. `NSL::FermionMatrix`
@@ -119,10 +157,9 @@ class FermionMatrix{
         NSL::LatticeBase * lattice;
 
         // parameters used during Fermion Matrix
-        NSL::ParameterBase * param;
+        NSL::ParameterDict * param;
 
-        // Hopping matrix
-        NSL::Tensor & Hopping_matrix;
+
 
     public:
 
@@ -138,13 +175,25 @@ class FermionMatrix{
     * Implements different spatial lattices and communication of temporal axis given
 
 ```
-class NSL::Lattice{
-    private:
-        // looks up the nearest neighbors in a given
-        NSL::Tensor nearest_neighbor_table;
+struct Edge{
+    size_t s_start,s_finish;
+    // hopping strength from s_start,s_finish
+    Complex k;
+};
 
-        // Internode communication
-        NSL::Comm & com; // postponed
+class NSL::SpatialLatticeBase{
+    private:
+        // Topology only
+        // | Site Index | Nearest Neighbor List | kappa (hopping strength)   |
+        // |      0     | 1,2,V, ...            | E(0,1), E(0,2), E(0,V),... |
+        // |      1     | 0,2,3,V-1 ...         | E(1,0), E(1,2), E(1,V),... |
+        // SpatialLattice[0] = Site
+        // SpatialLattice(0,0) = Hopping strength 0 - 0
+        std::vector<std::vector<Edge>> hopping_graph;
+        std::vector<NSL::Site> linear_index_trafo;
+
+        // Hopping matrix
+        NSL::Tensor & Hopping_matrix;
 
     public:
         // Return linearized index from lattice site
@@ -152,6 +201,7 @@ class NSL::Lattice{
 
         // Return lattice site from linear index
         NSL::Site & operator()(size_t index);
+
 };
 
 template<size_t dim>
@@ -165,6 +215,8 @@ __device__ __host__ Site = Array<dim>;
 class FermField : NSL::Tensor {
     private:
         NSL::LatticeBase * lattice;
+
+        Complex Action_Value;
 
     public:
         // Tensor operations but agnostic to lattice
