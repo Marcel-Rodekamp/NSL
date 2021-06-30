@@ -34,5 +34,158 @@ This document provides a general idea of the software design.
     * Linux (tests, development, production)
     * Mac Os (tests, development)
 
+### Interfaces
+
+Hide underlying libraries in interfaces.
+Allowing to interchange libraries in case other features are required.
+From high to low level, consider the following workflow for an HMC call.
+Note that this is not detailed documentation of the classes!
+
+1. `NSL::HMC`
+    * Classes implementing a HMC algorithm given
+        * Integrator
+        * Action
+        * HMC parameters
+
+```
+class HMC {
+    private:
+        // omelyan, leapfrog
+        NSL::IntegratorBase * integrator;
+
+        // Action
+        NSL::ActionBase * action;
+
+        // Parameters used during HMC
+        NSL::ParameterBase * param;
+
+    public:
+        void operator()(...);
+};
+```
+2. `NSL::Integrator`
+    * Classes implementing different integrators given
+        * Action
+        * Fermion Matrix
+        * Integrator parameters
+
+```
+class Integrator{
+    private:
+        // Fermion Matrix
+        NSL::FermionMatrixBase * FermMat;  
+
+        // Action
+        NSL::ActionBase * action;
+
+        // parameters used during integration
+        NSL::ParameterBase * param;
+
+    public:
+        FermField operator()(...);
+};
+```
+3. `NSL::Action`
+    * Classes implementing different actions given
+        * Fermion Matrix
+        * Action parameters
+
+```
+class Action{
+    private:
+        // Fermion Matrix
+        NSL::FermionMatrixBase * FermMat;
+
+        // parameters used during action
+        NSL::ParameterBase * param;
+
+
+    public:
+
+    FermField operator()(...);
+    FermField force(...);
+}
+```
+4. `NSL::FermionMatrix`
+    * Classes implementing certain fermion matrices given
+        * Lattice
+        * Hopping matrix
+        * Fermion Matrix Parameters
+
+```
+class FermionMatrix{
+    private:
+        // encodes nearest neighbor table
+        NSL::LatticeBase * lattice;
+
+        // parameters used during Fermion Matrix
+        NSL::ParameterBase * param;
+
+        // Hopping matrix
+        NSL::Tensor & Hopping_matrix;
+
+    public:
+
+        FermField M(...);
+        FermField dM(...);
+        FermField Mdag(...);
+        FermField dMdag(...);
+        FermField MdagM(...);
+        FermField dMdagM(...);
+};
+```
+5. `NSL::Lattice`
+    * Implements different spatial lattices and communication of temporal axis given
+
+```
+class NSL::Lattice{
+    private:
+        // looks up the nearest neighbors in a given
+        NSL::Tensor nearest_neighbor_table;
+
+        // Internode communication
+        NSL::Comm & com; // postponed
+
+    public:
+        // Return linearized index from lattice site
+        size_t operator()(NSL::Site & lattice_site);
+
+        // Return lattice site from linear index
+        NSL::Site & operator()(size_t index);
+};
+
+template<size_t dim>
+__device__ __host__ Site = Array<dim>;
+```
+6. `NSL::FermField`
+    * Implements a (pseudo-)fermion field given
+        * Lattice
+
+```
+class FermField : NSL::Tensor {
+    private:
+        NSL::LatticeBase * lattice;
+
+    public:
+        // Tensor operations but agnostic to lattice
+}
+```
+7. `NSL::Tensor`
+    * Implements the memory and algebra interface
+
+```
+class Tensor {
+    private:
+        //library container
+        Container * data;
+
+    public:
+        // Interface all relevant functions
+        // 1. Elementwise
+        // 2. Tensor - Tensor operations
+}
+```
+8. `NSL::LinearAlgebra::`
+    * Namespace of functions performing algorithms on `NSL::Tensor`
 
 ## After Merge
