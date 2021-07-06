@@ -54,7 +54,7 @@ template<class ConfigType, class ProposalMachineType>
 class MarkovChain{
     private:
         NSL::Ensemble _MC;
-        ProposalMachineType * _pmb;
+        ProposalMachineBase * _pmb;
 
     public:
         // constructors
@@ -169,7 +169,7 @@ class MarkovChain{
     * Holds RNG state
 
 ```
-class ProposalMachineBase{
+class UpdateMachineBase{
     std::list<NSL::RNG &> _rng;
 
     public:
@@ -292,8 +292,37 @@ class ActionBase{
             * Class templates
 
 ```
-template<class FieldType, class Algorithm>
-class FermionMatrixBase{
+class FermionMatrixAFact{
+
+    private:
+        // encodes nearest neighbor table
+        NSL::LatticeBase * _lattice;
+
+        // parameters used during Fermion Matrix
+        NSL::ParameterDict * _param;
+        
+        FieldType * _field;
+        
+    public:
+
+        FieldType & M(Vector v);
+        FieldType & Mdag(Vector V);
+        FieldType & MdagM(Vector V);
+        FieldType & MMdag(Vector V);
+
+        Complex det_M(Vector V);
+        Complex det_Mdag(Vector V);
+        Complex det_MdagM(Vector V);
+        Complex det_MMdag(Vector V);
+
+        Complex log_det_M(Vector V);
+        Complex log_det_Mdag(Vector V);
+        Complex log_det_MdagM(Vector V);
+        Complex log_det_MMdag(Vector V);
+};
+
+template<class FieldType>
+class FermionMatrixA{
     private:
         // encodes nearest neighbor table
         NSL::LatticeBase * _lattice;
@@ -303,20 +332,21 @@ class FermionMatrixBase{
 
     public:
 
-        virtual FieldType & M(FieldType & config) = 0;
-        virtual FieldType & Mdag(FieldType & config) = 0;
-        virtual FieldType & MdagM(FieldType & config) = 0;
-        virtual FieldType & MMdag(FieldType & config) = 0;
+        FieldType & M(FieldType & config, Vector v);
+        FieldType & Mdag(FieldType & config);
+        FieldType & MdagM(FieldType & config);
+        FieldType & MMdag(FieldType & config);
 
-        virtual Complex det_M(FieldType & config) = 0;
-        virtual Complex det_Mdag(FieldType & config) = 0;
-        virtual Complex det_MdagM(FieldType & config) = 0;
-        virtual Complex det_MMdag(FieldType & config) = 0;
+        Complex det_M(FieldType & config);
+        Complex det_Mdag(FieldType & config);
+        Complex det_MdagM(FieldType & config);
+        Complex det_MMdag(FieldType & config);
 
-        virtual Complex log_det_M(FieldType & config) = 0;
-        virtual Complex log_det_Mdag(FieldType & config) = 0;
-        virtual Complex log_det_MdagM(FieldType & config) = 0;
-        virtual Complex log_det_MMdag(FieldType & config) = 0;
+        Complex log_det_M(FieldType & config);
+        Complex log_det_Mdag(FieldType & config);
+        Complex log_det_MdagM(FieldType & config);
+        Complex log_det_MMdag(FieldType & config);
+        
 };
 ```
 
@@ -440,6 +470,13 @@ template<size_t dim>
 __device__ __host__ Site = Array<dim>;
 ```
 
+#### File IO
+
+* h5
+* Store data chunked 
+    * Data sets can be chunked
+* HighFive    
+
 #### Linear Algebra ToDo
 
 * linear algebra interface
@@ -465,6 +502,18 @@ __device__ __host__ Site = Array<dim>;
     * Extenability to AMD GPUs
         * Open question
 
+* Possible questions:
+    * Pytorch overhead of computational graphs compared to other libraries 
+    * xtensor GPU support?
+    * Magma
+    * Eigen3
+* Benchmark these
+    * Randomly chosen fermion matrix
+        * CG (sparse)
+        * 100 (Diagonal matrix exponent, Matmul with dens matrix)
+    * Single Process
+    * Multi Process 
+    * Single Process Single GPU
 ```
 template<typename Type>
 class Tensor {
@@ -484,6 +533,10 @@ class Tensor {
 * Parameter not covered
 * Benchmarking
 
+* Tensor Library that has python bindings 
+    * Interacting with numpy
+* Less object oriented      
+
 ## After Merge
 
 ## Style Guide
@@ -491,10 +544,9 @@ class Tensor {
 * classes: MyClass
     * camelCase
     * First letter capitalized
-* private variables: _myVariable
+* private variables: myVariable_
     * camelCase
-    * Starts with underscore
-    * Second letter lower case
+    * Ends with underscore
 * functions: my_function
     * snake_case
     * First letter lower case
@@ -506,6 +558,29 @@ class Tensor {
     * CAPITALIZED
 * variables: myVariable
     * camelCase
-
 * Tab = 4 spaces (Soft Tab)
-* dont use /**/ within code
+* don't use /**/ within code
+
+
+```
+struct State{
+    ConfigBase & configuration;
+    complex & action;
+};
+
+class Ensemble{
+    std::vector<complex> action_;
+    std::vector<ConfigBase> configs_;
+    
+    State operator[] (size_type idx){
+        return State(&action_[idx],&config[idx]_);
+    }
+    
+    State last(){
+       return State(action_.back(),config_.back()); 
+    }
+    
+};
+int main()
+
+```
