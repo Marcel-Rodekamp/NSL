@@ -1,3 +1,3 @@
 target_sources(NSL PUBLIC
-        tensor.hpp
+        mat_vec.hpp
 )

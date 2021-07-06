@@ -3,3 +3,5 @@ target_include_directories(NSL PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # add the tensor class
 add_subdirectory(Tensor/)
+
+add_subdirectory(FermionMatrix/)
