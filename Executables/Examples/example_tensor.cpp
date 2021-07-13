@@ -4,5 +4,5 @@
 int main(){
     // test you tensors here if you like ;)
 
-    std::cout << "Hello World!" << std::endl;
+    NSL::Tensor<float> example_tensor (12);
 }

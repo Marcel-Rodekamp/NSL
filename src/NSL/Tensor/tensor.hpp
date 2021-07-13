@@ -1,6 +1,8 @@
 #ifndef NSL_TENSOR_HPP
 #define NSL_TENSOR_HPP
 
+#include<torch/torch.h>
+
 #include <memory>
 
 // ============================================================================
@@ -10,11 +12,13 @@ namespace NSL {
 template<typename Type>
 class Tensor {
     private:
-        // xt::xtensor data_;
+        torch::tensor data_;
 
     public:
         // construct 1D tensor (i.e. array)
-        explicit Tensor(std::size_t size);
+        explicit Tensor(std::size_t size){
+            data_ = torch::zeros({size});
+        }
 
         // construct data_ with sizes stored in dims
         explicit Tensor(std::initializer_list<std::size_t> dims);
