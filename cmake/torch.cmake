@@ -1,11 +1,3 @@
-#find_package(Torch REQUIRED)
-#
-#message(STATUS "ADDING TORCH_CXX_FLAGS: ${TORCH_CXX_FLAGS}")
-#message(STATUS "ADDING TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
-#
-#target_compile_options(NSL SHARED ${TORCH_CXX_FLAGS})
-#target_link_libraries(NSL SHARED ${TORCH_LIBRARIES})
-
 FetchContent_Declare(
     Torch
     URL https://download.pytorch.org/libtorch/nightly/cpu/libtorch-shared-with-deps-latest.zip
@@ -17,7 +9,6 @@ find_package(Torch REQUIRED)
 
 message(STATUS "ADDING TORCH_CXX_FLAGS: ${TORCH_CXX_FLAGS}")
 message(STATUS "ADDING TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
-
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 target_link_libraries(NSL
