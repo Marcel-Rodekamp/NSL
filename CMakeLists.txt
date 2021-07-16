@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # This is the shared library we can include in C++ code
-add_library(NSL SHARED)
+add_library(NSL SHARED src/NSL/Tensor/tensor.cpp)
 set_target_properties(NSL PROPERTIES LINKER_LANGUAGE CXX)
 
 # enable language support cuda
