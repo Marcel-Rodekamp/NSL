@@ -20,7 +20,7 @@ class Tensor {
         torch::Tensor data_; //just to prove cout's in the main program.
 
         //Default constructor
-        explicit Tensor()= default;
+        explicit Tensor() = default;
 
         // construct 1D tensor (i.e. array)
         explicit Tensor(std::size_t size){
@@ -28,7 +28,7 @@ class Tensor {
         }
 
         // construct data_ with sizes stored in dims
-        explicit Tensor(std::vector< long int> dims){
+        explicit Tensor(const std::vector< long int> & dims){
             data_= torch::zeros(dims);
         }
 
@@ -39,9 +39,9 @@ class Tensor {
 
         // random access operator
         //ToDo: Must be reference to return.
-        Type  operator()( std::vector<long int> idx){
-            return data_.index(idx).item<Type>();
-        }
+//        Type  operator()( std::vector<long int> idx){
+//            return data_.index(idx).item<Type>();
+//        }
 
         // return size of dimension in data_
         std::size_t shape(std::size_t dim){
