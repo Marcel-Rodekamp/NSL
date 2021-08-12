@@ -6,16 +6,16 @@ namespace NSL::TestingExpDisc {
 //ToDo: Is that correct?
 template<typename Type>
 NSL::TimeTensor<Type> BF( NSL::TimeTensor<Type> & phi, NSL::Tensor<Type> & expKappa) {
-
     c10::complex<double> num = (0,1);
-    std::deque<long int> expand_num ={phi.shape(1)};
-    NSL::TimeTensor<Type> out = NSL::LinAlg::mat_vec(expKappa, (NSL::LinAlg::exp(phi*num)).expand(expand_num));
-    out.print();
-    for (int t = 0; t < phi.shape(0); ++t) {
+    NSL::TimeTensor<Type> out = ((NSL::LinAlg::mat_vec(phi,num)).exp().expand(phi.shape(1)))*expKappa;
+    int t= phi.shape(0) - 1;
+    out[{t}] *= -1;
+
+    /*for (int t = 0; t < phi.shape(0); ++t) {
         if (t == phi.shape(0) - 1){
-            out[{t}] *= -1;
+            out[{phi.shape(0)-1}] *= -1;
         }
-    }
+    }*/
     return out;
 }
 

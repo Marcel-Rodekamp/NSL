@@ -4,6 +4,7 @@
 #include<torch/torch.h>
 #include <memory>
 #include<vector>
+//ToDo:
 //ToDo: Make private the data? Or it is slower. Then must change the copy to a copy in other tensor.
 namespace NSL{
     namespace LinAlg {
@@ -38,6 +39,35 @@ namespace NSL{
             aux.data_ =torch::matmul(matrix.data_, vector.data_);
             return aux;
         }
+        //Tensor x scalar.
+        template<typename Type>
+        NSL::Tensor<Type> mat_vec(NSL::Tensor<Type> & matrix, const Type & num){
+            NSL::Tensor<Type> aux;
+            aux.data_ *=num;
+            return aux;
+        }
+        //scalar x Tensor.
+        template<typename Type>
+        NSL::Tensor<Type> mat_vec(const Type & num, NSL::Tensor<Type> & matrix){
+            NSL::Tensor<Type> aux;
+            aux.data_ =num*aux.data_;
+            return aux;
+        }
+        //TimeTensor x scalar.
+        template<typename Type>
+        NSL::TimeTensor<Type> mat_vec(NSL::TimeTensor<Type> & matrix, const Type & num){
+            NSL::TimeTensor<Type> aux;
+            aux.data_ =matrix.data_*num;
+            return aux;
+        }
+        //scalar x TimeTensor
+        template<typename Type>
+        NSL::TimeTensor<Type> mat_vec(Type & num, NSL::TimeTensor<Type> & matrix){
+            NSL::TimeTensor<Type> aux;
+            aux.data_ =num*matrix.data_;
+            return aux;
+        }
+
         //exponential(tensor)
         template<typename Type>
         NSL::Tensor<Type> exp (Tensor<Type> & tensor){
@@ -50,7 +80,6 @@ namespace NSL{
         template<typename Type>
         NSL::TimeTensor<Type> exp (TimeTensor<Type> & tensor){
             NSL::TimeTensor<Type> aux(tensor);
-            /*aux.exp();*/
             aux.data_= torch::exp(aux.data_);
             return aux;
         }
