@@ -43,10 +43,6 @@ FetchContent_MakeAvailable(
         googletest
         googlebenchmark)
 
-
-set(BENCHMARK_FORMAT "csv")
-set(BENCHMARK_OUT "filename.csv")
-
 target_link_libraries(NSL benchmark::benchmark)
 
 
