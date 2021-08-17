@@ -123,7 +123,16 @@ static void BM_fermionMatrix(benchmark::State & state){
         NSL::TestingExpDisc::BF(phi, expKappa);
     }
 }
-BENCHMARK(BM_fermionMatrix)
+
+static void CustomArguments(benchmark::internal::Benchmark* b) {
+    for (int i = 2; i <= 3; ++i)
+        for (int j = 2; j <= 150; j += 1)
+            b->Args({i, j});
+}
+
+BENCHMARK(BM_fermionMatrix)->Apply(CustomArguments);
+
+/*BENCHMARK(BM_fermionMatrix)
     ->Args({2,20})
     ->Args({2,40})
     ->Args({2,60})
@@ -133,7 +142,7 @@ BENCHMARK(BM_fermionMatrix)
     ->Args({3,40})
     ->Args({3,60})
     ->Args({3,80})
-    ->Args({3,100}); //Register the function as a benchmark
+    ->Args({3,100});*/ //Register the function as a benchmark
 //==========================================================================
 
 //Main
