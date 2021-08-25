@@ -6,6 +6,9 @@
 #include <iomanip>
 #include <complex>
 #include <cmath>
+#include <utility>
+#include "../assert.hpp"
+
 using namespace torch::indexing;
 // ============================================================================
 // CPU Implementations
@@ -14,56 +17,213 @@ using namespace torch::indexing;
 namespace NSL {
     template<typename Type>
     class Tensor {
+        using size_t = long int;
+
     private:
-//        torch::Tensor data_;
+
     public:
-        torch::Tensor data_; //just to prove cout's in the main program.
+        torch::Tensor data_;
 
         //Default constructor.
-        explicit Tensor() = default;
+       constexpr explicit Tensor() = default;
 
         //Construct 1D tensor (i.e. array).
-        explicit Tensor(const std::size_t & size) {
-            data_ = torch::rand({static_cast<const long int>(size)}, caffe2::TypeMeta::Make<Type>());
-        }
+        constexpr explicit Tensor(const std::size_t & size):
+        data_(torch::zeros({static_cast<const long int>(size)}, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        {}
 
         //Construct data_ with sizes stored in dims.
-        explicit Tensor(const std::vector<long int> &  dims) {
-            data_ = torch::rand(dims, caffe2::TypeMeta::Make<Type>());
+        constexpr explicit Tensor(const std::vector<long int>  & dims):
+        data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        {}
+
+        constexpr explicit Tensor(torch::Tensor && other):
+        data_(other)
+        {}
+
+        constexpr explicit Tensor(torch::Tensor & other):
+        data_(other)
+        {}
+
+        // copy constructor
+        constexpr Tensor(const Tensor& other):
+        data_(other.data_)
+        {}
+
+        //Random creation
+        Tensor<Type> & rand(){
+            data_=torch::rand(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
+            return (*this);
         }
 
-        //Copy constructor.
-        //ToDo: More efficient data_=other.data_.detach().clone(); or just data_= other.data_;?
-        Tensor(Tensor<Type> &other) {
-            data_ = other.data_.detach().clone();
+        // =====================================================================
+        // Random Access Operators
+        // =====================================================================
+
+        constexpr Tensor<Type> operator[](const size_t index){
+            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
+            return Tensor<Type>(slice);
         }
 
-        //Random access operator.
-        //ToDo: Must be reference to return.
-        //ToDo: Accept std::vector
-        torch::Tensor operator[](const std::initializer_list<TensorIndex>  & arr){
-//            std::initializer_list<TensorIndex> arr;
-//            std::copy(dims.begin(), dims.end(), &arr);
-            return data_.index(arr).data();
+        constexpr const Tensor<Type> & operator[](const size_t index) const {
+            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
+            return Tensor<Type>(slice);
         }
+
+        constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
+            // get index transformation
+            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
+            // last accessed 20.08.21
+            size_t offset = 0;
+            for(size_t d = 0; d < indices.size(); ++d){
+                offset += *(indices.begin()+d) * data_.stride(d);
+            }
+
+            // dereference underlying pointer
+            return data_.data_ptr<Type>()[offset];
+        }
+
+        constexpr const Type & operator[](const std::initializer_list<size_t> & indices) const {
+            // get index transformation
+            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
+            // last accessed 20.08.21
+            size_t offset = 0;
+            for(size_t d = 0; d < indices.size(); ++d){
+                offset += *(indices.begin()+d) * data_.stride(d);
+            }
+
+            // dereference underlying pointer
+            return data_.data_ptr<Type>()[offset];
+        }
+
+        torch::Tensor & to_torch(){
+            return data_;
+        }
+
+        // =====================================================================
+        // Slice Operation
+        // =====================================================================
+        constexpr Tensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
+            torch::Tensor && slice = data_.slice(dim,start,end,step);
+            return Tensor<Type>(slice);
+        }
+
+        constexpr Tensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step) const {
+            torch::Tensor && slice = data_.slice(dim,start,end,step);
+            return Tensor<Type>(slice);
+        }
+
+        // =====================================================================
+        // Algebra Operators
+        // =====================================================================
 
         //Product by a scalar.
         NSL::Tensor<Type> & operator*(const Type & factor){
-            data_.data() *= factor;
+            for(long int x = 0; x < data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor*data_.template data_ptr<Type>()[x];
+            }
             return *this;
         }
 
+        //Sum by a scalar.
+        NSL::Tensor<Type> & operator+(const Type & factor){
+            for(long int x = 0; x < data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor+data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        //Minus by a scalar.
+        NSL::Tensor<Type> & operator-(const Type & factor){
+            for(long int x = 0; x < data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = data_.template data_ptr<Type>()[x]-factor;
+            }
+            return *this;
+        }
+
+        //Equal
+        Tensor<Type> & operator=(const Tensor<Type> & other){
+            assert(other.data_.dim() == this->data_.dim());
+
+            // copy the data explicitly by looping over all elements
+            for(long int x = 0; x < other.data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
+            }
+
+            return *this;
+        }
+
+        // =====================================================================
+        // Boolean operators
+        // =====================================================================
+
+        //Comparison each element of two tensors.
+        bool operator== (NSL::Tensor<Type> & other) const{
+            bool out = torch::eq(this->data_, other.data_);
+            return out;
+        }
+        //comparison all element with a number.
+        bool operator== (const Type & num) const{
+            bool out = torch::eq(this->data_, num);
+            return out;
+        }
+
+        // =====================================================================
+        // Print and stream
+        // =====================================================================
+
+        // streaming operator
+        friend std::ostream & operator << (std::ostream & os, const Tensor<Type> & T){
+            return (os << T.data_);
+        }
+
+        //Print tensor.
+        void print () const{
+            std::cout<<data_ <<std::endl;
+        }
+
+        //Print tensor complex.
+        void print_complex () const{
+            std::cout<< torch::view_as_real(data_)<<std::endl;
+        }
+
+        // =====================================================================
+        // Shape and dimension
+        // =====================================================================
+
+        //ToDo: Revise static_cast.
         //Return size of dimension in data_.
-        std::size_t shape(const std::size_t & dim) {
+        const std::size_t shape(const std::size_t & dim) const {
             return data_.size(static_cast<const long int>(dim));
         }
 
+        std::vector<long int> shape() const {
+            std::vector<long int> out;
+            for (long int i=0; i< data_.dim(); ++i){
+                out.push_back(data_.size(i));
+            }
+            return out;
+        }
+
+        const std::size_t dim() const {
+            return this->data_.dim();
+        }
+
+        // =====================================================================
+        // Exponential
+        // =====================================================================
+
         //Tensor exponential.
         NSL::Tensor<Type> & exp() {
-           data_.data()=torch::exp(data_.data());
+           data_=torch::exp(data_);
             return *this;
         }
 
+        // =====================================================================
+        // Expand
+        // =====================================================================
+
+        //ToDo: Have to be const?
         //Tensor Expand.
         NSL::Tensor<Type> & expand(std::deque<long int> & dims){
             std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
@@ -71,129 +231,217 @@ namespace NSL {
             return *this;
         }
 
+        //ToDo: Have to be const?
+        //Tensor Expand.
+        NSL::Tensor<Type> & expand(std::deque<long int> dims){
+            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
+            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+            return *this;
+        }
+
+        //Tensor Expand.
+        NSL::Tensor<Type> & expand(const std::size_t & dimension){
+            std::deque<long int> dims;
+            dims.push_front(dimension);
+            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
+            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+            return *this;
+        }
+
+        // =====================================================================
+        // Shift
+        // =====================================================================
+
         // return the t-shifted version of this tensor.
-        //ToDo: What if shift > dimension?
         //Why use roll? https://discuss.pytorch.org/t/is-there-a-way-to-create-a-rolled-shifted-and-wrapped-view-of-a-tensor/67568
         NSL::Tensor<Type> & shift(const long int & shift, const Type & boundary){
-
-            data_.data() = torch::roll(data_.data(),shift,0);
+            data_ = torch::roll(data_,shift,0);
             std::cout<<"Boundary:" <<boundary<<std::endl;
             if(shift>0) {
                 for (int i = 0; i <  shift ; i++ ) {
-                    (data_[i]).data() *=boundary;
+                    for(long int x = 0; x < this->data_[i].numel(); ++x){
+                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
+                    }
                 }
             }
             else{
                 for (int i = (data_).dim() + shift; i < (data_).dim(); i++){
-                    (data_[i]).data() *=boundary;
+                    for(long int x = 0; x < this->data_[i].numel(); ++x){
+                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
+                    }
                 }
             }
             return *this;
         }
 
-        //Print tensor.
-        void print (){
-            std::cout<<data_ <<std::endl;
-        }
-
-        //Print tensor complex.
-        void print_complex (){
-            std::cout<< torch::view_as_real(data_)<<std::endl;
+        NSL::Tensor<Type> & shift(const long int & shift) {
+            data_ = torch::roll(data_, shift, 0);
+            return *this;
         }
     }; //Tensor class
 //========================================================================
 //Time Tensor Class
     template<typename Type>
     class TimeTensor {
+        using size_t = long int;
+
     private:
-//                torch::Tensor data_;
+
     public:
-        torch::Tensor data_;//just to prove cout's in the main program.
+        torch::Tensor data_;
+        // torch::Tensor data_; //just to prove cout's in the main program.
 
         //Default constructor.
-        explicit TimeTensor() = default;
+        constexpr explicit TimeTensor() = default;
 
         //Construct 1D tensor (i.e. array).
-        explicit TimeTensor(const std::size_t & size){
-            data_ = torch::rand({static_cast<const long int>(size)}, caffe2::TypeMeta::Make<Type>());
-        }
+        constexpr explicit TimeTensor(const std::size_t & size):
+        data_(torch::zeros({static_cast<const long int>(size)}, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        {}
 
         //Construct data_ with sizes stored in dims.
-        explicit TimeTensor(const std::vector<long int>  & dims){
-           data_ = torch::rand(dims, caffe2::TypeMeta::Make<Type>());
+        constexpr explicit TimeTensor(const std::vector<long int>  & dims):
+        data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        {}
+
+        constexpr explicit TimeTensor(torch::Tensor && other):
+        data_(other)
+        {}
+
+        constexpr explicit TimeTensor(torch::Tensor & other):
+        data_(other)
+        {}
+
+        // copy constructor
+        constexpr TimeTensor(const TimeTensor& other):
+        data_(other.data_)
+        {}
+
+        //Random creation
+        TimeTensor<Type> & rand(){
+            data_=torch::rand(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
+            return (*this);
         }
 
-        //Copy constructor.
-        explicit TimeTensor(Tensor<Type> & other){
-            data_ = other.data_.detach().clone();
+        // =====================================================================
+        // Random Access Operators
+        // =====================================================================
+
+        constexpr TimeTensor<Type> operator[](const size_t index){
+            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
+            return TimeTensor<Type>(slice);
         }
-        //Random access operator. Return size of dimension in data_.
-        torch::Tensor operator[](const std::initializer_list<TensorIndex>  & arr){
-            return data_.index(arr).data();
+
+        constexpr const TimeTensor<Type> & operator[](const size_t index) const {
+            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
+            return TimeTensor<Type>(slice);
         }
+
+        constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
+            // get index transformation
+            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
+            // last accessed 20.08.21
+            size_t offset = 0;
+            for(size_t d = 0; d < indices.size(); ++d){
+                offset += *(indices.begin()+d) * data_.stride(d);
+            }
+
+            // dereference underlying pointer
+            return data_.data_ptr<Type>()[offset];
+        }
+
+        constexpr const Type & operator[](const std::initializer_list<size_t> & indices) const {
+            // get index transformation
+            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
+            // last accessed 20.08.21
+            size_t offset = 0;
+            for(size_t d = 0; d < indices.size(); ++d){
+                offset += *(indices.begin()+d) * data_.stride(d);
+            }
+
+            // dereference underlying pointer
+            return data_.data_ptr<Type>()[offset];
+        }
+
+        torch::Tensor & to_torch(){
+            return data_;
+        }
+
+        // =====================================================================
+        // Slice Operation
+        // =====================================================================
+        constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
+            torch::Tensor && slice = data_.slice(dim,start,end,step);
+            return TimeTensor<Type>(slice);
+        }
+
+        constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step) const {
+            torch::Tensor && slice = data_.slice(dim,start,end,step);
+            return TimeTensor<Type>(slice);
+        }
+
+        // =====================================================================
+        // Algebra Operators
+        // =====================================================================
 
         //Product by a scalar.
-        NSL::TimeTensor<Type> & operator*(const Type & factor){
-            data_.data() *= factor;
-            return *this;
-        }
-
-        NSL::TimeTensor<Type> & operator*(const NSL::Tensor<Type> & tensor){
-            data_=torch::matmul(data_.data(), tensor.data_.data());
-            return *this;
-        }
-
-        std::size_t shape(const std::size_t & dim){
-            return data_.size(static_cast<const long int>(dim));
-        }
-
-        //Tensor exponential.
-        //ToDo: implement data_.data()?
-       NSL::TimeTensor<Type> & exp() {
-            data_.data() = torch::exp(data_.data());
-            return *this;
-        }
-        //Tensor Expand.
-        NSL::TimeTensor<Type> & expand(std::deque<long int> & dims){
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()}));
-            return *this;
-        }
-
-        //Tensor Expand.
-        NSL::TimeTensor<Type> & expand(const std::vector<long int> & dimension){
-            std::deque<long int> dims;
-            std::for_each(dimension.rbegin(), dimension.rend(), [& dims](const long int & x){dims.push_front(x);});
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()}));
-            return *this;
-        }
-
-        NSL::TimeTensor<Type> & expand(const std::size_t & dimension){
-            std::deque<long int> dims;
-            dims.push_front(dimension);
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()}));
-            return *this;
-        }
-
-        // return the t-shifted version of this tensor.
-        //ToDo: What if shift > dimension?
-        //Why use roll? https://discuss.pytorch.org/t/is-there-a-way-to-create-a-rolled-shifted-and-wrapped-view-of-a-tensor/67568
-        NSL::TimeTensor<Type> & shift(const long int & shift, const Type & boundary){
-
-            data_.data()= torch::roll(data_.data(),shift,0);;
-            if(shift>0) {
-                for (int i = 0; i <  shift ; i++ ) {
-                      data_[i].data() *= boundary;
-                }
+        TimeTensor<Type> & operator*(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor*data_.template data_ptr<Type>()[x];
             }
-            else{
-                for (int i = (data_).dim() + shift; i < (data_).dim(); i++){
-                    data_[i].data() *= boundary;
-                }
+            return *this;
+        }
+
+        //Sum by a scalar.
+        TimeTensor<Type> & operator+(const Type & factor){
+            for(long int x = 0; x < data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor+data_.template data_ptr<Type>()[x];
             }
-            return (*this);
+            return *this;
+        }
+
+        //Minus by a scalar.
+        TimeTensor<Type> & operator-(const Type & factor){
+            for(long int x = 0; x < data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = data_.template data_ptr<Type>()[x]-factor;
+            }
+            return *this;
+        }
+
+        //Equal
+        TimeTensor<Type> & operator=(const TimeTensor<Type> & other){
+            assert(other.data_.dim() == this->data_.dim());
+
+            // copy the data explicitly by looping over all elements
+            for(long int x = 0; x < other.data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
+            }
+
+            return *this;
+        }
+
+
+        // =====================================================================
+        // Boolean operators
+        // =====================================================================
+        //Comparison each element of two tensors.
+        bool operator== (NSL::TimeTensor<Type> & other) const{
+            bool out = torch::eq(this->data_, other.data_);
+            return out;
+        }
+        //comparison all element with a number.
+        bool operator== (const Type & num) const{
+            bool out = torch::eq(this->data_, num);
+            return out;
+        }
+
+        // =====================================================================
+        // Print and stream
+        // =====================================================================
+
+        // streaming operator
+        friend std::ostream & operator << (std::ostream & os, const TimeTensor<Type> & T){
+            return (os << T.data_);
         }
 
         //Print tensor.
@@ -206,6 +454,97 @@ namespace NSL {
             std::cout<< torch::view_as_real(data_)<<std::endl;
         }
 
+        // =====================================================================
+        // Shape and dimension
+        // =====================================================================
+
+        //Return size of dimension in data_.
+        //ToDo: Revise static_cast.
+        //Return size of dimension in data_.
+        const std::size_t shape(const std::size_t & dim) const {
+            return data_.size(static_cast<const long int>(dim));
+        }
+
+        std::vector<long int> shape() const {
+            std::vector<long int> out;
+            for (long int i=0; i< data_.dim(); ++i){
+                out.push_back(data_.size(i));
+            }
+            return out;
+        }
+
+        const std::size_t dim() const {
+            return this->data_.dim();
+        }
+
+        // =====================================================================
+        // Exponential
+        // =====================================================================
+
+        //Tensor exponential.
+        TimeTensor<Type> & exp() {
+            data_=torch::exp(data_);
+            return *this;
+        }
+
+        // =====================================================================
+        // Expand
+        // =====================================================================
+
+        //Tensor Expand.
+       TimeTensor<Type> & expand(std::deque<long int> & dims){
+            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
+            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+            return *this;
+        }
+
+        TimeTensor<Type> & expand(std::deque<long int> dims){
+            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
+            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+            return *this;
+        }
+
+        //Tensor Expand.
+        TimeTensor<Type> & expand(const std::size_t & dimension){
+
+            std::deque<long int> dims;
+            dims.push_front(dimension);
+            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
+            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+            return *this;
+
+        }
+
+        // =====================================================================
+        // Shift
+        // =====================================================================
+
+        // return the t-shifted version of this tensor.
+        //Why use roll? https://discuss.pytorch.org/t/is-there-a-way-to-create-a-rolled-shifted-and-wrapped-view-of-a-tensor/67568
+        NSL::TimeTensor<Type> & shift(const long int & shift, const Type & boundary){
+            data_ = torch::roll(data_,shift,0);
+            std::cout<<"Boundary:" <<boundary<<std::endl;
+            if(shift>0) {
+                for (int i = 0; i <  shift ; i++ ) {
+                    for(long int x = 0; x < this->data_[i].numel(); ++x){
+                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
+                    }
+                }
+            }
+            else{
+                for (int i = (data_).dim() + shift; i < (data_).dim(); i++){
+                    for(long int x = 0; x < this->data_[i].numel(); ++x){
+                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
+                    }
+                }
+            }
+            return *this;
+        }
+
+        NSL::TimeTensor<Type> & shift(const long int & shift) {
+            data_ = torch::roll(data_, shift, 0);
+            return *this;
+        }
     }; //Time Tensor class
 } // namespace NSL
 

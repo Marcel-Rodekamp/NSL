@@ -1,5 +1,10 @@
 # relative include to the src/
 target_include_directories(NSL PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_sources(NSL PUBLIC
+        assert.hpp
+        complex.hpp
+        )
+
 
 # add the tensor class
 add_subdirectory(Tensor/)

@@ -7,22 +7,27 @@
 #include <vector> //Vector
 #include<ctime> //To compute time
 #include <benchmark/benchmark.h> //Benchmark
-
-//int main() {
+#include <time.h>
+int main() {
 //Examples for tensor-TimeTensor class.
     //Construction.
-    /*NSL::Tensor<c10::complex<float>> example_tensor0(2); //Vector
+/*
+    NSL::Tensor<c10::complex<float>> example_tensor0(2); //Vector
     NSL::Tensor<c10::complex<float>> example_tensor1({2,2,2}); //Tensor
     NSL::TimeTensor<c10::complex<double>> example_timetensor0 (2); //Time-vector
     NSL::TimeTensor<c10::complex<double>> example_timetensor1 ({2,2,2}); //Time-tensor
-     */
-
     //Copy.
-    /*NSL::Tensor<c10::complex<float>> example_tensor2 (2); //Initialize tensor
+    NSL::Tensor<c10::complex<float>> example_tensor2 (2); //Initialize tensor
     NSL::Tensor<c10::complex<float>> example_tensor3(example_tensor2); //Copy of tensor
     NSL::TimeTensor<c10::complex<float>> example_timetensor2(2); //Initialize Time-tensor
-    NSL::TimeTensor<c10::complex<float>> example_timetensor3(example_tensor2); //Copy of Time-tensor
-     */
+//    NSL::TimeTensor<c10::complex<float>> example_timetensor3(example_tensor2); //Copy of Time-tensor
+*/
+
+    //Random
+   /* NSL::Tensor<float> example_tensor0({2,3});
+    example_tensor0.rand().print();
+    example_tensor0.rand().print();
+    */
 
     //SHAPE.
     /*NSL::Tensor<c10::complex<float>> example_tensor4 ({2,2,2}); //Initialize tensor
@@ -32,14 +37,11 @@
      */
 
     //random access.
-    /* NSL::Tensor<float> example_tensor5({2,2});
-     example_tensor5[{1,1}]=1;
-     NSL::TimeTensor<float> example_timetensor5({2,2});
-     example_timetensor5[{1,1}]=1;*/
+
 
     //Example of the use of operator *
     /*NSL::Tensor<double> example_tensor6({2,2});
-    (example_tensor4*3);
+    (example_tensor6[1]*3)
      NSL::TimeTensor<double> example_timetensor6({2,2});
     (example_timetensor6*2);*/
 
@@ -57,23 +59,21 @@
     example_timetensor8.expand(dimension8));*/
 
     //Tensor shift
-    /*NSL::Tensor<c10::complex<double>> example_tensor9 ({2,2});
-    c10::complex<double> num(3,2);
-    example_tensor9.shift(1, num);
-    NSL::TimeTensor<c10::complex<double>> example_timetensor9 ({2,2});
-    example_timetensor9.shift(1, num);*/
+    NSL::TimeTensor<double> example_tensor9 ({2,2});
+    example_tensor9.rand().print();
+    example_tensor9.shift(1, 2).print();
+
 
 //===========================================================================
 //Example of mat_vec.hpp. Must change data_ from private //
     //Example of mat_vec Tensor x TimeTensor
-    /*NSL::Tensor<c10::complex<float>> example_tensor20 ({2,2});
+  /*  NSL::Tensor<c10::complex<float>> example_tensor20 ({2,2});
     NSL::TimeTensor<c10::complex<float>> example_timetensor20 ({2,2});
-    NSL::LinAlg::mat_vec(example_tensor20, example_timetensor20); //Tensor x TimeTensor
+    NSL::LinAlg::mat_vec(example_tensor20, example_timetensor20).print(); //Tensor x TimeTensor
     NSL::LinAlg::mat_vec(example_timetensor20, example_tensor20); //TimeTensor x Tensor
     NSL::LinAlg::mat_vec(example_tensor20, example_timetensor20); //TimeTensor x TimeTensor
     NSL::LinAlg::mat_vec(example_tensor20, example_tensor20);     //Tensor x Tensor
-     */
-
+*/
     //Exponential
     /*NSL::Tensor<double> example_tenso21({2,2});
      NSL::TimeTensor<double> example_timetensor21({2,2});
@@ -106,44 +106,22 @@
     phi.print();
     expKappa.print();*/
 //==================================================================================
-//return 0;
-//} //end of int main
+
+/*NSL::Tensor<c10::complex<double>> expo({1000, 1000});
+NSL::TimeTensor<c10::complex<double>> phi({50,1000});
+NSL::TimeTensor<c10::complex<double>> psi({50});
+
+expo.rand();
+phi.rand();
+psi.rand();
+const clock_t begin_time = clock();
+auto out = NSL::TestingExpDisc::BF(phi, expo);
+std::cout << float( clock () - begin_time ) /  CLOCKS_PER_SEC<<std::endl;
+
+const clock_t begin_time2 = clock();
+NSL::LinAlg::foreach_timeslice(out,psi);
+std::cout << float( clock () - begin_time2) /  CLOCKS_PER_SEC<<std::endl;
+return 0;*/
+} //end of int main
 //===============================================================================
 //===============================================================================
-//Benchmarking
-//BM
-static void BM_fermionMatrix(benchmark::State & state){
-    std::vector<long int> dimension;
-    for(int i = 0; i < state.range(0); i++){
-        dimension.push_back(state.range(1));
-    }
-    NSL::TimeTensor<c10::complex<double>> phi(dimension);
-    NSL::Tensor<c10::complex<double>> expKappa(dimension);
-    for (auto _ : state){
-        NSL::TestingExpDisc::BF(phi, expKappa);
-    }
-}
-
-static void CustomArguments(benchmark::internal::Benchmark* b) {
-    for (int i = 2; i <= 3; ++i)
-        for (int j = 2; j <= 150; j += 1)
-            b->Args({i, j});
-}
-
-BENCHMARK(BM_fermionMatrix)->Apply(CustomArguments);
-
-/*BENCHMARK(BM_fermionMatrix)
-    ->Args({2,20})
-    ->Args({2,40})
-    ->Args({2,60})
-    ->Args({2,80})
-    ->Args({2,100})
-    ->Args({3,20})
-    ->Args({3,40})
-    ->Args({3,60})
-    ->Args({3,80})
-    ->Args({3,100});*/ //Register the function as a benchmark
-//==========================================================================
-
-//Main
-BENCHMARK_MAIN();
