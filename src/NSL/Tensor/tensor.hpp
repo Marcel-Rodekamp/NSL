@@ -1,5 +1,6 @@
 #ifndef NSL_TENSOR_HPP
 #define NSL_TENSOR_HPP
+
 #include<torch/torch.h>
 #include <memory>
 #include<vector>
@@ -12,20 +13,19 @@
 using namespace torch::indexing;
 // ============================================================================
 // CPU Implementations
-//About underlying data: https://stackoverflow.com/questions/62523708/pointer-type-behavior-in-pytorch
-//About view (underlying data functions):
 namespace NSL {
     template<typename Type>
     class Tensor {
         using size_t = long int;
 
     private:
-
-    public:
         torch::Tensor data_;
+    public:
+
 
         //Default constructor.
-       constexpr explicit Tensor() = default;
+
+        constexpr explicit Tensor() = default;
 
         //Construct 1D tensor (i.e. array).
         constexpr explicit Tensor(const std::size_t & size):
@@ -54,6 +54,16 @@ namespace NSL {
         Tensor<Type> & rand(){
             data_=torch::rand(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
             return (*this);
+        }
+
+        Tensor<Type> & copy(Tensor<Type> & other){
+            data_ = other.data_.clone();
+            return *this;
+        }
+
+        Tensor<Type> & copy(Tensor<Type> other){
+            data_ = other.data_.clone();
+            return *this;
         }
 
         // =====================================================================
@@ -96,7 +106,11 @@ namespace NSL {
             return data_.data_ptr<Type>()[offset];
         }
 
-        torch::Tensor & to_torch(){
+        friend const torch::Tensor to_torch(const Tensor<Type> & other){
+            return other.data_;
+        }
+
+        torch::Tensor to_torch(){
             return data_;
         }
 
@@ -118,28 +132,159 @@ namespace NSL {
         // =====================================================================
 
         //Product by a scalar.
-        NSL::Tensor<Type> & operator*(const Type & factor){
-            for(long int x = 0; x < data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor*data_.template data_ptr<Type>()[x];
+        Tensor<Type> operator*(const Type & factor){
+            Tensor <Type> out (data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = factor* out.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        Tensor<Type> & prod(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
             }
             return *this;
         }
 
+        Tensor<Type> & operator*=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        //Product by a Tensor
+        Tensor<Type> operator*(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::Tensor <Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]*other.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        Tensor<Type> & operator*=(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        Tensor<Type> & prod(const Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        //sum by Tensor
+        Tensor<Type> operator+(Tensor<Type> & other ) {
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::Tensor out(this->data_);
+            for (long int x = 0; x < out.data_.numel(); ++x) {
+                out.data_.template data_ptr<Type>()[x] =
+                        out.data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        Tensor<Type> & operator+=(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+
+        Tensor<Type> & sum(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+
         //Sum by a scalar.
-        NSL::Tensor<Type> & operator+(const Type & factor){
-            for(long int x = 0; x < data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor+data_.template data_ptr<Type>()[x];
+        Tensor<Type> operator+(const Type & factor){
+            NSL::Tensor <Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = factor + out.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        Tensor<Type> & operator+=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
+            }
+            return *this;
+        }
+
+
+        Tensor<Type> & sum(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
+            }
+            return *this;
+        }
+
+        //Minus by Tensor
+        Tensor<Type> operator-(Tensor<Type> & other ) {
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::Tensor out(this->data_);
+            for (long int x = 0; x < out.data_.numel(); ++x) {
+                out.data_.template data_ptr<Type>()[x] =
+                        out.data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        Tensor<Type> & operator-=(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+
+        Tensor<Type> & subs(const NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-other.data_.template data_ptr<Type>()[x];
             }
             return *this;
         }
 
         //Minus by a scalar.
-        NSL::Tensor<Type> & operator-(const Type & factor){
+        Tensor<Type> operator-(const Type & factor){
+            NSL::Tensor <Type> out (this->data_);
             for(long int x = 0; x < data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = data_.template data_ptr<Type>()[x]-factor;
+                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]-factor;
+            }
+            return out;
+        }
+
+        Tensor<Type> & operator-=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
             }
             return *this;
         }
+
+        Tensor<Type> & subs(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
+            }
+            return *this;
+        }
+
+
 
         //Equal
         Tensor<Type> & operator=(const Tensor<Type> & other){
@@ -152,19 +297,32 @@ namespace NSL {
 
             return *this;
         }
-
         // =====================================================================
         // Boolean operators
         // =====================================================================
 
         //Comparison each element of two tensors.
-        bool operator== (NSL::Tensor<Type> & other) const{
-            bool out = torch::eq(this->data_, other.data_);
+        bool operator== (NSL::Tensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            bool out = true;
+            for(long int x = 0; x < other.data_.numel(); ++x) {
+                if (this->data_.template data_ptr<Type>()[x] != other.data_.template data_ptr<Type>()[x]){
+                    out = false;
+                    break;
+                }
+            }
             return out;
         }
+
         //comparison all element with a number.
-        bool operator== (const Type & num) const{
-            bool out = torch::eq(this->data_, num);
+        bool operator== (const Type & num){
+            bool out = true;
+            for(long int x = 0; x < this->data_.numel(); ++x) {
+                if (this->data_.template data_ptr<Type>()[x] != num){
+                    out = false;
+                    break;
+                }
+            }
             return out;
         }
 
@@ -214,8 +372,8 @@ namespace NSL {
         // =====================================================================
 
         //Tensor exponential.
-        NSL::Tensor<Type> & exp() {
-           data_=torch::exp(data_);
+        Tensor<Type> & exp() {
+            data_.exp_();
             return *this;
         }
 
@@ -257,6 +415,7 @@ namespace NSL {
         NSL::Tensor<Type> & shift(const long int & shift, const Type & boundary){
             data_ = torch::roll(data_,shift,0);
             std::cout<<"Boundary:" <<boundary<<std::endl;
+
             if(shift>0) {
                 for (int i = 0; i <  shift ; i++ ) {
                     for(long int x = 0; x < this->data_[i].numel(); ++x){
@@ -286,9 +445,8 @@ namespace NSL {
         using size_t = long int;
 
     private:
-
-    public:
         torch::Tensor data_;
+    public:
         // torch::Tensor data_; //just to prove cout's in the main program.
 
         //Default constructor.
@@ -323,18 +481,22 @@ namespace NSL {
             return (*this);
         }
 
+        TimeTensor<Type> & copy(TimeTensor<Type> & other){
+            data_ = other.data_.clone();
+            return *this;
+        }
         // =====================================================================
         // Random Access Operators
         // =====================================================================
 
-        constexpr TimeTensor<Type> operator[](const size_t index){
+        constexpr Tensor<Type> operator[](const size_t index){
             torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return TimeTensor<Type>(slice);
+            return Tensor<Type>(slice);
         }
 
-        constexpr const TimeTensor<Type> & operator[](const size_t index) const {
+        constexpr const Tensor<Type> & operator[](const size_t index) const {
             torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return TimeTensor<Type>(slice);
+            return Tensor<Type>(slice);
         }
 
         constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
@@ -363,6 +525,10 @@ namespace NSL {
             return data_.data_ptr<Type>()[offset];
         }
 
+        friend const torch::Tensor to_torch(const TimeTensor<Type> & other){
+            return other.data_;
+        }
+
         torch::Tensor & to_torch(){
             return data_;
         }
@@ -385,25 +551,145 @@ namespace NSL {
         // =====================================================================
 
         //Product by a scalar.
-        TimeTensor<Type> & operator*(const Type & factor){
+        TimeTensor<Type> operator*(const Type & factor) const{
+            TimeTensor <Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = factor* out.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        TimeTensor<Type> & prod(const Type & factor){
             for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor*data_.template data_ptr<Type>()[x];
+                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & operator*=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+
+        //Product by a Timetensor
+        TimeTensor<Type> operator*(const TimeTensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::TimeTensor <Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]*other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & operator*=(const TimeTensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & prod(const TimeTensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        //Sum of TimeTensors
+        TimeTensor<Type> operator+(TimeTensor<Type> & other ){
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::TimeTensor<Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        TimeTensor<Type> & operator+=(TimeTensor<Type> & other ){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & sum(TimeTensor<Type> & other ){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
             }
             return *this;
         }
 
         //Sum by a scalar.
-        TimeTensor<Type> & operator+(const Type & factor){
-            for(long int x = 0; x < data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor+data_.template data_ptr<Type>()[x];
+        TimeTensor<Type> operator+(const Type & factor) const{
+            NSL::TimeTensor<Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = factor + out.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        TimeTensor<Type> & operator+=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & sum(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
+            }
+            return *this;
+        }
+
+        //Minus of TimeTensors
+        TimeTensor<Type> operator-(TimeTensor<Type> & other ){
+            assert(other.data_.sizes() == this->data_.sizes());
+            NSL::TimeTensor<Type> out (this->data_);
+            for(long int x = 0; x < out.data_.numel(); ++x){
+                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
+            }
+            return out;
+        }
+
+        TimeTensor<Type> & operator-=(TimeTensor<Type> & other ){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & subs(TimeTensor<Type> & other ){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
             }
             return *this;
         }
 
         //Minus by a scalar.
-        TimeTensor<Type> & operator-(const Type & factor){
+        TimeTensor<Type> operator-(const Type & factor){
+            TimeTensor <Type> out (this->data_);
             for(long int x = 0; x < data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = data_.template data_ptr<Type>()[x]-factor;
+                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]-factor;
+            }
+            return out;
+        }
+
+        TimeTensor<Type> & operator-=(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
+            }
+            return *this;
+        }
+
+        TimeTensor<Type> & subs(const Type & factor){
+            for(long int x = 0; x < this->data_.numel(); ++x){
+                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
             }
             return *this;
         }
@@ -420,18 +706,30 @@ namespace NSL {
             return *this;
         }
 
-
         // =====================================================================
         // Boolean operators
         // =====================================================================
         //Comparison each element of two tensors.
-        bool operator== (NSL::TimeTensor<Type> & other) const{
-            bool out = torch::eq(this->data_, other.data_);
+        bool operator== (NSL::TimeTensor<Type> & other){
+            assert(other.data_.sizes() == this->data_.sizes());
+            bool out = true;
+            for(long int x = 0; x < other.data_.numel(); ++x) {
+                if (this->data_.template data_ptr<Type>()[x] != other.data_.template data_ptr<Type>()[x]){
+                    out = false;
+                    break;
+                }
+            }
             return out;
         }
         //comparison all element with a number.
-        bool operator== (const Type & num) const{
-            bool out = torch::eq(this->data_, num);
+        bool operator== (const Type & num){
+            bool out = true;
+            for(long int x = 0; x < this->data_.numel(); ++x) {
+                if (this->data_.template data_ptr<Type>()[x] != num){
+                    out = false;
+                    break;
+                }
+            }
             return out;
         }
 
@@ -483,7 +781,7 @@ namespace NSL {
 
         //Tensor exponential.
         TimeTensor<Type> & exp() {
-            data_=torch::exp(data_);
+            data_.exp_();
             return *this;
         }
 
@@ -506,13 +804,11 @@ namespace NSL {
 
         //Tensor Expand.
         TimeTensor<Type> & expand(const std::size_t & dimension){
-
             std::deque<long int> dims;
             dims.push_front(dimension);
             std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
             data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
             return *this;
-
         }
 
         // =====================================================================

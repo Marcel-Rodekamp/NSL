@@ -6,13 +6,16 @@ namespace NSL::TestingExpDisc {
 //ToDo: Is that correct?
 template<typename Type>
 NSL::TimeTensor<Type> BF(  NSL::TimeTensor<Type> & phi, NSL::Tensor<Type> & expKappa) {
-    NSL::TimeTensor<Type> out(phi.shape());
-    out.expand(phi.shape(1));
+    const long Nt = phi.shape(0);
+    const long Nx = phi.shape(1);
+
+    NSL::TimeTensor<Type> out({Nt, Nx, Nx});
+
     c10::complex<double> num = (0,1);
     for(std::size_t t=0; t<phi.shape(0); ++t){
-        out[t] =NSL::LinAlg::mat_vec(expKappa,((NSL::LinAlg::mat_vec(phi[t],num)).exp().expand(phi.shape(1))));
+        out[t]=(((phi[t]*num).exp().expand(phi.shape(1))).prod(expKappa));
     }
-    out[phi.shape(0) - 1] = out[phi.shape(0) - 1]* -1;
+    out[0] *= -1;
 
     return out;
 }
@@ -23,15 +26,14 @@ NSL::TimeTensor<Type> exp_disc_Mp(
          NSL::TimeTensor<Type> &psi,
          NSL::Tensor<Type> &expKappa
 ) {
-    NSL::TimeTensor<Type> out1 = NSL::TestingExpDisc::BF(phi, expKappa);
-    NSL::TimeTensor<Type> out(phi.shape());
-    out.expand(phi.shape(1));
-    for(long int t=0; t< phi.shape(0); ++t){
-        auto out2 = NSL::LinAlg::shift(psi,1);
-        auto out3 = out1[t];
-       out[t]=NSL::LinAlg::foreach_timeslice(out3,out2);
+    NSL::TimeTensor<Type> M= NSL::TestingExpDisc::BF(phi, expKappa);
+    NSL::TimeTensor<Type> out(psi.shape());
+
+    for(std::size_t t = 0; t < psi.shape(0); ++t){
+        out[t] = NSL::LinAlg::mat_vec(M[t],(NSL::LinAlg::shift(psi,1))[t]);
     }
-    return out;
+
+    return psi - out;
 }
 
 } // namespace NSL::TestingExpDisc

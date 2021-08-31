@@ -46,10 +46,9 @@ int main() {
     (example_timetensor6*2);*/
 
     //Example of the use of exponential
-    /*NSL::Tensor<std::complex<float>> example_tensor7 ({3,3}); //Initialize tensor
-    example_tensor5.exp();
-    NSL::TimeTensor<std::complex<float>> example_timetensor7 ({3,3}); //Initialize tensor
-    example_timetensor7.exp();*/
+   /* NSL::Tensor<float> example_tensor7 ({20000,20000}); //Initialize tensor
+    example_tensor7.exp();*/
+
 
     //Example of expand
     /*NSL::Tensor<std::complex<float>> example_tensor8({3, 2});
@@ -59,10 +58,10 @@ int main() {
     example_timetensor8.expand(dimension8));*/
 
     //Tensor shift
-    NSL::TimeTensor<double> example_tensor9 ({2,2});
+  /*  NSL::TimeTensor<double> example_tensor9 ({2,2});
     example_tensor9.rand().print();
     example_tensor9.shift(1, 2).print();
-
+*/
 
 //===========================================================================
 //Example of mat_vec.hpp. Must change data_ from private //
@@ -122,6 +121,14 @@ const clock_t begin_time2 = clock();
 NSL::LinAlg::foreach_timeslice(out,psi);
 std::cout << float( clock () - begin_time2) /  CLOCKS_PER_SEC<<std::endl;
 return 0;*/
+
+
+NSL::Tensor<float> example1({2,2});
+example1+=1;
+NSL::Tensor<float> example2({2});
+NSL::LinAlg::mat_vec(example1, example2).print();
+example1.print();
+
 } //end of int main
 //===============================================================================
 //===============================================================================
