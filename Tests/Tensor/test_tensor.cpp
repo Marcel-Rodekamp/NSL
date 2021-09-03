@@ -7,19 +7,17 @@ void test_1D_constructor(const std::size_t & size){
     // Initializes a 1D Tensor of type
     // * float
     // with size elements and checks if it is initialized to 0.
-    // Note: Requires tensor::data()
+    // Note: Requires NSL::Tensor::operator==(Type);
 
     NSL::Tensor<float> T_float(size);
     NSL::Tensor<double> T_double(size);
     NSL::Tensor<c10::complex<float>> T_cfloat(size);
     NSL::Tensor<c10::complex<double>> T_cdouble(size);
 
-    for(std::size_t i = 0; i < size; ++i){
-        REQUIRE(T_float[i] == 0);
-        REQUIRE(T_double[i] == 0);
-        REQUIRE(T_cfloat[i] == c10::complex<float>(0,0));
-        REQUIRE(T_cdouble[i] == c10::complex<double>(0,0));
-    }
+    REQUIRE(T_float == 0);
+    REQUIRE(T_double == 0);
+    REQUIRE(T_cfloat == c10::complex<float>(0,0));
+    REQUIRE(T_cdouble == c10::complex<double>(0,0));
 }
 
 // =============================================================================
