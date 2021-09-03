@@ -32,7 +32,7 @@ static void BM_fermionMatrix(benchmark::State & state){
 //Custom Argument: With this function you can control the conditions of our benchark (dimension, size per dimension)
 static void CustomArguments(benchmark::internal::Benchmark* b) {
     // Nt = max t = 100
-    for (int Nt = 400; Nt <= 600; Nt+=100)
+    for (int Nt = 10; Nt <= 600; Nt+=100)
         // Nx = max x = 100
         for (int Nx = 10; Nx <= 100; Nx += 10) {
             b->Args({Nt, Nx});
