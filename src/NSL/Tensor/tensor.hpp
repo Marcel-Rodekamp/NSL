@@ -9,6 +9,7 @@
 #include <cmath>
 #include <utility>
 #include "../assert.hpp"
+#include "../complex.hpp"
 
 using namespace torch::indexing;
 // ============================================================================
@@ -17,6 +18,7 @@ namespace NSL {
     template<typename Type>
     class Tensor {
         using size_t = long int;
+        using complex = c10::complex<Type>;
 
     private:
         torch::Tensor data_;
@@ -302,7 +304,7 @@ namespace NSL {
         // =====================================================================
 
         //Comparison each element of two tensors.
-        bool operator== (NSL::Tensor<Type> & other){
+        bool operator== (NSL::Tensor<Type> & other) const{
             assert(other.data_.sizes() == this->data_.sizes());
             bool out = true;
             for(long int x = 0; x < other.data_.numel(); ++x) {
@@ -315,7 +317,7 @@ namespace NSL {
         }
 
         //comparison all element with a number.
-        bool operator== (const Type & num){
+        bool operator== (const Type & num) const{
             bool out = true;
             for(long int x = 0; x < this->data_.numel(); ++x) {
                 if (this->data_.template data_ptr<Type>()[x] != num){
@@ -710,7 +712,7 @@ namespace NSL {
         // Boolean operators
         // =====================================================================
         //Comparison each element of two tensors.
-        bool operator== (NSL::TimeTensor<Type> & other){
+        bool operator== (NSL::TimeTensor<Type> & other) const{
             assert(other.data_.sizes() == this->data_.sizes());
             bool out = true;
             for(long int x = 0; x < other.data_.numel(); ++x) {
@@ -722,7 +724,7 @@ namespace NSL {
             return out;
         }
         //comparison all element with a number.
-        bool operator== (const Type & num){
+        bool operator== (const Type & num) const{
             bool out = true;
             for(long int x = 0; x < this->data_.numel(); ++x) {
                 if (this->data_.template data_ptr<Type>()[x] != num){
