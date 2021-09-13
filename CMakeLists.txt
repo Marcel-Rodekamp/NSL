@@ -38,6 +38,14 @@ add_library(NSL_BENCHMARK INTERFACE Benchmarks/benchmark_main.cpp)
 set_target_properties(NSL_BENCHMARK PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(NSL_BENCHMARK INTERFACE NSL)
 
+# add module path; libraries should be
+if(NOT APPLE)
+  # .so, generically or
+  set(CMAKE_INSTALL_RPATH $ORIGIN)
+else()
+  # .dylib, on mac
+  set(CMAKE_INSTALL_RPATH @loader_path)
+endif()
 
 # include requirements on which the library is build
 include(cmake/torch.cmake)
