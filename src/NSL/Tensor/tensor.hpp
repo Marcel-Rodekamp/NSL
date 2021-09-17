@@ -494,48 +494,66 @@ class Tensor {
             return *this;
         }
     }; //Tensor class
+
+
 //========================================================================
 //Time Tensor Class
-    template<typename Type>
-    class TimeTensor {
-        using size_t = long int;
+
+template<typename Type>
+class TimeTensor {
+
+    // alias settings
+    using size_t = long int;
+
 
     private:
         torch::Tensor data_;
+
+        template<typename... Args>
+        inline const std::size_t linearIndex_(const Args &... indices){
+            std::array<long int, sizeof...(indices)> a_indices = {indices...};
+            std::size_t offset = 0;
+
+            for(long int d = 0 ; d < sizeof...(indices); ++d){
+                offset += a_indices[d] * data_.stride(d);
+            }
+
+            return offset;
+        }
+
     public:
-
-
         //Default constructor.
         constexpr explicit TimeTensor() = default;
 
-
-        //Construct 1D tensor (i.e. array).
-        constexpr explicit TimeTensor(const std::size_t & size):
-        data_(torch::zeros({static_cast<const long int>(size)}, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        //Construct with N dimensions
+        template<typename... ArgsT>
+        constexpr explicit TimeTensor(const size_t & size0, const ArgsT &... sizes):
+            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
         {}
-
 
         //Construct data_ with sizes stored in dims.
+        [[deprecated("Will be deleted in version 1, use variadic constructors")]]
         constexpr explicit TimeTensor(const std::vector<long int>  & dims):
-        data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+            data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
         {}
-
 
         constexpr explicit TimeTensor(torch::Tensor && other):
-        data_(other)
+            data_(std::move(other))
         {}
-
 
         constexpr explicit TimeTensor(torch::Tensor & other):
-        data_(other)
+            data_(other)
         {}
-
 
         // copy constructor
         constexpr TimeTensor(const TimeTensor& other):
-        data_(other.data_)
+            data_(other.data_)
         {}
 
+        // move constructor
+        constexpr TimeTensor(TimeTensor && other) noexcept:
+            data_(std::move(other.data_))
+        {}
 
         //Random creation
         TimeTensor<Type> & rand(){
@@ -543,7 +561,7 @@ class Tensor {
             return (*this);
         }
 
-
+        // ToDo: Repalace these calls with the assignment/copy constructor
         TimeTensor<Type> & copy(TimeTensor<Type> & other){
             data_ = other.data_.clone();
             return *this;
@@ -553,17 +571,45 @@ class Tensor {
         // =====================================================================
         // Random Access Operators
         // =====================================================================
+        template<typename ...Args>
+        constexpr Type & operator()(const Args &... indices){
+            static_assert(NSL::all_convertible<size_t, Args...>::value,
+                          "NSL::TimeTensor::operator()(const Args &... indices) can only be called with arguments of integer type"
+            ); // static_assert
+            // need data_.dim() arguments!
+            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
+            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
 
+            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
+            return data_.data_ptr<Type>()[linearIndex_(indices...)];
+        }
+
+        template<typename ...Args>
+        constexpr Type & operator()(const Args &... indices) const {
+            static_assert(NSL::all_convertible<size_t, Args...>::value,
+                      "NSL::TimeTensor::operator()(const Args &... indices) can only be called with arguments of integer type"
+            ); // static_assert
+            // need data_.dim() arguments!
+            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
+            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+
+            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
+            return data_.data_ptr<Type>()[linearIndex_(indices...)];
+        }
+
+        [[deprecated("Will be deleted in version 1, use operator()")]]
         constexpr Tensor<Type> operator[](const size_t index){
             torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
             return Tensor<Type>(slice);
         }
 
+        [[deprecated("Will be deleted in version 1, use operator()")]]
         constexpr const Tensor<Type> & operator[](const size_t index) const {
             torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
             return Tensor<Type>(slice);
         }
 
+        [[deprecated("Will be deleted in version 1, use operator()")]]
         constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
             // get index transformation
             // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
@@ -577,6 +623,7 @@ class Tensor {
             return data_.data_ptr<Type>()[offset];
         }
 
+        [[deprecated("Will be deleted in version 1, use operator()")]]
         constexpr const Type & operator[](const std::initializer_list<size_t> & indices) const {
             // get index transformation
             // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
@@ -598,6 +645,15 @@ class Tensor {
             return data_;
         }
 
+        constexpr Type * data(){
+            return data_.data_ptr<Type>();
+        }
+
+        constexpr Type * data() const {
+            return data_.data_ptr<Type>();
+        }
+
+
         // =====================================================================
         // Slice Operation
         // =====================================================================
@@ -615,6 +671,7 @@ class Tensor {
         // Algebra Operators
         // =====================================================================
 
+        // ToDo: merge with prod
         //Product by a scalar.
         TimeTensor<Type> operator*(const Type & factor) const{
             TimeTensor <Type> out (this->data_);
@@ -771,6 +828,7 @@ class Tensor {
             return *this;
         }
 
+
         // =====================================================================
         // Boolean operators
         // =====================================================================
@@ -817,6 +875,7 @@ class Tensor {
             std::cout<< torch::view_as_real(data_)<<std::endl;
         }
 
+
         // =====================================================================
         // Shape and dimension
         // =====================================================================
@@ -840,6 +899,7 @@ class Tensor {
             return this->data_.dim();
         }
 
+
         // =====================================================================
         // Exponential
         // =====================================================================
@@ -854,13 +914,21 @@ class Tensor {
         // Expand
         // =====================================================================
 
+        template<typename... Args>
+        NSL::TimeTensor<Type> & expand(const Args &... dims) {
+            this->data_ = data_.unsqueeze(-1).expand({dims...});
+            return *this;
+        }
+
         //Tensor Expand.
-       TimeTensor<Type> & expand(std::deque<long int> & dims){
+        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
+        TimeTensor<Type> & expand(std::deque<long int> & dims){
             std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
             data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
             return *this;
         }
 
+        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
         TimeTensor<Type> & expand(std::deque<long int> dims){
             std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
             data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
@@ -868,6 +936,7 @@ class Tensor {
         }
 
         //Tensor Expand.
+        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
         TimeTensor<Type> & expand(const size_t & dimension){
             std::deque<long int> dims;
             dims.push_front(dimension);
@@ -875,6 +944,7 @@ class Tensor {
             data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
             return *this;
         }
+
 
         // =====================================================================
         // Shift
