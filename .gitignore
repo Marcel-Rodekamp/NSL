@@ -34,6 +34,10 @@
 # Clion files
 .idea
 
+# doxygen files
+doc/html
+doc/latex
+
 # cmake build directory
 cmake-build-debug
 build

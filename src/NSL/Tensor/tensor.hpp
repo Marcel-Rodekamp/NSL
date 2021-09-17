@@ -8,22 +8,29 @@
 #include "../assert.hpp"
 #include "../complex.hpp"
 
+//! Imported Namespace: torch::indexing
 using namespace torch::indexing;
-// ============================================================================
-// CPU Implementations
+
 namespace NSL {
 
+// doxygen documentation
+//! Representation of a multidimensional data.
 
+//! Storing data in various data types is one of the key requirements of any simulation.
+//! This class provides an interface to torch::Tensor (libtorch) in order to allow
+//! access and functionality on various architectures such as Multi CPU setups, Nvidia GPUs, AMD GPUs, ...
 template<typename Type>
 class Tensor {
 
-    // alias settings
+    //! Alias: size_t = long int
     using size_t = long int;
 
 
     private:
+        // underlying data
         torch::Tensor data_;
 
+        // transform given indices and strides in data_ to a linear index accessing the underlying pointer
         template<typename... Args>
         inline const std::size_t linearIndex_(const Args &... indices){
             std::array<long int, sizeof...(indices)> a_indices = {indices...};
@@ -37,10 +44,27 @@ class Tensor {
         }
 
     public:
-    //Default constructor.
-        constexpr explicit Tensor() = default;
+        //Default constructor not required
+        constexpr explicit Tensor() = delete;
 
-        //Construct with N dimensions
+        //! D-dimensional constructor.
+
+        //! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
+        //! \n
+        //! Params:\n
+        //!     * `size0`: Extend of the 0th dimension\n
+        //!     * `sizes`: Parameter pack, extends of respective dimensions
+        //!
+        //! \n
+        //! Assumptions:\n
+        //!     * At least one argument must be passed (`size0`)
+        //!     * ArgsT must be of integral type (convertible to `size_t`)
+        //!     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
+        //!
+        //!
+        //! \n
+        //! Further behavior:\n
+        //!     * Initialization sets all values to `Type` equivalent of 0
         template<typename... ArgsT>
         constexpr explicit Tensor(const size_t & size0, const ArgsT &... sizes):
             data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>().device(torch::kCPU))) {}
