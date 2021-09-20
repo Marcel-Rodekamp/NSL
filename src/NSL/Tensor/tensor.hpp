@@ -458,6 +458,11 @@ class Tensor {
             return *this;
         }
 
+        //Matrix exponential.
+        Tensor<Type> & mat_exp() {
+            data_ = data_.matrix_exp();
+            return *this;
+        }
 
         // =====================================================================
         // Expand
