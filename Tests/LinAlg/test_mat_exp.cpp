@@ -69,6 +69,37 @@ void test_exponential_of_diagonal(const size_type & size){
     }
 }
 
+template<typename T>
+void test_exponential_of_hermitian(const size_type & size){
+    // Generate real eigenvalues
+    NSL::Tensor<T> eigenvalue(size);
+    eigenvalue.rand().real();
+
+    NSL::Tensor<T> diagonal(size,size);
+    for(int i = 0; i < size; ++i ) {
+        diagonal(i,i) = eigenvalue(i);
+    }
+
+    // Construct a random unitary
+    NSL::Tensor<T> U(size, size);
+    U.rand();
+    auto det = U.det();
+    U /= pow(det, 1/size);
+
+    // Construct the exponential matrix two ways
+    NSL::Tensor<T> clever(size, size) = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
+    NSL::Tensor<T> brute(size,size)   = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
+
+    // Compare
+    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
+    for(int i = 0; i < size; ++i) {
+        for(int j = 0; j < size; ++j) {
+            auto res = NSL::LinAlg::abs(clever(i,j)-brute(i,j));
+            INFO("Type = " << typeid(T).name() << ", Res = " << res << ", limit = " << limit);
+            REQUIRE( res <= limit);
+        }
+    }
+}
 
 // =============================================================================
 // Test Cases
@@ -102,4 +133,14 @@ TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
     test_exponential_of_diagonal<double>(size);
     test_exponential_of_diagonal<NSL::complex<float>>(size);
     test_exponential_of_diagonal<NSL::complex<double>>(size);
+}
+
+TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
+    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+
+    // floating point types
+    test_exponential_of_hermitian<float>(size);
+    test_exponential_of_hermitian<double>(size);
+    test_exponential_of_hermitian<NSL::complex<float>>(size);
+    test_exponential_of_hermitian<NSL::complex<double>>(size);
 }
