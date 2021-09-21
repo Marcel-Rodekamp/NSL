@@ -95,7 +95,7 @@ class Tensor {
 
         //Fill with random values
         Tensor<Type> & rand(){
-            this->data_ = torch::rand_like(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
+            this->data_ = torch::rand_like(this->data_);
             return (*this);
         }
 
