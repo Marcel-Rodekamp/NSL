@@ -87,8 +87,8 @@ void test_exponential_of_hermitian(const size_type & size){
     U /= pow(det, 1/size);
 
     // Construct the exponential matrix two ways
-    NSL::Tensor<T> clever(size, size) = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
-    NSL::Tensor<T> brute(size,size)   = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
+    NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
+    NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
 
     // Compare
     auto limit = std::pow(10, std::numeric_limits<T>::digits10);
