@@ -1,10 +1,16 @@
-#include <complex>
+//#include <complex>
+#include "complex.hpp"
 #include "catch2/catch.hpp"
 #include "LinAlg/mat_exp.hpp"
 #include <typeinfo>
 
 // Torch requirement
 using size_type = long int;
+
+template<typename T>
+bool near_to(const T & left, const T & right, const T threshold=1.e-9){
+    return (abs(left-right) <= threshold);
+}
 
 template<typename T>
 void test_exponential_of_zero(const size_type & size){
@@ -26,6 +32,39 @@ void test_exponential_of_zero(const size_type & size){
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
             REQUIRE(exponentiated(i,j) == one(i,j));
+        }
+    }
+}
+
+template<typename T>
+void test_exponential_of_diagonal(const size_type & size){
+    // const std::size_t & size, number of elements
+    // const T & exponent, entry to put on the diagonal
+    // Initializes an identity matrix of type T
+    // with size elements in each direction.
+    // Checks if exponentiating the identity = an identity filled with exponentials.
+    // Note: NSL::Tensor::data()
+    // Note: Requires conversion from int to type T
+
+    NSL::Tensor<T> exponent(size);
+    exponent.rand();
+
+    NSL::Tensor<T> expected(size, size);
+    for(int i = 0; i < size; ++i) {
+        expected(i,i) = exp(exponent(i));
+    }
+
+    NSL::Tensor<T> diagonal(size, size);
+    for (int i = 0; i < size; ++i ) {
+        diagonal(i,i) = exponent(i);
+    }
+
+    NSL::Tensor<T> exponentiated = NSL::LinAlg::mat_exp(diagonal);
+
+    for(int i = 0; i < size; ++i) {
+        for(int j = 0; j < size; ++j) {
+            REQUIRE(abs(exponentiated(i,j)-expected(i,j)) <= 1.e-7);
+            // REQUIRE(near_to(exponentiated(i,j), expected(i,j)));
         }
     }
 }
@@ -53,4 +92,16 @@ TEST_CASE( "LinAlg: Mat_Exp of zero", "[LinAlg,mat_exp,zero]" ) {
     test_exponential_of_zero<double>(size);
     test_exponential_of_zero<NSL::complex<float>>(size);
     test_exponential_of_zero<NSL::complex<double>>(size);
+}
+
+TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
+    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+
+    // floating point types
+    test_exponential_of_diagonal<float>(size);
+    test_exponential_of_diagonal<double>(size);
+    // TODO: error: no matching function for call to 'abs'
+    // similar error if I call near_to().
+    //test_exponential_of_diagonal<NSL::complex<float>>(size);
+    //test_exponential_of_diagonal<NSL::complex<double>>(size);
 }
