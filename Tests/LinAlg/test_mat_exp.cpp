@@ -2,6 +2,8 @@
 #include "complex.hpp"
 #include "catch2/catch.hpp"
 #include "LinAlg/mat_exp.hpp"
+#include "LinAlg/exp.hpp"
+#include "LinAlg/abs.hpp"
 #include <typeinfo>
 
 // Torch requirement
@@ -9,7 +11,7 @@ using size_type = long int;
 
 template<typename T>
 bool near_to(const T & left, const T & right, const T threshold=1.e-9){
-    return (abs(left-right) <= threshold);
+    return (NSL::LinAlg::abs(left-right) <= threshold);
 }
 
 template<typename T>
@@ -46,12 +48,14 @@ void test_exponential_of_diagonal(const size_type & size){
     // Note: NSL::Tensor::data()
     // Note: Requires conversion from int to type T
 
+    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
+
     NSL::Tensor<T> exponent(size);
     exponent.rand();
 
     NSL::Tensor<T> expected(size, size);
     for(int i = 0; i < size; ++i) {
-        expected(i,i) = exp(exponent(i));
+        expected(i,i) = NSL::LinAlg::exp(exponent(i));
     }
 
     NSL::Tensor<T> diagonal(size, size);
@@ -63,8 +67,9 @@ void test_exponential_of_diagonal(const size_type & size){
 
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
-            REQUIRE(abs(exponentiated(i,j)-expected(i,j)) <= 1.e-7);
-            // REQUIRE(near_to(exponentiated(i,j), expected(i,j)));
+            auto res = NSL::LinAlg::abs(exponentiated(i,j)-expected(i,j));
+            INFO("Type = " << typeid(T).name() << ", Res = " << res << ", limit = " << limit);
+            REQUIRE( res <= limit);
         }
     }
 }
@@ -102,6 +107,6 @@ TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
     test_exponential_of_diagonal<double>(size);
     // TODO: error: no matching function for call to 'abs'
     // similar error if I call near_to().
-    //test_exponential_of_diagonal<NSL::complex<float>>(size);
-    //test_exponential_of_diagonal<NSL::complex<double>>(size);
+    test_exponential_of_diagonal<NSL::complex<float>>(size);
+    test_exponential_of_diagonal<NSL::complex<double>>(size);
 }
