@@ -10,11 +10,6 @@
 using size_type = long int;
 
 template<typename T>
-bool near_to(const T & left, const T & right, const T threshold=1.e-9){
-    return (NSL::LinAlg::abs(left-right) <= threshold);
-}
-
-template<typename T>
 void test_exponential_of_zero(const size_type & size){
     // const std::size_t & size, number of elements
     // Initializes a 2D Tensor of type T
@@ -105,8 +100,6 @@ TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
     // floating point types
     test_exponential_of_diagonal<float>(size);
     test_exponential_of_diagonal<double>(size);
-    // TODO: error: no matching function for call to 'abs'
-    // similar error if I call near_to().
     test_exponential_of_diagonal<NSL::complex<float>>(size);
     test_exponential_of_diagonal<NSL::complex<double>>(size);
 }

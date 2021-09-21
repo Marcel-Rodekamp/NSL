@@ -1,5 +1,5 @@
-#ifndef NSL_LATTICES_EXP_HPP
-#define NSL_LATTICES_EXP_HPP
+#ifndef NSL_LINALG_EXP_HPP
+#define NSL_LINALG_EXP_HPP
 
 #include <cmath>
 #include "../Tensor/tensor.hpp"
@@ -28,4 +28,4 @@ NSL::TimeTensor<Type> exp(TimeTensor<Type> &tensor) {
 
 } // namespace LinAlg
 } // namespace NSL
-#endif //NSL_LATTICES_EXP_HPP
+#endif //NSL_LINALG_EXP_HPP

@@ -1,5 +1,5 @@
-#ifndef NSL_LATTICES_ABS_HPP
-#define NSL_LATTICES_ABS_HPP
+#ifndef NSL_LINALG_ABS_HPP
+#define NSL_LINALG_ABS_HPP
 
 
 #include <cmath>
@@ -21,4 +21,4 @@ inline Type abs(NSL::complex<Type> number){
 
 } // namespace LinAlg
 } // namespace NSL
-#endif //NSL_LATTICES_ABS_HPP
+#endif //NSL_LINALG_ABS_HPP
