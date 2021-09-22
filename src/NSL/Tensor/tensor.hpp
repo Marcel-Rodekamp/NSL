@@ -693,8 +693,23 @@ class TimeTensor {
             return data_.data_ptr<Type>();
         }
 
+        TimeTensor<Type> real(){
+            return NSL::TimeTensor<Type>(torch::real(data_));
+        }
 
-        // =====================================================================
+        TimeTensor<Type> real() const {
+            return NSL::TimeTensor<Type>(torch::real(data_));
+        }
+
+        TimeTensor<Type> imag(){
+            return NSL::TimeTensor<Type>(torch::imag(data_));
+        }
+
+        TimeTensor<Type> imag() const {
+            return NSL::TimeTensor<Type>(torch::imag(data_));
+        }
+
+    // =====================================================================
         // Slice Operation
         // =====================================================================
         constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
