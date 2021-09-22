@@ -10,3 +10,4 @@ target_sources(NSL PUBLIC
 add_subdirectory(Tensor/)
 add_subdirectory(LinAlg/)
 add_subdirectory(FermionMatrix/)
+add_subdirectory(Lattice/)
