@@ -742,7 +742,7 @@ class TimeTensor {
             return NSL::TimeTensor<Type>(torch::imag(data_));
         }
 
-    // =====================================================================
+        // =====================================================================
         // Slice Operation
         // =====================================================================
         constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
