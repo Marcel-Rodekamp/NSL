@@ -115,6 +115,7 @@ void test_exponential_of_hermitian(const size_type & size){
     for(int i = 0; i < size; ++i ) {
         U(i,i) = 1.;
     }
+    INFO("det U = " << NSL::LinAlg::det(U));
 
     // Since exp(UHU†) = U exp(H) U†, we expect
     NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );

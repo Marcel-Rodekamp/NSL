@@ -479,19 +479,8 @@ class Tensor {
         // Determinant
         // =====================================================================
 
-        // TODO: it seems to me that .det and .logdet should not be mutations...
-        // nor should computing it require copying.  But for consistency,
-        // for now, they are mutations.
-
-        NSL::Tensor<Type> & det() {
-            data_ = data_.det();
-            return *this;
-        }
-
-        NSL::Tensor<Type> logdet() {
-            data_ = data_.logdet();
-            return *this;
-        }
+        // Other .member functions are mutations which change .data_.
+        // Since .det and .logdet shouldn't do that, they go in LinAlg.
 
         // =====================================================================
         // Transpose + Adjoint

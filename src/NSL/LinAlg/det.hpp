@@ -6,9 +6,12 @@
 namespace NSL {
 namespace LinAlg {
 
-template <typename Type> NSL::Tensor<Type> det(const NSL::Tensor<Type> & t){
-    NSL::Tensor<Type> out(t);
-    return out.det();
+template <typename Type> const NSL::Tensor<Type> det(const NSL::Tensor<Type> & t){
+    return NSL::Tensor<Type>(to_torch(t).det());
+}
+
+template <typename Type> const NSL::Tensor<Type> logdet(const NSL::Tensor<Type> & t){
+    return NSL::Tensor<Type>(to_torch(t).logdet());
 }
 
 } // namespace LinAlg
