@@ -196,7 +196,23 @@ class Tensor {
             return data_.data_ptr<Type>();
         }
 
-        // =====================================================================
+        Tensor<Type> real(){
+            return NSL::Tensor<Type>(torch::real(data_));
+        }
+
+        Tensor<Type> real() const {
+            return NSL::Tensor<Type>(torch::real(data_));
+        }
+
+        Tensor<Type> imag(){
+            return NSL::Tensor<Type>(torch::imag(data_));
+        }
+
+        Tensor<Type> imag() const {
+            return NSL::Tensor<Type>(torch::imag(data_));
+        }
+
+    // =====================================================================
         // Slice Operation
         // =====================================================================
         constexpr Tensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
@@ -281,7 +297,6 @@ class Tensor {
             return *this;
         }
 
-
         Tensor<Type> & sum(const NSL::Tensor<Type> & other){
             assert(other.data_.sizes() == this->data_.sizes());
             for(long int x = 0; x < this->data_.numel(); ++x){
@@ -289,7 +304,6 @@ class Tensor {
             }
             return *this;
         }
-
 
         //Sum by a scalar.
         Tensor<Type> operator+(const Type & factor){
@@ -306,7 +320,6 @@ class Tensor {
             }
             return *this;
         }
-
 
         Tensor<Type> & sum(const Type & factor){
             for(long int x = 0; x < this->data_.numel(); ++x){
@@ -364,8 +377,6 @@ class Tensor {
             }
             return *this;
         }
-
-
 
         //Equal
         Tensor<Type> & operator=(const Tensor<Type> & other){
