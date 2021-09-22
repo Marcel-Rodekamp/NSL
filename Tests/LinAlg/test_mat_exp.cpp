@@ -84,16 +84,6 @@ void test_exponential_of_hermitian(const size_type & size){
     // TODO: .real() doesn't seem to actually cause real values,
     // as the trace of the eigenvalues comes out complex.
 
-    // and we know the identity
-    //      det e^{H} = e^tr H
-    // which we will check below.
-    T trace = 0;
-    for(int i = 0; i < size; ++i ) {
-        trace += eigenvalue(i);
-    }
-    T determinant = exp(trace);
-    INFO("trace of eigenvalues = " << trace);
-
     // To get a random H we can put the eigenvalues on the diagonal
     NSL::Tensor<T> diagonal(size,size);
     for(int i = 0; i < size; ++i ) {
@@ -118,6 +108,7 @@ void test_exponential_of_hermitian(const size_type & size){
     INFO("det U = " << NSL::LinAlg::det(U));
 
     // Since exp(UHU†) = U exp(H) U†, we expect
+    // TODO: are these proper matrix multiplies?  Or (wrongly) element-wise?
     NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
     NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
 
@@ -134,6 +125,16 @@ void test_exponential_of_hermitian(const size_type & size){
     // Moreover, since det(exp(UHU†)) = det(U exp(H) U†) = det( exp(H) )
     auto det_clever = NSL::LinAlg::det(clever);
     auto det_brute  = NSL::LinAlg::det(brute);
+
+    // Finally, using the identity
+    //      det e^{H} = e^tr H
+    // we can compute the determinant directly.
+    T trace = 0;
+    for(int i = 0; i < size; ++i ) {
+        trace += eigenvalue(i);
+    }
+    INFO("trace of eigenvalues = " << trace);
+    auto determinant = exp(trace);
 
     INFO("target determinant   = " << determinant);
     INFO("clever determinant   = " << det_clever );
