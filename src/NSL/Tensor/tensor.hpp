@@ -476,6 +476,50 @@ class Tensor {
         }
 
         // =====================================================================
+        // Determinant
+        // =====================================================================
+
+        // TODO: it seems to me that .det and .logdet should not be mutations...
+        // nor should computing it require copying.  But for consistency,
+        // for now, they are mutations.
+
+        NSL::Tensor<Type> & det() {
+            data_ = data_.det();
+            return *this;
+        }
+
+        NSL::Tensor<Type> logdet() {
+            data_ = data_.logdet();
+            return *this;
+        }
+
+        // =====================================================================
+        // Transpose + Adjoint
+        // =====================================================================
+
+        // TODO: transpose (and maybe adjoint) could be a view?
+
+        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & transpose() {
+            this->transpose(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1).conj();
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint() {
+            this->adjoint(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        // =====================================================================
         // Expand
         // =====================================================================
         template<typename... Args>

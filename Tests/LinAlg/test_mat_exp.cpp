@@ -3,6 +3,7 @@
 #include "catch2/catch.hpp"
 #include "LinAlg/mat_exp.hpp"
 #include "LinAlg/exp.hpp"
+#include "LinAlg/det.hpp"
 #include "LinAlg/abs.hpp"
 #include <typeinfo>
 
@@ -71,26 +72,55 @@ void test_exponential_of_diagonal(const size_type & size){
 
 template<typename T>
 void test_exponential_of_hermitian(const size_type & size){
-    // Generate real eigenvalues
+    INFO("Type = " << typeid(T).name());
+    INFO("size = " << size);
+
+    // Construct an exponential of the form e^{H} where
+    // H is Hermitian.
+
+    // Any Hermitian matrix has real eigenvalues.
     NSL::Tensor<T> eigenvalue(size);
     eigenvalue.rand().real();
+    // TODO: .real() doesn't seem to actually cause real values,
+    // as the trace of the eigenvalues comes out complex.
 
+    // and we know the identity
+    //      det e^{H} = e^tr H
+    // which we will check below.
+    T trace = 0;
+    for(int i = 0; i < size; ++i ) {
+        trace += eigenvalue(i);
+    }
+    T determinant = exp(trace);
+    INFO("trace of eigenvalues = " << trace);
+
+    // To get a random H we can put the eigenvalues on the diagonal
     NSL::Tensor<T> diagonal(size,size);
     for(int i = 0; i < size; ++i ) {
         diagonal(i,i) = eigenvalue(i);
     }
 
-    // Construct a random unitary
-    NSL::Tensor<T> U(size, size);
-    U.rand();
-    auto det = U.det();
-    U /= pow(det, 1/size);
+    // and then conjugate with a random unitary matrix.
+    NSL::Tensor<T> V(size, size);
+    V.rand();
+    NSL::Tensor<T> det = NSL::LinAlg::det(V);
 
-    // Construct the exponential matrix two ways
-    NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
+    // INFO("det V = " << det);
+    // REQUIRE( NSL::LinAlg::abs(det) == 1. );
+
+    // TODO:  actually make U a unitarized V.
+    //NSL::Tensor<T> U = V / pow(det(0), 1/size);
+    // FIXME: in the mean time, just make U the identity:
+    NSL::Tensor<T> U(size,size);
+    for(int i = 0; i < size; ++i ) {
+        U(i,i) = 1.;
+    }
+
+    // Since exp(UHU†) = U exp(H) U†, we expect
     NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
+    NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
 
-    // Compare
+    // to be equal, up to some numerical precision.
     auto limit = std::pow(10, std::numeric_limits<T>::digits10);
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
@@ -99,6 +129,21 @@ void test_exponential_of_hermitian(const size_type & size){
             REQUIRE( res <= limit);
         }
     }
+
+    // Moreover, since det(exp(UHU†)) = det(U exp(H) U†) = det( exp(H) )
+    auto det_clever = NSL::LinAlg::det(clever);
+    auto det_brute  = NSL::LinAlg::det(brute);
+
+    INFO("target determinant   = " << determinant);
+    INFO("clever determinant   = " << det_clever );
+    INFO("brute  determinant   = " << det_brute  );
+    // TODO: requires <= for NSL::Tensor?
+    //REQUIRE( NSL::LinAlg::abs(determinant - det_clever) <= limit );
+    //REQUIRE( NSL::LinAlg::abs(determinant - det_brute ) <= limit );
+    //REQUIRE( NSL::LinAlg::abs(det_clever  - det_brute ) <= limit );
+
+    // FIXME: in the mean time, fail
+    REQUIRE( false );
 }
 
 // =============================================================================
@@ -136,11 +181,12 @@ TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
 }
 
 TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
-    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+    const size_type size = GENERATE(1, 2, 4, 8, 16, 32, 64);
 
     // floating point types
-    test_exponential_of_hermitian<float>(size);
-    test_exponential_of_hermitian<double>(size);
+    // TODO: when real() is implemented for non-complex dtypes
+    //test_exponential_of_hermitian<float>(size);
+    //test_exponential_of_hermitian<double>(size);
     test_exponential_of_hermitian<NSL::complex<float>>(size);
     test_exponential_of_hermitian<NSL::complex<double>>(size);
 }
