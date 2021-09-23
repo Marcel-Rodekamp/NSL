@@ -6,8 +6,7 @@
 
 #include "../Tensor/tensor.hpp"
 
-namespace NSL {
-namespace Lattice {
+namespace NSL::Lattice {
 
 struct Site{
 }; // Site
@@ -15,9 +14,11 @@ struct Site{
 template <typename Type>
 class SpatialLatticeBase {
     public:
-        SpatialLatticeBase(const NSL::Tensor<Type> & hops, const std::vector<NSL::Lattice::Site> sites);
+        SpatialLatticeBase() = delete;
+        SpatialLatticeBase(const std::string & name, const NSL::Tensor<Type> & hops, const std::vector<NSL::Lattice::Site> & sites);
 
-        NSL::Lattice::Site & operator()(size_t index);
+
+        const NSL::Lattice::Site operator()(size_t index);
         // size_t operator()(const & NSL::Site x);
 
         size_t sites();
@@ -28,15 +29,17 @@ class SpatialLatticeBase {
 
         const std::string & name() { return name_; };
 
-    private:
-        const NSL::Tensor<Type> adj_;
-        const NSL::Tensor<Type> hops_;
-        const std::vector<NSL::Lattice::Site> sites_;
-        std::map<double,NSL::Tensor<Type>> exp_hopping_matrix_;
+    protected:
         const std::string name_;
-        
-        static NSL::Tensor<Type> & compute_adjacency(const NSL::Tensor<Type> & hops);
+        NSL::Tensor<Type> adj_;
+        NSL::Tensor<Type> hops_;
+        std::vector<NSL::Lattice::Site> sites_;
+        std::map<double,NSL::Tensor<Type>> exp_hopping_matrix_;
 
+    private:
+        bool adj_is_initialized_ = false;
+
+        void compute_adjacency(const NSL::Tensor<Type> & hops);
     }; // SpatialLatticeBase
 
 class Lattice {
@@ -45,7 +48,6 @@ class Lattice {
     private:
     }; // Lattice
 
-} // namespace Lattice
 } // namespace NSL
 
 #endif
