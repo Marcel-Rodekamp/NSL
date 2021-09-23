@@ -45,7 +45,9 @@ class Tensor {
 
     public:
         //Default constructor not required
-        constexpr explicit Tensor() = delete;
+        constexpr explicit Tensor() :
+            data_(torch::zeros({},torch::TensorOptions().dtype<Type>()))
+        {}
 
         //! D-dimensional constructor.
 
@@ -595,8 +597,10 @@ class TimeTensor {
         }
 
     public:
-        //Default constructor.
-        constexpr explicit TimeTensor() = default;
+        //Default constructor
+        constexpr explicit TimeTensor() :
+            data_(torch::zeros({},torch::TensorOptions().dtype<Type>()))
+        {}
 
         //Construct with N dimensions
         template<typename... ArgsT>
