@@ -32,6 +32,7 @@ size_t NSL::Lattice::SpatialLatticeBase<Type>::sites(){ return sites_.size(); }
 
 template <typename Type>
 NSL::Tensor<Type> NSL::Lattice::SpatialLatticeBase<Type>::adjacency_matrix(){
+    if (!(this->adj_is_initialized_)) this->compute_adjacency(this->hops_);
     return adj_;
 }
 
