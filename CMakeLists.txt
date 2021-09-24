@@ -62,3 +62,6 @@ add_subdirectory(Tests)
 
 
 add_subdirectory(Benchmarks)
+
+
+add_subdirectory(Documentation)
