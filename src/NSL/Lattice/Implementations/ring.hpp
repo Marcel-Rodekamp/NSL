@@ -11,7 +11,7 @@ namespace NSL::Lattice {
  *      Might need to disambiguate these if a coordinate-dependent potential is used.
  **/
 template <typename Type>
-class Ring: public NSL::Lattice::SpatialLatticeBase<Type> {
+class Ring: public NSL::Lattice::SpatialLattice<Type> {
     public:
         /*!
          *  \param n the number of sites

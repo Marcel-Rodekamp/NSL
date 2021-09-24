@@ -9,7 +9,7 @@ namespace NSL::Lattice {
 
 template<typename Type>
 NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa) :
-        NSL::Lattice::SpatialLatticeBase<Type>(
+        NSL::Lattice::SpatialLattice<Type>(
                 "Ring" + std::to_string(n),
                 NSL::Tensor<Type>(n, n),
                 std::vector<NSL::Lattice::Site>(n)

@@ -4,7 +4,7 @@
 namespace NSL::Lattice {
 
 template <typename Type>
-NSL::Lattice::SpatialLatticeBase<Type>::SpatialLatticeBase(
+NSL::Lattice::SpatialLattice<Type>::SpatialLattice(
     const std::string &name,
     const NSL::Tensor<Type> &hops,
     const std::vector<NSL::Lattice::Site> &sites
@@ -17,32 +17,32 @@ NSL::Lattice::SpatialLatticeBase<Type>::SpatialLatticeBase(
     }
 
 template <typename Type>
-const NSL::Lattice::Site NSL::Lattice::SpatialLatticeBase<Type>::operator()(size_t index){
+const NSL::Lattice::Site NSL::Lattice::SpatialLattice<Type>::operator()(size_t index){
     assertm( (0 <= index) && (index < this->sites()),
             "Spatial lattice site out of bounds.");
     return this->sites_[index];
 }
 
-//size_t SpatialLatticeBase::operator()(const & NSL::Site x){
+//size_t SpatialLattice::operator()(const & NSL::Site x){
 //  TODO
 //}
 
 template <typename Type>
-size_t NSL::Lattice::SpatialLatticeBase<Type>::sites(){ return sites_.size(); }
+size_t NSL::Lattice::SpatialLattice<Type>::sites(){ return sites_.size(); }
 
 template <typename Type>
-NSL::Tensor<Type> NSL::Lattice::SpatialLatticeBase<Type>::adjacency_matrix(){
+NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::adjacency_matrix(){
     if (!(this->adj_is_initialized_)) this->compute_adjacency(this->hops_);
     return adj_;
 }
 
 template <typename Type>
-NSL::Tensor<Type> NSL::Lattice::SpatialLatticeBase<Type>::hopping_matrix(Type delta){
+NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::hopping_matrix(Type delta){
     return delta == 1. ? hops_ : hops_ * delta;
 }
 
 template <typename Type>
-NSL::Tensor<Type> NSL::Lattice::SpatialLatticeBase<Type>::exp_hopping_matrix(Type delta){
+NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type delta){
     if(! exp_hopping_matrix_.contains(delta)){
         // compute if it's not in exp_hopping_matrix_ already
         this->exp_hopping_matrix_[delta] = NSL::LinAlg::mat_exp(this->hopping_matrix(delta));
@@ -51,12 +51,12 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLatticeBase<Type>::exp_hopping_matrix(Typ
 }
 
 template <typename Type>
-void NSL::Lattice::SpatialLatticeBase<Type>::compute_adjacency(const NSL::Tensor<Type> & hops) {
+void NSL::Lattice::SpatialLattice<Type>::compute_adjacency(const NSL::Tensor<Type> & hops) {
     // TODO: actually compute the adjacency: 1 if connected, 0 if not.
     this->adj_ = hops;
 }
 
 } // namespace NSL
 
-template class NSL::Lattice::SpatialLatticeBase<float>;
-template class NSL::Lattice::SpatialLatticeBase<double>;
+template class NSL::Lattice::SpatialLattice<float>;
+template class NSL::Lattice::SpatialLattice<double>;

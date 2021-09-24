@@ -33,12 +33,12 @@ struct Site{
  *      from the hopping matrix, computing and memoizing exp.
  **/
 template <typename Type>
-class SpatialLatticeBase {
+class SpatialLattice {
     public:
         //  No default constructor
         /*  There is no default constructor.
          *  You must talk about SOME particular lattice. */
-        SpatialLatticeBase() = delete;
+        SpatialLattice() = delete;
 
         //! A minimal constructor.
         /*! 
@@ -46,7 +46,7 @@ class SpatialLatticeBase {
          *  \param hops  a sparse or dense matrix of hopping amplitudes.
          *  \param sites a vector of sites; the indices match those in `hops`.
          **/
-        SpatialLatticeBase(const std::string & name, const NSL::Tensor<Type> & hops, const std::vector<NSL::Lattice::Site> & sites);
+        SpatialLattice(const std::string & name, const NSL::Tensor<Type> & hops, const std::vector<NSL::Lattice::Site> & sites);
 
         /*!
          *  \param index is a linear index into the vector of sites in the lattice.
@@ -104,7 +104,7 @@ class SpatialLatticeBase {
          *         nonzero amplitudes imply adjacency.
          **/
         void compute_adjacency(const NSL::Tensor<Type> & hops);
-    }; // SpatialLatticeBase
+    }; // SpatialLattice
 
 class Lattice {
     public:
