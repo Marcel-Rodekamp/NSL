@@ -8,12 +8,22 @@
 namespace NSL::Lattice {
 
 template<typename Type>
-NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa) :
+NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const double &radius) :
         NSL::Lattice::SpatialLattice<Type>(
                 "Ring(" + std::to_string(n) + ")",
                 NSL::Tensor<Type>(n, n),
                 std::vector<NSL::Lattice::Site>(n)
         ) {
+    //! \todo: use a better pi
+    double theta = 2*3.14159265358979 / n;
+    for (int i = 0; i < n; ++i) {
+        NSL::Tensor<double> coordinates(3);
+        coordinates(0) = radius * cos(i * theta);
+        coordinates(1) = radius * sin(i * theta);
+        coordinates(2) = 0.;
+
+        this->sites_[i].coordinates = coordinates;
+    }
     for (int i = 0; i < n - 1; ++i) {
         this->hops_(i, i + 1) = kappa;
     }

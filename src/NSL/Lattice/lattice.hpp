@@ -22,6 +22,7 @@ namespace NSL::Lattice {
  *      In the future, might contain the geometric location (for example).
  **/
 struct Site{
+    NSL::Tensor<double> coordinates;
 }; // Site
 
 /*! A base class for spatial lattices (ie. finite graphs of Sites).
