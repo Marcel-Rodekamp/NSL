@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.18)
 
 
 # Project name
@@ -28,15 +28,15 @@ set_target_properties(NSL PROPERTIES LINKER_LANGUAGE CXX)
 
 
 # Create testing library depending on Catch2
-add_library(NSL_TEST INTERFACE Tests/test_main.cpp)
+add_library(NSL_TEST SHARED Tests/test_main.cpp)
 set_target_properties(NSL_TEST PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(NSL_TEST INTERFACE NSL)
+target_link_libraries(NSL_TEST NSL)
 
 
 # Create benchmarking library depending on Catch2
-add_library(NSL_BENCHMARK INTERFACE Benchmarks/benchmark_main.cpp)
+add_library(NSL_BENCHMARK SHARED Benchmarks/benchmark_main.cpp)
 set_target_properties(NSL_BENCHMARK PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(NSL_BENCHMARK INTERFACE NSL)
+target_link_libraries(NSL_BENCHMARK NSL)
 
 # add module path; libraries should be
 if(NOT APPLE)
