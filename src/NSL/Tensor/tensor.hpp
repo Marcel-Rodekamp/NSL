@@ -46,7 +46,7 @@ class Tensor {
     public:
         //Default constructor not required
         constexpr explicit Tensor() :
-            data_(torch::zeros({},torch::TensorOptions().dtype<Type>()))
+            data_(torch::zeros({0},torch::TensorOptions().dtype<Type>()))
         {}
 
         //! D-dimensional constructor.
@@ -123,6 +123,7 @@ class Tensor {
             // need data_.dim() arguments!
             assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
             assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+            // ToDo check indices < shapes!
 
             // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
             return data_.data_ptr<Type>()[linearIndex_(indices...)];
@@ -382,13 +383,7 @@ class Tensor {
 
         //Equal
         Tensor<Type> & operator=(const Tensor<Type> & other){
-            assert(other.data_.dim() == this->data_.dim());
-
-            // copy the data explicitly by looping over all elements
-            for(long int x = 0; x < other.data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
-            }
-
+            this->data_ = other.data_.clone();
             return *this;
         }
         // =====================================================================
@@ -507,6 +502,13 @@ class Tensor {
 
         NSL::Tensor<Type> & adjoint() {
             this->adjoint(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & conj() {
+            if(this->data_.is_complex()){
+                this->data_ = this->data_.conj();
+            }
             return *this;
         }
 
@@ -910,13 +912,7 @@ class TimeTensor {
 
         //Equal
         TimeTensor<Type> & operator=(const TimeTensor<Type> & other){
-            assert(other.data_.dim() == this->data_.dim());
-
-            // copy the data explicitly by looping over all elements
-            for(long int x = 0; x < other.data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
-            }
-
+            this->data_ = other.data_.clone();
             return *this;
         }
 
