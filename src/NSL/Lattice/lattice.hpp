@@ -55,6 +55,7 @@ class SpatialLattice {
          **/
         const NSL::Tensor<double> operator()(size_t index);
 
+        //! Gives a list of coordinates in the order of sites.
         const NSL::Tensor<double> coordinates(){
             return this->sites_;
         };
