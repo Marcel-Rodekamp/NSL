@@ -17,11 +17,11 @@ using size_type = std::size_t;
  *  \param kappa the counter-clockwise hopping amplitude
  **/
 template<typename T>
-void test_ring(const size_type & size){
+void test_ring(const size_type & size, T kappa = 1.){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);
 
-    NSL::Lattice::Ring<T> ring(size);
+    NSL::Lattice::Ring<T> ring(size, kappa);
     INFO(ring.name());
 
     REQUIRE(ring.sites() == size);
