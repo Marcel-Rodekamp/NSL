@@ -27,7 +27,9 @@ void test_ring(const size_type & size, T kappa = 1.){
     REQUIRE(ring.sites() == size);
 
     INFO(ring.coordinates());
+    //! \todo Sum up the coordinates; they should evenly surround the origin.
 
+    //  Perhaps make these their own stand-alone tests.
     //! \todo Require that adjacency^size has a diagonal of 2.
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
 }
