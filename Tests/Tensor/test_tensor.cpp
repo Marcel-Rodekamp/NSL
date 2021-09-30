@@ -116,6 +116,49 @@ void test_random_access_3D(const size_type & size0,const size_type & size1,const
 }
 
 
+template<typename Type>
+void test_assignment_1D(const size_type & size){
+    NSL::Tensor<Type> T1(size);
+    NSL::Tensor<Type> T2(size);
+
+    for(int i = 0; i < size; ++i){
+        T2(i) = static_cast<Type>(i);
+    }
+
+    T1 = T2;
+
+    for(int i = 0; i < size; ++i){
+        REQUIRE(T1(i) == static_cast<Type>(i));
+        T1(i) = static_cast<Type>(0);
+    }
+
+    // if shallow copy of NSL::tensor.operator= T2 would be 0;
+    // assignment should perform deepcopy!
+    for(int i = 0; i < size; ++i){
+        REQUIRE(T2(i) == static_cast<Type>(i));
+    }
+
+}
+
+template<typename Type>
+void test_assignment_1D(const size_type & size1, const size_type & size2){
+    NSL::Tensor<Type> T1(size1);
+    NSL::Tensor<Type> T2(size2);
+
+    for(int i = 0; i < size2; ++i){
+        T2(i) = static_cast<Type>(i);
+    }
+
+    // after this T1 is of size: size2
+    T1 = T2;
+
+    REQUIRE(T1.shape(0) == size2);
+
+    for(int i = 0; i < size2; ++i){
+        REQUIRE(T1(i) == static_cast<Type>(i));
+    }
+}
+
 
 // =============================================================================
 // Test Cases
@@ -186,7 +229,8 @@ TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
 // Random Access
 // =============================================================================
 
-TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
+
+TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D]"){
    const size_type size = GENERATE(1, 100, 200);
 
     test_random_access_1D<int>(size);
@@ -199,7 +243,7 @@ TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
     test_random_access_1D<bool>(size);
 }
 
-TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D"){
+TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D]"){
     const size_type size0 = GENERATE(1, 100, 200);
     const size_type size1 = GENERATE(1, 100, 200);
 
@@ -213,7 +257,7 @@ TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D"){
     test_random_access_2D<bool>(size0,size1);
 }
 
-TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D"){
+TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D]"){
     const size_type size0 = GENERATE(1, 10, 20);
     const size_type size1 = GENERATE(1, 10, 20);
     const size_type size2 = GENERATE(1, 10, 20);
@@ -226,4 +270,37 @@ TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D"){
     test_random_access_3D<NSL::complex<double>>(size0,size1,size2);
     // bool types
     test_random_access_3D<bool>(size0,size1,size2);
+}
+
+
+// =============================================================================
+// Assignment
+// =============================================================================
+
+
+TEST_CASE( "TENSOR: 1D Assignment", "[Tensor, Assignment, 1D]"){
+    const size_type size = GENERATE(1, 100, 200);
+
+    test_assignment_1D<int>(size);
+    // floating point types
+    test_assignment_1D<float>(size);
+    test_assignment_1D<double>(size);
+    test_assignment_1D<NSL::complex<float>>(size);
+    test_assignment_1D<NSL::complex<double>>(size);
+    // bool types
+    test_assignment_1D<bool>(size);
+}
+
+TEST_CASE( "TENSOR: 1D Assignment Different Sizes", "[Tensor, Assignment, 1D]"){
+    const size_type size1 = GENERATE(1, 100, 200);
+    const size_type size2 = GENERATE(1, 100, 200);
+
+    test_assignment_1D<int>(size1,size2);
+    // floating point types
+    test_assignment_1D<float>(size1,size2);
+    test_assignment_1D<double>(size1,size2);
+    test_assignment_1D<NSL::complex<float>>(size1,size2);
+    test_assignment_1D<NSL::complex<double>>(size1,size2);
+    // bool types
+    test_assignment_1D<bool>(size1,size2);
 }
