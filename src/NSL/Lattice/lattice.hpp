@@ -66,8 +66,11 @@ class SpatialLattice {
         size_t sites();
 
         //! Give the adjacency matrix of the lattice, 1 if the sites are connected, 0 otherwise.
-        /*
-         *  \todo change the type signature to NSL::Tensor<int>.
+        /*!
+         *  \todo change the type signature to `NSL::Tensor<int>` or `<bool>`.
+         *  `<int>` probably makes sense, because you might need to perform arithmetic
+         *  operations to deduce graph-theoretic properties.  For example
+         *  diagonal(adjacency^(all odd powers)) = 0 if the graph is bipartite.
          **/
         NSL::Tensor<Type> adjacency_matrix();
 
