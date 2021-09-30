@@ -7,7 +7,7 @@ template <typename Type>
 NSL::Lattice::SpatialLattice<Type>::SpatialLattice(
     const std::string &name,
     const NSL::Tensor<Type> &hops,
-    const std::vector<NSL::Lattice::Site> &sites
+    const NSL::Tensor<double> &sites
     ) :
     name_(name),
     hops_(hops),
@@ -17,10 +17,10 @@ NSL::Lattice::SpatialLattice<Type>::SpatialLattice(
     }
 
 template <typename Type>
-const NSL::Lattice::Site NSL::Lattice::SpatialLattice<Type>::operator()(size_t index){
+const NSL::Tensor<double> NSL::Lattice::SpatialLattice<Type>::operator()(size_t index){
     assertm( (0 <= index) && (index < this->sites()),
             "Spatial lattice site out of bounds.");
-    return this->sites_[index];
+    return this->sites_.slice(0,index,index+1,1);
 }
 
 //size_t SpatialLattice::operator()(const & NSL::Site x){
@@ -28,7 +28,7 @@ const NSL::Lattice::Site NSL::Lattice::SpatialLattice<Type>::operator()(size_t i
 //}
 
 template <typename Type>
-size_t NSL::Lattice::SpatialLattice<Type>::sites(){ return sites_.size(); }
+size_t NSL::Lattice::SpatialLattice<Type>::sites(){ return sites_.shape(0); }
 
 template <typename Type>
 NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::adjacency_matrix(){

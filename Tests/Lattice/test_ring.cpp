@@ -20,7 +20,7 @@ void test_ring(const size_type & size){
     //! \bug yields `SIGABRT - Abort (abnormal termination) signal`
     // I think it's that the Site.coordinates = calculated coordinates
     // in the Lattice::Ring constructor isn't handled correctly.
-    INFO(ring(0).coordinates)
+    INFO(ring.coordinates());
 
     // Require that adjacency^size has a diagonal of 2.
 }

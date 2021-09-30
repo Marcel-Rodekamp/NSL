@@ -21,9 +21,9 @@ namespace NSL::Lattice {
 /*! A class to hold information about each site in a lattice.
  *      In the future, might contain the geometric location (for example).
  **/
-struct Site{
-    NSL::Tensor<double> coordinates;
-}; // Site
+
+//template<typename Type = double>
+//using Site = NSL::Tensor<Type>;
 
 /*! A base class for spatial lattices (ie. finite graphs of Sites).
  *      Offers a variety of default methods, which might be overridden by
@@ -47,13 +47,17 @@ class SpatialLattice {
          *  \param hops  a sparse or dense matrix of hopping amplitudes.
          *  \param sites a vector of sites; the indices match those in `hops`.
          **/
-        SpatialLattice(const std::string & name, const NSL::Tensor<Type> & hops, const std::vector<NSL::Lattice::Site> & sites);
+        SpatialLattice(const std::string & name, const NSL::Tensor<Type> & hops, const NSL::Tensor<double> & sites);
 
         /*!
          *  \param index is a linear index into the vector of sites in the lattice.
          *  \returns a Site in the lattice.
          **/
-        const NSL::Lattice::Site operator()(size_t index);
+        const NSL::Tensor<double> operator()(size_t index);
+
+        const NSL::Tensor<double> coordinates(){
+            return this->sites_;
+        };
 
         // size_t operator()(const & NSL::Site x);
 
@@ -89,7 +93,7 @@ class SpatialLattice {
         //! The hopping matrix.
         NSL::Tensor<Type> hops_;
         //! The sites connectd by the hopping amplitudes.
-        std::vector<NSL::Lattice::Site> sites_;
+        NSL::Tensor<double> sites_;
         //! Since exponentiating can be costly, a place to memoize results.
         std::map<double,NSL::Tensor<Type>> exp_hopping_matrix_;
 
