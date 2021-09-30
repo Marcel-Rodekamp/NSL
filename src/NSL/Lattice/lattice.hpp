@@ -60,7 +60,7 @@ class SpatialLattice {
             return this->sites_;
         };
 
-        // size_t operator()(const & NSL::Site x);
+        // size_t operator()(const NSL::Tensor<double> &x);
 
         //! Gives the number of spatial sites.
         size_t sites();
