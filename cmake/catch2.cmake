@@ -6,5 +6,5 @@ FetchContent_MakeAvailable(
         Catch2
 )
 
-target_link_libraries(NSL_TEST INTERFACE Catch2::Catch2)
-target_link_libraries(NSL_BENCHMARK INTERFACE Catch2::Catch2)
+target_link_libraries(NSL_TEST Catch2::Catch2)
+target_link_libraries(NSL_BENCHMARK Catch2::Catch2)
