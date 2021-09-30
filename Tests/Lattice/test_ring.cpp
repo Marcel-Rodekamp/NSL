@@ -23,7 +23,8 @@ void test_ring(const size_type & size){
 
     INFO(ring.coordinates());
 
-    // Require that adjacency^size has a diagonal of 2.
+    //! \todo Require that adjacency^size has a diagonal of 2.
+    //! \todo Require that FT * hopping * FT† is diagonal and sensible.
 }
 
 // =============================================================================
@@ -46,6 +47,7 @@ TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
     // floating point types
     test_ring<float>(size);
     test_ring<double>(size);
+    //! \todo add tests of complex amplitudes
     // NOTE: no complex<type>s 
     // because the hopping amplitude
     // wouldn't be hermitian, which is required.
