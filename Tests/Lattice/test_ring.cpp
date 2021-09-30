@@ -6,11 +6,16 @@
 
 
 /*! \file test_ring.cpp
-*/
+ *  Test the `Lattice::Ring` implementation.
+ */
 
-// Torch requirement
+//! Torch requirement
 using size_type = std::size_t;
 
+/*!
+ *  \param size the number of sites
+ *  \param kappa the counter-clockwise hopping amplitude
+ **/
 template<typename T>
 void test_ring(const size_type & size){
     INFO("Type = " << typeid(T).name());
