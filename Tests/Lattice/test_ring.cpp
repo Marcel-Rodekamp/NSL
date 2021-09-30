@@ -4,6 +4,10 @@
 #include <typeinfo>
 #include "Lattice/Implementations/ring.hpp"
 
+
+/*! \file test_ring.cpp
+*/
+
 // Torch requirement
 using size_type = std::size_t;
 
@@ -17,9 +21,6 @@ void test_ring(const size_type & size){
 
     REQUIRE(ring.sites() == size);
 
-    //! \bug yields `SIGABRT - Abort (abnormal termination) signal`
-    // I think it's that the Site.coordinates = calculated coordinates
-    // in the Lattice::Ring constructor isn't handled correctly.
     INFO(ring.coordinates());
 
     // Require that adjacency^size has a diagonal of 2.

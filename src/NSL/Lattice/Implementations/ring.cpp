@@ -1,6 +1,9 @@
 #ifndef NSL_LATTICE_RING_CPP
 #define NSL_LATTICE_RING_CPP
 
+/*! \file ring.cpp
+*/
+
 #include <cmath>
 
 #include "../../Tensor/tensor.hpp"
@@ -18,7 +21,7 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
                 NSL::Tensor<double>(n,3)
         )
 {
-    //! \todo: use a better pi
+    //! \todo use a better pi
     double theta = 2*3.14159265358979 / n;
 
     for(int i = 0; i < n; ++i) {
