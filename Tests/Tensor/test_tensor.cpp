@@ -169,59 +169,25 @@ void test_assignment_1D(const size_type & size1, const size_type & size2){
 // Constructors
 // =============================================================================
 
-// short int                Not Supported by torch
-//unsigned short int        Not Supported by torch
-//unsigned int              Not Supported by torch
-//size_type                  Not Supported by torch
-//unsigned size_type         Not Supported by torch
-//long size_type             Not Supported by torch
-//unsigned long size_type    Not Supported by torch
-//long double               Not Supported by torch
-//NSL::complex<int>         Not Supported by torch
-
-TEST_CASE( "TENSOR: 1D Constructor", "[Tensor,Constructor,1D]" ) {
+NSL_TEST_CASE( "TENSOR: 1D Constructor", "[Tensor,Constructor,1D]" ) {
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
 
-    // int type
-    test_constructor<int>(size);
-    // floating point types
-    test_constructor<float>(size);
-    test_constructor<double>(size);
-    test_constructor<NSL::complex<float>>(size);
-    test_constructor<NSL::complex<double>>(size);
-    // bool types
-    test_constructor<bool>(size);
+    test_constructor<TestType>(size);
 }
 
-TEST_CASE( "TENSOR: 2D Constructor", "[Tensor,Constructor,2D]" ) {
+NSL_TEST_CASE( "TENSOR: 2D Constructor", "[Tensor,Constructor,2D]" ) {
     const size_type size0 = GENERATE(1, 100, 200);
     const size_type size1 = GENERATE(1, 100, 200);
 
-    // int type
-    test_constructor<int>(size0,size1);
-    // floating point types
-    test_constructor<float>(size0,size1);
-    test_constructor<double>(size0,size1);
-    test_constructor<NSL::complex<float>>(size0,size1);
-    test_constructor<NSL::complex<double>>(size0,size1);
-    // bool types
-    test_constructor<bool>(size0,size1);
+    test_constructor<TestType>(size0,size1);
 }
 
-TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
+NSL_TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
     const size_type size0 = GENERATE(1, 100, 200);
     const size_type size1 = GENERATE(1, 100, 200);
     const size_type size2 = GENERATE(1, 100, 200);
 
-    // int type
-    test_constructor<int>(size0,size1,size2);
-    // floating point types
-    test_constructor<float>(size0,size1,size2);
-    test_constructor<double>(size0,size1,size2);
-    test_constructor<NSL::complex<float>>(size0,size1,size2);
-    test_constructor<NSL::complex<double>>(size0,size1,size2);
-    // bool types
-    test_constructor<bool>(size0,size1,size2);
+    test_constructor<TestType>(size0,size1,size2);
 }
 
 
@@ -229,27 +195,20 @@ TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
 // Random Access
 // =============================================================================
 
-
-TORCH_TYPE_TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
+NSL_TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
    const size_type size = GENERATE(1, 100, 200);
 
     test_random_access_1D<TestType>(size);
 }
 
-TEMPLATE_TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D",
-    TORCH_TYPES)
-{
+NSL_TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D"){
     const size_type size0 = GENERATE(1, 100, 200);
     const size_type size1 = GENERATE(1, 100, 200);
 
     test_random_access_2D<TestType>(size0,size1);
 }
 
-TEMPLATE_TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D", 
-    int,
-    FLOATING_POINT_TYPES,
-    bool)
-{
+NSL_TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D"){
     const size_type size0 = GENERATE(1, 10, 20);
     const size_type size1 = GENERATE(1, 10, 20);
     const size_type size2 = GENERATE(1, 10, 20);
