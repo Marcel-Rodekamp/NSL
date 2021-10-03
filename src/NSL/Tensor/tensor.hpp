@@ -115,28 +115,42 @@ class Tensor {
             return data_.data_ptr<Type>()[linearIndex_(indices...)];
         }
 
+        //! Random Access operator
+        /*!
+         *  * `const Args &... indices`: parameter pack, indices of the tensor
+         *      * Args must be integer type e.g.: `int`, `size_t`,...
+         *
+         *  \n
+         *  Behavior:\n
+         *  each index in parameter pack `indices` corresponds to the index
+         *
+         * */
         template<typename ...Args>
         constexpr Type & operator()(const Args &... indices) const {
-            static_assert(NSL::all_convertible<size_t, Args...>::value,
-                          "NSL::Tensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-            ); // static_assert
-            // need data_.dim() arguments!
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+        static_assert(NSL::all_convertible<size_t, Args...>::value,
+                      "NSL::Tensor::operator()(const Args &... indices) can only be called with arguments of integer type"
+        ); // static_assert
+        // need data_.dim() arguments!
+        assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
+        assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
 
-            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
+        // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
+        return data_.data_ptr<Type>()[linearIndex_(indices...)];
 
-        }
+    }
 
+        //! Explicitly access the torch::Tensor
+        /*! \todo: Add Documentation*/
         friend torch::Tensor to_torch(const Tensor<Type> & other) {
             return other.data_;
         }
 
+        //! Access the underlying pointer (CPU only)
         constexpr Type * data(){
             return data_.data_ptr<Type>();
         }
 
+        //! Access the underlying pointer (CPU only)
         constexpr Type * data() const {
             return data_.data_ptr<Type>();
         }
@@ -146,11 +160,15 @@ class Tensor {
         // Slice Operation
         // =====================================================================
 
+        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
+        /*! \todo: Add Documentation*/
         constexpr Tensor<Type,RealType> & slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1){
             torch::Tensor && slice = data_.slice(dim,start,end,step);
             return std::move(Tensor<Type>(slice));
         }
 
+        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
+        /*! \todo: Add Documentation*/
         constexpr Tensor<Type,RealType> & slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1) const {
             torch::Tensor && slice = data_.slice(dim,start,end,step);
             return Tensor<Type>(slice);
