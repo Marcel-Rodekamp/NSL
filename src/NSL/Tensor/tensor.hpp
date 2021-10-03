@@ -263,15 +263,6 @@ class Tensor {
             return (os << T.data_);
         }
 
-        //Print tensor.
-        void print () const{
-            std::cout<<data_ <<std::endl;
-        }
-
-        //Print tensor complex.
-        void print_complex () const{
-            std::cout<< torch::view_as_real(data_)<<std::endl;
-        }
 
         // =====================================================================
         // Shape and dimension
