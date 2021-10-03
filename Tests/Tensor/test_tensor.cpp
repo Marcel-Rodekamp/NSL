@@ -15,7 +15,7 @@ void test_constructor(const Tsize &... size){
     // Note: Requires conversion from int to type T
 
     NSL::Tensor<T> Tr(size...);
-    REQUIRE(Tr == 0);
+    REQUIRE((Tr == 0).all());
 }
 
 template<typename T>
