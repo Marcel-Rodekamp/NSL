@@ -116,6 +116,49 @@ void test_random_access_3D(const size_type & size0,const size_type & size1,const
 }
 
 
+template<typename Type>
+void test_assignment_1D(const size_type & size){
+    NSL::Tensor<Type> T1(size);
+    NSL::Tensor<Type> T2(size);
+
+    for(int i = 0; i < size; ++i){
+        T2(i) = static_cast<Type>(i);
+    }
+
+    T1 = T2;
+
+    for(int i = 0; i < size; ++i){
+        REQUIRE(T1(i) == static_cast<Type>(i));
+        T1(i) = static_cast<Type>(0);
+    }
+
+    // if shallow copy of NSL::tensor.operator= T2 would be 0;
+    // assignment should perform deepcopy!
+    for(int i = 0; i < size; ++i){
+        REQUIRE(T2(i) == static_cast<Type>(i));
+    }
+
+}
+
+template<typename Type>
+void test_assignment_1D(const size_type & size1, const size_type & size2){
+    NSL::Tensor<Type> T1(size1);
+    NSL::Tensor<Type> T2(size2);
+
+    for(int i = 0; i < size2; ++i){
+        T2(i) = static_cast<Type>(i);
+    }
+
+    // after this T1 is of size: size2
+    T1 = T2;
+
+    REQUIRE(T1.shape(0) == size2);
+
+    for(int i = 0; i < size2; ++i){
+        REQUIRE(T1(i) == static_cast<Type>(i));
+    }
+}
+
 
 // =============================================================================
 // Test Cases
@@ -185,6 +228,7 @@ TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
 // =============================================================================
 // Random Access
 // =============================================================================
+
 
 TORCH_TYPE_TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
    const size_type size = GENERATE(1, 100, 200);

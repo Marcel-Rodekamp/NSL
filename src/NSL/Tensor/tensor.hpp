@@ -45,7 +45,9 @@ class Tensor {
 
     public:
         //Default constructor not required
-        constexpr explicit Tensor() = delete;
+        constexpr explicit Tensor() :
+            data_(torch::zeros({0},torch::TensorOptions().dtype<Type>()))
+        {}
 
         //! D-dimensional constructor.
 
@@ -95,7 +97,7 @@ class Tensor {
 
         //Fill with random values
         Tensor<Type> & rand(){
-            this->data_ = torch::rand_like(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
+            this->data_ = torch::rand_like(this->data_);
             return (*this);
         }
 
@@ -121,6 +123,7 @@ class Tensor {
             // need data_.dim() arguments!
             assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
             assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+            // ToDo check indices < shapes!
 
             // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
             return data_.data_ptr<Type>()[linearIndex_(indices...)];
@@ -194,6 +197,22 @@ class Tensor {
 
         constexpr Type * data() const {
             return data_.data_ptr<Type>();
+        }
+
+        Tensor<Type> real(){
+            return NSL::Tensor<Type>(torch::real(data_));
+        }
+
+        Tensor<Type> real() const {
+            return NSL::Tensor<Type>(torch::real(data_));
+        }
+
+        Tensor<Type> imag(){
+            return NSL::Tensor<Type>(torch::imag(data_));
+        }
+
+        Tensor<Type> imag() const {
+            return NSL::Tensor<Type>(torch::imag(data_));
         }
 
         // =====================================================================
@@ -281,7 +300,6 @@ class Tensor {
             return *this;
         }
 
-
         Tensor<Type> & sum(const NSL::Tensor<Type> & other){
             assert(other.data_.sizes() == this->data_.sizes());
             for(long int x = 0; x < this->data_.numel(); ++x){
@@ -289,7 +307,6 @@ class Tensor {
             }
             return *this;
         }
-
 
         //Sum by a scalar.
         Tensor<Type> operator+(const Type & factor){
@@ -306,7 +323,6 @@ class Tensor {
             }
             return *this;
         }
-
 
         Tensor<Type> & sum(const Type & factor){
             for(long int x = 0; x < this->data_.numel(); ++x){
@@ -365,17 +381,9 @@ class Tensor {
             return *this;
         }
 
-
-
         //Equal
         Tensor<Type> & operator=(const Tensor<Type> & other){
-            assert(other.data_.dim() == this->data_.dim());
-
-            // copy the data explicitly by looping over all elements
-            for(long int x = 0; x < other.data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
-            }
-
+            this->data_ = other.data_.clone();
             return *this;
         }
         // =====================================================================
@@ -458,6 +466,51 @@ class Tensor {
             return *this;
         }
 
+        //Matrix exponential.
+        Tensor<Type> & mat_exp() {
+            data_ = data_.matrix_exp();
+            return *this;
+        }
+
+        // =====================================================================
+        // Determinant
+        // =====================================================================
+
+        // Other .member functions are mutations which change .data_.
+        // Since .det and .logdet shouldn't do that, they go in LinAlg.
+
+        // =====================================================================
+        // Transpose + Adjoint
+        // =====================================================================
+
+        // TODO: transpose (and maybe adjoint) could be a view?
+
+        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & transpose() {
+            this->transpose(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1).conj();
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint() {
+            this->adjoint(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & conj() {
+            if(this->data_.is_complex()){
+                this->data_ = this->data_.conj();
+            }
+            return *this;
+        }
 
         // =====================================================================
         // Expand
@@ -546,8 +599,10 @@ class TimeTensor {
         }
 
     public:
-        //Default constructor.
-        constexpr explicit TimeTensor() = default;
+        //Default constructor
+        constexpr explicit TimeTensor() :
+            data_(torch::zeros({},torch::TensorOptions().dtype<Type>()))
+        {}
 
         //Construct with N dimensions
         template<typename... ArgsT>
@@ -677,6 +732,21 @@ class TimeTensor {
             return data_.data_ptr<Type>();
         }
 
+        TimeTensor<Type> real(){
+            return NSL::TimeTensor<Type>(torch::real(data_));
+        }
+
+        TimeTensor<Type> real() const {
+            return NSL::TimeTensor<Type>(torch::real(data_));
+        }
+
+        TimeTensor<Type> imag(){
+            return NSL::TimeTensor<Type>(torch::imag(data_));
+        }
+
+        TimeTensor<Type> imag() const {
+            return NSL::TimeTensor<Type>(torch::imag(data_));
+        }
 
         // =====================================================================
         // Slice Operation
@@ -842,13 +912,7 @@ class TimeTensor {
 
         //Equal
         TimeTensor<Type> & operator=(const TimeTensor<Type> & other){
-            assert(other.data_.dim() == this->data_.dim());
-
-            // copy the data explicitly by looping over all elements
-            for(long int x = 0; x < other.data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = other.data_.template data_ptr<Type>()[x];
-            }
-
+            this->data_ = other.data_.clone();
             return *this;
         }
 

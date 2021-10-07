@@ -42,28 +42,6 @@ namespace NSL{
         }
 
         // =====================================================================
-        // Exponential
-        // =====================================================================
-
-        //exponential(tensor)
-        template<typename Type>
-        NSL::Tensor<Type> exp (Tensor<Type> & tensor){
-            NSL::Tensor<Type> aux;
-            aux.copy(tensor);
-            aux.exp();
-            return aux;
-        }
-
-        //exponential(Timetensor)
-        template<typename Type>
-        NSL::TimeTensor<Type> exp (TimeTensor<Type> & tensor){
-            NSL::TimeTensor<Type> aux;
-            aux.copy(tensor);
-            aux.exp();
-            return aux;
-        }
-
-        // =====================================================================
         // Expansion
         // =====================================================================
 
