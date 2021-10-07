@@ -1,5 +1,5 @@
 #include <complex>
-#include "catch2/catch.hpp"
+#include "../test.hpp"
 #include "Tensor/tensor.hpp"
 #include <typeinfo>
 
@@ -230,77 +230,29 @@ TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
 // =============================================================================
 
 
-TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D]"){
+TORCH_TYPE_TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
    const size_type size = GENERATE(1, 100, 200);
 
-    test_random_access_1D<int>(size);
-    // floating point types
-    test_random_access_1D<float>(size);
-    test_random_access_1D<double>(size);
-    test_random_access_1D<NSL::complex<float>>(size);
-    test_random_access_1D<NSL::complex<double>>(size);
-    // bool types
-    test_random_access_1D<bool>(size);
+    test_random_access_1D<TestType>(size);
 }
 
-TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D]"){
+TEMPLATE_TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D",
+    TORCH_TYPES)
+{
     const size_type size0 = GENERATE(1, 100, 200);
     const size_type size1 = GENERATE(1, 100, 200);
 
-    test_random_access_2D<int>(size0,size1);
-    // floating point types
-    test_random_access_2D<float>(size0,size1);
-    test_random_access_2D<double>(size0,size1);
-    test_random_access_2D<NSL::complex<float>>(size0,size1);
-    test_random_access_2D<NSL::complex<double>>(size0,size1);
-    // bool types
-    test_random_access_2D<bool>(size0,size1);
+    test_random_access_2D<TestType>(size0,size1);
 }
 
-TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D]"){
+TEMPLATE_TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D", 
+    int,
+    FLOATING_POINT_TYPES,
+    bool)
+{
     const size_type size0 = GENERATE(1, 10, 20);
     const size_type size1 = GENERATE(1, 10, 20);
     const size_type size2 = GENERATE(1, 10, 20);
 
-    test_random_access_3D<int>(size0,size1,size2);
-    // floating point types
-    test_random_access_3D<float>(size0,size1,size2);
-    test_random_access_3D<double>(size0,size1,size2);
-    test_random_access_3D<NSL::complex<float>>(size0,size1,size2);
-    test_random_access_3D<NSL::complex<double>>(size0,size1,size2);
-    // bool types
-    test_random_access_3D<bool>(size0,size1,size2);
-}
-
-
-// =============================================================================
-// Assignment
-// =============================================================================
-
-
-TEST_CASE( "TENSOR: 1D Assignment", "[Tensor, Assignment, 1D]"){
-    const size_type size = GENERATE(1, 100, 200);
-
-    test_assignment_1D<int>(size);
-    // floating point types
-    test_assignment_1D<float>(size);
-    test_assignment_1D<double>(size);
-    test_assignment_1D<NSL::complex<float>>(size);
-    test_assignment_1D<NSL::complex<double>>(size);
-    // bool types
-    test_assignment_1D<bool>(size);
-}
-
-TEST_CASE( "TENSOR: 1D Assignment Different Sizes", "[Tensor, Assignment, 1D]"){
-    const size_type size1 = GENERATE(1, 100, 200);
-    const size_type size2 = GENERATE(1, 100, 200);
-
-    test_assignment_1D<int>(size1,size2);
-    // floating point types
-    test_assignment_1D<float>(size1,size2);
-    test_assignment_1D<double>(size1,size2);
-    test_assignment_1D<NSL::complex<float>>(size1,size2);
-    test_assignment_1D<NSL::complex<double>>(size1,size2);
-    // bool types
-    test_assignment_1D<bool>(size1,size2);
+    test_random_access_3D<TestType>(size0,size1,size2);
 }
