@@ -28,15 +28,32 @@ NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vec
 
     std::size_t copies = 1;
     std::size_t run = sites;
+    // We set up the list of sites so that the 0th dimension is slowest
+    // and the last dimension is fastest.  If we knew ahead of time how
+    // many dimensions we'd be given, that'd be quite simple: we'd just 
+    // hard-code the loops.  Instead, with a generic implementation we
+    // need to think more generally.
+    //
+    // We'll fill in each coordinate dimension-by-dimension.
     for(std::size_t d = 0; d < dimensions; ++d) {
+    // In each dimension, the speed of the coordinate gets faster,
         run /= n[d];
+    // and we require more copies---more loops over the values of the
+    // coordinates.
         for(std::size_t copy = 0; copy < copies; ++copy){
+    // For each copy, loop over the values of the coordinates
             for(std::size_t x = 0; x < n[d]; ++x) {
+    // and repeat each coordinate some number of times.
                 for(std::size_t repeat=0; repeat < run; ++repeat){
+                    // There is a lot of magic in the first index.
+                    // copy*run*n[d] fast-forwards past previous copies,
+                    // x*run fast-forwards past smaller coordinates in this copy
+                    // repeat iterates across all the repetitions
                     coordinates(copy*run*n[d]+x*run + repeat, d) = x;
                 }
             }
         }
+    // Finally, the next dimension goes faster, so we need more copies.
         copies *= n[d];
     }
     return coordinates;
