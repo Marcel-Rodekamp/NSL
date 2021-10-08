@@ -76,9 +76,12 @@ NSL::Lattice::Square<Type>::Square(const std::vector<std::size_t> n):
         }
     }
 
-    for (int i = 0; i < sites; ++i) {
-        this->hops_(i,i) = 0;
-        // this->hops_(i, i + 1) = kappa;
+    for (int i = 0; i < sites; ++i){
+        for (int j = i; j < sites; ++j){
+            //! todo: properly determine nearest-neighbors
+            this->hops_(i,j) = 0;
+            this->hops_(j,i) = 0;
+        }
     }
 
 }
