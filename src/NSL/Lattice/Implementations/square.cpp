@@ -60,7 +60,11 @@ NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vec
 }
 
 template<typename Type>
-NSL::Lattice::Square<Type>::Square(const std::vector<std::size_t> n):
+NSL::Lattice::Square<Type>::Square(
+            const std::vector<std::size_t> n,
+            const Type & kappa,
+            const double spacing
+            ):
         NSL::Lattice::SpatialLattice<Type>(
                 "Square()",    //! todo: stringify
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
@@ -68,15 +72,34 @@ NSL::Lattice::Square<Type>::Square(const std::vector<std::size_t> n):
         ),
         integers_(integer_coordinates_(n))
 {
+    std::vector<Type> kappas(n.size());
+    for(std::size_t i=0; i < kappas.size(); ++i){
+        kappas[i] = kappa;
+    }
+
+    std::vector<double> spacings(n.size());
+    for(std::size_t i=0; i < spacings.size(); ++i){
+        spacings[i] = spacing;
+    }
+
+    this->init_(n, kappas, spacings);
+}
+
+template<typename Type>
+void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
+                   const std::vector<Type> &kappa,
+                   const std::vector<double> spacings)
+{
     for(int i = 0; i < this->sites(); ++i) {
         for(int d = 0; d < n.size(); ++d) {
-            this->sites_(i,d) = this->integers_(i,d);
+            this->sites_(i,d) = spacings[d] * this->integers_(i,d);
         }
     }
 
     for (int i = 0; i < this->sites(); ++i){
         for (int j = i; j < this->sites(); ++j){
             //! todo: properly determine nearest-neighbors
+            // depends on direction-dependent kappa
             this->hops_(i,j) = 0;
             this->hops_(j,i) = 0;
         }
