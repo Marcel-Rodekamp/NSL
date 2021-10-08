@@ -65,19 +65,17 @@ NSL::Lattice::Square<Type>::Square(const std::vector<std::size_t> n):
                 "Square()",    //! todo: stringify
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
-        )
+        ),
+        integers_(integer_coordinates_(n))
 {
-    this->integers_ = this->integer_coordinates_(n);
-    auto sites = this->n_to_sites_(n);
-
-    for(int i = 0; i < sites; ++i) {
+    for(int i = 0; i < this->sites(); ++i) {
         for(int d = 0; d < n.size(); ++d) {
             this->sites_(i,d) = this->integers_(i,d);
         }
     }
 
-    for (int i = 0; i < sites; ++i){
-        for (int j = i; j < sites; ++j){
+    for (int i = 0; i < this->sites(); ++i){
+        for (int j = i; j < this->sites(); ++j){
             //! todo: properly determine nearest-neighbors
             this->hops_(i,j) = 0;
             this->hops_(j,i) = 0;
