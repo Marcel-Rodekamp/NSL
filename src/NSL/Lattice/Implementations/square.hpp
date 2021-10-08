@@ -19,9 +19,11 @@ class Square: public NSL::Lattice::SpatialLattice<Type> {
         // explicit Square(const std::vector<std::size_t> n, const std::vector<double> spacings);
         // explicit Square(const std::vector<std::size_t> n, const std::vector<double> spacings, const std::vector<NSL::Lattice::Boundary> condition);
 
+    protected:
+        NSL::Tensor<int> integers_;
     private:
-        static inline std::size_t n_to_sites(const std::vector<std::size_t> &n);
-        static NSL::Tensor<int> integer_coordinates(const std::vector<std::size_t> &n);
+        static inline std::size_t n_to_sites_(const std::vector<std::size_t> &n);
+        static NSL::Tensor<int> integer_coordinates_(const std::vector<std::size_t> &n);
 };
 
 } // namespace NSL

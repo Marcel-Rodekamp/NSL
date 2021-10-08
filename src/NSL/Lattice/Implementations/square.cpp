@@ -14,15 +14,15 @@
 namespace NSL::Lattice {
 
 template<typename Type>
-inline std::size_t NSL::Lattice::Square<Type>::n_to_sites(const std::vector<std::size_t> &n){
+inline std::size_t NSL::Lattice::Square<Type>::n_to_sites_(const std::vector<std::size_t> &n){
     std::size_t volume=1;
     for(const auto& value: n) volume *= value;
     return volume;
 }
 
 template<typename Type>
-NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates(const std::vector<std::size_t> &n){
-    std::size_t sites = NSL::Lattice::Square<Type>::n_to_sites(n);
+NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vector<std::size_t> &n){
+    std::size_t sites = NSL::Lattice::Square<Type>::n_to_sites_(n);
     std::size_t dimensions = n.size();
     NSL::Tensor<int> coordinates(sites, dimensions);
 
@@ -46,17 +46,16 @@ template<typename Type>
 NSL::Lattice::Square<Type>::Square(const std::vector<std::size_t> n):
         NSL::Lattice::SpatialLattice<Type>(
                 "Square()",    //! todo: stringify
-                NSL::Tensor<Type>(64, 64),
-                NSL::Tensor<double>(64, 4)
-                //NSL::Tensor<Type>(this->n_to_sites(n), this->n_to_sites(n)),
-                //NSL::Tensor<double>(this->n_to_sites(n), n.size())
+                NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
+                NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         )
 {
-    auto sites = this->n_to_sites(n);
-    NSL::Tensor<int> x = this->integer_coordinates(n);
+    this->integers_ = this->integer_coordinates_(n);
+    auto sites = this->n_to_sites_(n);
+
     for(int i = 0; i < sites; ++i) {
         for(int d = 0; d < n.size(); ++d) {
-            this->sites_(i,d) = x(i,d);
+            this->sites_(i,d) = this->integers_(i,d);
         }
     }
 
