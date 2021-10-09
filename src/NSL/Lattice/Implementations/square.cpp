@@ -115,6 +115,8 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
                 // depends on direction-dependent kappa
                 this->hops_(i,j) = kappa[dim];
                 //! todo The following should REALLY be conj(kappa[dim])
+                // fixing this correctly may require tracking more carefully
+                // whether diff == +1 or -1
                 this->hops_(j,i) = kappa[dim];
             }
         }
