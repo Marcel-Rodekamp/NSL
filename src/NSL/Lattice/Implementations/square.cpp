@@ -6,6 +6,7 @@
 
 #include <cmath>
 
+#include "../../assert.hpp"
 #include "../../Tensor/tensor.hpp"
 #include "../lattice.hpp"
 #include "square.hpp"
@@ -101,10 +102,21 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
 
     for (int i = 0; i < this->sites(); ++i){
         for (int j = i; j < this->sites(); ++j){
-            //! todo: properly determine nearest-neighbors
-            // depends on direction-dependent kappa
-            this->hops_(i,j) = 0;
-            this->hops_(j,i) = 0;
+            // This does NOT handle periodic boundary conditions.
+            std::size_t same = 0;
+            std::size_t adjacent = 0;
+            std::size_t dim = -1;
+            for(int d = 0; d < n.size(); ++d){
+                int diff = this->integers_(i,d)-this->integers_(j,d);
+                if( diff == 0 ) {same+=1;}
+                if( diff == +1 || diff == -1) {adjacent+=1; dim=d;}
+            }
+            if(adjacent == 1 && same + 1 == n.size() ){
+                // depends on direction-dependent kappa
+                this->hops_(i,j) = kappa[dim];
+                //! todo The following should REALLY be conj(kappa[dim])
+                this->hops_(j,i) = kappa[dim];
+            }
         }
     }
 
