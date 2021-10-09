@@ -90,6 +90,9 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
                    const std::vector<Type> &kappa,
                    const std::vector<double> spacings)
 {
+    assertm(n.size() == kappa.size(), "hopping amplitudes and dimension mismatch");
+    assertm(n.size() == spacings.size(), "lattice spacings and dimension mismatch");
+
     for(int i = 0; i < this->sites(); ++i) {
         for(int d = 0; d < n.size(); ++d) {
             this->sites_(i,d) = spacings[d] * this->integers_(i,d);
