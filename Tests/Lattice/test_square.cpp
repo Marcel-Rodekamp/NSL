@@ -30,6 +30,7 @@ void test_square(const std::vector<size_type> & size, T kappa = 1.){
     REQUIRE(lattice.sites() == volume);
 
     //INFO(lattice.coordinates());
+    //INFO(lattice.adjacency_matrix());
     //! \todo Sum up the coordinates; they should evenly surround the origin.
 
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
@@ -40,6 +41,21 @@ void test_square(const std::vector<size_type> & size, T kappa = 1.){
 // =============================================================================
 // Test Cases
 // =============================================================================
+
+TEST_CASE( "Lattice: 1D Square", "[Lattice, Square, 1D]" ) {
+    const size_type d0 = GENERATE(2, 4, 8, 16);
+
+    std::vector<size_type> n(1);
+    n[0] = d0;
+    // floating point types
+    test_square<float>(n);
+    //! \todo add tests of complex amplitudes
+    // NOTE: no complex<type>s 
+    // because the hopping amplitude
+    // wouldn't be hermitian, which is required.
+    // A (generic) FIX would require a complex conjugation 
+    // on real float, double for Square::hops_.
+}
 
 TEST_CASE( "Lattice: 2D Square", "[Lattice, Square, 2D]" ) {
     const size_type d0 = GENERATE(2, 3, 4, 8, 16);
