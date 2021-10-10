@@ -18,13 +18,6 @@
 
 namespace NSL::Lattice {
 
-/*! A class to hold information about each site in a lattice.
- *      In the future, might contain the geometric location (for example).
- **/
-
-//template<typename Type = double>
-//using Site = NSL::Tensor<Type>;
-
 /*! A base class for spatial lattices (ie. finite graphs of Sites).
  *      Offers a variety of default methods, which might be overridden by
  *      children classes (if, for example, there is a more direct / stable 

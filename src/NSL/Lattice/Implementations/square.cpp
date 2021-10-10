@@ -62,6 +62,48 @@ NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vec
 
 template<typename Type>
 NSL::Lattice::Square<Type>::Square(
+// All vector
+            const std::vector<std::size_t> n,
+            const std::vector<Type> & kappas,
+            const std::vector<double> spacings
+            ):
+        NSL::Lattice::SpatialLattice<Type>(
+                "Square()",    //! todo: stringify
+                NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
+                NSL::Tensor<double>(this->n_to_sites_(n), n.size())
+        ),
+        dimensions_(n),
+        integers_(integer_coordinates_(n))
+{
+    this->init_(n, kappas, spacings);
+}
+
+template<typename Type>
+NSL::Lattice::Square<Type>::Square(
+// scalar spacing
+            const std::vector<std::size_t> n,
+            const std::vector<Type> &kappas,
+            const double spacing
+            ):
+        NSL::Lattice::SpatialLattice<Type>(
+                "Square()",    //! todo: stringify
+                NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
+                NSL::Tensor<double>(this->n_to_sites_(n), n.size())
+        ),
+        dimensions_(n),
+        integers_(integer_coordinates_(n))
+{
+    std::vector<double> spacings(n.size());
+    for(std::size_t i=0; i < spacings.size(); ++i){
+        spacings[i] = spacing;
+    }
+
+    this->init_(n, kappas, spacings);
+}
+
+template<typename Type>
+NSL::Lattice::Square<Type>::Square(
+// scalar kappa and spacing
             const std::vector<std::size_t> n,
             const Type & kappa,
             const double spacing
@@ -71,6 +113,7 @@ NSL::Lattice::Square<Type>::Square(
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         ),
+        dimensions_(n),
         integers_(integer_coordinates_(n))
 {
     std::vector<Type> kappas(n.size());
@@ -85,6 +128,30 @@ NSL::Lattice::Square<Type>::Square(
 
     this->init_(n, kappas, spacings);
 }
+
+template<typename Type>
+NSL::Lattice::Square<Type>::Square(
+// scalar kappa
+            const std::vector<std::size_t> n,
+            const Type & kappa,
+            const std::vector<double> spacings
+            ):
+        NSL::Lattice::SpatialLattice<Type>(
+                "Square()",    //! todo: stringify
+                NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
+                NSL::Tensor<double>(this->n_to_sites_(n), n.size())
+        ),
+        dimensions_(n),
+        integers_(integer_coordinates_(n))
+{
+    std::vector<Type> kappas(n.size());
+    for(std::size_t i=0; i < kappas.size(); ++i){
+        kappas[i] = kappa;
+    }
+
+    this->init_(n, kappas, spacings);
+}
+
 
 template<typename Type>
 void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
