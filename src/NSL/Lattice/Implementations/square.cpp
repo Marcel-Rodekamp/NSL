@@ -84,7 +84,7 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
             std::size_t adjacent = 0;
             std::size_t dim = -1;
             for(int d = 0; d < n.size(); ++d){
-                int diff = this->integers_(i,d)-this->integers_(j,d);
+                int diff = this->integers_(j,d)-this->integers_(i,d);
                 if( diff == 0 ) {same+=1;}
                 if( diff == +1 || diff == -1) {adjacent+=1; dim=d;}
             }
