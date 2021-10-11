@@ -66,5 +66,27 @@ class Square: public NSL::Lattice::SpatialLattice<Type> {
                    const std::vector<double> spacings);
 };
 
+/*! Sites evenly spaced in 3D on orthogonal coorinates, starting at (0,0,0),
+ *  with equal hopping amplitude and lattice spacing in each direction.
+ **/
+template <typename Type>
+class Cube3D: public NSL::Lattice::Square<Type> {
+    public:
+        /*!
+         *  \param n the number of sites in each direction
+         *  \param kappa a common hopping parameter
+         *  \param spacing a common lattice spacing
+         **/
+        explicit Cube3D(
+                    std::size_t n,
+                    const Type & kappa = 1,
+                    const double spacing = 1): 
+                NSL::Lattice::Square<Type>(
+                        std::vector<std::size_t>({n,n,n}),
+                        kappa,
+                        spacing)
+                {};
+};
+
 } // namespace NSL
 #endif
