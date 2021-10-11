@@ -2,6 +2,9 @@
 #define NSL_LATTICE_SQUARE_CPP
 
 /*! \file square.cpp
+ *  \author Evan Berkowitz
+ *  \date October 2021
+ *  \brief Implementation of arbitrary-dimension square lattice with different hopping amplitudes and lattice spacings.
 */
 
 #include <cmath>
@@ -59,6 +62,48 @@ NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vec
     }
     return coordinates;
 }
+
+template<typename Type>
+void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
+                   const std::vector<Type> &kappa,
+                   const std::vector<double> spacings)
+{
+    assertm(n.size() == kappa.size(), "hopping amplitudes and dimension mismatch");
+    assertm(n.size() == spacings.size(), "lattice spacings and dimension mismatch");
+
+    for(int i = 0; i < this->sites(); ++i) {
+        for(int d = 0; d < n.size(); ++d) {
+            this->sites_(i,d) = spacings[d] * this->integers_(i,d);
+        }
+    }
+
+    for (int i = 0; i < this->sites(); ++i){
+        for (int j = i; j < this->sites(); ++j){
+            // This does NOT handle periodic boundary conditions.
+            std::size_t same = 0;
+            std::size_t adjacent = 0;
+            std::size_t dim = -1;
+            for(int d = 0; d < n.size(); ++d){
+                int diff = this->integers_(i,d)-this->integers_(j,d);
+                if( diff == 0 ) {same+=1;}
+                if( diff == +1 || diff == -1) {adjacent+=1; dim=d;}
+            }
+            if(adjacent == 1 && same + 1 == n.size() ){
+                // depends on direction-dependent kappa
+                this->hops_(i,j) = kappa[dim];
+                //! todo The following should REALLY be conj(kappa[dim])
+                // fixing this correctly may require tracking more carefully
+                // whether diff == +1 or -1
+                this->hops_(j,i) = kappa[dim];
+            }
+        }
+    }
+
+}
+
+//=====================================================================
+// Constructors
+//=====================================================================
 
 template<typename Type>
 NSL::Lattice::Square<Type>::Square(
@@ -150,45 +195,6 @@ NSL::Lattice::Square<Type>::Square(
     }
 
     this->init_(n, kappas, spacings);
-}
-
-
-template<typename Type>
-void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
-                   const std::vector<Type> &kappa,
-                   const std::vector<double> spacings)
-{
-    assertm(n.size() == kappa.size(), "hopping amplitudes and dimension mismatch");
-    assertm(n.size() == spacings.size(), "lattice spacings and dimension mismatch");
-
-    for(int i = 0; i < this->sites(); ++i) {
-        for(int d = 0; d < n.size(); ++d) {
-            this->sites_(i,d) = spacings[d] * this->integers_(i,d);
-        }
-    }
-
-    for (int i = 0; i < this->sites(); ++i){
-        for (int j = i; j < this->sites(); ++j){
-            // This does NOT handle periodic boundary conditions.
-            std::size_t same = 0;
-            std::size_t adjacent = 0;
-            std::size_t dim = -1;
-            for(int d = 0; d < n.size(); ++d){
-                int diff = this->integers_(i,d)-this->integers_(j,d);
-                if( diff == 0 ) {same+=1;}
-                if( diff == +1 || diff == -1) {adjacent+=1; dim=d;}
-            }
-            if(adjacent == 1 && same + 1 == n.size() ){
-                // depends on direction-dependent kappa
-                this->hops_(i,j) = kappa[dim];
-                //! todo The following should REALLY be conj(kappa[dim])
-                // fixing this correctly may require tracking more carefully
-                // whether diff == +1 or -1
-                this->hops_(j,i) = kappa[dim];
-            }
-        }
-    }
-
 }
 
 } // namespace NSL::Lattice
