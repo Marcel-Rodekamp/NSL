@@ -9,7 +9,7 @@
 #include "../../Tensor/tensor.hpp"
 #include "../lattice.hpp"
 #include "ring.hpp"
-
+#include <numbers>
 
 namespace NSL::Lattice {
 
@@ -21,8 +21,7 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
                 NSL::Tensor<double>(n,3)
         )
 {
-    //! \todo use a better pi
-    double theta = 2*3.14159265358979 / n;
+    double theta = 2 * std::numbers::pi / n;
 
     for(int i = 0; i < n; ++i) {
         this->sites_(i,0) = radius * std::cos(i * theta);
