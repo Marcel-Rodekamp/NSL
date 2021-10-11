@@ -14,6 +14,17 @@
 #include "../lattice.hpp"
 #include "square.hpp"
 
+namespace {
+    std::string name(const std::vector<std::size_t> &n){
+        std::string result="Square(";
+        for(const auto& value: n){
+            result+= " ";
+            result+= std::to_string(value);
+        }
+        result += " )";
+        return result;
+    }
+}
 
 namespace NSL::Lattice {
 
@@ -113,7 +124,7 @@ NSL::Lattice::Square<Type>::Square(
             const std::vector<double> spacings
             ):
         NSL::Lattice::SpatialLattice<Type>(
-                "Square()",    //! todo: stringify
+                name(n),
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         ),
@@ -131,7 +142,7 @@ NSL::Lattice::Square<Type>::Square(
             const double spacing
             ):
         NSL::Lattice::SpatialLattice<Type>(
-                "Square()",    //! todo: stringify
+                name(n),
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         ),
@@ -154,7 +165,7 @@ NSL::Lattice::Square<Type>::Square(
             const double spacing
             ):
         NSL::Lattice::SpatialLattice<Type>(
-                "Square()",    //! todo: stringify
+                name(n),
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         ),
@@ -182,7 +193,7 @@ NSL::Lattice::Square<Type>::Square(
             const std::vector<double> spacings
             ):
         NSL::Lattice::SpatialLattice<Type>(
-                "Square()",    //! todo: stringify
+                name(n),
                 NSL::Tensor<Type>(this->n_to_sites_(n), this->n_to_sites_(n)),
                 NSL::Tensor<double>(this->n_to_sites_(n), n.size())
         ),
