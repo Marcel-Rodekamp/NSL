@@ -12,20 +12,42 @@ class Square: public NSL::Lattice::SpatialLattice<Type> {
     public:
         /*!
          *  \param n the number of sites in each direction
-         *  \param spacing
+         *  \param kappas the hopping parameters in each direction
+         *  \param spacings the lattice spacings in each direction
+         *
+         *  All three arguments must have the same length.
          **/
         explicit Square(
                 const std::vector<std::size_t> n,
                 const std::vector<Type> &kappas,
                 const std::vector<double> spacings);
+        /*!
+         *  \param n the number of sites in each direction
+         *  \param kappas the hopping parameters in each direction
+         *  \param spacing a common lattice spacing
+         *
+         *  `n` and `kappas` must have the same length.
+         **/
         explicit Square(
                 const std::vector<std::size_t> n,
                 const std::vector<Type> &kappas,
                 const double spacing = 1);
+        /*!
+         *  \param n the number of sites in each direction
+         *  \param kappa a common hopping parameter
+         *  \param spacing a common lattice spacing
+         **/
         explicit Square(
                 const std::vector<std::size_t> n,
                 const Type & kappa = 1,
                 const double spacing = 1);
+        /*!
+         *  \param n the number of sites in each direction
+         *  \param kappa a common hopping parameter
+         *  \param spacings the lattice spacings in each direction.
+         *
+         *  `n` and `spacings` must have the same length.
+         **/
         explicit Square(
                 const std::vector<std::size_t> n,
                 const Type & kappa,
