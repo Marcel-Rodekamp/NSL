@@ -4,6 +4,9 @@
 //! \file complex.hpp
 
 #include "torch/torch.h"
+#include <complex>  // For std::complex type   abs
+#include <cmath>    // For floating-point type abs
+#include <cstdlib>  // For integral types      abs
 
 namespace NSL{
 
@@ -64,6 +67,51 @@ template<typename T>
 constexpr bool is_complex(){
     return RT_extractor<T>::value;
 }
+
+//! If `complex<>`, returns the real part; otherwise returns the passed value.
+template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
+RealType real(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        value.real();
+    }
+    else {
+        return value;
+    }
+}
+
+//! If `complex<>`, returns the imaginary part; otherwise returns 0.
+template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
+RealType imag(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        value.imag();
+    }
+    else {
+        return 0;
+    }
+}
+
+//! Returns the real-type absolute value, regardless of whether the passed value is real or `complex<>`.
+template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
+RealType abs(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        value.abs();
+    }
+    else {
+        abs(value);
+    }
+}
+
+//! Returns the complex conjugate, maintaining type (`complex<>` if `complex<>`, not if not).
+template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
+inline Type conj(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        return value.conj();
+    }
+    else {
+        return value;
+    }
+}
+
 
 }
 
