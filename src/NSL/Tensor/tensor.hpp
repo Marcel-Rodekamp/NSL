@@ -45,7 +45,7 @@ class Tensor {
          * \n
          * Assumptions:\n
          *     * At least one argument must be passed (`size0`)
-         *     * ArgsT must be of integral type (convertible to `size_t`)
+         *     * SizeType must be of integral type (convertible to `size_t`)
          *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
          *
          *
@@ -53,8 +53,8 @@ class Tensor {
          * Further behavior:\n
          *     * Initialization sets all values to `Type` equivalent of 0
          */
-        template<typename... ArgsT>
-        constexpr explicit Tensor(const size_t & size0, const ArgsT &... sizes):
+        template<typename... SizeType>
+        constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
             data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
         {}
 
@@ -68,15 +68,17 @@ class Tensor {
             data_(std::move(other.data_))
         {}
 
-        //! Implicit Conversion from torch::Tensor
-        constexpr Tensor(torch::Tensor && other):
-                data_(std::move(other))
+        explicit Tensor(torch::Tensor other):
+            data_(std::move(other))
         {}
 
-        //! Implicit Conversion from torch::Tensor
-        constexpr explicit Tensor(torch::Tensor & other):
-                data_(other)
+        explicit constexpr Tensor(torch::Tensor & other):
+            data_(other)
         {}
+
+        operator torch::Tensor(){
+            return data_;
+        }
 
         // =====================================================================
         // Tensor Creation Helpers
@@ -98,45 +100,32 @@ class Tensor {
 
         //! Random Access operator
         /*!
-         *  * `const Args &... indices`: parameter pack, indices of the tensor
-         *      * Args must be integer type e.g.: `int`, `size_t`,...
+         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
+         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
          *
          *  \n
          *  Behavior:\n
          *  each index in parameter pack `indices` corresponds to the index
          *
          * */
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices) {
-            // check that all arguments of the parameter pack are convertible to
-            // the defined size type (i.e. integer valued)
-            static_assert(NSL::all_convertible<size_t, Args...>::value);
-
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
+        template<typename ...SizeType>
+        constexpr Type & operator()(const SizeType &... indices) {
+            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
         }
 
         //! Random Access operator
         /*!
-         *  * `const Args &... indices`: parameter pack, indices of the tensor
-         *      * Args must be integer type e.g.: `int`, `size_t`,...
+         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
+         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
          *
          *  \n
          *  Behavior:\n
          *  each index in parameter pack `indices` corresponds to the index
          *
          * */
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices) const {
-        static_assert(NSL::all_convertible<size_t, Args...>::value,
-                      "NSL::Tensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-        ); // static_assert
-        // need data_.dim() arguments!
-        assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-        assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
-
-        // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-        return data_.data_ptr<Type>()[linearIndex_(indices...)];
-
+        template<typename ...SizeType>
+        constexpr const Type & operator()(const SizeType &... indices) const {
+            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
     }
 
         //! Explicitly access the torch::Tensor
@@ -147,12 +136,12 @@ class Tensor {
 
         //! Access the underlying pointer (CPU only)
         constexpr Type * data(){
-            return data_.data_ptr<Type>();
+            return this->data_.template data_ptr<Type>();
         }
 
         //! Access the underlying pointer (CPU only)
-        constexpr Type * data() const {
-            return data_.data_ptr<Type>();
+        constexpr const Type * data() const {
+            return this->data_.template data_ptr<Type>();
         }
 
 
@@ -162,16 +151,16 @@ class Tensor {
 
         //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
         /*! \todo: Add Documentation*/
-        constexpr Tensor<Type,RealType> & slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1){
-            torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return std::move(Tensor<Type>(slice));
+        Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1){
+            torch::Tensor slice = data_.slice(dim,start,end,step);
+            return Tensor<Type,RealType> (std::move(slice));
         }
 
         //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
         /*! \todo: Add Documentation*/
-        constexpr Tensor<Type,RealType> & slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1) const {
+        const Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1) const {
             torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return Tensor<Type>(slice);
+            return Tensor<Type,RealType>(std::move(slice));
         }
 
 
@@ -203,72 +192,72 @@ class Tensor {
          * Checks if each element of this equals other.
          * */
         Tensor<bool> operator== (NSL::Tensor<Type> & other) {
-            return this->data_ == other.data_;
+            return Tensor<bool>(this->data_ == other.data_);
         }
 
         //! Elementwise equal: Tensor to number
         Tensor<bool> operator== (const Type & value) {
-            return this->data_ == value;
+            return Tensor<bool>(this->data_ == value);
         }
 
         //! Elementwise not equal: Tensor to Tensor
         /*! \todo: Add Documentation*/
         Tensor<bool> operator!= (const NSL::Tensor<Type,RealType> & other) {
-            return this->data_ != other.data_;
+            return Tensor<bool>(this->data_ != other.data_);
         }
 
         //! Elementwise not equal: Tensor to number
         /*! \todo: Add Documentation*/
         Tensor<bool> operator!= (const Type & value) {
-            return this->data_ != value;
+            return Tensor<bool>(this->data_ != value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
         Tensor<bool> operator<= (const NSL::Tensor<Type,RealType> & other) {
-            return this->data_ <= other.data_;
+            return Tensor<bool>(this->data_ <= other.data_);
         }
 
         //! Elementwise smaller or equals: Tensor to number
         /*! \todo: Add Documentation*/
         Tensor<bool> operator<= (const Type & value) {
-            return this->data_ <= value;
+            return Tensor<bool>(this->data_ <= value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
         Tensor<bool> operator>= (const NSL::Tensor<Type,RealType> & other) {
-            return this->data_ >= other.data_;
+            return Tensor<bool>(this->data_ >= other.data_);
         }
 
         //! Elementwise greater or equals: Tensor to number
         /*! \todo: Add Documentation*/
         Tensor<bool> operator>= (const Type & value) {
-            return this->data_ >= value;
+            return Tensor<bool>(this->data_ >= value);
         }
 
         //! Elementwise smaller : Tensor to Tensor
         /*! \todo: Add Documentation*/
         Tensor<bool> operator< (const NSL::Tensor<Type,RealType> & other) {
-            return this->data_ < other.data_;
+            return Tensor<bool>(this->data_ < other.data_);
         }
 
         //! Elementwise smaller: Tensor to number
         /*! \todo: Add Documentation*/
         Tensor<bool> operator< (const Type & value) {
-            return this->data_ < value;
+            return Tensor<bool>(this->data_ < value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
         Tensor<bool> operator> (const NSL::Tensor<Type,RealType> & other) {
-            return this->data_ > other.data_;
+            return Tensor<bool>(this->data_ > other.data_);
         }
 
         //! Elementwise greater or equals: Tensor to number
         /*! \todo: Add Documentation*/
         Tensor<bool> operator> (const Type & value) {
-            return this->data_ > value;
+            return Tensor<bool>(this->data_ > value);
         }
 
         // =====================================================================
@@ -294,7 +283,7 @@ class Tensor {
          * Behavior:\n
          * Returns the extent of the dimension specified by `dim`.
          * If no reallocation is performed the value will match the given parameter
-         * to the constructor `NSL::Tensor<Type,RealType>::Tensor(Arg size0, Args... sizes)`.
+         * to the constructor `NSL::Tensor<Type,RealType>::Tensor(Arg size0, SizeType... sizes)`.
          * */
         [[nodiscard]] std::size_t shape(const size_t & dim) const {
             return data_.size(dim);
@@ -302,20 +291,26 @@ class Tensor {
 
         //! Get the extents of the tensor
         [[nodiscard]] std::vector<size_t> shape() const {
-        std::vector<long int> out(data_.dim());
-        for (long int i=0; i< data_.dim(); ++i){
-            out[i] = data_.size(i);
+            std::vector<long int> out(data_.dim());
+            for (long int i=0; i< data_.dim(); ++i){
+                out[i] = data_.size(i);
+            }
+            return out;
         }
-        return out;
-    }
 
         //! Get the dimension of the Tensor.
         /*!
          *  The dimension of the tensor is specified at construction by the number
-         *  of integer arguments provided to the constructor `NSL::Tensor(Arg size0, Args... sizes)`
+         *  of integer arguments provided to the constructor `NSL::Tensor(Arg size0, SizeType... sizes)`
          * */
         [[nodiscard]] std::size_t dim() const {
             return this->data_.dim();
+        }
+
+        //! Get the total number of elements.
+        /*! \todo: Add Documentaton*/
+        [[nodiscard]] std::size_t numel() const {
+            return this->data_.numel();
         }
 
 
@@ -698,14 +693,18 @@ class Tensor {
 
         //! Transform a given set of D indices to the linear index used to reference
         //! the 1 dimensional memory layout
-        template<typename... Args>
-        inline std::size_t linearIndex_(const Args &... indices){
+        template<typename... SizeType>
+        inline std::size_t linearIndex_(const SizeType &... indices) const{
+            // check that all arguments of the parameter pack are convertible to
+            // the defined size type (i.e. integer valued)
+            static_assert(NSL::all_convertible<size_t, SizeType...>::value);
+
             // check that the number of arguments in indices matches the dimension of the tensor
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const SizeType &... indices) called with to little indices");
+            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const SizeType &... indices) called with to many indices");
 
             // unpack the parameter pack
-            std::array<long int, sizeof...(indices)> a_indices = {indices...};
+            std::array<size_t, sizeof...(indices)> a_indices = {indices...};
 
             size_t offset = 0;
             for(size_t d = 0 ; d < sizeof...(indices); ++d){
