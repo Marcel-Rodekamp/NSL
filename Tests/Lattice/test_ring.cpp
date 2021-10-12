@@ -49,7 +49,7 @@ void test_ring(const size_type & size, T kappa = 1.){
 //NSL::complex<int>         Not Supported by torch
 
 TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
-    const size_type size = GENERATE(1, 101, 202, 505, 1010);
+    const size_type size = GENERATE(2, 4, 8, 101, 202, 505, 1010);
 
     // floating point types
     test_ring<float>(size, 0.5);
