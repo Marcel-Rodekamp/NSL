@@ -54,12 +54,25 @@ template <typename Type>
 void NSL::Lattice::SpatialLattice<Type>::compute_adjacency(NSL::Tensor<Type> hops) {
     // We want the adjacency matrix to be a matrix of 1s if the sites are connected, and 0 otherwise.
     // But, the hopping amplitudes can be arbitrary real or complex numbers.
-    // So, just rounding or truncating won't work; we need to check for zeroness
-    // in other words, we need to check something like (if 1/hop ≠ nan).
+    // So, just rounding or truncating won't work; we need to check for zeroness.
     //
-    // So, cast to bool (0 if 0, 1 otherwise), and then cast to int.
-    this->adj_= static_cast<NSL::Tensor<int>>(static_cast<NSL::Tensor<bool>>(hops)); 
-    //! todo Think carefully about how complex types get cast; maybe cast abs(hops)?
+    // Since float->bool casts 0.0f to false and anything else to true, you might
+    // expect a cast like
+    // this->adj_= static_cast<NSL::Tensor<int>>(static_cast<NSL::Tensor<bool>>(hops)); 
+    // to work.  However, this does NOT work, for a reason that eludes me.
+    // Even stranger, even though the result OBVIOUSLY must contain ints,
+    // it doesn't: it contains floats.
+
+    // So, since none of the 'smart' ways have worked, just brute-force:
+    NSL::Tensor<int> integers(hops.shape());
+    for(int i = 0; i < hops.shape(0); ++i){
+        for(int j = 0; j < hops.shape(1); ++j){
+            if( 0 == hops(i,j) ) continue;
+            integers(i,j) = 1;
+        }
+    }
+    this->adj_ = integers;
+    this->adj_is_initialized_ = true;
 }
 
 template <typename Type>
@@ -70,8 +83,9 @@ bool NSL::Lattice::SpatialLattice<Type>::bipartite(){
 
 template <typename Type>
 void NSL::Lattice::SpatialLattice<Type>::compute_bipartite(){
-    NSL::Tensor<int> adjacency = this->adjacency_matrix();
+    // We do a depth-first search for a contradiction on the adjacency graph.
 
+    NSL::Tensor<int> adjacency = this->adjacency_matrix();
     std::queue<int> unvisited;
     for(int i=0; i < adjacency.shape(0); ++i) unvisited.push(i);
 
