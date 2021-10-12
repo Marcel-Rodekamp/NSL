@@ -94,7 +94,7 @@ class SpatialLattice {
         //! The sites connectd by the hopping amplitudes.
         NSL::Tensor<double> sites_;
         //! Since exponentiating can be costly, a place to memoize results.
-        std::map<double,NSL::Tensor<Type>> exp_hopping_matrix_;
+        std::map<Type,NSL::Tensor<Type>> exp_hopping_matrix_;
         //! Store whether the lattice can be bipartitioned.
         bool bipartite_ = false;
         //! We only check for bipartiteness on the first request.
