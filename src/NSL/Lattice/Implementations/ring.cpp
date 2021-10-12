@@ -34,9 +34,10 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
     }
 
     for (int i = 1; i < n; ++i) {
-        this->hops_(i - 1, i) = kappa;
+        this->hops_(i , i - 1) = NSL::conj<Type>(kappa);
     }
-    this->hops_(0, n - 1) = kappa;
+
+    this->hops_(0, n - 1) = NSL::conj<Type>(kappa);
     this->hops_(n - 1, 0) = kappa;
 }
 
