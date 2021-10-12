@@ -49,11 +49,11 @@ void test_ring(const size_type & size, T kappa = 1.){
 //NSL::complex<int>         Not Supported by torch
 
 TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
-    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+    const size_type size = GENERATE(1, 101, 202, 505, 1010);
 
     // floating point types
-    test_ring<float>(size);
-    test_ring<double>(size);
+    test_ring<float>(size, 0.5);
+    test_ring<double>(size, 2.0);
     //! \todo add tests of complex amplitudes
     // NOTE: no complex<type>s 
     // because the hopping amplitude
