@@ -1,6 +1,9 @@
 #ifndef NSL_TEST_HPP
 #define NSL_TEST_HPP
 
+// for CATCH2::INFO string computations
+#include<string>
+
 #include "catch2/catch.hpp"
 
 
@@ -29,6 +32,5 @@
 // ====================================================================
 
 #define NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, NSL_TYPES)
-
 
 #endif

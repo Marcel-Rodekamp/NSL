@@ -1,193 +1,42 @@
-#include <complex>
 #include "../test.hpp"
 #include "Tensor/tensor.hpp"
-#include <typeinfo>
+
+//! \file Tests/Tensor/test_tensor.cpp
 
 // Torch requirement
 using size_type = long int;
 
-template<typename T, typename ...Tsize>
-void test_constructor(const Tsize &... size){
-    // size: number of elements
-    // Initializes a d-D Tensor of type T
-    // with size elements and checks if it is initialized to 0.
-    // Note: Requires NSL::Tensor::operator==(Type);
-    // Note: Requires conversion from int to type T
+template<typename T, typename ... SizeTypes>
+void test_constructor(const SizeTypes &... sizes);
 
-    NSL::Tensor<T> Tr(size...);
-    REQUIRE(Tr == 0);
-}
+template<typename T, typename ... SizeTypes>
+void test_access(const SizeTypes &... sizes);
 
-template<typename T>
-void test_random_access_1D(const size_type & size){
-    // const std::size_t & size, number of elements
-    // Initializes a 1D Tensor of type T
-    // with size elements and checks if it is initialized to 0.
-    // Note: NSL::Tensor::data()
-    // Note: Requires conversion from int to type T
-    NSL::Tensor<T> Tr(size);
-
-    // Step one
-    // Check element wise initialization
-    // Set Value to id
-    for(int i = 0; i < size; ++i){
-        INFO("type = " << typeid(T).name() << ", size = " << size << ", id = " << i);
-        // check that the type is returned correctly
-        REQUIRE(typeid(Tr(i)) == typeid(T));
-
-        // check for correct initialization + random access
-        REQUIRE(Tr(i) == T(0));
-        // check setter
-        Tr(i) = static_cast<T>(i);
-        // check that value is set correctly
-        REQUIRE(Tr(i) == static_cast<T>(i));
-        // check that underlying data ptr is changed
-        REQUIRE(Tr.data()[i] == Tr(i));
-    }
-}
-
-template<typename T>
-void test_random_access_2D(const size_type & size0,const size_type & size1){
-    // const std::size_t & size, number of elements
-    // Initializes a 1D Tensor of type T
-    // with size elements and checks if it is initialized to 0.
-    // Note: NSL::Tensor::data()
-    // Note: Requires conversion from int to type T
-    // Note: Assumes data being aligned as LinearIndex = i*size1 + j if Tr(i,j) is referenced
-    NSL::Tensor<T> Tr(size0,size1);
-
-    // Step one
-    // Check element wise initialization
-    // Set Value to id
-    for(int i = 0; i < size0; ++i){
-        for(int j = 0; j < size1; ++j) {
-            INFO("type = " << typeid(T).name() << ", size0 = " << size0 << ", size1 = " << size1 << ", id = " << i);
-            // check that the type is returned correctly
-            REQUIRE(typeid(Tr(i, j)) == typeid(T));
-
-            const size_type testVal = i * size1 + j;
-
-            // check for correct initialization + random access
-            REQUIRE(Tr(i,j) == T(0));
-            // check setter
-            Tr(i,j) = static_cast<T>(testVal);
-            // check that value is set correctly
-            REQUIRE(Tr(i,j) == static_cast<T>(testVal));
-            // ch`eck that underlying data ptr is changed
-            REQUIRE(Tr.data()[testVal] == Tr(i,j));
-
-        }
-    }
-}
-
-template<typename T>
-void test_random_access_3D(const size_type & size0,const size_type & size1,const size_type & size2){
-    // const std::size_t & size, number of elements
-    // Initializes a 1D Tensor of type T
-    // with size elements and checks if it is initialized to 0.
-    // Note: NSL::Tensor::data()
-    // Note: Requires conversion from int to type T
-    // Note: Assumes data being aligned as LinearIndex = i*size1*size2 + j*size1 + k if Tr(i,j) is referenced
-    NSL::Tensor<T> Tr(size0,size1,size2);
-
-    // Step one
-    // Check element wise initialization
-    // Set Value to id
-    for(int i = 0; i < size0; ++i){
-        for(int j = 0; j < size1; ++j) {
-            for(int k = 0; k<size2; ++k) {
-                INFO("type = " << typeid(T).name() << ", size0 = " << size0 << ", size1 = " << size1 << ", id = " << i);
-                // check that the type is returned correctly
-                REQUIRE(typeid(Tr(i, j, k)) == typeid(T));
-
-                const size_type testVal = i * size2 * size1 + j * size2 + k;
-
-                // check for correct initialization + random access
-                REQUIRE(Tr(i,j,k) == T(0));
-                // check setter
-                Tr(i,j,k) = static_cast<T>(testVal);
-                // check that value is set correctly
-                REQUIRE(Tr(i,j,k) == static_cast<T>(testVal));
-                // ch`eck that underlying data ptr is changed
-                REQUIRE(Tr.data()[testVal] == Tr(i,j,k));
-            }
-        }
-    }
-}
-
-
-template<typename Type>
-void test_assignment_1D(const size_type & size){
-    NSL::Tensor<Type> T1(size);
-    NSL::Tensor<Type> T2(size);
-
-    for(int i = 0; i < size; ++i){
-        T2(i) = static_cast<Type>(i);
-    }
-
-    T1 = T2;
-
-    for(int i = 0; i < size; ++i){
-        REQUIRE(T1(i) == static_cast<Type>(i));
-        T1(i) = static_cast<Type>(0);
-    }
-
-    // if shallow copy of NSL::tensor.operator= T2 would be 0;
-    // assignment should perform deepcopy!
-    for(int i = 0; i < size; ++i){
-        REQUIRE(T2(i) == static_cast<Type>(i));
-    }
-
-}
-
-template<typename Type>
-void test_assignment_1D(const size_type & size1, const size_type & size2){
-    NSL::Tensor<Type> T1(size1);
-    NSL::Tensor<Type> T2(size2);
-
-    for(int i = 0; i < size2; ++i){
-        T2(i) = static_cast<Type>(i);
-    }
-
-    // after this T1 is of size: size2
-    T1 = T2;
-
-    REQUIRE(T1.shape(0) == size2);
-
-    for(int i = 0; i < size2; ++i){
-        REQUIRE(T1(i) == static_cast<Type>(i));
-    }
-}
-
-
-// =============================================================================
-// Test Cases
-// =============================================================================
-
+template<typename T, typename ... SizeTypes>
+void test_slice(const SizeTypes &... sizes);
 
 // =============================================================================
 // Constructors
 // =============================================================================
 
-NSL_TEST_CASE( "TENSOR: 1D Constructor", "[Tensor,Constructor,1D]" ) {
-    const size_type size = GENERATE(1, 100, 200, 500, 1000);
-
-    test_constructor<TestType>(size);
+NSL_TEST_CASE("Tensor: Constructor 1D", "[Tensor,Constructor]") {
+    size_t size0 = GENERATE(1,100,1000);
+    test_constructor<TestType>(size0);
 }
 
-NSL_TEST_CASE( "TENSOR: 2D Constructor", "[Tensor,Constructor,2D]" ) {
-    const size_type size0 = GENERATE(1, 100, 200);
-    const size_type size1 = GENERATE(1, 100, 200);
 
-    test_constructor<TestType>(size0,size1);
+NSL_TEST_CASE("Tensor: Constructor 2D", "[Tensor,Constructor]") {
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    test_constructor<TestType>(size0, size1);
 }
 
-NSL_TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
-    const size_type size0 = GENERATE(1, 100, 200);
-    const size_type size1 = GENERATE(1, 100, 200);
-    const size_type size2 = GENERATE(1, 100, 200);
 
-    test_constructor<TestType>(size0,size1,size2);
+NSL_TEST_CASE("Tensor: Constructor 3D", "[Tensor,Constructor]"){
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    size_t size2 = GENERATE(1, 10, 100);
+    test_constructor<TestType>(size0, size1, size2);
 }
 
 
@@ -195,23 +44,229 @@ NSL_TEST_CASE( "TENSOR: 3D Constructor", "[Tensor,Constructor,3D]" ) {
 // Random Access
 // =============================================================================
 
-NSL_TEST_CASE( "TENSOR: 1D Random access", "[Tensor,Random Access, 1D"){
-   const size_type size = GENERATE(1, 100, 200);
-
-    test_random_access_1D<TestType>(size);
+NSL_TEST_CASE("Tensor: Element Access 1D", "[Tensor,Access]") {
+    size_t size0 = GENERATE(1,100,1000);
+    test_access<TestType>(size0);
 }
 
-NSL_TEST_CASE( "TENSOR: 2D Random access", "[Tensor,Random Access, 2D"){
-    const size_type size0 = GENERATE(1, 100, 200);
-    const size_type size1 = GENERATE(1, 100, 200);
 
-    test_random_access_2D<TestType>(size0,size1);
+NSL_TEST_CASE("Tensor: Element Access 2D", "[Tensor,Access]") {
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    test_access<TestType>(size0, size1);
 }
 
-NSL_TEST_CASE( "TENSOR: 3D Random access", "[Tensor,Random Access, 3D"){
-    const size_type size0 = GENERATE(1, 10, 20);
-    const size_type size1 = GENERATE(1, 10, 20);
-    const size_type size2 = GENERATE(1, 10, 20);
 
-    test_random_access_3D<TestType>(size0,size1,size2);
+NSL_TEST_CASE("Tensor: Element Access 3D", "[Tensor,Access]"){
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    size_t size2 = GENERATE(1, 10, 100);
+    test_access<TestType>(size0, size1, size2);
+}
+
+
+// =============================================================================
+// Random Access
+// =============================================================================
+
+NSL_TEST_CASE("Tensor: Slice 1D", "[Tensor,Access]") {
+    size_t size0 = GENERATE(1,100,1000);
+    test_slice<TestType>(size0);
+}
+
+
+NSL_TEST_CASE("Tensor: Slice 2D", "[Tensor,Access]") {
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    test_slice<TestType>(size0, size1);
+}
+
+
+NSL_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
+    size_t size0 = GENERATE(1, 10, 100);
+    size_t size1 = GENERATE(1, 10, 100);
+    size_t size2 = GENERATE(1, 10, 100);
+    test_slice<TestType>(size0, size1, size2);
+}
+
+
+// =============================================================================
+// Implementations
+// =============================================================================
+
+//! Check the constructors
+/*!
+ * Tests:
+ *
+ *  * `Tensor<Type,RealType>::Tensor(size_t size0, SizeType... sizes)`
+ *  * `Tensor<Type,RealType>::Tensor(Tensor<Type,RealType> & other)`
+ *  * `Tensor<Type,RealType>::Tensor(Tensor<Type,RealType> && other)`
+ *
+ * \n
+ * Requires:
+ *
+ *  * `Tensor::operator==(const Type & value)`
+ *  * `Tensor::operator=(const Type & value)`
+ *  * `Tensor::all()`
+ * */
+template<typename T, typename ... SizeTypes>
+void test_constructor(const SizeTypes &... sizes){
+    INFO("Type = " + std::string(typeid(T).name()));
+    INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
+    INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+
+    // D-dimensional constructor
+    NSL::Tensor<T> A(sizes...);
+    REQUIRE((A==static_cast<T>(0)).all());
+    A = static_cast<T>(1);
+
+    // copy constructor
+    NSL::Tensor<T> B(A);
+    REQUIRE((B==static_cast<T>(1)).all());
+
+    // move constructor
+    NSL::Tensor<T> C(std::move(B));
+    // check that all elements are correctly available
+    REQUIRE((C==static_cast<T>(1)).all());
+    // check that the original "has been moved"
+    REQUIRE_THROWS((B==static_cast<T>(1)).all());
+}
+
+
+//! Check the access methods
+/*!
+ * Tests:
+ *
+ *  * `Tensor<Type,RealType>::operator(const Args &... sizes)()`
+ *  * `Tensor<Type,RealType>::operator(const Args &... sizes)() const`
+ *  * `Tensor<Type,RealType>::data()`
+ *  * `Tensor<Type,RealType>::data() const`
+ *
+ * \n
+ * Requires:
+ *
+ *  * `Tensor<Type,RealType>::Tensor(size_t size0, SizeType... sizes)`
+ *  * For d-dimensional with \f$d>1\f$, assume naive memory layout:
+ *      \f[
+ *      \text{LinearIndex} \left[(i_0,i_1,\dots),(\texttt{sizes}\dots)\right] = \sum_{n_d=0}^{d-1} \left[ i_{n_d}\prod_{m=n_d+1}^{d-1} \texttt{sizes}\left[m\right]\right]
+ *      \f]
+ * */
+template<typename T, typename ... SizeTypes>
+void test_access(const SizeTypes &... sizes){
+    INFO("Type = " + std::string(typeid(T).name()));
+    INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
+    INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+
+    std::array<size_t, sizeof...(SizeTypes)> extents{{sizes...}};
+
+    // initialize a Tensor (all values are 0)
+    NSL::Tensor<T> A(sizes...);
+    const NSL::Tensor<T> Aconst(sizes...);
+
+    if constexpr (sizeof...(SizeTypes) == 1){
+        for(size_t n0 = 0; n0 < extents[0]; ++n0){
+            INFO("n_0 = " + std::to_string(n0));
+
+            // Check that get element works
+            REQUIRE(A(n0) == static_cast<T>(0));
+            REQUIRE(A.data()[n0] == static_cast<T>(0));
+            REQUIRE(Aconst(n0) == static_cast<T>(0));
+            REQUIRE(Aconst.data()[n0] == static_cast<T>(0));
+
+            // check that set element works (assuming get element works)
+            A(n0) = static_cast<T>(1);
+            REQUIRE(A(n0) == static_cast<T>(1));
+            A.data()[n0] = static_cast<T>(2);
+            REQUIRE(A(n0) == static_cast<T>(2));
+        }
+    } else if constexpr(sizeof...(SizeTypes) == 2){
+        for(size_t n0=0,n1=0; n0 < extents[0] && n1 < extents[1]; ++n0, ++n1){
+            INFO("n_0 = " + std::to_string(n0));
+            INFO("n_1 = " + std::to_string(n1));
+
+            // this assumes naive layout (e.g. torch::strided)
+            size_t n = n0 * extents[1] + n1;
+
+            // Check that get element works
+            REQUIRE(A(n0,n1) == static_cast<T>(0));
+            REQUIRE(A.data()[n] == static_cast<T>(0));
+            REQUIRE(Aconst(n0,n1) == static_cast<T>(0));
+            REQUIRE(Aconst.data()[n] == static_cast<T>(0));
+
+            // check that set element works (assuming get element works)
+            A(n0,n1) = static_cast<T>(1);
+            REQUIRE(A(n0,n1) == static_cast<T>(1));
+            A.data()[n] = static_cast<T>(2);
+            REQUIRE(A(n0,n1) == static_cast<T>(2));
+        }
+    } else if constexpr(sizeof...(SizeTypes) == 3){
+        for(size_t n0=0,n1=0,n2=0; n0 < extents[0] && n1 < extents[1] && n2 < extents[2]; ++n0, ++n1, ++n2){
+            INFO("n_0 = " + std::to_string(n0));
+            INFO("n_1 = " + std::to_string(n1));
+            INFO("n_2 = " + std::to_string(n2));
+
+            // this assumes naive layout (e.g. torch::strided)
+            size_t n = n0 * extents[1] * extents[2] + n1 * extents[2] + n2;
+
+            // Check that get element works
+            REQUIRE(A(n0,n1,n2) == static_cast<T>(0));
+            REQUIRE(A.data()[n] == static_cast<T>(0));
+            REQUIRE(Aconst(n0,n1,n2) == static_cast<T>(0));
+            REQUIRE(Aconst.data()[n] == static_cast<T>(0));
+
+            // check that set element works (assuming get element works)
+            A(n0,n1,n2) = static_cast<T>(1);
+            REQUIRE(A(n0,n1,n2) == static_cast<T>(1));
+            A.data()[n] = static_cast<T>(2);
+            REQUIRE(A(n0,n1,n2) == static_cast<T>(2));
+        }
+    } else {
+        INFO("Test is only developed for dimension = 1, 2, 3");
+        REQUIRE(false);
+    }
+}
+
+//! Check the slicing operation
+/*!
+ * Tests:
+ *
+ * * `Tensor<Type,RealType>::slice(const size_t & dim, const size_t start, const size_t & end, const size_t step = 1)`
+ * * `Tensor<Type,RealType>::slice(const size_t & dim, const size_t start, const size_t & end, const size_t step = 1) const`
+ *
+ *
+ * \n
+ * Requires:
+ *
+ *  * `Tensor<Type,RealType>::data()`
+ *  * `Tensor<Type,RealType>::shape()`
+ *  * `Tensor<Type,RealType>::shape(const size_t & dim)`
+ *  * `Tensor<Type,RealType>::dim()`
+ *  * `Tensor<Type,RealType>::operator=(Tensor<Type,RealType>)`
+ *
+ * */
+template<typename T, typename ... SizeTypes>
+void test_slice(const SizeTypes &... sizes){
+    INFO("Type = " + std::string(typeid(T).name()));
+    INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
+    INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+
+    // D-dimensional constructor
+    NSL::Tensor<T> A(sizes...);
+
+    // fill the tensor
+    const size_t N = (1 * ... * sizes);
+    for(size_t n = 0; n < N; ++n){
+        A.data()[n] = n;
+    }
+
+    // single dim slice
+    // Expectation:
+    //     * Aslice.dim() = A.dim() = sizeof...(SizeTypes)
+    //     * Aslice.shape(0) = 1
+    NSL::Tensor<T> Aslice = A.slice(/*dim=*/0,/*start=*/0,/*end=*/1,/*step=*/1);
+    REQUIRE(Aslice.dim() == A.dim());
+    REQUIRE(Aslice.shape(0) == 1);
+    for(size_t d = 1; d < sizeof...(SizeTypes); ++d){
+        REQUIRE(Aslice.shape(d) == A.shape(d));
+    }
 }

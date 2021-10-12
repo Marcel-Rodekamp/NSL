@@ -18,6 +18,7 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -Wall -pedantic ${CMAKE_CXX_FLAGS_DEBUG_INIT}")
+
 # Pytorch uses long int instead of std:size_t (aka unsigned long int)
 # to avoid warning we put -Wno-narrowing
 # ToDo: There should be a better way to circumvent this problem!!!
