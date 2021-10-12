@@ -51,14 +51,15 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
 }
 
 template <typename Type>
-void NSL::Lattice::SpatialLattice<Type>::compute_adjacency(const NSL::Tensor<Type> & hops) {
-    NSL::Tensor<int> nonzero(hops.shape());
-    for(int i = 0; true; i++){
-        1+1; // avoid an empty for loop
-        //! \todo Correctly cast to int
-        // nonzero
-    }
-    this->adj_ = nonzero;
+void NSL::Lattice::SpatialLattice<Type>::compute_adjacency(NSL::Tensor<Type> hops) {
+    // We want the adjacency matrix to be a matrix of 1s if the sites are connected, and 0 otherwise.
+    // But, the hopping amplitudes can be arbitrary real or complex numbers.
+    // So, just rounding or truncating won't work; we need to check for zeroness
+    // in other words, we need to check something like (if 1/hop ≠ nan).
+    //
+    // So, cast to bool (0 if 0, 1 otherwise), and then cast to int.
+    this->adj_= static_cast<NSL::Tensor<int>>(static_cast<NSL::Tensor<bool>>(hops)); 
+    //! todo Think carefully about how complex types get cast; maybe cast abs(hops)?
 }
 
 template <typename Type>

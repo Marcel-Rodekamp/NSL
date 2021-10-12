@@ -120,7 +120,7 @@ class SpatialLattice {
          *         Zero amplitudes imply non-adjacent sites,
          *         nonzero amplitudes imply adjacency.
          **/
-        void compute_adjacency(const NSL::Tensor<Type> & hops);
+        void compute_adjacency(NSL::Tensor<Type> hops);
         
         // A generic method, in case no short-cut is available
         void compute_bipartite();
