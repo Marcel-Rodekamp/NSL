@@ -25,6 +25,7 @@ void test_ring(const size_type & size, T kappa = 1.){
     INFO(ring.name());
 
     REQUIRE(ring.sites() == size);
+    REQUIRE(ring.bipartite() == (size%2 == 0));
 
     INFO(ring.coordinates());
     //! \todo Sum up the coordinates; they should evenly surround the origin.
