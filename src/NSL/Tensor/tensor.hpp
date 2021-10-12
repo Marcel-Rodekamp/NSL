@@ -60,9 +60,14 @@ class Tensor {
             data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
         {}
 
+        /*!
+         * param shape a std::vector giving the shape of the new Tensor.
+         * \todo Tensor(std::vector shape) is a horrible hack that should be cleaned up.
+         * However, we tried a variety of `static_cast`s and `std::transform` and things of that nature,
+         * and kept encountering a problem with the fact that `IntArrayRef` really wants `long long`.
+         **/
         explicit Tensor(const std::vector<size_t> &shape)
         {
-            
             std::vector<long long> shape_ll(shape.size());
             for(int i = 0; i < shape.size(); ++i){
                 shape_ll[i] = shape[i];
