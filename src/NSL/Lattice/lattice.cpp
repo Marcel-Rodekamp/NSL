@@ -38,7 +38,7 @@ NSL::Tensor<int> NSL::Lattice::SpatialLattice<Type>::adjacency_matrix(){
 
 template <typename Type>
 NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::hopping_matrix(Type delta){
-    return delta == 1. ? hops_ : hops_ * delta;
+    return delta == static_cast<Type>(1.) ? hops_ : hops_ * delta;
 }
 
 template <typename Type>
@@ -67,7 +67,7 @@ void NSL::Lattice::SpatialLattice<Type>::compute_adjacency(NSL::Tensor<Type> hop
     NSL::Tensor<int> integers(hops.shape());
     for(int i = 0; i < hops.shape(0); ++i){
         for(int j = 0; j < hops.shape(1); ++j){
-            if( 0 == hops(i,j) ) continue;
+            if( static_cast<Type>(0.) == hops(i,j) ) continue;
             integers(i,j) = 1;
         }
     }
