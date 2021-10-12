@@ -1,47 +1,35 @@
 #ifndef NSL_TENSOR_HPP
 #define NSL_TENSOR_HPP
 
+//!  \file Tensor/tensor.hpp
+
+//! Tensor is a wrapper of torch::tensor
 #include <torch/torch.h>
-#include <vector>
+//! Used for handling parameter packs to reduce amount of recursive functions
 #include <array>
-#include <iomanip>
+//! If not defined NDEBUG assertion handling
 #include "../assert.hpp"
+//! Helper functions for complex valued Tensor
 #include "../complex.hpp"
+////! TimeTensor, specialized class which first dimension will (!) be parallelized across multiple nodes
+//#include "time_tensor.hpp"
 
 //! Imported Namespace: torch::indexing
 using namespace torch::indexing;
 
 namespace NSL {
 
-// doxygen documentation
-//! Representation of a multidimensional data.
-
-//! Storing data in various data types is one of the key requirements of any simulation.
-//! This class provides an interface to torch::Tensor (libtorch) in order to allow
-//! access and functionality on various architectures such as Multi CPU setups, Nvidia GPUs, AMD GPUs, ...
-template<typename Type>
+//! Representation of multidimensional data.
+/*!
+ * Storing data of various data types is one of the key requirements of any simulation.
+ * This class provides an interface to torch::Tensor ([libtorch](https://pytorch.org/cppdocs/)) in order to allow
+ * access and functionality on various architectures.
+ * */
+template <typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
 class Tensor {
-
     //! Alias: size_t = long int
     using size_t = long int;
 
-
-    private:
-        // underlying data
-        torch::Tensor data_;
-
-        // transform given indices and strides in data_ to a linear index accessing the underlying pointer
-        template<typename... Args>
-        inline const std::size_t linearIndex_(const Args &... indices){
-            std::array<long int, sizeof...(indices)> a_indices = {indices...};
-            std::size_t offset = 0;
-
-            for(long int d = 0 ; d < sizeof...(indices); ++d){
-                offset += a_indices[d] * data_.stride(d);
-            }
-
-            return offset;
-        }
 
     public:
         //Default constructor not required
@@ -50,401 +38,279 @@ class Tensor {
         {}
 
         //! D-dimensional constructor.
-
-        //! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
-        //! \n
-        //! Params:\n
-        //!     * `size0`: Extend of the 0th dimension\n
-        //!     * `sizes`: Parameter pack, extends of respective dimensions
-        //!
-        //! \n
-        //! Assumptions:\n
-        //!     * At least one argument must be passed (`size0`)
-        //!     * ArgsT must be of integral type (convertible to `size_t`)
-        //!     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
-        //!
-        //!
-        //! \n
-        //! Further behavior:\n
-        //!     * Initialization sets all values to `Type` equivalent of 0
-        template<typename... ArgsT>
-        constexpr explicit Tensor(const size_t & size0, const ArgsT &... sizes):
-            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>().device(torch::kCPU))) {}
-
-        //Construct data_ with sizes stored in dims.
-        [[deprecated("Will be deleted in version 1, use variadic constructors")]]
-        constexpr explicit Tensor(const std::vector<long int>  & dims):
-            data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
+        /*! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
+         * \n
+         * Params:\n
+         *     * `size0`: Extend of the 0th dimension\n
+         *     * `sizes`: Parameter pack, extends of respective dimensions
+         *
+         * \n
+         * Assumptions:\n
+         *     * At least one argument must be passed (`size0`)
+         *     * SizeType must be of integral type (convertible to `size_t`)
+         *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
+         *
+         *
+         * \n
+         * Further behavior:\n
+         *     * Initialization sets all values to `Type` equivalent of 0
+         */
+        template<typename... SizeType>
+        constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
+            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
         {}
 
-        constexpr explicit Tensor(torch::Tensor && other):
-            data_(std::move(other))
-        {}
+        /*!
+         * param shape a std::vector giving the shape of the new Tensor.
+         * \todo Tensor(std::vector shape) is a horrible hack that should be cleaned up.
+         * However, we tried a variety of `static_cast`s and `std::transform` and things of that nature,
+         * and kept encountering a problem with the fact that `IntArrayRef` really wants `long long`.
+         **/
+        explicit Tensor(const std::vector<size_t> &shape)
+        {
+            std::vector<long long> shape_ll(shape.size());
+            for(int i = 0; i < shape.size(); ++i){
+                shape_ll[i] = shape[i];
+            }
+            data_ = torch::zeros(
+                        torch::IntArrayRef(shape_ll.data(), shape_ll.size()),
+                        torch::TensorOptions().dtype<Type>()
+                    );
+        }
 
-        constexpr explicit Tensor(torch::Tensor & other):
-            data_(other)
-        {}
-
-        // copy constructor
+        //! copy constructor
         constexpr Tensor(const Tensor& other):
             data_(other.data_)
         {}
 
-        // move constructor
+        //! move constructor
         constexpr Tensor(Tensor && other) noexcept:
             data_(std::move(other.data_))
         {}
 
-        //Fill with random values
-        Tensor<Type> & rand(){
-            this->data_ = torch::rand_like(this->data_);
-            return (*this);
+        explicit Tensor(torch::Tensor other):
+            data_(std::move(other))
+        {}
+
+        explicit constexpr Tensor(torch::Tensor & other):
+            data_(other)
+        {}
+
+        operator torch::Tensor(){
+            return data_;
         }
 
-        Tensor<Type> & copy(Tensor<Type> & other){
-            data_ = other.data_.clone();
+        // =====================================================================
+        // Tensor Creation Helpers
+        // =====================================================================
+
+        //! Fill the tensor with pseudo-random numbers
+        /*!
+         * Fills the Tensor with pseudo-random numbers from the uniform distribution
+         * \todo Generalize for different distributions
+         */
+        Tensor<Type,RealType> & rand(){
+            this->data_.uniform_();
             return *this;
         }
 
-        Tensor<Type> & copy(Tensor<Type> other){
-            data_ = other.data_.clone();
-            return *this;
-        }
-
-
         // =====================================================================
-        // Random Access Operators
+        // Accessors
         // =====================================================================
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices){
-            static_assert(NSL::all_convertible<size_t, Args...>::value,
-                    "NSL::Tensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-            ); // static_assert
-            // need data_.dim() arguments!
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
-            // ToDo check indices < shapes!
 
-            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
+        //! Random Access operator
+        /*!
+         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
+         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
+         *
+         *  \n
+         *  Behavior:\n
+         *  each index in parameter pack `indices` corresponds to the index
+         *
+         * */
+        template<typename ...SizeType>
+        constexpr Type & operator()(const SizeType &... indices) {
+            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
         }
 
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices) const {
-            static_assert(NSL::all_convertible<size_t, Args...>::value,
-                          "NSL::Tensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-            ); // static_assert
-            // need data_.dim() arguments!
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
+        //! Random Access operator
+        /*!
+         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
+         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
+         *
+         *  \n
+         *  Behavior:\n
+         *  each index in parameter pack `indices` corresponds to the index
+         *
+         * */
+        template<typename ...SizeType>
+        constexpr const Type & operator()(const SizeType &... indices) const {
+            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
+    }
 
-            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
-
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr Tensor<Type> operator[](const size_t index){
-            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return Tensor<Type>(slice);
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr const Tensor<Type> & operator[](const size_t index) const {
-            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return Tensor<Type>(slice);
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
-            // get index transformation
-            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
-            // last accessed 20.08.21
-            size_t offset = 0;
-            for(size_t d = 0; d < indices.size(); ++d){
-                offset += *(indices.begin()+d) * data_.stride(d);
-            }
-
-            // dereference underlying pointer
-            return data_.data_ptr<Type>()[offset];
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr Type & operator[](const std::initializer_list<size_t> & indices) const {
-            // get index transformation
-            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
-            // last accessed 20.08.21
-            size_t offset = 0;
-            for(size_t d = 0; d < indices.size(); ++d){
-                offset += *(indices.begin()+d) * data_.stride(d);
-            }
-
-            // dereference underlying pointer
-            return data_.data_ptr<Type>()[offset];
-        }
-
+        //! Explicitly access the torch::Tensor
+        /*! \todo: Add Documentation*/
         friend torch::Tensor to_torch(const Tensor<Type> & other) {
             return other.data_;
         }
 
-        torch::Tensor to_torch(){
-            return data_;
-        }
-
+        //! Access the underlying pointer (CPU only)
         constexpr Type * data(){
-            return data_.data_ptr<Type>();
+            return this->data_.template data_ptr<Type>();
         }
 
-        constexpr Type * data() const {
-            return data_.data_ptr<Type>();
+        //! Access the underlying pointer (CPU only)
+        constexpr const Type * data() const {
+            return this->data_.template data_ptr<Type>();
         }
 
-        Tensor<Type> real(){
-            return NSL::Tensor<Type>(torch::real(data_));
-        }
-
-        Tensor<Type> real() const {
-            return NSL::Tensor<Type>(torch::real(data_));
-        }
-
-        Tensor<Type> imag(){
-            return NSL::Tensor<Type>(torch::imag(data_));
-        }
-
-        Tensor<Type> imag() const {
-            return NSL::Tensor<Type>(torch::imag(data_));
-        }
 
         // =====================================================================
         // Slice Operation
         // =====================================================================
-        constexpr Tensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
-            torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return Tensor<Type>(slice);
+
+        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1){
+            torch::Tensor slice = data_.slice(dim,start,end,step);
+            return Tensor<Type,RealType> (std::move(slice));
         }
 
-        constexpr Tensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step) const {
+        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
+        /*! \todo: Add Documentation*/
+        const Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1) const {
             torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return Tensor<Type>(slice);
+            return Tensor<Type,RealType>(std::move(slice));
         }
 
 
         // =====================================================================
-        // Algebra Operators
+        // Assignment operators
         // =====================================================================
-        //Product by a scalar.
-        Tensor<Type> operator*(const Type & factor){
-            Tensor <Type> out (data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = factor* out.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
 
-        Tensor<Type> & prod(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        Tensor<Type> & operator*=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Product by a Tensor
-        Tensor<Type> operator*(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::Tensor <Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]*other.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        Tensor<Type> & operator*=(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        Tensor<Type> & prod(const Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //sum by Tensor
-        Tensor<Type> operator+(Tensor<Type> & other ) {
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::Tensor out(this->data_);
-            for (long int x = 0; x < out.data_.numel(); ++x) {
-                out.data_.template data_ptr<Type>()[x] =
-                        out.data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        Tensor<Type> & operator+=(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        Tensor<Type> & sum(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Sum by a scalar.
-        Tensor<Type> operator+(const Type & factor){
-            NSL::Tensor <Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = factor + out.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        Tensor<Type> & operator+=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
-            }
-            return *this;
-        }
-
-        Tensor<Type> & sum(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
-            }
-            return *this;
-        }
-
-        //Minus by Tensor
-        Tensor<Type> operator-(Tensor<Type> & other ) {
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::Tensor out(this->data_);
-            for (long int x = 0; x < out.data_.numel(); ++x) {
-                out.data_.template data_ptr<Type>()[x] =
-                        out.data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        Tensor<Type> & operator-=(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        Tensor<Type> & subs(const NSL::Tensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Minus by a scalar.
-        Tensor<Type> operator-(const Type & factor){
-            NSL::Tensor <Type> out (this->data_);
-            for(long int x = 0; x < data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]-factor;
-            }
-            return out;
-        }
-
-        Tensor<Type> & operator-=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
-            }
-            return *this;
-        }
-
-        Tensor<Type> & subs(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
-            }
-            return *this;
-        }
-
-        //Equal
-        Tensor<Type> & operator=(const Tensor<Type> & other){
+        //! Assignment operator: Tensor to Tensor
+        Tensor<Type,RealType> & operator=(const Tensor<Type> & other){
+            // deep copy of other into this
             this->data_ = other.data_.clone();
             return *this;
         }
+
+        //! Assignment operator: Scalar to Tensor
+        Tensor<Type,RealType> & operator=(const Type & value){
+            // overwrite data with value
+            this->data_ = torch::full_like(this->data_, value);
+            return *this;
+        }
+
+
         // =====================================================================
         // Boolean operators
         // =====================================================================
 
-        //Comparison each element of two tensors.
-        bool operator== (NSL::Tensor<Type> & other) const{
-            assert(other.data_.sizes() == this->data_.sizes());
-            bool out = true;
-            for(long int x = 0; x < other.data_.numel(); ++x) {
-                if (this->data_.template data_ptr<Type>()[x] != other.data_.template data_ptr<Type>()[x]){
-                    out = false;
-                    break;
-                }
-            }
-            return out;
+        //! Elementwise equal: Tensor to Tensor
+        /*
+         * Checks if each element of this equals other.
+         * */
+        Tensor<bool> operator== (NSL::Tensor<Type> & other) {
+            return Tensor<bool>(this->data_ == other.data_);
         }
 
-        //comparison all element with a number.
-        bool operator== (const Type & num) const{
-            bool out = true;
-            for(long int x = 0; x < this->data_.numel(); ++x) {
-                if (this->data_.template data_ptr<Type>()[x] != num){
-                    out = false;
-                    break;
-                }
-            }
-            return out;
+        //! Elementwise equal: Tensor to number
+        Tensor<bool> operator== (const Type & value) {
+            return Tensor<bool>(this->data_ == value);
+        }
+
+        //! Elementwise not equal: Tensor to Tensor
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator!= (const NSL::Tensor<Type,RealType> & other) {
+            return Tensor<bool>(this->data_ != other.data_);
+        }
+
+        //! Elementwise not equal: Tensor to number
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator!= (const Type & value) {
+            return Tensor<bool>(this->data_ != value);
+        }
+
+        //! Elementwise smaller or equals: Tensor to Tensor
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator<= (const NSL::Tensor<Type,RealType> & other) {
+            return Tensor<bool>(this->data_ <= other.data_);
+        }
+
+        //! Elementwise smaller or equals: Tensor to number
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator<= (const Type & value) {
+            return Tensor<bool>(this->data_ <= value);
+        }
+
+        //! Elementwise smaller or equals: Tensor to Tensor
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator>= (const NSL::Tensor<Type,RealType> & other) {
+            return Tensor<bool>(this->data_ >= other.data_);
+        }
+
+        //! Elementwise greater or equals: Tensor to number
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator>= (const Type & value) {
+            return Tensor<bool>(this->data_ >= value);
+        }
+
+        //! Elementwise smaller : Tensor to Tensor
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator< (const NSL::Tensor<Type,RealType> & other) {
+            return Tensor<bool>(this->data_ < other.data_);
+        }
+
+        //! Elementwise smaller: Tensor to number
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator< (const Type & value) {
+            return Tensor<bool>(this->data_ < value);
+        }
+
+        //! Elementwise smaller or equals: Tensor to Tensor
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator> (const NSL::Tensor<Type,RealType> & other) {
+            return Tensor<bool>(this->data_ > other.data_);
+        }
+
+        //! Elementwise greater or equals: Tensor to number
+        /*! \todo: Add Documentation*/
+        Tensor<bool> operator> (const Type & value) {
+            return Tensor<bool>(this->data_ > value);
         }
 
         // =====================================================================
         // Print and stream
         // =====================================================================
 
-        // streaming operator
+        //! Streaming operator
+        //! \todo: We should code up our own.
         friend std::ostream & operator << (std::ostream & os, const Tensor<Type> & T){
             return (os << T.data_);
         }
 
-        //Print tensor.
-        void print () const{
-            std::cout<<data_ <<std::endl;
-        }
-
-        //Print tensor complex.
-        void print_complex () const{
-            std::cout<< torch::view_as_real(data_)<<std::endl;
-        }
 
         // =====================================================================
         // Shape and dimension
         // =====================================================================
 
-        //ToDo: Revise static_cast.
-        //Return size of dimension in data_.
-        [[nodiscard]] std::size_t shape(const std::size_t & dim) const {
-            return data_.size(static_cast<const long int>(dim));
+        //! Get the extent of a certain dimension.
+        /*!
+         * Parameters:\n
+         * * `const size_t & dim`: Dimension of which the extent should be queried.
+         *
+         * Behavior:\n
+         * Returns the extent of the dimension specified by `dim`.
+         * If no reallocation is performed the value will match the given parameter
+         * to the constructor `NSL::Tensor<Type,RealType>::Tensor(Arg size0, SizeType... sizes)`.
+         * */
+        [[nodiscard]] std::size_t shape(const size_t & dim) const {
+            return data_.size(dim);
         }
 
-        [[nodiscard]] std::vector<long int> shape() const {
+        //! Get the extents of the tensor
+        [[nodiscard]] std::vector<size_t> shape() const {
             std::vector<long int> out(data_.dim());
             for (long int i=0; i< data_.dim(); ++i){
                 out[i] = data_.size(i);
@@ -452,18 +318,19 @@ class Tensor {
             return out;
         }
 
+        //! Get the dimension of the Tensor.
+        /*!
+         *  The dimension of the tensor is specified at construction by the number
+         *  of integer arguments provided to the constructor `NSL::Tensor(Arg size0, SizeType... sizes)`
+         * */
         [[nodiscard]] std::size_t dim() const {
             return this->data_.dim();
         }
 
-        // =====================================================================
-        // Exponential
-        // =====================================================================
-
-        //Tensor exponential.
-        Tensor<Type> & exp() {
-            data_.exp_();
-            return *this;
+        //! Get the total number of elements.
+        /*! \todo: Add Documentaton*/
+        [[nodiscard]] std::size_t numel() const {
+            return this->data_.numel();
         }
 
         //Matrix exponential.
@@ -513,29 +380,328 @@ class Tensor {
         }
 
         // =====================================================================
-        // Expand
+        // Algebra Operators
         // =====================================================================
-        template<typename... Args>
-        NSL::Tensor<Type> & expand(const Args &... dims) {
-            this->data_ = data_.unsqueeze(-1).expand({dims...});
+        // Here we create all the inplace linear algebra operation we need
+
+        // =====================================================================
+        // operator+;
+
+        //! Elementwise addition: Tensor + Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator+(const Tensor<Type,RealType> & other){
+            Tensor<Type,RealType> tmp(this->data_ + other.data_);
+            return tmp;
+        }
+
+        //! Elementwise addition: Tensor + number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator+(const Type & value){
+            Tensor<Type,RealType> tmp(this->data_ + value);
+            return tmp;
+        }
+
+        // =====================================================================
+        // operator+=;
+
+        //! Elementwise addition: Tensor + Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> & operator+=(const Tensor<Type,RealType> & other){
+            this->data_ += other.data_;
             return *this;
         }
 
-        //Tensor Expand
-        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
-        NSL::Tensor<Type> & expand(std::deque<long int> dims){
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+        //! Elementwise addition: Tensor + number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator+=(const Type & value){
+            this->data_ += value;
             return *this;
         }
 
-        //Tensor Expand.
-        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
-        NSL::Tensor<Type> & expand(const size_t & dimension){
-            std::deque<long int> dims;
-            dims.push_front(dimension);
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
+
+        // =====================================================================
+        // operator-;
+
+        //! Elementwise subtraction: Tensor - Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator-(const Tensor<Type,RealType> & other){
+            Tensor<Type,RealType> tmp(this->data_ - other.data_);
+            return tmp;
+        }
+
+        //! Elementwise subtraction: Tensor - number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator-(const Type & value){
+            Tensor<Type,RealType> tmp(this->data_ - value);
+            return tmp;
+        }
+
+        // =====================================================================
+        // operator-=;
+
+        //! Elementwise subtraction: Tensor - Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> & operator-=(const Tensor<Type,RealType> & other){
+            this->data_ -= other.data_;
+            return *this;
+        }
+
+        //! Elementwise subtraction: Tensor - number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator-=(const Type & value){
+            this->data_ -= value;
+            return *this;
+        }
+
+        // =====================================================================
+        // operator*;
+
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor * Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator*(const Tensor<Type,RealType> & other){
+            Tensor<Type,RealType> tmp(this->data_ * other.data_);
+            return tmp;
+        }
+
+        //! Elementwise multiplication: Tensor * number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator*(const Type & value){
+            Tensor<Type,RealType> tmp(this->data_ * value);
+            return tmp;
+        }
+
+        // =====================================================================
+        // operator*=;
+
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor * Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> & operator*=(const Tensor<Type,RealType> & other){
+            this->data_ *= other.data_;
+            return *this;
+        }
+
+        //! Elementwise multiplication: Tensor * number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator*=(const Type & value){
+            this->data_ *= value;
+            return *this;
+        }
+
+
+        // =====================================================================
+        // operator/;
+
+        //! Elementwise division (Schur, Hadamard division): Tensor / Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator/(const Tensor<Type,RealType> & other){
+            Tensor<Type,RealType> tmp(this->data_ / other.data_);
+            return tmp;
+        }
+
+        //! Elementwise division: Tensor / number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator/(const Type & value){
+            Tensor<Type,RealType> tmp(this->data_ / value);
+            return tmp;
+        }
+
+        // =====================================================================
+        // operator/=;
+
+        //! Elementwise division (Schur, Hadamard division): Tensor / Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> & operator/=(const Tensor<Type,RealType> & other){
+            this->data_ /= other.data_;
+            return *this;
+        }
+
+        //! Elementwise division: Tensor / number
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator/=(const Type & value){
+            this->data_ /= value;
+            return *this;
+        }
+
+        //! Elementwise real part
+        /*!
+         * If `Type` refers to `NSL::complex<RealType>` return the real part of
+         * each element of the tensor as `NSL::Tensor<RealType>`
+         * Else `Type` refers to a RealType expression (e.g. `float`,`double`, ...)
+         * and is simply returned.
+         * */
+        Tensor<RealType,RealType> real(){
+            // compile time evaluation: if Type equals RealType
+            if constexpr(std::is_same<Type,RealType>()){
+                // return the real tensor
+                return *this;
+                // compile time evaluation: if Type equals NSL::complex<RealType>
+            } else {
+                // return real part
+                return torch::real(this->data_);
+            }
+        }
+
+        //! Elementwise imaginary part
+        /*!
+         * If `Type` refers to `NSL::complex<RealType>` return the imaginary part of
+         * each element of the tensor as `NSL::Tensor<RealType>`
+         * Else `Type` refers to a RealType expression and does not have an imaginary
+         * part, a Tensor with zeros is returned.
+         * */
+        Tensor<RealType,RealType> imag(){
+            // compile time evaluation: if type T is real type RT
+            if constexpr(std::is_same<Type,RealType>()){
+                // return zeros
+                return torch::zeros(this->data_.sizes(),
+                                    torch::TensorOptions().dtype<RealType>()
+                                                          .layout(this->data_.layout())
+                                                          .device(this->data_.device())
+                );
+                // compile time evaluation: if type T is NSL::complex<RT>
+            } else {
+                // return imaginary part
+                return torch::imag(this->data_);
+            }
+        }
+
+        // =====================================================================
+        // Trigonometric functions
+        // =====================================================================
+
+        //! Elementwise exponential
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & exp() {
+            this->data_.exp_();
+            return *this;
+        }
+
+        //! Elementwise sine
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & sin() {
+            this->data_.sin_();
+            return *this;
+        }
+
+        //! Elementwise cosine
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & cos() {
+            this->data_.cos_();
+            return *this;
+        }
+
+        //! Elementwise tangent
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & tan() {
+            this->data_.tan_();
+            return *this;
+        }
+
+        //! Elementwise hyperbolic sine
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & sinh() {
+            this->data_.sinh_();
+            return *this;
+        }
+
+        //! Elementwise hyperbolic cosine
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & cosh() {
+            this->data_.cosh_();
+            return *this;
+        }
+
+        //! Elementwise hyperbolic tangent
+        /*! \todo: Add Documentation*/
+        Tensor<Type,RealType> & tanh() {
+            this->data_.tanh_();
+            return *this;
+        }
+
+
+        // =====================================================================
+        // Reductions
+        // =====================================================================
+
+        //! Reduction: +
+        /*! \todo: Add Documentation*/
+        Type sum(const size_t dim){
+            return this->data_.sum(dim).template item<Type>();
+        }
+
+        //! Reduction: +
+        /*! \todo: Add Documentation*/
+        Type sum(){
+            return this->data_.sum().template item<Type>();
+        }
+
+        //! Reduction: *
+        /*! \todo: Add Documentation*/
+        Type prod(const size_t dim){
+            return this->data_.prod(dim).template item<Type>();
+        }
+
+        //! Reduction: *
+        /*! \todo: Add Documentation*/
+        Type prod(){
+            return this->data_.prod().template item<Type>();
+        }
+
+        //! Reduction: && (logical and)
+        /*! \todo: Add Documentation*/
+        Type all(){
+            static_assert(std::is_same<Type,bool>());
+            return this->data_.all().template item<Type>();
+        }
+
+        //! Reduction: || (logical or)
+        /*! \todo: Add Documentation*/
+        Type any(){
+            static_assert(std::is_same<Type,bool>());
+            return this->data_.any().template item<Type>();
+        }
+
+
+        // =====================================================================
+        // Resize operations
+        // =====================================================================
+
+        //! Expanding the Tensor by one dimension with size `newSize`
+        /*! \todo: Add Documentation
+         * */
+        NSL::Tensor<Type> & expand(const size_t & newSize) {
+            this->data_ = data_.unsqueeze(-1).expand(c10::IntArrayRef({this->data_.sizes(), newSize}));
             return *this;
         }
 
@@ -543,528 +709,82 @@ class Tensor {
         // Shift
         // =====================================================================
 
-        // return the t-shifted version of this tensor.
-        //Why use roll? https://discuss.pytorch.org/t/is-there-a-way-to-create-a-rolled-shifted-and-wrapped-view-of-a-tensor/67568
-        NSL::Tensor<Type> & shift(const long int & shift, const Type & boundary){
-            data_ = torch::roll(data_,shift,0);
-            std::cout<<"Boundary:" <<boundary<<std::endl;
-
-            if(shift>0) {
-                for (int i = 0; i <  shift ; i++ ) {
-                    for(long int x = 0; x < this->data_[i].numel(); ++x){
-                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
-                    }
-                }
-            }
-            else{
-                for (int i = (data_).dim() + shift; i < (data_).dim(); i++){
-                    for(long int x = 0; x < this->data_[i].numel(); ++x){
-                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
-                    }
-                }
-            }
+        //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction.
+        /*! \todo: Add Documentation*/
+        NSL::Tensor<Type,RealType> & shift(const int shift){
+            this->data_ = this->data_.roll(shift,0);
             return *this;
         }
 
-        NSL::Tensor<Type> & shift(const long int & shift) {
-            data_ = torch::roll(data_, shift, 0);
+        //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction.
+        /*! \todo: Add Documentation*/
+        NSL::Tensor<Type,RealType> & shift(const int shift, const size_t dim){
+            this->data_ = this->data_.roll(shift,dim);
             return *this;
         }
-    }; //Tensor class
 
+        //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
+        /*! \todo: Add Documentation*/
+        NSL::Tensor<Type,RealType> & shift(const int shift, const Type boundary){
+            this->data_ = this->data_.roll(shift,0);
 
-//========================================================================
-//Time Tensor Class
+            if(shift>0){
+                this->data_.slice(/*dim=*/0,/*start=*/0,/*end=*/shift,/*step=*/1)*=boundary;
+            } else {
+                this->data_.slice(/*dim=*/0,/*start=*/this->shape(0)-shift,/*end=*/this->shape(0),/*step=*/1)*=boundary;
+            }
 
-template<typename Type>
-class TimeTensor {
+            return *this;
+        }
 
-    // alias settings
-    using size_t = long int;
+        //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
+        /*! \todo: Add Documentation*/
+        NSL::Tensor<Type,RealType> & shift(const int shift, const size_t dim, const Type boundary){
+            this->data_ = this->data_.roll(shift,dim);
 
+            if(shift>0){
+                this->data_.slice(/*dim=*/dim,/*start=*/0,/*end=*/shift,/*step=*/1)*=boundary;
+            } else {
+                this->data_.slice(/*dim=*/dim,/*start=*/this->shape(dim)-shift,/*end=*/this->shape(dim),/*step=*/1)*=boundary;
+            }
 
-    private:
+            return *this;
+        }
+
+    protected:
+        //! Underlying torch::Tensor
         torch::Tensor data_;
 
-        template<typename... Args>
-        inline const std::size_t linearIndex_(const Args &... indices){
-            std::array<long int, sizeof...(indices)> a_indices = {indices...};
-            std::size_t offset = 0;
+        //! Transform a given set of D indices to the linear index used to reference
+        //! the 1 dimensional memory layout
+        template<typename... SizeType>
+        inline std::size_t linearIndex_(const SizeType &... indices) const{
+            // check that all arguments of the parameter pack are convertible to
+            // the defined size type (i.e. integer valued)
+            static_assert(NSL::all_convertible<size_t, SizeType...>::value);
 
-            for(long int d = 0 ; d < sizeof...(indices); ++d){
+            // check that the number of arguments in indices matches the dimension of the tensor
+            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const SizeType &... indices) called with to little indices");
+            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const SizeType &... indices) called with to many indices");
+
+            // unpack the parameter pack
+            std::array<size_t, sizeof...(indices)> a_indices = {indices...};
+
+            size_t offset = 0;
+            for(size_t d = 0 ; d < sizeof...(indices); ++d){
                 offset += a_indices[d] * data_.stride(d);
             }
 
             return offset;
         }
 
-    public:
-        //Default constructor
-        constexpr explicit TimeTensor() :
-            data_(torch::zeros({},torch::TensorOptions().dtype<Type>()))
-        {}
+}; //Tensor class
 
-        //Construct with N dimensions
-        template<typename... ArgsT>
-        constexpr explicit TimeTensor(const size_t & size0, const ArgsT &... sizes):
-            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
-        {}
 
-        //Construct data_ with sizes stored in dims.
-        [[deprecated("Will be deleted in version 1, use variadic constructors")]]
-        constexpr explicit TimeTensor(const std::vector<long int>  & dims):
-            data_(torch::zeros(dims, torch::TensorOptions().dtype<Type>().device(torch::kCPU)))
-        {}
+template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
+using TimeTensor = NSL::Tensor<Type>;
 
-        constexpr explicit TimeTensor(torch::Tensor && other):
-            data_(std::move(other))
-        {}
 
-        constexpr explicit TimeTensor(torch::Tensor & other):
-            data_(other)
-        {}
-
-        // copy constructor
-        constexpr TimeTensor(const TimeTensor& other):
-            data_(other.data_)
-        {}
-
-        // move constructor
-        constexpr TimeTensor(TimeTensor && other) noexcept:
-            data_(std::move(other.data_))
-        {}
-
-        //Random creation
-        TimeTensor<Type> & rand(){
-            data_=torch::rand(data_.sizes(), torch::TensorOptions().dtype<Type>().device(torch::kCPU));
-            return (*this);
-        }
-
-        // ToDo: Repalace these calls with the assignment/copy constructor
-        TimeTensor<Type> & copy(TimeTensor<Type> & other){
-            data_ = other.data_.clone();
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Random Access Operators
-        // =====================================================================
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices){
-            static_assert(NSL::all_convertible<size_t, Args...>::value,
-                          "NSL::TimeTensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-            ); // static_assert
-            // need data_.dim() arguments!
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
-
-            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
-        }
-
-        template<typename ...Args>
-        constexpr Type & operator()(const Args &... indices) const {
-            static_assert(NSL::all_convertible<size_t, Args...>::value,
-                      "NSL::TimeTensor::operator()(const Args &... indices) can only be called with arguments of integer type"
-            ); // static_assert
-            // need data_.dim() arguments!
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const Args &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const Args &... indices) called with to many indices");
-
-            // ToDo: data_.dim() == 1 is a problem as the slice case would always be called! Unfortunately, data_.dim() is only known at runtime
-            return data_.data_ptr<Type>()[linearIndex_(indices...)];
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr Tensor<Type> operator[](const size_t index){
-            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return Tensor<Type>(slice);
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr const Tensor<Type> & operator[](const size_t index) const {
-            torch::Tensor && slice = data_.slice(0,index,index+1,1).squeeze(0);
-            return Tensor<Type>(slice);
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr Type & operator[](const std::initializer_list<size_t> & indices) {
-            // get index transformation
-            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
-            // last accessed 20.08.21
-            size_t offset = 0;
-            for(size_t d = 0; d < indices.size(); ++d){
-                offset += *(indices.begin()+d) * data_.stride(d);
-            }
-
-            // dereference underlying pointer
-            return data_.data_ptr<Type>()[offset];
-        }
-
-        [[deprecated("Will be deleted in version 1, use operator()")]]
-        constexpr const Type & operator[](const std::initializer_list<size_t> & indices) const {
-            // get index transformation
-            // compare TensorAccessor: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/TensorAccessor.h
-            // last accessed 20.08.21
-            size_t offset = 0;
-            for(size_t d = 0; d < indices.size(); ++d){
-                offset += *(indices.begin()+d) * data_.stride(d);
-            }
-
-            // dereference underlying pointer
-            return data_.data_ptr<Type>()[offset];
-        }
-
-        friend torch::Tensor to_torch(const TimeTensor<Type> & other){
-            return other.data_;
-        }
-
-        torch::Tensor & to_torch(){
-            return data_;
-        }
-
-        constexpr Type * data(){
-            return data_.data_ptr<Type>();
-        }
-
-        constexpr Type * data() const {
-            return data_.data_ptr<Type>();
-        }
-
-        TimeTensor<Type> real(){
-            return NSL::TimeTensor<Type>(torch::real(data_));
-        }
-
-        TimeTensor<Type> real() const {
-            return NSL::TimeTensor<Type>(torch::real(data_));
-        }
-
-        TimeTensor<Type> imag(){
-            return NSL::TimeTensor<Type>(torch::imag(data_));
-        }
-
-        TimeTensor<Type> imag() const {
-            return NSL::TimeTensor<Type>(torch::imag(data_));
-        }
-
-        // =====================================================================
-        // Slice Operation
-        // =====================================================================
-        constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step){
-            torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return TimeTensor<Type>(slice);
-        }
-
-        constexpr TimeTensor<Type> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step) const {
-            torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return TimeTensor<Type>(slice);
-        }
-
-        // =====================================================================
-        // Algebra Operators
-        // =====================================================================
-
-        // ToDo: merge with prod
-        //Product by a scalar.
-        TimeTensor<Type> operator*(const Type & factor) const{
-            TimeTensor <Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = factor* out.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        TimeTensor<Type> & prod(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & operator*=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = factor* this->data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-
-        //Product by a Timetensor
-        TimeTensor<Type> operator*(const TimeTensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::TimeTensor <Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]*other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & operator*=(const TimeTensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & prod(const TimeTensor<Type> & other){
-            assert(other.data_.sizes() == this->data_.sizes());
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]* other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Sum of TimeTensors
-        TimeTensor<Type> operator+(TimeTensor<Type> & other ){
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::TimeTensor<Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        TimeTensor<Type> & operator+=(TimeTensor<Type> & other ){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & sum(TimeTensor<Type> & other ){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] + other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Sum by a scalar.
-        TimeTensor<Type> operator+(const Type & factor) const{
-            NSL::TimeTensor<Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = factor + out.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        TimeTensor<Type> & operator+=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & sum(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]+factor;
-            }
-            return *this;
-        }
-
-        //Minus of TimeTensors
-        TimeTensor<Type> operator-(TimeTensor<Type> & other ){
-            assert(other.data_.sizes() == this->data_.sizes());
-            NSL::TimeTensor<Type> out (this->data_);
-            for(long int x = 0; x < out.data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
-            }
-            return out;
-        }
-
-        TimeTensor<Type> & operator-=(TimeTensor<Type> & other ){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & subs(TimeTensor<Type> & other ){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x] - other.data_.template data_ptr<Type>()[x];
-            }
-            return *this;
-        }
-
-        //Minus by a scalar.
-        TimeTensor<Type> operator-(const Type & factor){
-            TimeTensor <Type> out (this->data_);
-            for(long int x = 0; x < data_.numel(); ++x){
-                out.data_.template data_ptr<Type>()[x] = out.data_.template data_ptr<Type>()[x]-factor;
-            }
-            return out;
-        }
-
-        TimeTensor<Type> & operator-=(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
-            }
-            return *this;
-        }
-
-        TimeTensor<Type> & subs(const Type & factor){
-            for(long int x = 0; x < this->data_.numel(); ++x){
-                this->data_.template data_ptr<Type>()[x] = this->data_.template data_ptr<Type>()[x]-factor;
-            }
-            return *this;
-        }
-
-        //Equal
-        TimeTensor<Type> & operator=(const TimeTensor<Type> & other){
-            this->data_ = other.data_.clone();
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Boolean operators
-        // =====================================================================
-        //Comparison each element of two tensors.
-        bool operator== (NSL::TimeTensor<Type> & other) const{
-            assert(other.data_.sizes() == this->data_.sizes());
-            bool out = true;
-            for(long int x = 0; x < other.data_.numel(); ++x) {
-                if (this->data_.template data_ptr<Type>()[x] != other.data_.template data_ptr<Type>()[x]){
-                    out = false;
-                    break;
-                }
-            }
-            return out;
-        }
-        //comparison all element with a number.
-        bool operator== (const Type & num) const{
-            bool out = true;
-            for(long int x = 0; x < this->data_.numel(); ++x) {
-                if (this->data_.template data_ptr<Type>()[x] != num){
-                    out = false;
-                    break;
-                }
-            }
-            return out;
-        }
-
-        // =====================================================================
-        // Print and stream
-        // =====================================================================
-
-        // streaming operator
-        friend std::ostream & operator << (std::ostream & os, const TimeTensor<Type> & T){
-            return (os << T.data_);
-        }
-
-        //Print tensor.
-        void print (){
-            std::cout<<data_ <<std::endl;
-        }
-
-        //Print tensor complex.
-        void print_complex (){
-            std::cout<< torch::view_as_real(data_)<<std::endl;
-        }
-
-
-        // =====================================================================
-        // Shape and dimension
-        // =====================================================================
-
-        //Return size of dimension in data_.
-        //ToDo: Revise static_cast.
-        //Return size of dimension in data_.
-        [[nodiscard]] std::size_t shape(const size_t & dim) const {
-            return data_.size(static_cast<const long int>(dim));
-        }
-
-        [[nodiscard]] std::vector<long int> shape() const {
-            std::vector<long int> out;
-            for (long int i=0; i< data_.dim(); ++i){
-                out.push_back(data_.size(i));
-            }
-            return out;
-        }
-
-        [[nodiscard]] size_t dim() const {
-            return this->data_.dim();
-        }
-
-
-        // =====================================================================
-        // Exponential
-        // =====================================================================
-
-        //Tensor exponential.
-        TimeTensor<Type> & exp() {
-            data_.exp_();
-            return *this;
-        }
-
-        // =====================================================================
-        // Expand
-        // =====================================================================
-
-        template<typename... Args>
-        NSL::TimeTensor<Type> & expand(const Args &... dims) {
-            this->data_ = data_.unsqueeze(-1).expand({dims...});
-            return *this;
-        }
-
-        //Tensor Expand.
-        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
-        TimeTensor<Type> & expand(std::deque<long int> & dims){
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
-            return *this;
-        }
-
-        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
-        TimeTensor<Type> & expand(std::deque<long int> dims){
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
-            return *this;
-        }
-
-        //Tensor Expand.
-        [[deprecated("Will be deleted in version 1, use expand(Args... & dims)")]]
-        TimeTensor<Type> & expand(const size_t & dimension){
-            std::deque<long int> dims;
-            dims.push_front(dimension);
-            std::for_each(data_.sizes().rbegin(), data_.sizes().rend(), [& dims](const long int & x){dims.push_front(x);});
-            data_=(data_).unsqueeze(-1).expand(std::vector<long int>({dims.begin(), dims.end()})).clone();
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Shift
-        // =====================================================================
-
-        // return the t-shifted version of this tensor.
-        //Why use roll? https://discuss.pytorch.org/t/is-there-a-way-to-create-a-rolled-shifted-and-wrapped-view-of-a-tensor/67568
-        NSL::TimeTensor<Type> & shift(const long int & shift, const Type & boundary){
-            data_ = torch::roll(data_,shift,0);
-            std::cout<<"Boundary:" <<boundary<<std::endl;
-            if(shift>0) {
-                for (int i = 0; i <  shift ; i++ ) {
-                    for(long int x = 0; x < this->data_[i].numel(); ++x){
-                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
-                    }
-                }
-            }
-            else{
-                for (int i = (data_).dim() + shift; i < (data_).dim(); i++){
-                    for(long int x = 0; x < this->data_[i].numel(); ++x){
-                        this->data_[i].template data_ptr<Type>()[x] = boundary*data_[i].template data_ptr<Type>()[x];
-                    }
-                }
-            }
-            return *this;
-        }
-
-        NSL::TimeTensor<Type> & shift(const long int & shift) {
-            data_ = torch::roll(data_, shift, 0);
-            return *this;
-        }
-    }; //Time Tensor class
 } // namespace NSL
 
 #endif //NSL_TENSOR_HPP

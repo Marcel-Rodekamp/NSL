@@ -65,7 +65,7 @@ class SpatialLattice {
          *  operations to deduce graph-theoretic properties.  For example
          *  diagonal(adjacency^(all odd powers)) = 0 if the graph is bipartite.
          **/
-        NSL::Tensor<Type> adjacency_matrix();
+        NSL::Tensor<int> adjacency_matrix();
 
         //! Give the matrix of hopping amplitudes. Can be complex, as long as it's Hermitian.
         /*!
@@ -84,6 +84,8 @@ class SpatialLattice {
         //! A string that describes the lattice.
         const std::string & name() { return name_; };
 
+        bool bipartite();
+
     protected:
         //! A descriptive string for quick human identification of the lattice.
         const std::string name_;
@@ -93,19 +95,28 @@ class SpatialLattice {
         NSL::Tensor<double> sites_;
         //! Since exponentiating can be costly, a place to memoize results.
         std::map<double,NSL::Tensor<Type>> exp_hopping_matrix_;
+        //! Store whether the lattice can be bipartitioned.
+        bool bipartite_ = false;
+        //! We only check for bipartiteness on the first request.
+        bool bipartite_is_initialized_ = false;
+        // Maybe the right thing is to have wrapper that can hold
+        // a value or be Uninitialized
 
     private:
         //! We only compute the adjacency matrix on first request.
         bool adj_is_initialized_ = false;
         //! The (computed) adjacency matrix.
-        NSL::Tensor<Type> adj_;
+        NSL::Tensor<int> adj_;
         //! Transform the hopping matrix into the adjacency matrix.
         /*!
          *  \param hops a matrix of hopping amplitudes.
          *         Zero amplitudes imply non-adjacent sites,
          *         nonzero amplitudes imply adjacency.
          **/
-        void compute_adjacency(const NSL::Tensor<Type> & hops);
+        void compute_adjacency(NSL::Tensor<Type> hops);
+        
+        // A generic method, in case no short-cut is available
+        void compute_bipartite();
     }; // SpatialLattice
 
 class Lattice {
