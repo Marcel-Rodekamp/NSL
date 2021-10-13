@@ -502,7 +502,7 @@ class Tensor {
          * and is simply returned.
          * */
         Tensor<RealType,RealType> real(){
-            if constexpr(this->is_complex()){
+            if constexpr(NSL::is_complex<Type>()){
                 return Tensor<RealType>(torch::real(this->data_));
             } else {
                 return *this;
@@ -517,7 +517,7 @@ class Tensor {
          * part, a Tensor with zeros is returned.
          * */
         Tensor<RealType,RealType> imag(){
-            if constexpr(this->is_complex()){
+            if constexpr(NSL::is_complex<Type>()){
                 return Tensor<RealType>(torch::imag(this->data_));
             } else {
                 return Tensor<RealType>(torch::zeros(this->data_.sizes(),
@@ -526,6 +526,17 @@ class Tensor {
                                             .device(this->data_.device())
                 ));
             }
+        }
+
+        //! Complex conjugation
+        /*!
+         * \todo: Add documentation
+         * */
+        Tensor<Type,RealType> & conj(){
+            if constexpr(NSL::is_complex<Type>()){
+                this->data_ = this->data_.conj();
+            }
+            return *this;
         }
 
         // =====================================================================
