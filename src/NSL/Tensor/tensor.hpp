@@ -260,6 +260,10 @@ class Tensor {
             return Tensor<bool>(this->data_ > value);
         }
 
+        constexpr bool is_complex(){
+            return std::is_same<Type,RealType>();
+        }
+
         // =====================================================================
         // Print and stream
         // =====================================================================
@@ -498,14 +502,10 @@ class Tensor {
          * and is simply returned.
          * */
         Tensor<RealType,RealType> real(){
-            // compile time evaluation: if Type equals RealType
-            if constexpr(std::is_same<Type,RealType>()){
-                // return the real tensor
-                return *this;
-                // compile time evaluation: if Type equals NSL::complex<RealType>
+            if constexpr(this->is_complex()){
+                return Tensor<RealType>(torch::real(this->data_));
             } else {
-                // return real part
-                return torch::real(this->data_);
+                return *this;
             }
         }
 
@@ -517,18 +517,14 @@ class Tensor {
          * part, a Tensor with zeros is returned.
          * */
         Tensor<RealType,RealType> imag(){
-            // compile time evaluation: if type T is real type RT
-            if constexpr(std::is_same<Type,RealType>()){
-                // return zeros
-                return torch::zeros(this->data_.sizes(),
-                                    torch::TensorOptions().dtype<RealType>()
-                                                          .layout(this->data_.layout())
-                                                          .device(this->data_.device())
-                );
-                // compile time evaluation: if type T is NSL::complex<RT>
+            if constexpr(this->is_complex()){
+                return Tensor<RealType>(torch::imag(this->data_));
             } else {
-                // return imaginary part
-                return torch::imag(this->data_);
+                return Tensor<RealType>(torch::zeros(this->data_.sizes(),
+                                    torch::TensorOptions().dtype<RealType>()
+                                            .layout(this->data_.layout())
+                                            .device(this->data_.device())
+                ));
             }
         }
 
