@@ -72,12 +72,8 @@ TEST_CASE( "Lattice: 1D Square", "[Lattice, Square, 1D]" ) {
     n[0] = d0;
     // floating point types
     test_square<float>(n);
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Square::hops_.
+    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
 }
 
 TEST_CASE( "Lattice: 2D Square", "[Lattice, Square, 2D]" ) {
@@ -90,12 +86,8 @@ TEST_CASE( "Lattice: 2D Square", "[Lattice, Square, 2D]" ) {
     // floating point types
     test_square<float>(n);
     test_square<double>(n);
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Square::hops_.
+    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
 }
 
 TEST_CASE( "Lattice: 3D Square", "[Lattice, Square, 3D]" ) {
@@ -110,12 +102,8 @@ TEST_CASE( "Lattice: 3D Square", "[Lattice, Square, 3D]" ) {
     // floating point types
     test_square<float>(n);
     test_square<double>(n);
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Square::hops_.
+    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
 }
 
 TEST_CASE( "Lattice: Cube", "[Lattice, Cube, 3D]" ) {
@@ -124,10 +112,6 @@ TEST_CASE( "Lattice: Cube", "[Lattice, Cube, 3D]" ) {
     // floating point types
     test_cube<float>(n);
     test_cube<double>(n);
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Square::hops_.
+    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+    // test_cube<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
 }

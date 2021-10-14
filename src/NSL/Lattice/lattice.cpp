@@ -145,5 +145,6 @@ void NSL::Lattice::SpatialLattice<Type>::compute_bipartite(){
 
 template class NSL::Lattice::SpatialLattice<float>;
 template class NSL::Lattice::SpatialLattice<double>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<float>>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<double>>;
+// Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+//template class NSL::Lattice::SpatialLattice<NSL::complex<float>>;
+//template class NSL::Lattice::SpatialLattice<NSL::complex<double>>;

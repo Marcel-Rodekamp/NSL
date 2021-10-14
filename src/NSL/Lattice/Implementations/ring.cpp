@@ -45,7 +45,8 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
 
 template class NSL::Lattice::Ring<float>;
 template class NSL::Lattice::Ring<double>;
-template class NSL::Lattice::Ring<NSL::complex<float>>;
-template class NSL::Lattice::Ring<NSL::complex<double>>;
+// Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+//template class NSL::Lattice::Ring<NSL::complex<float>>;
+//template class NSL::Lattice::Ring<NSL::complex<double>>;
 
 #endif

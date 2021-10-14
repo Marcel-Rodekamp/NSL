@@ -55,11 +55,6 @@ TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
     // floating point types
     test_ring<float>(size, 0.5);
     test_ring<double>(size, 2.0);
-    test_ring<NSL::complex<double>>(size, NSL::complex<double>(0.707, 0.707));
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Ring::hops_.
+    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+    // test_ring<NSL::complex<double>>(size, NSL::complex<double>(0.707, 0.707));
 }
