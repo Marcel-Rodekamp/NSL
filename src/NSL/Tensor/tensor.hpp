@@ -624,14 +624,14 @@ class Tensor {
         //! Reduction: && (logical and)
         /*! \todo: Add Documentation*/
         Type all(){
-            static_assert(std::is_same<Type,bool>());
+            assert((std::is_same<Type,bool>()));
             return this->data_.all().template item<Type>();
         }
 
         //! Reduction: || (logical or)
         /*! \todo: Add Documentation*/
         Type any(){
-            static_assert(std::is_same<Type,bool>());
+            assert((std::is_same<Type,bool>()));
             return this->data_.any().template item<Type>();
         }
 
@@ -644,7 +644,7 @@ class Tensor {
         /*! \todo: Add Documentation
          * */
         NSL::Tensor<Type> & expand(const size_t & newSize) {
-            this->data_ = data_.unsqueeze(-1).expand(c10::IntArrayRef({this->data_.sizes(), newSize}));
+            this->data_ = data_.unsqueeze(-1).expand(this->data_.sizes().push_back(newSize));
             return *this;
         }
 
