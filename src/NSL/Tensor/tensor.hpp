@@ -644,7 +644,7 @@ class Tensor {
         /*! \todo: Add Documentation
          * */
         NSL::Tensor<Type> & expand(const size_t & newSize) {
-            this->data_ = data_.unsqueeze(-1).expand(this->data_.sizes().push_back(newSize));
+            this->data_ = data_.unsqueeze(-1).expand({newSize});
             return *this;
         }
 
