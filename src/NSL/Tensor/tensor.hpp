@@ -280,6 +280,10 @@ class Tensor {
             return Tensor<bool>(this->data_ > value);
         }
 
+        constexpr bool is_complex(){
+            return std::is_same<Type,RealType>();
+        }
+
         // =====================================================================
         // Print and stream
         // =====================================================================
@@ -562,14 +566,10 @@ class Tensor {
          * and is simply returned.
          * */
         Tensor<RealType,RealType> real(){
-            // compile time evaluation: if Type equals RealType
-            if constexpr(std::is_same<Type,RealType>()){
-                // return the real tensor
-                return *this;
-                // compile time evaluation: if Type equals NSL::complex<RealType>
+            if constexpr(NSL::is_complex<Type>()){
+                return Tensor<RealType>(torch::real(this->data_));
             } else {
-                // return real part
-                return torch::real(this->data_);
+                return *this;
             }
         }
 
@@ -581,19 +581,26 @@ class Tensor {
          * part, a Tensor with zeros is returned.
          * */
         Tensor<RealType,RealType> imag(){
-            // compile time evaluation: if type T is real type RT
-            if constexpr(std::is_same<Type,RealType>()){
-                // return zeros
-                return torch::zeros(this->data_.sizes(),
-                                    torch::TensorOptions().dtype<RealType>()
-                                                          .layout(this->data_.layout())
-                                                          .device(this->data_.device())
-                );
-                // compile time evaluation: if type T is NSL::complex<RT>
+            if constexpr(NSL::is_complex<Type>()){
+                return Tensor<RealType>(torch::imag(this->data_));
             } else {
-                // return imaginary part
-                return torch::imag(this->data_);
+                return Tensor<RealType>(torch::zeros(this->data_.sizes(),
+                                    torch::TensorOptions().dtype<RealType>()
+                                            .layout(this->data_.layout())
+                                            .device(this->data_.device())
+                ));
             }
+        }
+
+        //! Complex conjugation
+        /*!
+         * \todo: Add documentation
+         * */
+        Tensor<Type,RealType> & conj(){
+            if constexpr(NSL::is_complex<Type>()){
+                this->data_ = this->data_.conj();
+            }
+            return *this;
         }
 
         // =====================================================================
@@ -681,14 +688,14 @@ class Tensor {
         //! Reduction: && (logical and)
         /*! \todo: Add Documentation*/
         Type all(){
-            static_assert(std::is_same<Type,bool>());
+            assert((std::is_same<Type,bool>()));
             return this->data_.all().template item<Type>();
         }
 
         //! Reduction: || (logical or)
         /*! \todo: Add Documentation*/
         Type any(){
-            static_assert(std::is_same<Type,bool>());
+            assert((std::is_same<Type,bool>()));
             return this->data_.any().template item<Type>();
         }
 
@@ -701,7 +708,7 @@ class Tensor {
         /*! \todo: Add Documentation
          * */
         NSL::Tensor<Type> & expand(const size_t & newSize) {
-            this->data_ = data_.unsqueeze(-1).expand(c10::IntArrayRef({this->data_.sizes(), newSize}));
+            this->data_ = data_.unsqueeze(-1).expand({newSize});
             return *this;
         }
 

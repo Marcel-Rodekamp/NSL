@@ -15,6 +15,8 @@ void test_access(const SizeTypes &... sizes);
 template<typename T, typename ... SizeTypes>
 void test_slice(const SizeTypes &... sizes);
 
+template class NSL::Tensor<NSL::complex<float>>;
+
 // =============================================================================
 // Constructors
 // =============================================================================
