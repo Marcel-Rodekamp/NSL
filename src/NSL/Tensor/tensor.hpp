@@ -33,7 +33,9 @@ class Tensor {
 
     public:
         //Default constructor not required
-        constexpr explicit Tensor() = delete;
+        constexpr explicit Tensor() :
+            data_(torch::zeros({0},torch::TensorOptions().dtype<Type>()))
+        {}
 
         //! D-dimensional constructor.
         /*! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
@@ -57,6 +59,24 @@ class Tensor {
         constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
             data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
         {}
+
+        /*!
+         * param shape a std::vector giving the shape of the new Tensor.
+         * \todo Tensor(std::vector shape) is a horrible hack that should be cleaned up.
+         * However, we tried a variety of `static_cast`s and `std::transform` and things of that nature,
+         * and kept encountering a problem with the fact that `IntArrayRef` really wants `long long`.
+         **/
+        explicit Tensor(const std::vector<size_t> &shape)
+        {
+            std::vector<long long> shape_ll(shape.size());
+            for(int i = 0; i < shape.size(); ++i){
+                shape_ll[i] = shape[i];
+            }
+            data_ = torch::zeros(
+                        torch::IntArrayRef(shape_ll.data(), shape_ll.size()),
+                        torch::TensorOptions().dtype<Type>()
+                    );
+        }
 
         //! copy constructor
         constexpr Tensor(const Tensor& other):
@@ -317,6 +337,51 @@ class Tensor {
             return this->data_.numel();
         }
 
+        //Matrix exponential.
+        Tensor<Type> & mat_exp() {
+            data_ = data_.matrix_exp();
+            return *this;
+        }
+
+        // =====================================================================
+        // Determinant
+        // =====================================================================
+
+        // Other .member functions are mutations which change .data_.
+        // Since .det and .logdet shouldn't do that, they go in LinAlg.
+
+        // =====================================================================
+        // Transpose + Adjoint
+        // =====================================================================
+
+        // TODO: transpose (and maybe adjoint) could be a view?
+
+        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & transpose() {
+            this->transpose(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
+            data_ = torch::transpose(data_, dim0, dim1).conj();
+            return *this;
+        }
+
+        NSL::Tensor<Type> & adjoint() {
+            this->adjoint(this->dim()-1, this->dim()-2);
+            return *this;
+        }
+
+        NSL::Tensor<Type> & conj() {
+            if constexpr(NSL::is_complex<Type>()){
+                this->data_ = this->data_.conj();
+            }
+            return *this;
+        }
 
         // =====================================================================
         // Algebra Operators
@@ -407,7 +472,6 @@ class Tensor {
             this->data_ -= value;
             return *this;
         }
-
 
         // =====================================================================
         // operator*;
@@ -526,17 +590,6 @@ class Tensor {
                                             .device(this->data_.device())
                 ));
             }
-        }
-
-        //! Complex conjugation
-        /*!
-         * \todo: Add documentation
-         * */
-        Tensor<Type,RealType> & conj(){
-            if constexpr(NSL::is_complex<Type>()){
-                this->data_ = this->data_.conj();
-            }
-            return *this;
         }
 
         // =====================================================================
