@@ -592,17 +592,6 @@ class Tensor {
             }
         }
 
-        //! Complex conjugation
-        /*!
-         * \todo: Add documentation
-         * */
-        Tensor<Type,RealType> & conj(){
-            if constexpr(NSL::is_complex<Type>()){
-                this->data_ = this->data_.conj();
-            }
-            return *this;
-        }
-
         // =====================================================================
         // Trigonometric functions
         // =====================================================================
