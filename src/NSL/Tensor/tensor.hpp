@@ -92,6 +92,7 @@ class Tensor {
             return data_;
         }
 
+
         // =====================================================================
         // Tensor Creation Helpers
         // =====================================================================
@@ -105,6 +106,18 @@ class Tensor {
             this->data_.uniform_();
             return *this;
         }
+
+
+        //! Fill the tensor with pseudo-random numbers
+        /*!
+         * Fills the Tensor with pseudo-random numbers from the standard normal distribution
+         * \todo Generalize for different distributions
+         */
+        Tensor<Type,RealType> & randn(){
+            this->data_.normal_();
+            return *this;
+        }
+
 
         // =====================================================================
         // Accessors
@@ -138,7 +151,7 @@ class Tensor {
         template<typename ...SizeType>
         constexpr const Type & operator()(const SizeType &... indices) const {
             return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
-    }
+        }
 
         //! Explicitly access the torch::Tensor
         /*! \todo: Add Documentation*/
@@ -203,7 +216,7 @@ class Tensor {
         /*
          * Checks if each element of this equals other.
          * */
-        Tensor<bool> operator== (NSL::Tensor<Type> & other) {
+        Tensor<bool> operator== (const NSL::Tensor<Type> & other) {
             return Tensor<bool>(this->data_ == other.data_);
         }
 
@@ -301,16 +314,15 @@ class Tensor {
          * If no reallocation is performed the value will match the given parameter
          * to the constructor `NSL::Tensor<Type,RealType>::Tensor(Arg size0, SizeType... sizes)`.
          * */
-        [[nodiscard]] std::size_t shape(const size_t & dim) const {
+        [[nodiscard]] size_t shape(const size_t & dim) const {
             return data_.size(dim);
         }
 
         //! Get the extents of the tensor
         [[nodiscard]] std::vector<size_t> shape() const {
-            std::vector<long int> out(data_.dim());
-            for (long int i=0; i< data_.dim(); ++i){
-                out[i] = data_.size(i);
-            }
+            std::vector<size_t> out(data_.dim());
+            torch::IntArrayRef shape = this->data_.sizes();
+            std::copy(shape.begin(),shape.end(),out.begin());
             return out;
         }
 
@@ -319,21 +331,16 @@ class Tensor {
          *  The dimension of the tensor is specified at construction by the number
          *  of integer arguments provided to the constructor `NSL::Tensor(Arg size0, SizeType... sizes)`
          * */
-        [[nodiscard]] std::size_t dim() const {
+        [[nodiscard]] size_t dim() const {
             return this->data_.dim();
         }
 
         //! Get the total number of elements.
         /*! \todo: Add Documentaton*/
-        [[nodiscard]] std::size_t numel() const {
+        [[nodiscard]] size_t numel() const {
             return this->data_.numel();
         }
 
-        //Matrix exponential.
-        Tensor<Type> & mat_exp() {
-            data_ = data_.matrix_exp();
-            return *this;
-        }
 
         // =====================================================================
         // Determinant
@@ -348,32 +355,53 @@ class Tensor {
 
         // TODO: transpose (and maybe adjoint) could be a view?
 
+        //! Transpose dim0 dim1
+        /*!
+         * \todo Add documentation
+         * */
         NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
             data_ = torch::transpose(data_, dim0, dim1);
             return *this;
         }
 
+        //! Matrix transpose
+        /*!
+         * \todo: Add documentation
+         * */
         NSL::Tensor<Type> & transpose() {
             this->transpose(this->dim()-1, this->dim()-2);
             return *this;
         }
 
+        //! Adjoint (elementwise complex conjugate & transpose) of `dim0` and `dim1`
+        /*!
+         * \todo: Add documentation
+         * */
         NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
             data_ = torch::transpose(data_, dim0, dim1).conj();
             return *this;
         }
 
+        //! Matrix adjoint (elementwise complex conjugate & matrix transpose)
+        /*!
+         * \todo: Add documentation
+         * */
         NSL::Tensor<Type> & adjoint() {
             this->adjoint(this->dim()-1, this->dim()-2);
             return *this;
         }
 
+        //! Complex Conjugation (Elementwise)
+        /*!
+         * \todo: Add documentation
+         * */
         NSL::Tensor<Type> & conj() {
             if constexpr(NSL::is_complex<Type>()){
                 this->data_ = this->data_.conj();
             }
             return *this;
         }
+
 
         // =====================================================================
         // Algebra Operators
@@ -585,6 +613,19 @@ class Tensor {
         }
 
         // =====================================================================
+        // 2D Linear Algebra
+        // =====================================================================
+
+        //! Matrix exponential.
+        /*!
+         * \todo: Add documentation
+         * */
+        Tensor<Type> & mat_exp() {
+            data_ = data_.matrix_exp();
+            return *this;
+        }
+
+        // =====================================================================
         // Trigonometric functions
         // =====================================================================
 
@@ -689,7 +730,9 @@ class Tensor {
         /*! \todo: Add Documentation
          * */
         NSL::Tensor<Type> & expand(const size_t & newSize) {
-            this->data_ = data_.unsqueeze(-1).expand({newSize});
+            std::vector<size_t> sizes = this->shape();
+            sizes.push_back(newSize);
+            this->data_ = data_.unsqueeze(-1).expand(torch::IntArrayRef(sizes.data(),sizes.size()));
             return *this;
         }
 
@@ -699,21 +742,21 @@ class Tensor {
 
         //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction.
         /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const int shift){
+        NSL::Tensor<Type,RealType> & shift(const size_t & shift){
             this->data_ = this->data_.roll(shift,0);
             return *this;
         }
 
         //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction.
         /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const int shift, const size_t dim){
+        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const size_t & dim){
             this->data_ = this->data_.roll(shift,dim);
             return *this;
         }
 
         //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
         /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const int shift, const Type boundary){
+        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const Type & boundary){
             this->data_ = this->data_.roll(shift,0);
 
             if(shift>0){
@@ -727,7 +770,7 @@ class Tensor {
 
         //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
         /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const int shift, const size_t dim, const Type boundary){
+        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const size_t & dim, const Type &boundary){
             this->data_ = this->data_.roll(shift,dim);
 
             if(shift>0){

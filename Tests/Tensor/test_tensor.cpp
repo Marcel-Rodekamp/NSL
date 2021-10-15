@@ -4,7 +4,7 @@
 //! \file Tests/Tensor/test_tensor.cpp
 
 // Torch requirement
-using size_type = long int;
+using size_type = int64_t;
 
 template<typename T, typename ... SizeTypes>
 void test_constructor(const SizeTypes &... sizes);
@@ -15,6 +15,11 @@ void test_access(const SizeTypes &... sizes);
 template<typename T, typename ... SizeTypes>
 void test_slice(const SizeTypes &... sizes);
 
+template<typename T, typename ... SizeTypes>
+void test_expand(const size_type & newSize, const SizeTypes &... sizes);
+
+template<typename T, typename ... SizeTypes>
+void test_shift(const size_type & shift, const SizeTypes &... sizes);
 
 // =============================================================================
 // Constructors
@@ -92,6 +97,80 @@ TORCH_TYPE_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
 
 
 // =============================================================================
+// Expand
+// =============================================================================
+
+TORCH_TYPE_TEST_CASE("Tensor: Expand 1D -> 2D", "[Tensor,Expand]") {
+    size_type newSize = GENERATE(1,10,100);
+    size_type size0 = GENERATE(1,10,100);
+    test_expand<TestType>(newSize,size0);
+}
+
+TORCH_TYPE_TEST_CASE("Tensor: Expand 2D -> 3D", "[Tensor,Expand]") {
+    size_type newSize = GENERATE(1,5,10);
+    size_type size0 = GENERATE(1,10,20);
+    size_type size1 = GENERATE(1,10,20);
+    test_expand<TestType>(newSize,size0,size1);
+}
+
+TORCH_TYPE_TEST_CASE("Tensor: Expand 3D -> 4D", "[Tensor,Expand]") {
+    size_type newSize = GENERATE(1,5,10);
+    size_type size0 = GENERATE(1,5,10);
+    size_type size1 = GENERATE(1,5,10);
+    size_type size2 = GENERATE(1,5,10);
+    test_expand<TestType>(newSize,size0,size1,size2);
+}
+
+
+// =============================================================================
+// Shift
+// =============================================================================
+
+TORCH_TYPE_TEST_CASE("Tensor: Shift 1D", "[Tensor,Shift]") {
+    size_type shift = GENERATE(1,2,3,4);
+    size_type size0 = GENERATE(5,100,1000);
+    test_shift<TestType>(shift,size0);
+
+    // corner cases
+    test_shift<TestType>(shift,shift);
+    test_shift<TestType>(shift,shift-1);
+}
+
+TORCH_TYPE_TEST_CASE("Tensor: Shift 2D", "[Tensor,Shift]") {
+    size_type shift = GENERATE(1,2,3,4);
+    size_type size0 = GENERATE(5,10,100);
+    size_type size1 = GENERATE(5,10,100);
+
+    test_shift<TestType>(shift,size0,size1);
+
+    // corner cases
+    test_shift<TestType>(shift,shift,size1);
+    test_shift<TestType>(shift,shift-1,size1);
+
+    test_shift<TestType>(shift,size0,shift);
+    test_shift<TestType>(shift,size0,shift-1);
+}
+
+TORCH_TYPE_TEST_CASE("Tensor: Shift 3D", "[Tensor,Shift]") {
+    size_type shift = GENERATE(1,2,3,4);
+    size_type size0 = GENERATE(5,10,100);
+    size_type size1 = GENERATE(5,10,100);
+    size_type size2 = GENERATE(5,10,100);
+
+    test_shift<TestType>(shift,size0,size1,size2);
+
+    // corner cases
+    test_shift<TestType>(shift,shift,size1,size2);
+    test_shift<TestType>(shift,shift-1,size1,size2);
+
+    test_shift<TestType>(shift,size0,shift,size2);
+    test_shift<TestType>(shift,size0,shift-1,size2);
+
+    test_shift<TestType>(shift,size0,size1,shift);
+    test_shift<TestType>(shift,size0,size1,shift-1);
+}
+
+// =============================================================================
 // Implementations
 // =============================================================================
 
@@ -109,12 +188,16 @@ TORCH_TYPE_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
  *  * `Tensor::operator==(const Type & value)`
  *  * `Tensor::operator=(const Type & value)`
  *  * `Tensor::all()`
+ *  * `Tensor::shape()`
+ *  * `Tensor::shape(const size_t &)`
  * */
 template<typename T, typename ... SizeTypes>
 void test_constructor(const SizeTypes &... sizes){
     INFO("Type = " + std::string(typeid(T).name()));
     INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
     INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+
+    std::array<size_type,sizeof...(sizes)> size_array{{sizes...}};
 
     // D-dimensional constructor
     NSL::Tensor<T> A(sizes...);
@@ -131,6 +214,14 @@ void test_constructor(const SizeTypes &... sizes){
     REQUIRE((C==static_cast<T>(1)).all());
     // check that the original "has been moved"
     REQUIRE_THROWS((B==static_cast<T>(1)).all());
+
+    // shape like constructor
+    NSL::Tensor<T> D(A.shape());
+    REQUIRE(D.dim() == sizeof...(sizes));
+    for(int d = 0; d < sizeof...(sizes); ++d){
+        REQUIRE(D.shape(d) == size_array[d]);
+        REQUIRE((D == static_cast<T>(0)).all());
+    }
 }
 
 
@@ -271,4 +362,167 @@ void test_slice(const SizeTypes &... sizes){
     for(size_t d = 1; d < sizeof...(SizeTypes); ++d){
         REQUIRE(Aslice.shape(d) == A.shape(d));
     }
+}
+
+
+//! Check the expand operation
+/*!
+ * Tests:
+ *
+ * * `Tensor<Type,RealType>::expand(const size_t & newSize)`
+ *
+ * \n
+ * Requires:
+ *
+ *  * `Tensor<Type,RealType>::dim()`
+ *  * `Tensor<Type,RealType>::shape()`
+ *  * `Tensor<Type,RealType>::shape(const size_t & dim)`
+ *  * `Tensor<Type,RealType>::operator=(Tensor<Type,RealType>)`
+ *  * `Tensor<Type,RealType>::numel()`
+ * */
+template <typename T, typename ... SizeTypes>
+void test_expand(const size_type & newSize, const SizeTypes &... sizes){
+    INFO("Type = " + std::string(typeid(T).name()));
+    INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
+    INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+    std::array<size_type,sizeof...(sizes)> sizes_array{{sizes...}};
+
+    // create tensor
+    NSL::Tensor<T> A(sizes...);
+
+    // fill the tensor with values and backup it
+    A = static_cast<T>(1);
+    NSL::Tensor<T> Abak(A);
+
+    // expand the tensor
+    A.expand(newSize);
+
+    // check dimensionality
+    REQUIRE(A.dim() == sizeof...(sizes) + 1);
+    // check sizes
+    for(size_type d = 0; d < sizeof...(sizes); ++d){
+        REQUIRE(A.shape(d) == sizes_array[d]);
+    }
+    REQUIRE(A.shape(sizeof...(sizes)) == newSize);
+
+    // each slice of the new dimension contains the same data of the old array
+    for(size_type i = 0; i < newSize; ++i){
+        if constexpr (sizeof...(sizes) == 1){
+            for(size_type x0 = 0; x0 < sizes_array[0]; ++x0){
+                REQUIRE(A(x0,i) == Abak(x0));
+            }
+        } else if constexpr (sizeof...(sizes) == 2) {
+            for(size_type x0 = 0; x0 < sizes_array[0]; ++x0){
+                for(size_type x1 = 0; x1 < sizes_array[1];++x1) {
+                    REQUIRE(A(x0, x1, i) == Abak(x0,x1));
+                }
+            }
+        } else if constexpr(sizeof...(sizes) == 3){
+            for(size_type x0 = 0; x0 < sizes_array[0]; ++x0){
+                for(size_type x1 = 0; x1 < sizes_array[1];++x1) {
+                    for(size_type x2 = 0; x2 < sizes_array[2];++x2) {
+                        REQUIRE(A(x0, x1, x2, i) == Abak(x0,x1,x2));
+                    }
+                }
+            }
+        } else {
+            INFO("Error: test_expand is only implemented for up to 3 dimensions");
+            REQUIRE(false);
+        }
+    }
+
+}
+
+
+//! Check the shift operation
+/*!
+ * Tests:
+ *
+ * * `Tensor<Type,RealType>::shift(const size_t &)`
+ * * `Tensor<Type,RealType>::shift(const size_t & const )`
+ * * `Tensor<Type,RealType>::shift(const size_t &)`
+ * * `Tensor<Type,RealType>::shift(const size_t &)`
+ *
+ * \n
+ * Requires:
+ *
+ *  * `Tensor<Type,RealType>::slice(size_t,size_t,size_t)`
+ *  * `Tensor<Type,RealType>::operator==(Tensor<Type,RealType>)`
+ *  * `Tensor<Type,RealType>::operator=(Tensor<Type,RealType>)`
+ *  * `Tensor<Type,RealType>::all()`
+ * */
+template <typename T, typename ... SizeTypes>
+void test_shift(const size_type & shift, const SizeTypes &... sizes){
+    INFO("Type = " + std::string(typeid(T).name()));
+    INFO("Dimension = " + std::to_string(sizeof...(SizeTypes)));
+    INFO("Shift = " + std::to_string(shift));
+    INFO(("Sizes = " + ... + (" " + std::to_string(sizes))));
+    std::array<size_type, sizeof...(sizes)> size_array{{sizes...}};
+
+    // create a Tensor
+    NSL::Tensor<T> A(sizes...);
+
+    if constexpr(std::is_same<T,bool>()) {
+        for(size_type i = 0; i < A.numel(); ++i){
+            A.data()[i] = static_cast<bool>(i % 2);
+        }
+    } else if constexpr(std::is_same<T,int>()){
+        for(size_type i = 0; i < A.numel(); ++i){
+            A.data()[i] = i;
+        }
+    } else {
+        A.rand();
+    }
+
+    NSL::Tensor<T> Abak(A);
+
+    // shift 0th axis by shift elements
+    A.shift(shift);
+
+    for(size_type i = 0; i < size_array[0]; ++i){
+        REQUIRE((Abak.slice(0,(i-shift+size_array[0])%size_array[0],(i-shift+1+size_array[0])%size_array[0]) == A.slice(0,i,i+1)).all());
+    }
+
+    A = Abak;
+
+    // shift dth axis by shift element
+    for(size_type d = 0; d < sizeof...(sizes); ++d){
+        A.shift(shift,d);
+
+        for(size_type i = 0; i < size_array[d]; ++i){
+            REQUIRE((Abak.slice(d,(i-shift+size_array[d])%size_array[d],(i-shift+1+size_array[d])%size_array[d]) == A.slice(d,i,i+1)).all());
+        }
+
+        A = Abak;
+    }
+
+    // the following test apply different boundary conditions as this does not make
+    // sense in the bool case we exit here
+    if constexpr(std::is_same<T,bool>()){
+        return;
+    }
+
+    // generally if a boundary condition is applied:
+    // Psi(Nt) = boundary * Psi(0)
+    // Psi(Nt+1) = boundary * Psi(1)
+    // ...
+    // Psi(Nt+shift-1) = boundary * Psi(shift-1)
+    T tmp_b = static_cast<T>(1);
+
+    // test anti-periodic boundary condition: boundary = -1
+    // shift 0th axis by shift elements
+    A.shift(shift,static_cast<T>(-1));
+
+    for(size_type i = 0; i < size_array[0]; ++i){
+        if(i < shift){ // shift = 1: Psi(Nt) == - Psi(0)
+            tmp_b = static_cast<T>(-1);
+        }
+        REQUIRE((Abak.slice(0,(i-shift+size_array[0])%size_array[0],(i-shift+1+size_array[0])%size_array[0])*tmp_b == A.slice(0,i,i+1)).all());
+        if(i < shift){
+            tmp_b = static_cast<T>(1);
+        }
+    }
+
+    A = Abak;
+
 }
