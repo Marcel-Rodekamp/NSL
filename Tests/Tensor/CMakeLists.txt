@@ -3,3 +3,6 @@ target_link_libraries(test_tensor NSL_TEST NSL)
 
 add_executable(test_timetensor test_timetensor.cpp)
 target_link_libraries(test_timetensor NSL_TEST NSL)
+
+add_executable(test_compilation test_compilation.cpp)
+target_link_libraries(test_compilation NSL_TEST NSL)

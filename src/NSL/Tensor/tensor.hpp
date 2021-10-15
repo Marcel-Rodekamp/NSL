@@ -28,7 +28,7 @@ namespace NSL {
 template <typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
 class Tensor {
     //! Alias: size_t = long int
-    using size_t = long int;
+    using size_t = int64_t;
 
 
     public:
@@ -66,17 +66,9 @@ class Tensor {
          * However, we tried a variety of `static_cast`s and `std::transform` and things of that nature,
          * and kept encountering a problem with the fact that `IntArrayRef` really wants `long long`.
          **/
-        explicit Tensor(const std::vector<size_t> &shape)
-        {
-            std::vector<long long> shape_ll(shape.size());
-            for(int i = 0; i < shape.size(); ++i){
-                shape_ll[i] = shape[i];
-            }
-            data_ = torch::zeros(
-                        torch::IntArrayRef(shape_ll.data(), shape_ll.size()),
-                        torch::TensorOptions().dtype<Type>()
-                    );
-        }
+        explicit Tensor(const std::vector<size_t> &shape):
+            data_(torch::zeros(torch::IntArrayRef(shape.data(), shape.size()),torch::TensorOptions().dtype<Type>()))
+        {}
 
         //! copy constructor
         constexpr Tensor(const Tensor& other):
