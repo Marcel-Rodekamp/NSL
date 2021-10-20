@@ -112,27 +112,17 @@ void test_exponential_of_hermitian(const size_type & size){
     // Check that U is orthogonal / unitary (but allow for non-special).
     REQUIRE(NSL::abs(NSL::abs(detU) - static_cast<T>(1)) < limit);
 
-    INFO("DBUG0");
-
     auto Ubak = U;
-
-    INFO("DBUG0.1");
     auto Udagger = Ubak.adjoint();
-
-    INFO("DBUG1");
 
     // Since exp(UHU†) = U exp(H) U†, we expect
     NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( 
             NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(U , diagonal), Udagger) 
     );
 
-    INFO("DBUG2");
-
     NSL::Tensor<T> clever = NSL::LinAlg::mat_mul(
             NSL::LinAlg::mat_mul(U, NSL::LinAlg::mat_exp( diagonal )), Udagger
     );
-
-    INFO("DBUG3");
 
     // to be equal, up to some numerical precision.
     for(int i = 0; i < size; ++i) {
