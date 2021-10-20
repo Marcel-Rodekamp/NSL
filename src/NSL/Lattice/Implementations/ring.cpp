@@ -23,6 +23,7 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
 {
     double theta = 2 * std::numbers::pi / n;
 
+    // Sites are located around a circle of fixed radius.
     for(int i = 0; i < n; ++i) {
         this->sites_(i,0) = radius * std::cos(i * theta);
         this->sites_(i,1) = radius * std::sin(i * theta);
@@ -37,6 +38,7 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
         this->hops_(i , i - 1) = NSL::conj<Type>(kappa);
     }
 
+    // Periodic boundary conditions
     this->hops_(0, n - 1) = NSL::conj<Type>(kappa);
     this->hops_(n - 1, 0) = kappa;
 }
