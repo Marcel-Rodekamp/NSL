@@ -1,6 +1,6 @@
 //#include <complex>
 #include "complex.hpp"
-#include "catch2/catch.hpp"
+#include "../test.hpp"
 #include "LinAlg/mat_exp.hpp"
 #include "LinAlg/exp.hpp"
 #include "LinAlg/det.hpp"
@@ -152,43 +152,20 @@ void test_exponential_of_hermitian(const size_type & size){
 // Test Cases
 // =============================================================================
 
-// short int                Not Supported by torch
-//unsigned short int        Not Supported by torch
-//unsigned int              Not Supported by torch
-//size_type                  Not Supported by torch
-//unsigned size_type         Not Supported by torch
-//long size_type             Not Supported by torch
-//unsigned long size_type    Not Supported by torch
-//long double               Not Supported by torch
-//NSL::complex<int>         Not Supported by torch
-
-TEST_CASE( "LinAlg: Mat_Exp of zero", "[LinAlg,mat_exp,zero]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of zero", "[LinAlg,mat_exp,zero]" ) {
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
 
-    // floating point types
-    test_exponential_of_zero<float>(size);
-    test_exponential_of_zero<double>(size);
-    test_exponential_of_zero<NSL::complex<float>>(size);
-    test_exponential_of_zero<NSL::complex<double>>(size);
+    test_exponential_of_zero<TestType>(size);
 }
 
-TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
 
-    // floating point types
-    test_exponential_of_diagonal<float>(size);
-    test_exponential_of_diagonal<double>(size);
-    test_exponential_of_diagonal<NSL::complex<float>>(size);
-    test_exponential_of_diagonal<NSL::complex<double>>(size);
+    test_exponential_of_diagonal<TestType>(size);
 }
 
-TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
     const size_type size = GENERATE(1, 2, 4, 8, 16, 32, 64);
 
-    // floating point types
-    // TODO: when real() is implemented for non-complex dtypes
-    //test_exponential_of_hermitian<float>(size);
-    //test_exponential_of_hermitian<double>(size);
-    test_exponential_of_hermitian<NSL::complex<float>>(size);
-    test_exponential_of_hermitian<NSL::complex<double>>(size);
+    test_exponential_of_hermitian<TestType>(size);
 }
