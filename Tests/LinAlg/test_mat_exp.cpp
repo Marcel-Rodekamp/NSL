@@ -93,29 +93,33 @@ void test_exponential_of_hermitian(const size_type & size){
         diagonal(i,i) = eigenvalue(i);
     }
 
-    // and then conjugate with a random unitary matrix.
+    // and then conjugate with a random orthogonal or unitary matrix.
+    // Recall that a random orthogonal or unitary U
+    NSL::Tensor<T> U(size,size);
+    // can be written as exp(iH) where H is (physicist-)hermitian.
+    // Mathematicians absorb the i into H and write 
+    // U = exp(a skew-symmetric matrix in the real    case), or a
+    //        (a skew-Hermitian matrix in the complex case).
     NSL::Tensor<T> V(size, size);
     V.rand();
-    T det = NSL::LinAlg::det(V);
-
-    NSL::Tensor<T> U = V;
-    // det(V) need not be positive.  If T is a real type, you might get
-    // an imaginary result when taking the size^th root.
-    // Therefore, just divide out the size^th root of |det(V)|
-    // and wind up with a matrix which is orthogonal or unitary,
-    // but not not special.
-    U /= std::exp(std::log(NSL::abs(det))/size);
-    T detU = NSL::LinAlg::det(U);
-    INFO(" det U  = " << detU);
-    INFO("|det U| = " << NSL::abs(detU));
+    U += V;
+    V.adjoint();
+    U -= V;
+    U.mat_exp();
+    // The mathematicians' method is actually simplest if you want to
+    // avoid complex numbers (assuming you've got a real type).
+    T det = NSL::LinAlg::det(U);
+    INFO(" det U  = " << det);
+    INFO("|det U| = " << NSL::abs(det));
 
     // Check that U is orthogonal / unitary (but allow for non-special).
-    REQUIRE(NSL::abs(NSL::abs(detU) - static_cast<T>(1)) < limit);
+    REQUIRE(std::pow(NSL::abs(NSL::abs(det) - static_cast<T>(1)),2) < limit);
 
-    auto Ubak = U;
-    auto Udagger = Ubak.adjoint();
+    NSL::Tensor<T> Udagger(size,size);
+    Udagger += U;
+    Udagger.adjoint();
 
-    // Since exp(UHU†) = U exp(H) U†, we expect
+    // Since exp(UHU†) = U exp(H) U†, we expect the two
     NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( 
             NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(U , diagonal), Udagger) 
     );
@@ -150,13 +154,11 @@ void test_exponential_of_hermitian(const size_type & size){
     INFO("target determinant   = " << determinant);
     INFO("clever determinant   = " << det_clever );
     INFO("brute  determinant   = " << det_brute  );
-    // TODO: requires <= for NSL::Tensor?
-    //REQUIRE( NSL::LinAlg::abs(determinant - det_clever) <= limit );
-    //REQUIRE( NSL::LinAlg::abs(determinant - det_brute ) <= limit );
-    //REQUIRE( NSL::LinAlg::abs(det_clever  - det_brute ) <= limit );
 
-    // FIXME: in the mean time, fail
-    REQUIRE( false );
+    // To be more forgiving, we compare the ratios rather than the absolute differences.
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-determinant/det_clever),2) <= limit );
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-determinant/det_brute ),2) <= limit );
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-det_clever /det_brute ),2) <= limit );
 }
 
 // =============================================================================
