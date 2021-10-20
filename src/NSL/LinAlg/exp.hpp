@@ -19,12 +19,14 @@ NSL::Tensor<Type> exp(Tensor<Type> &tensor) {
     return out.exp();
 }
 
+// \todo The exponentiation of a TimeTensor may require more careful thought.
+// But, for now, since TimeTensor = NSL::Tensor, this definition is redundant.
 //exponential(Timetensor)
-template<typename Type>
-NSL::TimeTensor<Type> exp(TimeTensor<Type> &tensor) {
-    NSL::TimeTensor<Type> out(tensor);
-    return out.exp();
-}
+//template<typename Type>
+//NSL::TimeTensor<Type> exp(TimeTensor<Type> &tensor) {
+//    NSL::TimeTensor<Type> out(tensor);
+//    return out.exp();
+//}
 
 } // namespace LinAlg
 } // namespace NSL
