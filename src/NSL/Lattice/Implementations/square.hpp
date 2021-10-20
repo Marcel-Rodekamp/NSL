@@ -58,6 +58,8 @@ class Square: public NSL::Lattice::SpatialLattice<Type> {
         std::vector<std::size_t> dimensions_;
         //! Integer coordinates, from (0,0,0...) to (dimensions), left-most slowest.
         NSL::Tensor<int> integers_;
+        std::vector<Type> kappas_;
+        std::vector<double> spacings_;
     private:
         static inline std::size_t n_to_sites_(const std::vector<std::size_t> &n);
         static NSL::Tensor<int> integer_coordinates_(const std::vector<std::size_t> &n);

@@ -76,11 +76,14 @@ NSL::Tensor<int> NSL::Lattice::Square<Type>::integer_coordinates_(const std::vec
 
 template<typename Type>
 void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
-                   const std::vector<Type> &kappa,
+                   const std::vector<Type> &kappas,
                    const std::vector<double> spacings)
 {
-    assertm(n.size() == kappa.size(), "hopping amplitudes and dimension mismatch");
+    assertm(n.size() == kappas.size(), "hopping amplitudes and dimension mismatch");
     assertm(n.size() == spacings.size(), "lattice spacings and dimension mismatch");
+
+    this->kappas_ = kappas;
+    this->spacings_ = spacings;
 
     for(int i = 0; i < this->sites(); ++i) {
         for(int d = 0; d < n.size(); ++d) {
@@ -100,12 +103,15 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
                 if( diff == +1 || diff == -1) {adjacent+=1; dim=d;}
             }
             if(adjacent == 1 && same + 1 == n.size() ){
-                // depends on direction-dependent kappa
-                this->hops_(i,j) = kappa[dim];
-                //! \todo The following should REALLY be conj(kappa[dim])
+                // depends on direction-dependent kappas
+                this->hops_(i,j) = kappas[dim];
+                //! \todo The following should REALLY be conj(kappas[dim])
                 // fixing this correctly may require tracking more carefully
-                // whether diff == +1 or -1
-                this->hops_(j,i) = kappa[dim];
+                // whether diff == +1 or -1.
+                // Moreover, there's little point in a fix until issue #9
+                // https://github.com/Marcel-Rodekamp/NSL/issues/9
+                // is resolved
+                this->hops_(j,i) = kappas[dim];
             }
         }
     }
