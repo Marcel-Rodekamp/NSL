@@ -66,7 +66,8 @@ class Square: public NSL::Lattice::SpatialLattice<Type> {
                    const std::vector<double> spacings);
 };
 
-/*! Sites evenly spaced in 3D on orthogonal coorinates, starting at (0,0,0),
+/*! Sites evenly spaced in 3D on orthogonal coorinates,
+ *  starting at (0,0,0), and filling the first octant,
  *  with equal hopping amplitude and lattice spacing in each direction.
  **/
 template <typename Type>
