@@ -71,19 +71,18 @@ void test_exponential_of_diagonal(const size_type & size){
     }
 }
 
-template<typename T>
+template<typename T, typename RT = typename NSL::RT_extractor<T>::value_type>
 void test_exponential_of_hermitian(const size_type & size){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);
+    auto limit = std::pow(10, -std::numeric_limits<T>::digits10);
 
     // Construct an exponential of the form e^{H} where
     // H is Hermitian.
 
     // Any Hermitian matrix has real eigenvalues.
-    NSL::Tensor<T> eigenvalue(size);
-    eigenvalue.rand().real();
-    // TODO: .real() doesn't seem to actually cause real values,
-    // as the trace of the eigenvalues comes out complex.
+    NSL::Tensor<RT> eigenvalue(size);
+    eigenvalue.rand();
 
     // To get a random H we can put the eigenvalues on the diagonal
     NSL::Tensor<T> diagonal(size,size);
