@@ -175,7 +175,7 @@ FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" 
 }
 
 FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
-    const size_type size = GENERATE(1, 2, 4, 8, 16, 32, 64);
+    const size_type size = GENERATE(2, 4, 8, 16, 32, 64);
 
     test_exponential_of_hermitian<TestType>(size);
 }
