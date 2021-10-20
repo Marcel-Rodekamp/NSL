@@ -3,4 +3,5 @@ target_sources(NSL PUBLIC
     exp.hpp
     mat_vec.hpp
     mat_exp.hpp
+    mat_mul.hpp
 )
