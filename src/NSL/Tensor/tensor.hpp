@@ -100,6 +100,7 @@ class Tensor {
          * \todo Generalize for different distributions
          */
         Tensor<Type,RealType> & rand(){
+            // Note: This should be a uniform U(0,1) distribution
             this->data_.uniform_();
             return *this;
         }
@@ -111,6 +112,7 @@ class Tensor {
          * \todo Generalize for different distributions
          */
         Tensor<Type,RealType> & randn(){
+            // Note: This should be a standard normal N(mean=0,var=1) distribution
             this->data_.normal_();
             return *this;
         }
