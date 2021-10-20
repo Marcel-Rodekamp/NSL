@@ -93,30 +93,40 @@ void test_exponential_of_hermitian(const size_type & size){
     // and then conjugate with a random unitary matrix.
     NSL::Tensor<T> V(size, size);
     V.rand();
-    NSL::Tensor<T> det = NSL::LinAlg::det(V);
+    T det = NSL::LinAlg::det(V);
 
-    // INFO("det V = " << det);
-    // REQUIRE( NSL::LinAlg::abs(det) == 1. );
+    NSL::Tensor<T> U = V / std::pow(det, 1/size);
+    T detU = NSL::LinAlg::det(U);
+    INFO("det U = " << detU);
 
-    // TODO:  actually make U a unitarized V.
-    //NSL::Tensor<T> U = V / pow(det(0), 1/size);
-    // FIXME: in the mean time, just make U the identity:
-    NSL::Tensor<T> U(size,size);
-    for(int i = 0; i < size; ++i ) {
-        U(i,i) = 1.;
-    }
-    INFO("det U = " << NSL::LinAlg::det(U));
+    REQUIRE(NSL::abs(detU - static_cast<T>(1)) < limit);
+
+    INFO("DBUG0");
+
+    auto Ubak = U;
+
+    INFO("DBUG0.1");
+    auto Udagger = Ubak.adjoint();
+
+    INFO("DBUG1");
 
     // Since exp(UHU†) = U exp(H) U†, we expect
-    // TODO: are these proper matrix multiplies?  Or (wrongly) element-wise?
-    NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
-    NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
+    NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( 
+            NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(U , diagonal), Udagger) 
+    );
+
+    INFO("DBUG2");
+
+    NSL::Tensor<T> clever = NSL::LinAlg::mat_mul(
+            NSL::LinAlg::mat_mul(U, NSL::LinAlg::mat_exp( diagonal )), Udagger
+    );
+
+    INFO("DBUG3");
 
     // to be equal, up to some numerical precision.
-    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
-            auto res = NSL::LinAlg::abs(clever(i,j)-brute(i,j));
+            auto res = NSL::abs(clever(i,j)-brute(i,j));
             INFO("Type = " << typeid(T).name() << ", Res = " << res << ", limit = " << limit);
             REQUIRE( res <= limit);
         }
