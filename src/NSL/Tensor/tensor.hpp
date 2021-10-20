@@ -350,46 +350,6 @@ class Tensor {
 
         // TODO: transpose (and maybe adjoint) could be a view?
 
-        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & transpose() {
-            this->transpose(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1).conj();
-            return *this;
-        }
-
-        NSL::Tensor<Type> & adjoint() {
-            this->adjoint(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & conj() {
-            if(this->data_.is_complex()){
-                this->data_ = this->data_.conj();
-            }
-            return *this;
-        }
-
-        // =====================================================================
-        // Determinant
-        // =====================================================================
-
-        // Other .member functions are mutations which change .data_.
-        // Since .det and .logdet shouldn't do that, they go in LinAlg.
-
-        // =====================================================================
-        // Transpose + Adjoint
-        // =====================================================================
-
-        // TODO: transpose (and maybe adjoint) could be a view?
-
         //! Transpose dim0 dim1
         /*!
          * \todo Add documentation
