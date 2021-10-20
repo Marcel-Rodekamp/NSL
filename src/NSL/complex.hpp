@@ -108,7 +108,7 @@ RealType abs(const Type &value){
         return std::abs(value);
     }
     else {
-        return abs(value);
+        return std::abs(value);
     }
 }
 
