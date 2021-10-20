@@ -442,7 +442,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator+=(const Type & value){
+        Tensor<Type,RealType> & operator+=(const Type & value){
             this->data_ += value;
             return *this;
         }
@@ -485,7 +485,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator-=(const Type & value){
+        Tensor<Type,RealType> & operator-=(const Type & value){
             this->data_ -= value;
             return *this;
         }
@@ -527,7 +527,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator*=(const Type & value){
+        Tensor<Type,RealType> & operator*=(const Type & value){
             this->data_ *= value;
             return *this;
         }
@@ -570,7 +570,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator/=(const Type & value){
+        Tensor<Type,RealType> & operator/=(const Type & value){
             this->data_ /= value;
             return *this;
         }
