@@ -45,7 +45,8 @@ void test_exponential_of_diagonal(const size_type & size){
     // Note: NSL::Tensor::data()
     // Note: Requires conversion from int to type T
 
-    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
+    // Forgive 2 decimal places of floating-point precision loss.
+    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
 
     NSL::Tensor<T> exponent(size);
     exponent.rand();
@@ -75,7 +76,9 @@ template<typename T, typename RT = typename NSL::RT_extractor<T>::value_type>
 void test_exponential_of_hermitian(const size_type & size){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);
-    auto limit = std::pow(10, -std::numeric_limits<T>::digits10);
+
+    // Forgive 2 decimal places of floating-point precision loss.
+    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
 
     // Construct an exponential of the form e^{H} where
     // H is Hermitian.
