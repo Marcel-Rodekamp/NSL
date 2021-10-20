@@ -216,72 +216,72 @@ class Tensor {
         /*
          * Checks if each element of this equals other.
          * */
-        Tensor<bool> operator== (const NSL::Tensor<Type> & other) {
+        Tensor<bool> operator== (const NSL::Tensor<Type> & other) const {
             return Tensor<bool>(this->data_ == other.data_);
         }
 
         //! Elementwise equal: Tensor to number
-        Tensor<bool> operator== (const Type & value) {
+        Tensor<bool> operator== (const Type & value) const {
             return Tensor<bool>(this->data_ == value);
         }
 
         //! Elementwise not equal: Tensor to Tensor
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator!= (const NSL::Tensor<Type,RealType> & other) {
+        Tensor<bool> operator!= (const NSL::Tensor<Type,RealType> & other) const {
             return Tensor<bool>(this->data_ != other.data_);
         }
 
         //! Elementwise not equal: Tensor to number
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator!= (const Type & value) {
+        Tensor<bool> operator!= (const Type & value) const {
             return Tensor<bool>(this->data_ != value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator<= (const NSL::Tensor<Type,RealType> & other) {
+        Tensor<bool> operator<= (const NSL::Tensor<Type,RealType> & other) const {
             return Tensor<bool>(this->data_ <= other.data_);
         }
 
         //! Elementwise smaller or equals: Tensor to number
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator<= (const Type & value) {
+        Tensor<bool> operator<= (const Type & value) const {
             return Tensor<bool>(this->data_ <= value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator>= (const NSL::Tensor<Type,RealType> & other) {
+        Tensor<bool> operator>= (const NSL::Tensor<Type,RealType> & other) const {
             return Tensor<bool>(this->data_ >= other.data_);
         }
 
         //! Elementwise greater or equals: Tensor to number
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator>= (const Type & value) {
+        Tensor<bool> operator>= (const Type & value) const {
             return Tensor<bool>(this->data_ >= value);
         }
 
         //! Elementwise smaller : Tensor to Tensor
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator< (const NSL::Tensor<Type,RealType> & other) {
+        Tensor<bool> operator< (const NSL::Tensor<Type,RealType> & other) const {
             return Tensor<bool>(this->data_ < other.data_);
         }
 
         //! Elementwise smaller: Tensor to number
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator< (const Type & value) {
+        Tensor<bool> operator< (const Type & value) const {
             return Tensor<bool>(this->data_ < value);
         }
 
         //! Elementwise smaller or equals: Tensor to Tensor
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator> (const NSL::Tensor<Type,RealType> & other) {
+        Tensor<bool> operator> (const NSL::Tensor<Type,RealType> & other) const {
             return Tensor<bool>(this->data_ > other.data_);
         }
 
         //! Elementwise greater or equals: Tensor to number
         /*! \todo: Add Documentation*/
-        Tensor<bool> operator> (const Type & value) {
+        Tensor<bool> operator> (const Type & value) const {
             return Tensor<bool>(this->data_ > value);
         }
 
