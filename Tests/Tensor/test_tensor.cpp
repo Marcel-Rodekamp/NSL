@@ -25,20 +25,20 @@ void test_shift(const size_type & shift, const SizeTypes &... sizes);
 // Constructors
 // =============================================================================
 
-TORCH_TYPE_TEST_CASE("Tensor: Constructor 1D", "[Tensor,Constructor]") {
+NSL_TEST_CASE("Tensor: Constructor 1D", "[Tensor,Constructor]") {
     size_t size0 = GENERATE(1,100,1000);
     test_constructor<TestType>(size0);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Constructor 2D", "[Tensor,Constructor]") {
+NSL_TEST_CASE("Tensor: Constructor 2D", "[Tensor,Constructor]") {
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     test_constructor<TestType>(size0, size1);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Constructor 3D", "[Tensor,Constructor]"){
+NSL_TEST_CASE("Tensor: Constructor 3D", "[Tensor,Constructor]"){
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     size_t size2 = GENERATE(1, 10, 100);
@@ -50,20 +50,20 @@ TORCH_TYPE_TEST_CASE("Tensor: Constructor 3D", "[Tensor,Constructor]"){
 // Random Access
 // =============================================================================
 
-TORCH_TYPE_TEST_CASE("Tensor: Element Access 1D", "[Tensor,Access]") {
+NSL_TEST_CASE("Tensor: Element Access 1D", "[Tensor,Access]") {
     size_t size0 = GENERATE(1,100,1000);
     test_access<TestType>(size0);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Element Access 2D", "[Tensor,Access]") {
+NSL_TEST_CASE("Tensor: Element Access 2D", "[Tensor,Access]") {
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     test_access<TestType>(size0, size1);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Element Access 3D", "[Tensor,Access]"){
+NSL_TEST_CASE("Tensor: Element Access 3D", "[Tensor,Access]"){
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     size_t size2 = GENERATE(1, 10, 100);
@@ -75,20 +75,20 @@ TORCH_TYPE_TEST_CASE("Tensor: Element Access 3D", "[Tensor,Access]"){
 // Random Access
 // =============================================================================
 
-TORCH_TYPE_TEST_CASE("Tensor: Slice 1D", "[Tensor,Access]") {
+NSL_TEST_CASE("Tensor: Slice 1D", "[Tensor,Access]") {
     size_t size0 = GENERATE(1,100,1000);
     test_slice<TestType>(size0);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Slice 2D", "[Tensor,Access]") {
+NSL_TEST_CASE("Tensor: Slice 2D", "[Tensor,Access]") {
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     test_slice<TestType>(size0, size1);
 }
 
 
-TORCH_TYPE_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
+NSL_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
     size_t size0 = GENERATE(1, 10, 100);
     size_t size1 = GENERATE(1, 10, 100);
     size_t size2 = GENERATE(1, 10, 100);
@@ -100,20 +100,20 @@ TORCH_TYPE_TEST_CASE("Tensor: Slice 3D", "[Tensor,Access]"){
 // Expand
 // =============================================================================
 
-TORCH_TYPE_TEST_CASE("Tensor: Expand 1D -> 2D", "[Tensor,Expand]") {
+NSL_TEST_CASE("Tensor: Expand 1D -> 2D", "[Tensor,Expand]") {
     size_type newSize = GENERATE(1,10,100);
     size_type size0 = GENERATE(1,10,100);
     test_expand<TestType>(newSize,size0);
 }
 
-TORCH_TYPE_TEST_CASE("Tensor: Expand 2D -> 3D", "[Tensor,Expand]") {
+NSL_TEST_CASE("Tensor: Expand 2D -> 3D", "[Tensor,Expand]") {
     size_type newSize = GENERATE(1,5,10);
     size_type size0 = GENERATE(1,10,20);
     size_type size1 = GENERATE(1,10,20);
     test_expand<TestType>(newSize,size0,size1);
 }
 
-TORCH_TYPE_TEST_CASE("Tensor: Expand 3D -> 4D", "[Tensor,Expand]") {
+NSL_TEST_CASE("Tensor: Expand 3D -> 4D", "[Tensor,Expand]") {
     size_type newSize = GENERATE(1,5,10);
     size_type size0 = GENERATE(1,5,10);
     size_type size1 = GENERATE(1,5,10);
@@ -126,7 +126,7 @@ TORCH_TYPE_TEST_CASE("Tensor: Expand 3D -> 4D", "[Tensor,Expand]") {
 // Shift
 // =============================================================================
 
-TORCH_TYPE_TEST_CASE("Tensor: Shift 1D", "[Tensor,Shift]") {
+NSL_TEST_CASE("Tensor: Shift 1D", "[Tensor,Shift]") {
     size_type shift = GENERATE(1,2,3,4);
     size_type size0 = GENERATE(5,100,1000);
     test_shift<TestType>(shift,size0);
@@ -136,7 +136,7 @@ TORCH_TYPE_TEST_CASE("Tensor: Shift 1D", "[Tensor,Shift]") {
     test_shift<TestType>(shift,shift-1);
 }
 
-TORCH_TYPE_TEST_CASE("Tensor: Shift 2D", "[Tensor,Shift]") {
+NSL_TEST_CASE("Tensor: Shift 2D", "[Tensor,Shift]") {
     size_type shift = GENERATE(1,2,3,4);
     size_type size0 = GENERATE(5,10,100);
     size_type size1 = GENERATE(5,10,100);
@@ -151,7 +151,7 @@ TORCH_TYPE_TEST_CASE("Tensor: Shift 2D", "[Tensor,Shift]") {
     test_shift<TestType>(shift,size0,shift-1);
 }
 
-TORCH_TYPE_TEST_CASE("Tensor: Shift 3D", "[Tensor,Shift]") {
+NSL_TEST_CASE("Tensor: Shift 3D", "[Tensor,Shift]") {
     size_type shift = GENERATE(1,2,3,4);
     size_type size0 = GENERATE(5,10,100);
     size_type size1 = GENERATE(5,10,100);
@@ -223,6 +223,7 @@ void test_constructor(const SizeTypes &... sizes){
         REQUIRE((D == static_cast<T>(0)).all());
     }
 }
+
 
 
 //! Check the access methods
@@ -363,7 +364,6 @@ void test_slice(const SizeTypes &... sizes){
         REQUIRE(Aslice.shape(d) == A.shape(d));
     }
 }
-
 
 //! Check the expand operation
 /*!

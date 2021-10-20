@@ -1,3 +1,6 @@
 target_sources(NSL PUBLIC
-        mat_vec.hpp
+    abs.hpp
+    exp.hpp
+    mat_vec.hpp
+    mat_exp.hpp
 )

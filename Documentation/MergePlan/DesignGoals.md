@@ -407,7 +407,7 @@ struct Edge{
 
 ```
 
-class SpatialLatticeBase: {
+class SpatialLattice: {
     private:
         // Topology only
         // | Site Index | Nearest Neighbor List | kappa (hopping strength)   |
