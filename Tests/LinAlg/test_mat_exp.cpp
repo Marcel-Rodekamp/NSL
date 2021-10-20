@@ -2,6 +2,7 @@
 #include "complex.hpp"
 #include "../test.hpp"
 #include "LinAlg/mat_exp.hpp"
+#include "LinAlg/mat_mul.hpp"
 #include "LinAlg/exp.hpp"
 #include "LinAlg/det.hpp"
 #include "LinAlg/abs.hpp"
