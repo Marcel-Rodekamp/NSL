@@ -706,9 +706,23 @@ class Tensor {
 
         //! Reduction: && (logical and)
         /*! \todo: Add Documentation*/
+        Type all(const size_t dim){
+            assert((std::is_same<Type,bool>()));
+            return this->data_.all(dim).template item<Type>();
+        }
+
+        //! Reduction: && (logical and)
+        /*! \todo: Add Documentation*/
         Type all(){
             assert((std::is_same<Type,bool>()));
             return this->data_.all().template item<Type>();
+        }
+
+        //! Reduction: || (logical or)
+        /*! \todo: Add Documentation*/
+        Type any(const size_t dim){
+            assert((std::is_same<Type,bool>()));
+            return this->data_.any(dim).template item<Type>();
         }
 
         //! Reduction: || (logical or)
