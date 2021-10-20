@@ -91,6 +91,9 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
         }
     }
 
+    //! todo this algorithm is quadratic in the number of sites.
+    // I think, with intelligence, it can be made linear.
+    // But, it works for now.
     for (int i = 0; i < this->sites(); ++i){
         for (int j = i; j < this->sites(); ++j){
             // This does NOT handle periodic boundary conditions.

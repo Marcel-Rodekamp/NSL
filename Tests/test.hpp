@@ -32,5 +32,8 @@
 // ====================================================================
 
 #define NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, NSL_TYPES)
+#define REAL_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, REAL_TYPES)
+// todo: Hopefully we can drop the real-only test-cases.
+// However, that requires solving issue #9.
 
 #endif
