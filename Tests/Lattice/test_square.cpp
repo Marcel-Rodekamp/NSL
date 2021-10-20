@@ -34,7 +34,6 @@ void test_square(const std::vector<size_type> & size, T kappa = 1.){
 
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
 
-    REQUIRE( false );
 }
 
 /*!
@@ -57,8 +56,6 @@ void test_cube(const size_type & size, T kappa = 1.){
     //INFO(lattice.adjacency_matrix());
 
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
-
-    REQUIRE( false );
 }
 
 // =============================================================================
