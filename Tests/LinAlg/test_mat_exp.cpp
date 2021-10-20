@@ -98,11 +98,19 @@ void test_exponential_of_hermitian(const size_type & size){
     V.rand();
     T det = NSL::LinAlg::det(V);
 
-    NSL::Tensor<T> U = V / std::pow(det, 1/size);
+    NSL::Tensor<T> U = V;
+    // det(V) need not be positive.  If T is a real type, you might get
+    // an imaginary result when taking the size^th root.
+    // Therefore, just divide out the size^th root of |det(V)|
+    // and wind up with a matrix which is orthogonal or unitary,
+    // but not not special.
+    U /= std::exp(std::log(NSL::abs(det))/size);
     T detU = NSL::LinAlg::det(U);
-    INFO("det U = " << detU);
+    INFO(" det U  = " << detU);
+    INFO("|det U| = " << NSL::abs(detU));
 
-    REQUIRE(NSL::abs(detU - static_cast<T>(1)) < limit);
+    // Check that U is orthogonal / unitary (but allow for non-special).
+    REQUIRE(NSL::abs(NSL::abs(detU) - static_cast<T>(1)) < limit);
 
     INFO("DBUG0");
 
