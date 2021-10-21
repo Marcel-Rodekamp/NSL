@@ -682,8 +682,8 @@ class Tensor {
 
         //! Reduction: +
         /*! \todo: Add Documentation*/
-        Type sum(const size_t dim){
-            return this->data_.sum(dim).template item<Type>();
+        Tensor<Type,RealType> sum(const size_t dim){
+            return Tensor<Type,RealType>(this->data_.sum(dim));
         }
 
         //! Reduction: +
@@ -694,8 +694,8 @@ class Tensor {
 
         //! Reduction: *
         /*! \todo: Add Documentation*/
-        Type prod(const size_t dim){
-            return this->data_.prod(dim).template item<Type>();
+        Tensor<Type,RealType> prod(const size_t dim){
+            return Tensor<Type,RealType>(this->data_.prod(dim));
         }
 
         //! Reduction: *
@@ -706,9 +706,9 @@ class Tensor {
 
         //! Reduction: && (logical and)
         /*! \todo: Add Documentation*/
-        Type all(const size_t dim){
+        Tensor<bool> all(const size_t dim){
             assert((std::is_same<Type,bool>()));
-            return this->data_.all(dim).template item<Type>();
+            return Tensor<bool>(this->data_.all(dim));
         }
 
         //! Reduction: && (logical and)
@@ -720,9 +720,9 @@ class Tensor {
 
         //! Reduction: || (logical or)
         /*! \todo: Add Documentation*/
-        Type any(const size_t dim){
+        Tensor<bool> any(const size_t dim){
             assert((std::is_same<Type,bool>()));
-            return this->data_.any(dim).template item<Type>();
+            return Tensor<bool>(this->data_.any(dim));
         }
 
         //! Reduction: || (logical or)
