@@ -224,8 +224,6 @@ void test_constructor(const SizeTypes &... sizes){
     }
 }
 
-
-
 //! Check the access methods
 /*!
  * Tests:
@@ -318,7 +316,6 @@ void test_access(const SizeTypes &... sizes){
         REQUIRE(false);
     }
 }
-
 
 //! Check the slicing operation
 /*!

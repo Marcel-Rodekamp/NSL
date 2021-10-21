@@ -62,9 +62,6 @@ class Tensor {
 
         /*!
          * param shape a std::vector giving the shape of the new Tensor.
-         * \todo Tensor(std::vector shape) is a horrible hack that should be cleaned up.
-         * However, we tried a variety of `static_cast`s and `std::transform` and things of that nature,
-         * and kept encountering a problem with the fact that `IntArrayRef` really wants `long long`.
          **/
         explicit Tensor(const std::vector<size_t> &shape):
             data_(torch::zeros(torch::IntArrayRef(shape.data(), shape.size()),torch::TensorOptions().dtype<Type>()))
@@ -103,6 +100,7 @@ class Tensor {
          * \todo Generalize for different distributions
          */
         Tensor<Type,RealType> & rand(){
+            // Note: This should be a uniform U(0,1) distribution
             this->data_.uniform_();
             return *this;
         }
@@ -114,6 +112,7 @@ class Tensor {
          * \todo Generalize for different distributions
          */
         Tensor<Type,RealType> & randn(){
+            // Note: This should be a standard normal N(mean=0,var=1) distribution
             this->data_.normal_();
             return *this;
         }
@@ -340,52 +339,6 @@ class Tensor {
             return this->data_.numel();
         }
 
-        //Matrix exponential.
-        Tensor<Type> & mat_exp() {
-            data_ = data_.matrix_exp();
-            return *this;
-        }
-
-        // =====================================================================
-        // Determinant
-        // =====================================================================
-
-        // Other .member functions are mutations which change .data_.
-        // Since .det and .logdet shouldn't do that, they go in LinAlg.
-
-        // =====================================================================
-        // Transpose + Adjoint
-        // =====================================================================
-
-        // TODO: transpose (and maybe adjoint) could be a view?
-
-        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & transpose() {
-            this->transpose(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1).conj();
-            return *this;
-        }
-
-        NSL::Tensor<Type> & adjoint() {
-            this->adjoint(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        NSL::Tensor<Type> & conj() {
-            if(this->data_.is_complex()){
-                this->data_ = this->data_.conj();
-            }
-            return *this;
-        }
-
         // =====================================================================
         // Determinant
         // =====================================================================
@@ -489,7 +442,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator+=(const Type & value){
+        Tensor<Type,RealType> & operator+=(const Type & value){
             this->data_ += value;
             return *this;
         }
@@ -532,7 +485,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator-=(const Type & value){
+        Tensor<Type,RealType> & operator-=(const Type & value){
             this->data_ -= value;
             return *this;
         }
@@ -574,7 +527,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator*=(const Type & value){
+        Tensor<Type,RealType> & operator*=(const Type & value){
             this->data_ *= value;
             return *this;
         }
@@ -617,7 +570,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator/=(const Type & value){
+        Tensor<Type,RealType> & operator/=(const Type & value){
             this->data_ /= value;
             return *this;
         }
@@ -753,9 +706,23 @@ class Tensor {
 
         //! Reduction: && (logical and)
         /*! \todo: Add Documentation*/
+        Type all(const size_t dim){
+            assert((std::is_same<Type,bool>()));
+            return this->data_.all(dim).template item<Type>();
+        }
+
+        //! Reduction: && (logical and)
+        /*! \todo: Add Documentation*/
         Type all(){
             assert((std::is_same<Type,bool>()));
             return this->data_.all().template item<Type>();
+        }
+
+        //! Reduction: || (logical or)
+        /*! \todo: Add Documentation*/
+        Type any(const size_t dim){
+            assert((std::is_same<Type,bool>()));
+            return this->data_.any(dim).template item<Type>();
         }
 
         //! Reduction: || (logical or)

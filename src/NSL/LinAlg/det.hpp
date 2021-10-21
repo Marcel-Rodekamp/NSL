@@ -6,12 +6,18 @@
 namespace NSL {
 namespace LinAlg {
 
-template <typename Type> const NSL::Tensor<Type> det(const NSL::Tensor<Type> & t){
-    return NSL::Tensor<Type>(to_torch(t).det());
+template <typename Type> 
+Type det(const NSL::Tensor<Type> & t){
+    //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
+    
+    return to_torch(t).det().template item<Type>();
 }
 
-template <typename Type> const NSL::Tensor<Type> logdet(const NSL::Tensor<Type> & t){
-    return NSL::Tensor<Type>(to_torch(t).logdet());
+template <typename Type> 
+Type logdet(const NSL::Tensor<Type> & t){
+    //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
+
+    return to_torch(t).logdet().template item<Type>();
 }
 
 } // namespace LinAlg

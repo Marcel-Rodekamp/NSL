@@ -1,6 +1,6 @@
 //#include <complex>
 #include "complex.hpp"
-#include "catch2/catch.hpp"
+#include "../test.hpp"
 #include <typeinfo>
 #include "Lattice/Implementations/ring.hpp"
 
@@ -25,6 +25,7 @@ void test_ring(const size_type & size, T kappa = 1.){
     INFO(ring.name());
 
     REQUIRE(ring.sites() == size);
+    REQUIRE(ring.bipartite() == (size%2 == 0));
 
     INFO(ring.coordinates());
     //! \todo Sum up the coordinates; they should evenly surround the origin.
@@ -48,16 +49,9 @@ void test_ring(const size_type & size, T kappa = 1.){
 //long double               Not Supported by torch
 //NSL::complex<int>         Not Supported by torch
 
-TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
-    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+REAL_NSL_TEST_CASE( "Lattice: Ring", "[Lattice, Ring]" ) {
+    const size_type size = GENERATE(2, 4, 8, 101, 202, 505, 1010);
+    const TestType kappa = GENERATE(0.5, 2.0);
 
-    // floating point types
-    test_ring<float>(size);
-    test_ring<double>(size);
-    //! \todo add tests of complex amplitudes
-    // NOTE: no complex<type>s 
-    // because the hopping amplitude
-    // wouldn't be hermitian, which is required.
-    // A (generic) FIX would require a complex conjugation 
-    // on real float, double for Ring::hops_.
+    test_ring<TestType>(size, kappa);
 }

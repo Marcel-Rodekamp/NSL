@@ -1,7 +1,8 @@
 //#include <complex>
 #include "complex.hpp"
-#include "catch2/catch.hpp"
+#include "../test.hpp"
 #include "LinAlg/mat_exp.hpp"
+#include "LinAlg/mat_mul.hpp"
 #include "LinAlg/exp.hpp"
 #include "LinAlg/det.hpp"
 #include "LinAlg/abs.hpp"
@@ -44,7 +45,8 @@ void test_exponential_of_diagonal(const size_type & size){
     // Note: NSL::Tensor::data()
     // Note: Requires conversion from int to type T
 
-    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
+    // Forgive 2 decimal places of floating-point precision loss.
+    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
 
     NSL::Tensor<T> exponent(size);
     exponent.rand();
@@ -70,19 +72,20 @@ void test_exponential_of_diagonal(const size_type & size){
     }
 }
 
-template<typename T>
+template<typename T, typename RT = typename NSL::RT_extractor<T>::value_type>
 void test_exponential_of_hermitian(const size_type & size){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);
+
+    // Forgive 2 decimal places of floating-point precision loss.
+    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
 
     // Construct an exponential of the form e^{H} where
     // H is Hermitian.
 
     // Any Hermitian matrix has real eigenvalues.
-    NSL::Tensor<T> eigenvalue(size);
-    eigenvalue.rand().real();
-    // TODO: .real() doesn't seem to actually cause real values,
-    // as the trace of the eigenvalues comes out complex.
+    NSL::Tensor<RT> eigenvalue(size);
+    eigenvalue.rand();
 
     // To get a random H we can put the eigenvalues on the diagonal
     NSL::Tensor<T> diagonal(size,size);
@@ -90,33 +93,45 @@ void test_exponential_of_hermitian(const size_type & size){
         diagonal(i,i) = eigenvalue(i);
     }
 
-    // and then conjugate with a random unitary matrix.
+    // and then conjugate with a random orthogonal or unitary matrix.
+    // Recall that a random orthogonal or unitary U
+    NSL::Tensor<T> U(size,size);
+    // can be written as exp(iH) where H is (physicist-)hermitian.
+    // Mathematicians absorb the i into H and write 
+    // U = exp(a skew-symmetric matrix in the real    case), or a
+    //        (a skew-Hermitian matrix in the complex case).
     NSL::Tensor<T> V(size, size);
     V.rand();
-    NSL::Tensor<T> det = NSL::LinAlg::det(V);
+    U += V;
+    V.adjoint();
+    U -= V;
+    U.mat_exp();
+    // The mathematicians' method is actually simplest if you want to
+    // avoid complex numbers (assuming you've got a real type).
+    T det = NSL::LinAlg::det(U);
+    INFO(" det U  = " << det);
+    INFO("|det U| = " << NSL::abs(det));
 
-    // INFO("det V = " << det);
-    // REQUIRE( NSL::LinAlg::abs(det) == 1. );
+    // Check that U is orthogonal / unitary (but allow for non-special).
+    REQUIRE(std::pow(NSL::abs(NSL::abs(det) - static_cast<T>(1)),2) < limit);
 
-    // TODO:  actually make U a unitarized V.
-    //NSL::Tensor<T> U = V / pow(det(0), 1/size);
-    // FIXME: in the mean time, just make U the identity:
-    NSL::Tensor<T> U(size,size);
-    for(int i = 0; i < size; ++i ) {
-        U(i,i) = 1.;
-    }
-    INFO("det U = " << NSL::LinAlg::det(U));
+    NSL::Tensor<T> Udagger(size,size);
+    Udagger += U;
+    Udagger.adjoint();
 
-    // Since exp(UHU†) = U exp(H) U†, we expect
-    // TODO: are these proper matrix multiplies?  Or (wrongly) element-wise?
-    NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( U * diagonal * U.adjoint() );
-    NSL::Tensor<T> clever = U * NSL::LinAlg::mat_exp( diagonal ) * U.adjoint();
+    // Since exp(UHU†) = U exp(H) U†, we expect the two
+    NSL::Tensor<T> brute  = NSL::LinAlg::mat_exp( 
+            NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(U , diagonal), Udagger) 
+    );
+
+    NSL::Tensor<T> clever = NSL::LinAlg::mat_mul(
+            NSL::LinAlg::mat_mul(U, NSL::LinAlg::mat_exp( diagonal )), Udagger
+    );
 
     // to be equal, up to some numerical precision.
-    auto limit = std::pow(10, std::numeric_limits<T>::digits10);
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
-            auto res = NSL::LinAlg::abs(clever(i,j)-brute(i,j));
+            auto res = NSL::abs(clever(i,j)-brute(i,j));
             INFO("Type = " << typeid(T).name() << ", Res = " << res << ", limit = " << limit);
             REQUIRE( res <= limit);
         }
@@ -139,56 +154,31 @@ void test_exponential_of_hermitian(const size_type & size){
     INFO("target determinant   = " << determinant);
     INFO("clever determinant   = " << det_clever );
     INFO("brute  determinant   = " << det_brute  );
-    // TODO: requires <= for NSL::Tensor?
-    //REQUIRE( NSL::LinAlg::abs(determinant - det_clever) <= limit );
-    //REQUIRE( NSL::LinAlg::abs(determinant - det_brute ) <= limit );
-    //REQUIRE( NSL::LinAlg::abs(det_clever  - det_brute ) <= limit );
 
-    // FIXME: in the mean time, fail
-    REQUIRE( false );
+    // To be more forgiving, we compare the ratios rather than the absolute differences.
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-determinant/det_clever),2) <= limit );
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-determinant/det_brute ),2) <= limit );
+    REQUIRE( std::pow(NSL::LinAlg::abs(1-det_clever /det_brute ),2) <= limit );
 }
 
 // =============================================================================
 // Test Cases
 // =============================================================================
 
-// short int                Not Supported by torch
-//unsigned short int        Not Supported by torch
-//unsigned int              Not Supported by torch
-//size_type                  Not Supported by torch
-//unsigned size_type         Not Supported by torch
-//long size_type             Not Supported by torch
-//unsigned long size_type    Not Supported by torch
-//long double               Not Supported by torch
-//NSL::complex<int>         Not Supported by torch
-
-TEST_CASE( "LinAlg: Mat_Exp of zero", "[LinAlg,mat_exp,zero]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of zero", "[LinAlg,mat_exp,zero]" ) {
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
 
-    // floating point types
-    test_exponential_of_zero<float>(size);
-    test_exponential_of_zero<double>(size);
-    test_exponential_of_zero<NSL::complex<float>>(size);
-    test_exponential_of_zero<NSL::complex<double>>(size);
+    test_exponential_of_zero<TestType>(size);
 }
 
-TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of diagonal", "[LinAlg,mat_exp,diagonal]" ) {
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
 
-    // floating point types
-    test_exponential_of_diagonal<float>(size);
-    test_exponential_of_diagonal<double>(size);
-    test_exponential_of_diagonal<NSL::complex<float>>(size);
-    test_exponential_of_diagonal<NSL::complex<double>>(size);
+    test_exponential_of_diagonal<TestType>(size);
 }
 
-TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
-    const size_type size = GENERATE(1, 2, 4, 8, 16, 32, 64);
+FLOAT_NSL_TEST_CASE( "LinAlg: Mat_Exp of hermitian", "LinAlg,mat_exp,hermitian]" ) {
+    const size_type size = GENERATE(2, 4, 8, 16, 32, 64);
 
-    // floating point types
-    // TODO: when real() is implemented for non-complex dtypes
-    //test_exponential_of_hermitian<float>(size);
-    //test_exponential_of_hermitian<double>(size);
-    test_exponential_of_hermitian<NSL::complex<float>>(size);
-    test_exponential_of_hermitian<NSL::complex<double>>(size);
+    test_exponential_of_hermitian<TestType>(size);
 }

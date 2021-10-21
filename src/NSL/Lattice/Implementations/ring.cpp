@@ -9,7 +9,7 @@
 #include "../../Tensor/tensor.hpp"
 #include "../lattice.hpp"
 #include "ring.hpp"
-
+#include <numbers>
 
 namespace NSL::Lattice {
 
@@ -21,9 +21,9 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
                 NSL::Tensor<double>(n,3)
         )
 {
-    //! \todo use a better pi
-    double theta = 2*3.14159265358979 / n;
+    double theta = 2 * std::numbers::pi / n;
 
+    // Sites are located around a circle of fixed radius.
     for(int i = 0; i < n; ++i) {
         this->sites_(i,0) = radius * std::cos(i * theta);
         this->sites_(i,1) = radius * std::sin(i * theta);
@@ -35,9 +35,11 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
     }
 
     for (int i = 1; i < n; ++i) {
-        this->hops_(i - 1, i) = kappa;
+        this->hops_(i , i - 1) = NSL::conj<Type>(kappa);
     }
-    this->hops_(0, n - 1) = kappa;
+
+    // Periodic boundary conditions
+    this->hops_(0, n - 1) = NSL::conj<Type>(kappa);
     this->hops_(n - 1, 0) = kappa;
 }
 
@@ -45,5 +47,8 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
 
 template class NSL::Lattice::Ring<float>;
 template class NSL::Lattice::Ring<double>;
+// Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
+//template class NSL::Lattice::Ring<NSL::complex<float>>;
+//template class NSL::Lattice::Ring<NSL::complex<double>>;
 
 #endif

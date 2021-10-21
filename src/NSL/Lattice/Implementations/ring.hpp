@@ -16,7 +16,7 @@ class Ring: public NSL::Lattice::SpatialLattice<Type> {
          *  \param radius 
          *  \todo  If kappa is complex, it describes clockwise hopping.
          **/
-        explicit Ring(const std::size_t n, const Type & kappa = 1, const double &radius = -1);
+        explicit Ring(const std::size_t n, const Type & kappa = 1, const double &radius = 1);
 };
 
 } // namespace NSL
