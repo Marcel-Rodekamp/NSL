@@ -3,4 +3,6 @@ target_sources(NSL PUBLIC
     ring.cpp
     square.hpp
     square.cpp
+    complete.hpp
+    complete.cpp
 )
