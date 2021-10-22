@@ -23,21 +23,16 @@ void test_complete(NSL::Lattice::SpatialLattice<T> & lattice){
 
     REQUIRE(lattice.bipartite() == (lattice.sites() <= 2));
 
-    //! \todo Sum up the coordinates; they should evenly surround the origin.
     auto coordinates = lattice.coordinates();
     NSL::Tensor<double> centroid = coordinates.sum(0);  // sum all the respective components
-    //auto centroid = NSL::abs(coordinates.sum()); //! todo: check component-by-component
-
     INFO(centroid);
-    INFO(centroid.shape());
-    //REQUIRE((centroid < 1.e-12).all());
-    for(int i = 0; i < centroid.numel(); ++i){
-        REQUIRE( std::abs(centroid(i)) < 1.e-12 );
-    }
-    //NSL::Tensor<bool> pass(centroid < 1.e-12 );
-    //REQUIRE( pass.all() );
-    //REQUIRE(false);
+    REQUIRE((centroid < 1.e-12).all());
 
+    // Every site is connected to every site that isn't itself:
+    auto adj = lattice.adjacency_matrix();
+    INFO(adj);
+    REQUIRE( (adj.sum(0) == lattice.sites() - 1).all());
+    REQUIRE( (adj.sum(1) == lattice.sites() - 1).all());
 }
 
 // =============================================================================

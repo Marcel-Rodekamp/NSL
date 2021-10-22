@@ -32,7 +32,7 @@ NSL::Lattice::Complete<Type>::Complete(const std::size_t n, const Type &kappa, c
 
     // Every site is connected to every other:
     this->hops_ = kappa;
-    for (int i = 0; i < n - 1; ++i) {
+    for (int i = 0; i < n ; ++i) {
         this->hops_(i, i) = static_cast<Type>(0);
     }
 
