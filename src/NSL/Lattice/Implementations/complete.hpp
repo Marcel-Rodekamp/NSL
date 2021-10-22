@@ -6,7 +6,18 @@
 namespace NSL::Lattice {
 
 /*! The complete graph of n sites.
+ *  A [complete graph on n vertices][complete] K(n) is a graph
+ *  which connects every vertex to every other.
+ *  We connect every site with the same hopping amplitude.
+ *
+ *  Since no node is distinguished from any other 
+ *  and no link is distinguishable from any other,
+ *  you cannot choose a convention that orients the links.
+ *  Therefore, the hopping amplitude must be real.
+ *
  *  For convenience, geometrically distributed around a circle.
+ *
+ *  [complete]: https://en.wikipedia.org/wiki/Complete_graph
  **/
 template <typename Type>
 class Complete: public NSL::Lattice::SpatialLattice<Type> {
