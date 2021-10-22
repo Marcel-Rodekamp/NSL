@@ -27,7 +27,7 @@ class Triangle: public NSL::Lattice::Complete<Type> {
         explicit Triangle(  const Type & kappa = 1,
                             const double radius = 1):
             NSL::Lattice::Complete<Type>(3, kappa, radius) {
-            this->name_ = "Triangle";
+            // this->name_ = "Triangle";
             };
         bool bipartite() { return false; };
 };
@@ -38,7 +38,7 @@ class Tetrahedron: public NSL::Lattice::Complete<Type> {
         explicit Tetrahedron(  const Type & kappa = 1,
                                const double edge  = 1):
             NSL::Lattice::Complete<Type>(4, kappa) {
-                this->name_ = "Tetrahedron";
+                // this->name_ = "Tetrahedron";
                 // With a unit side length, the tetrahedron has coordinates
                 // given by any O(3) rotation of the following
                 //

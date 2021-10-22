@@ -6,3 +6,6 @@ target_link_libraries(test_square NSL_TEST NSL)
 
 add_executable(test_bipartite test_bipartite.cpp)
 target_link_libraries(test_bipartite NSL_TEST NSL)
+
+add_executable(test_complete test_complete.cpp)
+target_link_libraries(test_complete NSL_TEST)
