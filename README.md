@@ -147,7 +147,11 @@ pytorch version.
 
 ##### 2.1 Pre M1 
 
-ToDo
+If you installed torch via `pip3`, you can automatically configure to use that Torch installation using
+
+```
+cmake -DTorch_DIR=$(pip3 show torch | grep Location | cut -d ' ' -f 2)/torch/share/cmake/Torch [...location of NSL repo root...]
+```
 
 ##### 2.2 M1 
 
