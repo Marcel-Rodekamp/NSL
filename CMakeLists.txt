@@ -57,7 +57,7 @@ else()
 endif()
 
 # include requirements on which the library is build
-include(cmake/gpu.cmake)
+#include(cmake/gpu.cmake)
 include(cmake/torch.cmake)
 include(cmake/catch2.cmake)
 
