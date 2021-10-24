@@ -46,11 +46,6 @@ target_link_libraries(NSL_BENCHMARK NSL)
 if(APPLE)
   # .dylib, on mac
   set(CMAKE_INSTALL_RPATH @loader_path)
-
-  # fix compiler to clang
-  set(CMAKE_C_COMPILER clang)
-  set(CMAKE_CXX_COMPILER clang++)
-
 else()
   # .so, generically or
   set(CMAKE_INSTALL_RPATH $ORIGIN)
