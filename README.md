@@ -45,8 +45,8 @@ make
 
 ### Prerequisites
 
-Sometimes a few things have to be met before the build can work.
-We utilize features from C++20 which requires some level of compilers. 
+Sometimes a few things are needed before the build can work.
+We utilize features from C++20 which requires more recent compilers. 
 Currently, NSL is tested to work with 
 
 1. `g++ (GCC) 10.3.0`
