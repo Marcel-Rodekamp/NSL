@@ -16,12 +16,12 @@ module list
     Where:
         H:  Hidden Module
 ```
-For compilation you need to cload two modules (`module load` can be abbreviated with `ml`)
+For compilation you need to load two modules (`module load` can be abbreviated with `ml`)
 ```
 module load CMake
 module load PyTorch
 ```
-After the loaded modules should look lije
+After the loaded modules should look like
 ```
 module list
 

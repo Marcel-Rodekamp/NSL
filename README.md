@@ -11,7 +11,7 @@ Additional features become added to provide a self-containing simulation library
 
 ## Installation
 
-The defaul branch is the `devel` branch. 
+The default branch is the `devel` branch. 
 Only tested and working features are merged into this. 
 It is ment as a starting point for the development of new features.
 The `main` branch holds the newest major version of NSL.
@@ -55,7 +55,7 @@ Currently, NSL is tested to work with
    * `x86_64-apple-darwin20.6.0`
    * `arm64-apple-darwin20.6.0`
 
-Additionally, the backend depends on [PyTorches C++ ABI `libtorch`](https://pytorch.org/cppdocs/installing.html)
+Additionally, the backend depends on [PyTorch's C++ ABI `libtorch`](https://pytorch.org/cppdocs/installing.html)
 which is automatically shipped with any PyTorch installation. 
 Please ensure that PyTorch is installed on your system.
 
@@ -72,7 +72,7 @@ Here are some system specific details to install NSL
 ##### 1.1 Arch Linux
 
 Arch linux is rather flexible to obtain the newest versions of any software.
-This allows to install the newest g++ compilers & PyTorch via the packet manager.
+This allows to install the newest g++ compilers & PyTorch via the package manager.
 For [g++](https://archlinux.org/packages/core/x86_64/gcc/) this would mean
 ```
 sudo pacman -S gcc 
@@ -94,7 +94,7 @@ For (nvidia) GPU support also ensure that the cuda-toolkit is installed.
 For more details on nvidia on arch linux visit the official [nvidia arch wiki](https://wiki.archlinux.org/title/NVIDIA)
 as well as the [nvidia installation documentation](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
 
-If PyTorch is build with pip3, specify `Torch_DIR` as explained above.
+If PyTorch is built with pip3, specify `Torch_DIR` as explained above.
 
 ##### 1.2 Ubuntu
 
