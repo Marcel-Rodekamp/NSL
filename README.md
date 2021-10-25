@@ -153,7 +153,7 @@ pytorch version.
 
 Now you can use the quick build to compile NSL, don't forget to specify `Torch_DIR` as explained above.
 
-#### 2. Mac Os 
+#### 2. macOS 
 
 Ensure that your clang version matches one of the above.
 
