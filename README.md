@@ -36,7 +36,7 @@ mkdir build && cd build
      * `Debug`: Build for developing and debugging, turn on runtime assertions
      * `Release`: Build for production, turn off runtime assertions
 ``` 
-cmake CMAKE_BUILD_TYPE=Debug ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 4. Build the directory (add `-j 4` for parallel build on 4 cores)
 ```
@@ -45,18 +45,25 @@ make
 
 ### Prerequisites
 
-A few things have to be met before the build can work.
+Sometimes a few things have to be met before the build can work.
 We utilize features from C++20 which requires some level of compilers. 
 Currently, NSL is tested to work with 
 
-1. `g++ (GCC) 11.1.0`
-2. `clang++ 13.0.0` with targets:
+1. `g++ (GCC) 10.3.0`
+2. `g++ (GCC) 11.1.0`
+3. `clang++ 13.0.0` with targets:
    * `x86_64-apple-darwin20.6.0`
    * `arm64-apple-darwin20.6.0`
 
 Additionally, the backend depends on [PyTorches C++ ABI `libtorch`](https://pytorch.org/cppdocs/installing.html)
 which is automatically shipped with any PyTorch installation. 
 Please ensure that PyTorch is installed on your system.
+
+If PyTorch has been installed via [pip3](https://docs.python.org/3/installing/index.html) and it is not installed in the system defaults (that is the default case with pip!) you are required to tell cmake where to find PyTorch.
+This can be done in step 3 of the quick build by specifying `Torch_DIR`, for example with
+```
+cmake -DTorch_DIR=$(pip3 show torch | grep Location | cut -d ' ' -f 2)/torch/share/cmake/Torch -DCMAKE_BUILD_TYPE=Debug ..
+```
 
 Here are some system specific details to install NSL
 
@@ -87,6 +94,7 @@ For (nvidia) GPU support also ensure that the cuda-toolkit is installed.
 For more details on nvidia on arch linux visit the official [nvidia arch wiki](https://wiki.archlinux.org/title/NVIDIA)
 as well as the [nvidia installation documentation](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html)
 
+If PyTorch is build with pip3, specify `Torch_DIR` as explained above.
 
 ##### 1.2 Ubuntu
 
@@ -115,7 +123,7 @@ sudo apt update
 sudo apt install cmake
 ```
 
-To verify ensure that `cmake --version` returns a version larger then `3.18`
+To verify ensure that `cmake --version` returns a version larger or equal then `3.18`
 
 The next step is to install `g++11`, following [this blog article](https://linuxize.com/post/how-to-install-gcc-on-ubuntu-20-04/)
 
@@ -128,7 +136,7 @@ sudo apt install gcc-11 g++-11
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave  /usr/bin/g++ g++ /usr/bin/g++-11
 ```
 
-Now ypu need to install PyTorch. 
+Now you need to install PyTorch. 
 Here it is recommended to use pip.
 
 1. Install Python pip
@@ -143,19 +151,18 @@ sudo pip3 install torch torchvision torchaudio
 This automatically detects weather GPU support is available and installs the correct 
 pytorch version.
 
+Now you can use the quick build to compile NSL, don't forget to specify `Torch_DIR` as explained above.
+
 #### 2. Mac Os 
 
-##### 2.1 Pre M1 
+Ensure that your clang version matches one of the above.
 
-If you installed torch via `pip3`, you can automatically configure to use that Torch installation using
-
+PyTorch can be installed using `pip3`
 ```
-cmake -DTorch_DIR=$(pip3 show torch | grep Location | cut -d ' ' -f 2)/torch/share/cmake/Torch [...location of NSL repo root...]
+pip3 install torch torchvision torchaudio
 ```
 
-##### 2.2 M1 
-
-ToDo
+If PyTorch is build with pip3, specify `Torch_DIR` as explained above.
 
 #### 3. Windows
 
@@ -165,7 +172,6 @@ which can be installed through the powershell using
 wsl --install
 ```
 This should install an Ubuntu 20.04 kernel, hence further prerequisites can be found at section __1.2 Ubuntu__.
-We tested this only with a Windows 11 installation with an NVIDIA GPU.
 
 ## Dependencies
 
