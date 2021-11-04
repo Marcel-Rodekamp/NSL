@@ -9,19 +9,16 @@
 
 #include "../Tensor/tensor.hpp"
 
-
-
-template<typename Type>
-
+namespace NSL::FermionMatrix{
 
 //definition of class FermionMatrixBase
 
-class FermionMatrixBase: 
-{
+template<typename Type>
+class FermionMatrixBase {
 
 public:
 
-NSL::TimeTensor<Type> M(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi);
+NSL::TimeTensor<Type> M(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi, NSL::Tensor<Type> & expKappa);
 NSL::TimeTensor<Type> M_dagger(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi);
 NSL::TimeTensor<Type> MM_dagger(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi);
 Type det_M;
@@ -32,18 +29,19 @@ Type det_M;
 
 
 //constructor
+FermionMatrixBase()
+{}
+FermionMatrixBase( NSL::Lattice::SpatialLattice<Type>* L); 
 
-FermionMatrixBase( NSL::Lattice::SpatialLattice & L)
-:Lat(&L)
-{
-}
 
 
 
 private:
 
-NSL::Lattice::SpatialLattice * Lat;
+NSL::Lattice::SpatialLattice<Type>* Lat;
 
 };
+
+}
 
 #endif
