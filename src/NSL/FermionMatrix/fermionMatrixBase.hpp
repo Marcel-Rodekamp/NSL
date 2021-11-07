@@ -18,6 +18,9 @@ class FermionMatrixBase {
 
 public:
 
+
+//Declaration of methods methods M, M_dagger, MM_dagger and M
+
 NSL::TimeTensor<Type> M(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi, NSL::Tensor<Type> & expKappa);
 NSL::TimeTensor<Type> M_dagger(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi);
 NSL::TimeTensor<Type> MM_dagger(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> & psi);
@@ -37,6 +40,8 @@ FermionMatrixBase( NSL::Lattice::SpatialLattice<Type>* L);
 
 
 private:
+
+//a pointer pointing at the object of SpatialLattice type
 
 NSL::Lattice::SpatialLattice<Type>* Lat;
 
