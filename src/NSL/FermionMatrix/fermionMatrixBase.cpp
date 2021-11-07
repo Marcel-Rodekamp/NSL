@@ -2,16 +2,20 @@
 #include "fermionMatrixBase.hpp"
 #include "../Tensor/tensor.hpp"
 #include "../Lattice/lattice.hpp"
-//#include "../LinAlg/mat_vec.hpp"
+#include "../LinAlg/mat_vec.hpp"
 
 namespace NSL::FermionMatrix {
 
+
+//definition of constructor
 template<typename Type>
 NSL::FermionMatrix::FermionMatrixBase<Type>::FermionMatrixBase(NSL::Lattice::SpatialLattice<Type>* L)
 :Lat(L)
 {
 }
 
+
+//definition of the function M (incomplete, right now)
 template<typename Type>
 NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixBase<Type>::M(NSL::TimeTensor<Type> & phi, NSL::TimeTensor<Type> &psi, NSL::Tensor<Type> & expKappa)
 {
