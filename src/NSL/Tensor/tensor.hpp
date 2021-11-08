@@ -68,9 +68,19 @@ class Tensor {
         {}
 
         //! copy constructor
-        constexpr Tensor(const Tensor& other):
+        constexpr Tensor(const Tensor<Type,RealType>& other):
             data_(other.data_)
         {}
+
+
+        //! copy constructor
+        template<typename OtherRealType>
+        constexpr Tensor(const Tensor<OtherRealType,OtherRealType>& other):
+                data_(to_torch(other).to(torch::dtype<NSL::complex<OtherRealType>>()))
+        {
+            static_assert(std::is_same<OtherRealType,RealType>());
+            static_assert(NSL::is_complex<Type>());
+        }
 
         //! move constructor
         constexpr Tensor(Tensor && other) noexcept:
@@ -460,6 +470,22 @@ class Tensor {
             return tmp;
         }
 
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) * Tensor(Real)
+        /*!
+         * \todo Add documentation.
+         */
+        template<typename OtherType, typename OtherRealType = typename NSL::RT_extractor<OtherType>::value_type>
+        Tensor<NSL::complex<RealType>,RealType> operator-(const Tensor<OtherType,OtherRealType> & other){
+            // check for same precision
+            static_assert(std::is_same<OtherRealType,RealType>());
+            // ensure that at least one is complex valued
+            static_assert(NSL::is_complex<Type>() || NSL::is_complex<OtherType>());
+            // We expect the case where Type = RealType or OtherType = Type is handled by the operator<Type,RealType>
+            Tensor<NSL::complex<RealType>,RealType> tmp(this->data_ - to_torch(other));
+            return tmp;
+        }
+
+
         //! Elementwise subtraction: Tensor - number
         /*!
          * \todo Add documentation.
@@ -469,7 +495,23 @@ class Tensor {
             return tmp;
         }
 
-        // =====================================================================
+
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) - number(Real)
+        /*!
+         * \todo Add documentation.
+         */
+        template<typename OtherType>
+        Tensor<NSL::complex<RealType>,RealType> operator-(const OtherType & other){
+            // check for same precision
+            static_assert(std::is_same<typename RT_extractor<OtherType>::value_type ,RealType>());
+            // ensure that at least one is complex valued
+            static_assert(NSL::is_complex<Type>() || NSL::is_complex<OtherType>());
+            // We expect the case where Type = RealType or OtherType = Type is handled by the operator<Type,RealType>
+            Tensor<NSL::complex<RealType>,RealType> tmp(this->data_ - other);
+            return tmp;
+        }
+
+    // =====================================================================
         // operator-=;
 
         //! Elementwise subtraction: Tensor - Tensor
@@ -502,6 +544,21 @@ class Tensor {
             return tmp;
         }
 
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) * Tensor(Real)
+        /*!
+         * \todo Add documentation.
+         */
+        template<typename OtherType, typename OtherRealType = typename NSL::RT_extractor<OtherType>::value_type>
+        Tensor<NSL::complex<RealType>,RealType> operator*(const Tensor<OtherType,OtherRealType> & other){
+            // check for same precision
+            static_assert(std::is_same<OtherRealType,RealType>());
+            // ensure that at least one is complex valued
+            static_assert(NSL::is_complex<Type>() || NSL::is_complex<OtherType>());
+            // We expect the case where Type = RealType or OtherType = Type is handled by the operator<Type,RealType>
+            Tensor<NSL::complex<RealType>,RealType> tmp(this->data_ * to_torch(other));
+            return tmp;
+        }
+
         //! Elementwise multiplication: Tensor * number
         /*!
          * \todo Add documentation.
@@ -510,6 +567,22 @@ class Tensor {
             Tensor<Type,RealType> tmp(this->data_ * value);
             return tmp;
         }
+
+        //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) * number(Real)
+        /*!
+         * \todo Add documentation.
+         */
+        template<typename OtherType>
+        Tensor<NSL::complex<RealType>,RealType> operator*(const OtherType & other){
+            // check for same precision
+            static_assert(std::is_same<typename RT_extractor<OtherType>::value_type ,RealType>());
+            // ensure that at least one is complex valued
+            static_assert(NSL::is_complex<Type>() || NSL::is_complex<OtherType>());
+            // We expect the case where Type = RealType or OtherType = Type is handled by the operator<Type,RealType>
+            Tensor<NSL::complex<RealType>,RealType> tmp(this->data_ * other);
+            return tmp;
+        }
+
 
         // =====================================================================
         // operator*=;
