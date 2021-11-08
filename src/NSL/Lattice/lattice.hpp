@@ -79,7 +79,7 @@ class SpatialLattice {
          *  \param delta what factor to multiply by before exponentiating;
          *               typically the Trotter discretization.
          **/
-        NSL::Tensor<Type> exp_hopping_matrix(Type delta=1.);
+        virtual NSL::Tensor<Type> exp_hopping_matrix(Type delta=1.);
 
         //! A string that describes the lattice.
         const std::string & name() { return name_; };
