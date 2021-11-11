@@ -24,9 +24,9 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
     );
 
     // anti-periodic boundary condition
-    Fpsi.slice(0,0,1)*=-1;
 
-    return Fpsi;
+    Fpsi.slice(0,0,1)*=-1;
+    return Fpsi.transpose();
 }
 
 template <typename Type>
