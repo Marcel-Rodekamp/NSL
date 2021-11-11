@@ -29,9 +29,9 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
     return Fpsi;
 }
 
-template<typename Type>
+template <typename Type>
 NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::M(const NSL::TimeTensor<Type> &psi){
-    return this->F_(psi)*(-1.);
+    return psi - this->F_(psi);
 }
 
 
