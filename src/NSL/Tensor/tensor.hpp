@@ -470,6 +470,15 @@ class Tensor {
             return tmp;
         }
 
+        //! Elementwise subtraction: Tensor - Tensor
+        /*!
+         * \todo Add documentation.
+         */
+        Tensor<Type,RealType> operator-(const Tensor<Type,RealType> & other) const {
+            Tensor<Type,RealType> tmp(this->data_ - other.data_);
+            return tmp;
+        }
+
         //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) * Tensor(Real)
         /*!
          * \todo Add documentation.
