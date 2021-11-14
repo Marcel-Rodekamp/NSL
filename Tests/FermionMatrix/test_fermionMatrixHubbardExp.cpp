@@ -1,79 +1,56 @@
-#include <iostream>
-
-#include "../test.hpp"
-#include <typeinfo>
 #include "complex.hpp"
+#include "../test.hpp"
 #include "Tensor/tensor.hpp"
 #include "Lattice/Implementations/ring.hpp"
 #include "FermionMatrix/fermionMatrixHubbardExp.hpp"
 
-void test_fermionMatrixHubbardExp() {
 
-    NSL::complex<double> iota = {0,1};
-    NSL::TimeTensor<NSL::complex<double>> phi(16,2);
-    NSL::TimeTensor<NSL::complex<double>> psi(16,2);
+using size_type = int64_t;
+
+void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) {
+
+    //NSL::TimeTensor<T> phi(const size_t & size0, const SizeType &... sizes);
+    //NSL::TimeTensor<T> psi(const size_t & size0, const SizeType &... sizes);
+    NSL::TimeTensor<NSL::complex<double>> phi(size0, size1);
+    NSL::TimeTensor<NSL::complex<double>> psi(size0, size1);     
     psi(0,0) = 1.;
     psi(0,1) = 1.;
-    NSL::Lattice::Ring<double> r(2);
+
+    NSL::Lattice::Ring<double> r(size1);
     NSL::FermionMatrix::FermionMatrixHubbardExp M(&r,phi);
+    NSL::complex<double> I ={0,1};
+
+    // apply kronecker delta
+    NSL::TimeTensor<NSL::complex<double>> psiShift = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<NSL::complex<double>> out =  (NSL::LinAlg::mat_vec(
+       
+        r.exp_hopping_matrix(/*delta=(beta/Nt) */0.1),
+        ((phi*I).exp() * psiShift).transpose()
+    ));
+
+    // anti-periodic boundary condition
+
+    out.slice(0,0,1)*=-1;
+    NSL::TimeTensor<NSL::complex<double>> result = psi - (out).transpose();
+
+    //TEST  
+    REQUIRE(result.real().dim() == M.M(psi).real().dim());
+    REQUIRE(result.imag().dim() == M.M(psi).imag().dim());
+
+    for (int i=0; i<size0; i++) {
+        for (int j=0; j<size1; j++) {
+             REQUIRE(result(i,j)==M.M(psi)(i,j)); 
 
 
-//printing out various values for testing
-    std::cout<<phi*iota<<std::endl;
-    std::cout<<NSL::LinAlg::shift(psi,1)<<std::endl;
-    std::cout<<phi.exp()<<std::endl;
-    std::cout<<(phi.exp())*(NSL::LinAlg::shift(psi,1))<<std::endl;
-    std::cout<<psi<<std::endl;
-    std::cout<<r.hopping_matrix(0.1).real()<<std::endl;
-    std::cout<<r.exp_hopping_matrix(0.1).real()<<std::endl;
-    std::cout<<r.exp_hopping_matrix(0.1).imag()<<std::endl;
-    std::cout << M.M(psi).real() << std::endl;
-    std::cout << M.M(psi).imag() << std::endl;
-
-    std::cout<<NSL::LinAlg::mat_vec(r.exp_hopping_matrix(0.1),((phi.exp())*(NSL::LinAlg::shift(psi,1))).transpose())<<std::endl;
-
-
-//trying with arbtrary a and b (phi and psi)
-NSL::TimeTensor<NSL::complex<double>> a(4,4);
-
-NSL::TimeTensor<NSL::complex<double>> b(4,4);
-
-for (int i=0; i<4; i++)
-{ for (int j=0; j<4; j++)
-{a(i,j)=i+j;
-b(i,j)=j-i;
-}}
-
-//printing out various values for testing
-std::cout<<a.exp()<<std::endl;
-std::cout<<b<<std::endl;
-std::cout<<NSL::LinAlg::shift(b,1)<<std::endl;
-std::cout<<a.exp() * b<<std::endl; 
-
-
-std::cout<<NSL::LinAlg::shift(b,-1)<<std::endl;
-std::cout<<(a.exp())*(NSL::LinAlg::shift(b,-1))<<std::endl;
-std::cout<<((a.exp())*(NSL::LinAlg::shift(b,-1))).imag()<<std::endl;
-
-
-NSL::TimeTensor<NSL::complex<double>> c(1,4);
-
-NSL::TimeTensor<NSL::complex<double>> d(1,4);
-for (int j=0; j<4; j++){
-c(0,j)=j+5;
-d(0,j)=j;}
-
-std::cout<<c.exp()<<std::endl;
-std::cout<<d<<std::endl;
-std::cout<<NSL::LinAlg::shift(d,1)<<std::endl;
-std::cout<<c.exp() * d<<std::endl; 
-
-
+    }}
+  
 }
 
-//Not exactly a test case, just printing out values
-REAL_NSL_TEST_CASE( "FermionMatrix: fermionMatrixHubbardExp", "[FermionMatrix, fermionMatrixHubbardExp]"){
-test_fermionMatrixHubbardExp();}
+//Test cases
 
+NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
 
-//
+    const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    test_fermionMatrixHubbardExp(size_0, size_1);
+}
