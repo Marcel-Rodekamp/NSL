@@ -3,6 +3,8 @@
 
 #include "../LinAlg/mat_vec.hpp"
 #include "fermionMatrixBase.hpp"
+#include "../LinAlg/mat_conj.hpp"
+#include "../LinAlg/mat_mul.hpp"
 
 namespace NSL::FermionMatrix {
 template<typename Type>
@@ -25,6 +27,10 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
     {}
 
     NSL::TimeTensor<Type> M(const NSL::TimeTensor<Type> & psi) override;
+    NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi) override;
+    NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi) override;
+    NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi) override;
+
 
     protected:
     NSL::Tensor<Type> phi_;
