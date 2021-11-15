@@ -38,7 +38,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::M(const
 //! \todo: Full support of complex number multiplication is missing in Tensor:
 //template class NSL::FermionMatrix::FermionMatrixHubbardExp<float>;
 //template class NSL::FermionMatrix::FermionMatrixHubbardExp<double>;
-//template class NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<float>>;
+template class NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<float>>;
 template class NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<double>>;
 
 } // namespace FermionMatrix
