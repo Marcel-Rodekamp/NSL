@@ -11,6 +11,8 @@ void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) 
 
     //NSL::TimeTensor<T> phi(const size_t & size0, const SizeType &... sizes);
     //NSL::TimeTensor<T> psi(const size_t & size0, const SizeType &... sizes);
+
+    //hardcoding the calculation done in the method M of fermionMatrixHubbardExp class
     NSL::TimeTensor<NSL::complex<double>> phi(size0, size1);
     NSL::TimeTensor<NSL::complex<double>> psi(size0, size1);     
     psi(0,0) = 1.;
@@ -29,7 +31,6 @@ void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) 
     ));
 
     // anti-periodic boundary condition
-
     out.slice(0,0,1)*=-1;
     NSL::TimeTensor<NSL::complex<double>> result = psi - (out).transpose();
 
@@ -41,16 +42,14 @@ void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) 
         for (int j=0; j<size1; j++) {
              REQUIRE(result(i,j)==M.M(psi)(i,j)); 
 
-
-    }}
-  
+    }}  
 }
 
 //Test cases
-
-NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
+TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     test_fermionMatrixHubbardExp(size_0, size_1);
+
 }
