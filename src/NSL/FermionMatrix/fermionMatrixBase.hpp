@@ -20,6 +20,9 @@ class FermionMatrixBase {
     //Declaration of methods methods M, M_dagger, MM_dagger and M
 
     virtual NSL::TimeTensor<Type> M(const NSL::TimeTensor<Type> & psi) = 0;
+    virtual NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi) = 0;
+    virtual NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi) = 0;
+    virtual NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi) = 0;
 //    virtual NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi);
 //    virtual NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi);
 //    virtual NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi);
