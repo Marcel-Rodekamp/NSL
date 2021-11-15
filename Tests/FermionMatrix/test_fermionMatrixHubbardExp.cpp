@@ -6,25 +6,25 @@
 
 
 using size_type = int64_t;
-
+template<typename T>
 void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) {
 
     //NSL::TimeTensor<T> phi(const size_t & size0, const SizeType &... sizes);
     //NSL::TimeTensor<T> psi(const size_t & size0, const SizeType &... sizes);
 
     //hardcoding the calculation done in the method M of fermionMatrixHubbardExp class
-    NSL::TimeTensor<NSL::complex<double>> phi(size0, size1);
-    NSL::TimeTensor<NSL::complex<double>> psi(size0, size1);     
+    NSL::TimeTensor<NSL::complex<T>> phi(size0, size1);
+    NSL::TimeTensor<NSL::complex<T>> psi(size0, size1);     
     psi(0,0) = 1.;
     psi(0,1) = 1.;
 
-    NSL::Lattice::Ring<double> r(size1);
+    NSL::Lattice::Ring<T> r(size1);
     NSL::FermionMatrix::FermionMatrixHubbardExp M(&r,phi);
-    NSL::complex<double> I ={0,1};
+    NSL::complex<T> I ={0,1};
 
     // apply kronecker delta
-    NSL::TimeTensor<NSL::complex<double>> psiShift = NSL::LinAlg::shift(psi,1);
-    NSL::TimeTensor<NSL::complex<double>> out =  (NSL::LinAlg::mat_vec(
+    NSL::TimeTensor<NSL::complex<T>> psiShift = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<NSL::complex<T>> out =  (NSL::LinAlg::mat_vec(
        
         r.exp_hopping_matrix(/*delta=(beta/Nt) */0.1),
         ((phi*I).exp() * psiShift).transpose()
@@ -32,7 +32,7 @@ void test_fermionMatrixHubbardExp(const size_type size0, const size_type size1) 
 
     // anti-periodic boundary condition
     out.slice(0,0,1)*=-1;
-    NSL::TimeTensor<NSL::complex<double>> result = psi - (out).transpose();
+    NSL::TimeTensor<NSL::complex<T>> result = psi - (out).transpose();
 
     //TEST  
     REQUIRE(result.real().dim() == M.M(psi).real().dim());
@@ -50,6 +50,7 @@ TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_fermionMatrixHubbardExp(size_0, size_1);
+    test_fermionMatrixHubbardExp<float>(size_0, size_1);
+    test_fermionMatrixHubbardExp<double>(size_0, size_1);
 
 }
