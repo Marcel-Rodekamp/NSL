@@ -30,10 +30,28 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
 }
 
 template <typename Type>
-NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::M(const NSL::TimeTensor<Type> &psi){
+NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::M(const NSL::TimeTensor<Type> & psi){
     return psi - this->F_(psi);
 }
 
+template<typename Type>
+NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger(const NSL::TimeTensor<Type> & psi){
+    //NSL::TimeTensor<Type> out;
+    //out= this->M(psi);    
+    return (NSL::LinAlg::adjoint(this->M(psi)));
+}
+
+template<typename Type>
+NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(const NSL::TimeTensor<Type> & psi){
+   
+    return (NSL::LinAlg::mat_mul(this->M(psi),this->Mdagger(psi)));
+}
+
+template<typename Type>
+NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MdaggerM(const NSL::TimeTensor<Type> & psi){
+   
+    return (NSL::LinAlg::mat_mul(this->Mdagger(psi),this->M(psi)));
+}
 
 //! \todo: Full support of complex number multiplication is missing in Tensor:
 //template class NSL::FermionMatrix::FermionMatrixHubbardExp<float>;
