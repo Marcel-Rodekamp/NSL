@@ -21,7 +21,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
         // exp_hopping_matrix computes only once and stores the result accessible with the same function
         this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */0.1),
         ((this->phi_*I).exp() * psiShift).transpose()
-    );
+    ).transpose();
 
     // anti-periodic boundary condition
 

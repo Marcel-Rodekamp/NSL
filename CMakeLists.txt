@@ -30,14 +30,14 @@ add_library(NSL SHARED src/NSL)
 set_target_properties(NSL PROPERTIES LINKER_LANGUAGE CXX)
 
 
-# Create testing library depending on Catch2
+## Create testing library depending on Catch2
 add_library(NSL_TEST SHARED Tests/test_main.cpp)
 set_target_properties(NSL_TEST PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(NSL_TEST NSL)
 
 
 # Create benchmarking library depending on Catch2
-add_library(NSL_BENCHMARK SHARED Benchmarks/benchmark_main.cpp)
+add_library(NSL_BENCHMARK SHARED Benchmarks/benchmark.hpp)
 set_target_properties(NSL_BENCHMARK PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(NSL_BENCHMARK NSL)
 
