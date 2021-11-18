@@ -15,12 +15,12 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
     // apply kronecker delta
     NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
 
-    NSL::TimeTensor<Type> Fpsi = (NSL::LinAlg::mat_vec(
+    NSL::TimeTensor<Type> Fpsi = NSL::LinAlg::mat_vec(
         //! \todo: This argument needs to be variable with the beta coming from elsewhere
         //!        CHANGE THAT!!!
         // exp_hopping_matrix computes only once and stores the result accessible with the same function
         this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */0.1),
-        ((this->phi_*I).exp() * psiShift).transpose()).transpose()
+        ((this->phi_*I).exp() * psiShift).transpose()
     );
 
     // anti-periodic boundary condition
