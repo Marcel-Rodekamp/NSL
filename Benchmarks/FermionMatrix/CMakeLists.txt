@@ -1,0 +1,2 @@
+add_executable(benchmark_fermionMatrixHubbardExp benchmark_fermionMatrixHubbardExp.cpp)
+target_link_libraries(benchmark_fermionMatrixHubbardExp NSL_BENCHMARK NSL)
