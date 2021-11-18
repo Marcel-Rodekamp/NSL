@@ -422,7 +422,7 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator+(const Tensor<Type,RealType> & other){
+        Tensor<Type,RealType> operator+(const Tensor<Type,RealType> & other)const{
             Tensor<Type,RealType> tmp(this->data_ + other.data_);
             return tmp;
         }
