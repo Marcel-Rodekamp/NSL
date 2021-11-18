@@ -3,3 +3,5 @@ target_sources(NSL_BENCHMARK PUBLIC
 )
 
 add_subdirectory(Tensor/)
+
+add_subdirectory(FermionMatrix/)
