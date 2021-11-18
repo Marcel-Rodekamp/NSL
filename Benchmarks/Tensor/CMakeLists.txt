@@ -1,2 +1,0 @@
-add_executable(benchmark_tensor benchmark_tensor.cpp)
-target_link_libraries(benchmark_tensor NSL_BENCHMARK NSL)
