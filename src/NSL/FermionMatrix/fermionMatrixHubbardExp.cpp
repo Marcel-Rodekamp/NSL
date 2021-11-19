@@ -56,7 +56,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagge
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
     NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
 
-    //Since, phi.exp() changes phi_, copy it in phi because there are two exponential terms
+    //Since, phi_.exp() changes phi_, copy it in phi because there are two exponential terms
     //Or should mat_exp() be called?? mat_exp does exp( matrix A) instead of elemetwise exponentiation
     NSL::TimeTensor<Type> phi = this->phi_;
 
@@ -82,7 +82,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
     NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
 
-    //Since, phi.exp() changes phi_, copy it in phi because there are two exponential terms
+    //Since, phi_.exp() changes phi_, copy it in phi because there are two exponential terms
     NSL::TimeTensor<Type> phi = this->phi_;
 
     outdagger=  NSL::LinAlg::mat_vec(NSL::LinAlg::adjoint((phi*I).exp()).transpose(), this->Lat->exp_hopping_matrix(0.1));
