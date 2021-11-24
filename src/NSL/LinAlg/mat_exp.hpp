@@ -6,9 +6,15 @@
 namespace NSL {
 namespace LinAlg {
 
-template <typename Type> NSL::Tensor<Type> mat_exp(const NSL::Tensor<Type> & t){
-    NSL::Tensor<Type> out(t);
+template <typename Type> NSL::TimeTensor<Type> mat_exp(const NSL::TimeTensor<Type> & t){
+    NSL::TimeTensor<Type> out(t);
     return out.mat_exp();
+}
+
+
+template <typename Type> NSL::TimeTensor<Type> exp(const NSL::TimeTensor<Type> & t){
+    NSL::TimeTensor<Type> out(t);
+    return out.exp();
 }
 
 } // namespace LinAlg

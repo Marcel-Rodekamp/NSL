@@ -20,7 +20,7 @@ template<typename T>
 void test_ring(const size_type & size, T kappa = 1.){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);
-
+ 
     NSL::Lattice::Ring<T> ring(size, kappa);
     INFO(ring.name());
 

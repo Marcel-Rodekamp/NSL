@@ -42,7 +42,10 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
 
     NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
-    out= NSL::LinAlg::mat_vec(NSL::LinAlg::adjoint((this->phi_*I).exp()).transpose(), this->Lat->exp_hopping_matrix(0.1)) * psiShift;
+    out= NSL::LinAlg::mat_vec(
+        NSL::LinAlg::adjoint((this->phi_*I).exp()).transpose(),
+         this->Lat->exp_hopping_matrix(0.1))
+     * psiShift;
     //anti-periodic boundary condition
     out.slice(0,0,1)*=-1;
     return (psi-out);
@@ -54,23 +57,22 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagge
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1);
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
-    NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<Type> psiShift1 = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<Type> psiShift_1 = NSL::LinAlg::shift(psi,-1);
 
-    //Since, phi_.exp() changes phi_, copy it in phi because there are two exponential terms
-    //Or should mat_exp() be called?? mat_exp does exp( matrix A) instead of elemetwise exponentiation
-    NSL::TimeTensor<Type> phi = this->phi_;
-
-    out= (NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),((phi*I).exp()).transpose()));
-    out.transpose();
-    //anti-periodic boundary condition
+    //Since, phi_.exp() changes phi_, should NSL::LinAlg mat_exp be called? 
+ 
+    out= (NSL::LinAlg::mat_vec(
+        this->Lat->exp_hopping_matrix(0.1), (this->phi_*(-I)).exp().transpose())).
+    transpose();
+    out= out*psiShift1;
     out.slice(0,0,1)*=-1;
-
-    outdagger= NSL::LinAlg::adjoint((this->phi_*I).exp()).transpose();
-    outdagger=  NSL::LinAlg::mat_vec(outdagger, this->Lat->exp_hopping_matrix(0.1)) * psiShift;
-    //anti-periodic boundary condition
-    outdagger.slice(0,0,1)*=-1;
-
-    out= out*outdagger;
+    out*= -1; 
+    out = out - this->F_(psi);
+    out = out + (NSL::LinAlg::mat_vec(
+        NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),this->Lat->exp_hopping_matrix(0.1)),
+         (this->phi_*I - this->phi_*I).transpose()).transpose()
+    ) * psi ;   
     return (psi+out);
 }
 
@@ -80,22 +82,21 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1);
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
-    NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<Type> psiShift1 = NSL::LinAlg::shift(psi,1);
+    NSL::TimeTensor<Type> psiShift_1 = NSL::LinAlg::shift(psi,-1);
 
-    //Since, phi_.exp() changes phi_, copy it in phi because there are two exponential terms
-    NSL::TimeTensor<Type> phi = this->phi_;
-
-    outdagger=  NSL::LinAlg::mat_vec(NSL::LinAlg::adjoint((phi*I).exp()).transpose(), this->Lat->exp_hopping_matrix(0.1));
-    //anti-periodic boundary condition
-    outdagger.slice(0,0,1)*=-1;
-
-    out=  NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1), ((this->phi_*I).exp()).transpose());
-    out= out.transpose() * psiShift;
-    //anti-periodic boundary condition
+    out=  ((NSL::LinAlg::mat_vec(
+        this->Lat->exp_hopping_matrix(0.1), (this->phi_*(-I)).exp().transpose())).transpose()
+    )*psiShift_1;  
     out.slice(0,0,1)*=-1;
+    out*= -1;
+    out = out - this->F_(psi); 
+    out = out + (NSL::LinAlg::mat_vec(
+        NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),this->Lat->exp_hopping_matrix(0.1)),
+         (this->phi_*I - this->phi_*I).transpose()).transpose() 
+    )* psi ; 
 
-    outdagger = outdagger * out;
-    return (psi+outdagger);
+    return (psi+out);
 }
 
 //! \todo: Full support of complex number multiplication is missing in Tensor:
