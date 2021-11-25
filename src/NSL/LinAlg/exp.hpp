@@ -14,7 +14,7 @@ Type exp(Type number){
 
 //exponential(Tensor)
 template<typename Type>
-NSL::Tensor<Type> exp(Tensor<Type> &tensor) {
+NSL::Tensor<Type> exp(const Tensor<Type> &tensor) {
     NSL::Tensor<Type> out(tensor);
     return out.exp();
 }

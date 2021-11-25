@@ -13,6 +13,7 @@ template <typename Type> NSL::TimeTensor<Type> mat_exp(const NSL::TimeTensor<Typ
 
 
 template <typename Type> NSL::TimeTensor<Type> exp(const NSL::TimeTensor<Type> & t){
+    std::cout<<"Hello"<<std::endl;
     NSL::TimeTensor<Type> out(t);
     return out.exp();
 }
