@@ -69,7 +69,7 @@ class Tensor {
 
         //! copy constructor
         constexpr Tensor(const Tensor<Type,RealType>& other):
-            data_(other.data_)
+            data_(other.data_.clone())
         {}
 
 
@@ -572,7 +572,11 @@ class Tensor {
         /*!
          * \todo Add documentation.
          */
-        Tensor<Type,RealType> operator*(const Type & value){
+        Tensor<Type,RealType> operator*(const Type & value) const{
+            Tensor<Type,RealType> tmp(this->data_ * value);
+            return tmp;
+        }
+        Tensor<Type,RealType> operator*(const Type & value) {
             Tensor<Type,RealType> tmp(this->data_ * value);
             return tmp;
         }
@@ -711,6 +715,7 @@ class Tensor {
         //! Elementwise exponential
         /*! \todo: Add Documentation*/
         Tensor<Type,RealType> & exp() {
+            //this->data_=this->data_.exp();
             this->data_.exp_();
             return *this;
         }
