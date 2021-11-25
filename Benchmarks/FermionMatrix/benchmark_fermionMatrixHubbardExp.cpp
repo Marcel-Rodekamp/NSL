@@ -11,7 +11,8 @@ auto benchmark_fermionMatrixHubbardExp(const size_type Nt,const size_type Nx, st
 
     const size_type Nmeas = 100;
 
-    std::ofstream fout(fn);
+    std::ofstream fout(fn, std::ios::app);
+    
     
     NSL::TimeTensor<NSL::complex<double>> phi(Nt,Nx);
     NSL::TimeTensor<NSL::complex<double>> psi(Nt,Nx);
@@ -31,8 +32,8 @@ auto benchmark_fermionMatrixHubbardExp(const size_type Nt,const size_type Nx, st
 
     double time = timer.get_time(1e-9/Nmeas);
 
-    fout <<  time << std::endl;
-
+    const size_type memory = Nt*Nx * sizeof(NSL::complex<double>);
+    fout <<  time << "," <<Nt << "," <<Nx << "," << memory<<std::endl;
     fout.close();
 
     // don't remove this, it is calling psi such that the compiler does not optimize this away
@@ -43,7 +44,8 @@ auto benchmark_fermionMatrixHubbardExp(const size_type Nt,const size_type Nx, st
 }
 
 int main(){
-    benchmark_fermionMatrixHubbardExp(16,2, "bm_hubbardFermionMatrixExp_M_Nt16_Nx2.dat");
-
+    for (size_type i=100; i<400; i++){
+        benchmark_fermionMatrixHubbardExp(i,100, "bm_hubbardFermionMatrixExp_M_Nt16_Nx2.dat");
+    }
     return EXIT_SUCCESS;
 }
