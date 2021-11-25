@@ -24,7 +24,10 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
      * */
     FermionMatrixHubbardExp(NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type> *lat, const NSL::TimeTensor<Type> &phi):
         FermionMatrixBase<Type>(lat),
-        phi_(phi)
+        phi_(phi),
+        phiExp_(NSL::LinAlg::exp(phi*NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,1)))
+        
+
     {}
 
     NSL::TimeTensor<Type> M(const NSL::TimeTensor<Type> & psi) override;
@@ -35,6 +38,7 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
 
     protected:
     NSL::Tensor<Type> phi_;
+    NSL::Tensor<Type> phiExp_;
 
     private:
     NSL::TimeTensor<Type> F_(const NSL::TimeTensor<Type> & psi);
