@@ -20,7 +20,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(cons
         //!        CHANGE THAT!!!
         // exp_hopping_matrix computes only once and stores the result accessible with the same function
         this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */0.1),
-        ((this->phi_*I).exp() * psiShift).transpose()
+        (this->phiExp_ * psiShift).transpose()
     ).transpose();
 
     // anti-periodic boundary condition
@@ -61,6 +61,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagge
     NSL::TimeTensor<Type> psiShift_1 = NSL::LinAlg::shift(psi,-1);
 
     //Since, phi_.exp() changes phi_, should NSL::LinAlg mat_exp be called? 
+    //boundary condition?
  
     out= (NSL::LinAlg::mat_vec(
         this->Lat->exp_hopping_matrix(0.1), (this->phi_*(-I)).exp().transpose())).
