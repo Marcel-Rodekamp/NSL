@@ -1,4 +1,4 @@
-target_sources(NSL PUBLIC
+target_sources(NSL PRIVATE
         lattice.hpp
         lattice.cpp
 )
