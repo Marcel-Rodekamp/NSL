@@ -14,10 +14,10 @@
 ////! TimeTensor, specialized class which first dimension will (!) be parallelized across multiple nodes
 //#include "time_tensor.hpp"
 
+namespace NSL {
+
 //! Imported Namespace: torch::indexing
 using namespace torch::indexing;
-
-namespace NSL {
 
 //! Representation of multidimensional data.
 /*!
@@ -29,7 +29,6 @@ template <typename Type, typename RealType = typename NSL::RT_extractor<Type>::v
 class Tensor {
     //! Alias: size_t = long int
     using size_t = int64_t;
-
 
     public:
         //Default constructor not required
