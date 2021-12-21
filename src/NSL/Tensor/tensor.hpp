@@ -16,6 +16,23 @@
 
 namespace NSL {
 
+namespace DEVICE {
+
+struct GPU {
+    torch::DeviceType device(){
+        return torch::kCPU;
+    }
+};
+
+struct CPU {
+   torch::DeviceType device(){
+       return torch::kCPU;
+   }
+};
+
+} // namespace DEVICE
+
+
 //! Imported Namespace: torch::indexing
 using namespace torch::indexing;
 
@@ -56,8 +73,33 @@ class Tensor {
          */
         template<typename... SizeType>
         constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
-            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
+            data_(torch::zeros({size0, sizes...},
+                  torch::TensorOptions()
+                        .dtype<Type>()))
         {}
+
+        template<typename... SizeType>
+        constexpr explicit Tensor(NSL::DEVICE::GPU dev, const size_t & size0, const SizeType &... sizes):
+            data_(torch::zeros({size0, sizes...},
+                               torch::TensorOptions()
+                                       .dtype<Type>()
+                                       .device(torch::kCUDA)
+                              )
+            )
+        {}
+
+        template<typename... SizeType>
+        constexpr explicit Tensor(NSL::DEVICE::CPU dev, const size_t & size0, const SizeType &... sizes):
+                data_(torch::zeros({size0, sizes...},
+                                   torch::TensorOptions()
+                                           .dtype<Type>()
+                                           .device(torch::kCPU)
+                      )
+                )
+        {
+            std::cout << "New Constructor" << std::endl;
+            (std::cout << ... << sizes) << std::endl;
+        }
 
         /*!
          * param shape a std::vector giving the shape of the new Tensor.
@@ -791,6 +833,23 @@ class Tensor {
 
             return *this;
         }
+
+        // =====================================================================
+        // GPU specifics
+        // =====================================================================
+
+        //! Move data to given device (`NSL::DEVICE::CPU`  or `NSL::DEVICE::GPU`)
+        /*! \todo: Add Documentation*/
+        template<class DeviceType>
+        void to(DeviceType dev){
+            // make it a no-op if no GPU is found
+            if(dev.device() == torch::kCUDA && !torch::cuda::is_available()){
+                return ;
+            }
+            // move the tensor to device (CPU <-> GPU)
+            this->data_ = this->data_.to(dev.device());
+        }
+
 
     protected:
         //! Underlying torch::Tensor
