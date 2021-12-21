@@ -6,6 +6,7 @@
 #include "../LinAlg/mat_conj.hpp"
 #include "../LinAlg/mat_mul.hpp"
 #include "../LinAlg/mat_exp.hpp"
+#include "../LinAlg/mat_trans.hpp"
 
 namespace NSL::FermionMatrix {
 template<typename Type>
