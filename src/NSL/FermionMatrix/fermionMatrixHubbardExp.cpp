@@ -43,7 +43,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
 
     NSL::TimeTensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
     out= NSL::LinAlg::mat_vec(
-        NSL::LinAlg::adjoint((this->phi_*I).exp()).transpose(),
+        NSL::LinAlg::adjoint(this->phiExp_).transpose(),
          this->Lat->exp_hopping_matrix(0.1))
      * psiShift;
     //anti-periodic boundary condition
@@ -53,51 +53,34 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
 
 template<typename Type>
 NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(const NSL::TimeTensor<Type> & psi){
-    NSL::TimeTensor<Type> out, outdagger;
+    NSL::TimeTensor<Type> out;
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1);
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
-    NSL::TimeTensor<Type> psiShift1 = NSL::LinAlg::shift(psi,1);
-    NSL::TimeTensor<Type> psiShift_1 = NSL::LinAlg::shift(psi,-1);
 
-    //Since, phi_.exp() changes phi_, should NSL::LinAlg mat_exp be called? 
-    //boundary condition?
- 
-    out= (NSL::LinAlg::mat_vec(
-        this->Lat->exp_hopping_matrix(0.1), (this->phi_*(-I)).exp().transpose())).
+    out= this->M(psi) + this->Mdagger(psi) + NSL::LinAlg::mat_vec((this->Lat->exp_hopping_matrix(0.1))*
+        (this->Lat->exp_hopping_matrix(0.1)), NSL::LinAlg::mat_transpose(psi)).
     transpose();
-    out= out*psiShift1;
-    out.slice(0,0,1)*=-1;
-    out*= -1; 
-    out = out - this->F_(psi);
-    out = out + (NSL::LinAlg::mat_vec(
-        NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),this->Lat->exp_hopping_matrix(0.1)),
-         (this->phi_*I - this->phi_*I).transpose()).transpose()
-    ) * psi ;   
-    return (psi+out);
+
+    return (out-psi);
+
 }
 
 template<typename Type>
 NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MdaggerM(const NSL::TimeTensor<Type> & psi){
-    NSL::TimeTensor<Type> out, outdagger;
+    NSL::TimeTensor<Type> out;
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1);
     const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
-    NSL::TimeTensor<Type> psiShift1 = NSL::LinAlg::shift(psi,1);
-    NSL::TimeTensor<Type> psiShift_1 = NSL::LinAlg::shift(psi,-1);
 
-    out=  ((NSL::LinAlg::mat_vec(
-        this->Lat->exp_hopping_matrix(0.1), (this->phi_*(-I)).exp().transpose())).transpose()
-    )*psiShift_1;  
-    out.slice(0,0,1)*=-1;
-    out*= -1;
-    out = out - this->F_(psi); 
-    out = out + (NSL::LinAlg::mat_vec(
-        NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),this->Lat->exp_hopping_matrix(0.1)),
-         (this->phi_*I - this->phi_*I).transpose()).transpose() 
-    )* psi ; 
 
-    return (psi+out);
+    out= this->M(psi) + this->Mdagger(psi) + (NSL::LinAlg::adjoint(this->phiExp_) *
+        NSL::LinAlg::mat_vec((this->Lat->exp_hopping_matrix(0.1))*
+         (this->Lat->exp_hopping_matrix(0.1)),
+        (NSL::LinAlg::mat_transpose(this->phiExp_)))).transpose();
+
+    return (out-psi);
+
 }
 
 //! \todo: Full support of complex number multiplication is missing in Tensor:
