@@ -436,6 +436,11 @@ class Tensor {
             return tmp;
         }
 
+        Tensor<Type,RealType> operator+(const Type & value) const{
+            Tensor<Type,RealType> tmp(this->data_ + value);
+            return tmp;
+        }
+
         // =====================================================================
         // operator+=;
 
@@ -504,6 +509,11 @@ class Tensor {
             return tmp;
         }
 
+        Tensor<Type,RealType> operator-(const Type & value) const{
+            Tensor<Type,RealType> tmp(this->data_ - value);
+            return tmp;
+        }
+
 
         //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) - number(Real)
         /*!
@@ -553,6 +563,11 @@ class Tensor {
             return tmp;
         }
 
+        //const version of elementwise multiplication: Tensor * Tensor
+        Tensor<Type,RealType> operator*(const Tensor<Type,RealType> & other) const{
+            Tensor<Type,RealType> tmp(this->data_ * other.data_);
+            return tmp;
+        }
         //! Elementwise multiplication (Schur,Hadamard product): Tensor(Complex) * Tensor(Real)
         /*!
          * \todo Add documentation.
@@ -630,12 +645,21 @@ class Tensor {
             Tensor<Type,RealType> tmp(this->data_ / other.data_);
             return tmp;
         }
+        Tensor<Type,RealType> operator/(const Tensor<Type,RealType> & other) const{
+            Tensor<Type,RealType> tmp(this->data_ / other.data_);
+            return tmp;
+        }
 
         //! Elementwise division: Tensor / number
         /*!
          * \todo Add documentation.
          */
         Tensor<Type,RealType> operator/(const Type & value){
+            Tensor<Type,RealType> tmp(this->data_ / value);
+            return tmp;
+        }
+        //const version of elementwise division: Tensor/number
+        Tensor<Type,RealType> operator/(const Type & value) const{
             Tensor<Type,RealType> tmp(this->data_ / value);
             return tmp;
         }
