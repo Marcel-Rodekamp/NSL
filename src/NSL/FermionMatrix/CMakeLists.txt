@@ -1,3 +1,3 @@
-target_sources(NSL PUBLIC
+target_sources(NSL PRIVATE
         fermionMatrix.hpp
 )
