@@ -3,3 +3,6 @@ target_link_libraries(example_tensor NSL)
 
 add_executable(example_GPU_tensor example_GPU_tensor.cpp)
 target_link_libraries(example_GPU_tensor NSL)
+
+add_executable(example_GPU_MatExp example_GPU_MatExp.cpp)
+target_link_libraries(example_GPU_MatExp NSL)

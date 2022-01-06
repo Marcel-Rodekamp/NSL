@@ -13,24 +13,12 @@
 #include "../complex.hpp"
 ////! TimeTensor, specialized class which first dimension will (!) be parallelized across multiple nodes
 //#include "time_tensor.hpp"
+//! Required implementations for utilization of GPUs
+#include "../gpu.hpp"
 
 namespace NSL {
 
-namespace DEVICE {
 
-struct GPU {
-    torch::DeviceType device(){
-        return torch::kCPU;
-    }
-};
-
-struct CPU {
-   torch::DeviceType device(){
-       return torch::kCPU;
-   }
-};
-
-} // namespace DEVICE
 
 
 //! Imported Namespace: torch::indexing
@@ -48,7 +36,66 @@ class Tensor {
     using size_t = int64_t;
 
     public:
-        //Default constructor not required
+
+        //! D-dimensional constructor.
+        /*! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
+         * \n
+         * Params:\n
+         *     * `dev`  : Construct Tensor on GPU
+         *     * `size0`: Extend of the 0th dimension\n
+         *     * `sizes`: Parameter pack, extends of respective dimensions
+         *
+         * \n
+         * Assumptions:\n
+         *     * At least one argument must be passed (`size0`)
+         *     * SizeType must be of integral type (convertible to `size_t`)
+         *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
+         *
+         *
+         * \n
+         * Further behavior:\n
+         *     * Initialization sets all values to `Type` equivalent of 0
+         */
+        template<typename... SizeType>
+        constexpr explicit Tensor(NSL::DEVICE::GPU & dev, const size_t & size0, const SizeType &... sizes):
+                    data_(torch::zeros({size0, sizes...},
+                                       torch::TensorOptions()
+                                               .dtype<Type>()
+                                               .device(dev.device(),dev.deviceID)
+                          )
+                    )
+            {}
+
+        //! D-dimensional constructor.
+        /*! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
+         * \n
+         * Params:\n
+         *     * `dev`  : Construct Tensor on CPU
+         *     * `size0`: Extend of the 0th dimension\n
+         *     * `sizes`: Parameter pack, extends of respective dimensions
+         *
+         * \n
+         * Assumptions:\n
+         *     * At least one argument must be passed (`size0`)
+         *     * SizeType must be of integral type (convertible to `size_t`)
+         *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
+         *
+         *
+         * \n
+         * Further behavior:\n
+         *     * Initialization sets all values to `Type` equivalent of 0
+         */
+        template<typename... SizeType>
+        constexpr explicit Tensor(NSL::DEVICE::CPU & dev, const size_t & size0, const SizeType &... sizes):
+                data_(torch::zeros({size0, sizes...},
+                                   torch::TensorOptions()
+                                           .dtype<Type>()
+                                           .device(dev.device(),dev.deviceID)
+                      )
+                )
+        {}
+
+        //Default constructor
         constexpr explicit Tensor() :
             data_(torch::zeros({0},torch::TensorOptions().dtype<Type>()))
         {}
@@ -73,39 +120,20 @@ class Tensor {
          */
         template<typename... SizeType>
         constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
-            data_(torch::zeros({size0, sizes...},
-                  torch::TensorOptions()
-                        .dtype<Type>()))
+            Tensor(NSL::DEVICE::CPU(), size0, sizes...)
         {}
 
-        template<typename... SizeType>
-        constexpr explicit Tensor(NSL::DEVICE::GPU dev, const size_t & size0, const SizeType &... sizes):
-            data_(torch::zeros({size0, sizes...},
-                               torch::TensorOptions()
-                                       .dtype<Type>()
-                                       .device(torch::kCUDA)
-                              )
-            )
-        {}
 
-        template<typename... SizeType>
-        constexpr explicit Tensor(NSL::DEVICE::CPU dev, const size_t & size0, const SizeType &... sizes):
-                data_(torch::zeros({size0, sizes...},
-                                   torch::TensorOptions()
-                                           .dtype<Type>()
-                                           .device(torch::kCPU)
-                      )
-                )
-        {
-            std::cout << "New Constructor" << std::endl;
-            (std::cout << ... << sizes) << std::endl;
-        }
 
         /*!
          * param shape a std::vector giving the shape of the new Tensor.
          **/
         explicit Tensor(const std::vector<size_t> &shape):
-            data_(torch::zeros(torch::IntArrayRef(shape.data(), shape.size()),torch::TensorOptions().dtype<Type>()))
+            data_(torch::zeros(
+                    torch::IntArrayRef(shape.data(), shape.size()),
+                    torch::TensorOptions().dtype<Type>()
+                  )
+            )
         {}
 
         //! copy constructor
@@ -847,7 +875,7 @@ class Tensor {
                 return ;
             }
             // move the tensor to device (CPU <-> GPU)
-            this->data_ = this->data_.to(dev.device());
+            this->data_ = this->data_.to(dev.device(), /*non-blocking=*/true);
         }
 
 
@@ -880,6 +908,22 @@ class Tensor {
 
 }; //Tensor class
 
+//! Copy Tensor to device dev
+//! \todo: Add Documentation
+//! \todo: Can we do this with streaming instead of copying, s.t. the GPU can continue running.
+template<typename Type, class DeviceType>
+void to(NSL::Tensor<Type> T, DeviceType dev){
+    // make it a no-op if no GPU is found
+    if(dev.device() == torch::kCUDA && !torch::cuda::is_available()){
+        return ;
+    }
+    auto Tcopy = T;
+
+    // move the tensor to device (CPU <-> GPU)
+    Tcopy.to(dev);
+
+    return Tcopy;
+}
 
 template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
 using TimeTensor = NSL::Tensor<Type>;
