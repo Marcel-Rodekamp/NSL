@@ -57,7 +57,7 @@ class Tensor {
          *     * Initialization sets all values to `Type` equivalent of 0
          */
         template<typename... SizeType>
-        constexpr explicit Tensor(NSL::DEVICE::GPU & dev, const size_t & size0, const SizeType &... sizes):
+        constexpr explicit Tensor(NSL::DEVICE::GPU dev, const size_t & size0, const SizeType &... sizes):
                     data_(torch::zeros({size0, sizes...},
                                        torch::TensorOptions()
                                                .dtype<Type>()
@@ -86,7 +86,7 @@ class Tensor {
          *     * Initialization sets all values to `Type` equivalent of 0
          */
         template<typename... SizeType>
-        constexpr explicit Tensor(NSL::DEVICE::CPU & dev, const size_t & size0, const SizeType &... sizes):
+        constexpr explicit Tensor(NSL::DEVICE::CPU dev, const size_t & size0, const SizeType &... sizes):
                 data_(torch::zeros({size0, sizes...},
                                    torch::TensorOptions()
                                            .dtype<Type>()
