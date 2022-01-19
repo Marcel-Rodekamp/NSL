@@ -83,6 +83,62 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
 
 }
 
+template<typename Type>
+NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(const NSL::TimeTensor<Type> & psi){
+    const std::size_t Nt = this->phi_.shape(0);
+    const std::size_t Nx = this->phi_.shape(1); 
+    
+
+    //for identity matrix
+    NSL::Matrices::Matrices<Type> T; 
+    const Type length = Nx;
+    
+    NSL::TimeTensor<Type> prod;
+    NSL::TimeTensor<Type> out;
+    NSL::complex<Type> logdet(0,0);
+    //F_{N_t-1}
+    prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+    out = prod.slice(/*dim=*/0,/*start=*/1,/*end=*/2);
+    for(int i=1; i<Nt; i++){
+        out = out * prod.slice(/*dim=*/0,/*start=*/i+1,/*end=*/i+2);
+        
+    }
+    out = out + T.Identity(Nx);
+    logdet = NSL::LinAlg::logdet(out);
+
+    return logdet;
+
+}
+
+/*
+template<typename Type>
+NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F(){
+    NSL::TimeTensor<Type> out;
+    const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
+    NSL::TimeTensor<Type> phiShift = NSL::LinAlg::shift(this->phi_,-1);
+
+    out=NSL::LinAlg::mat_vec(this->Lat->exp_hopping_matrix(0.1),
+        NSL::LinAlg::mat_transpose(NSL::LinAlg::exp(phi*I)));
+
+    return(out);
+}
+*/
+/*
+template<typename Type>
+NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(const NSL::TimeTensor<Type> & psi){
+    const std::size_t Nt = this->phi_.shape(0);
+    const std::size_t Nx = this->phi_.shape(1);  
+    
+    NSL::TimeTensor<Type> prod;
+    NSL::complex<Type> out;
+    //F_{N_t-1}
+    prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-(1))
+    for(int i=0; i<Nt-2; i++){
+        
+    }
+
+}
+*/
 //! \todo: Full support of complex number multiplication is missing in Tensor:
 //template class NSL::FermionMatrix::FermionMatrixHubbardExp<float>;
 //template class NSL::FermionMatrix::FermionMatrixHubbardExp<double>;
