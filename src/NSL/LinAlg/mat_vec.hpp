@@ -114,7 +114,14 @@ namespace NSL{
 //            aux.shift(shift);
 //            return aux;
 //        }
-
+        //Identity matrix
+//        template<typename Type>
+//        torch::Tensor identity(const Type & length){
+            // Note: This should be a standard normal N(mean=0,var=1) distribution
+            
+        
+//          return (torch::eye(length,torch::TensorOptions().dtype<Type>()));
+       // }
     } // namespace LinAlg
 } // namespace NSL
 
