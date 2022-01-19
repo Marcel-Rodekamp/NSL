@@ -7,6 +7,8 @@
 #include "../LinAlg/mat_mul.hpp"
 #include "../LinAlg/mat_exp.hpp"
 #include "../LinAlg/mat_trans.hpp"
+#include "../LinAlg/det.hpp"
+#include "../Tensor/Matrices/matricesBase.hpp"
 
 namespace NSL::FermionMatrix {
 template<typename Type>
@@ -35,8 +37,10 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
     NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi) override;
     NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi) override;
     NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi) override;
-
-
+    NSL::complex<Type> logDetM(const NSL::TimeTensor<Type> & psi) override;
+    /*NSL::complex<Type> logDetM(const NSL::TimeTensor<Type> & psi) override;
+    NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F() override;
+    */
     protected:
     NSL::Tensor<Type> phi_;
     NSL::Tensor<Type> phiExp_;
