@@ -1,13 +1,14 @@
 #ifndef NANOSYSTEMLIBRARY_FERMIONMATRIXHUBBARDEXP_HPP
 #define NANOSYSTEMLIBRARY_FERMIONMATRIXHUBBARDEXP_HPP
 
-#include "../LinAlg/mat_vec.hpp"
+#include "LinAlg/mat_vec.hpp"
 #include "fermionMatrixBase.hpp"
 #include "../LinAlg/mat_conj.hpp"
 #include "../LinAlg/mat_mul.hpp"
 #include "../LinAlg/mat_exp.hpp"
 #include "../LinAlg/mat_trans.hpp"
 #include "../LinAlg/det.hpp"
+#include "../LinAlg/exp.hpp"
 #include "../Tensor/Matrices/matricesBase.hpp"
 
 namespace NSL::FermionMatrix {

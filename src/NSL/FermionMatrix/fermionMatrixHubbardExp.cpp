@@ -1,6 +1,5 @@
 #include "fermionMatrixHubbardExp.hpp"
 
-
 namespace NSL::FermionMatrix {
 
 //!

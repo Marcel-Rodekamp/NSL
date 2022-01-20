@@ -3,8 +3,8 @@
 #include "Tensor/tensor.hpp"
 #include "Lattice/Implementations/ring.hpp"
 #include "FermionMatrix/fermionMatrixHubbardExp.hpp"
-#include "Linalg/mat_conj.hpp"
-#include "Linalg/mat_exp.hpp"
+#include "LinAlg/mat_conj.hpp"
+#include "LinAlg/mat_exp.hpp"
 
 int main(){
 
