@@ -14,27 +14,34 @@ namespace NSL{
         // =====================================================================
 
         //Tensor x Tensor
-        template<typename Type, typename RealType>
-        NSL::Tensor<Type> mat_vec(const NSL::Tensor<Type,RealType> & matrix,  const NSL::Tensor<Type,RealType> & vector){
-            NSL::Tensor<Type> aux(torch::matmul(to_torch(matrix), to_torch(vector)));
-            return aux;
+        // Matrix Complex, Vector Real => promote Vector
+        template<typename MatCType, typename MatRType, typename VecRType>
+        NSL::Tensor<MatCType,MatRType>  mat_vec(const NSL::Tensor<MatCType,MatRType> & matrix, const NSL::Tensor<VecRType, VecRType> & vector){
+            return NSL::Tensor<MatCType,MatRType> (torch::matmul(
+                    matrix, static_cast<const NSL::Tensor<MatCType,MatRType>>(vector)
+            ));
         }
 
-        template<typename Type, typename RealType>
-        NSL::Tensor<Type> mat_vec(const NSL::Tensor<Type,RealType> & matrix,  const NSL::Tensor<RealType,RealType> & vector){
-            NSL::Tensor<Type> aux(torch::matmul(to_torch(matrix), to_torch(vector)));
-            return aux;
+        //Tensor x Tensor
+        // Matrix Real, Vector Complex => promote Matrix
+        template<typename MatRType, typename VecCType, typename VecRType>
+        NSL::Tensor<VecCType,VecRType>  mat_vec(const NSL::Tensor<MatRType,MatRType> & matrix, const NSL::Tensor<VecCType, VecRType> & vector){
+            return NSL::Tensor<VecCType,VecRType> (torch::matmul(
+                    static_cast<const NSL::Tensor<VecCType,VecRType>>(matrix), vector
+            ));
         }
 
-        template<typename Type, typename RealType>
-        NSL::Tensor<Type> mat_vec(const NSL::Tensor<RealType,RealType> & matrix,  const NSL::Tensor<Type,RealType> & vector){
-            NSL::Tensor<Type> aux(torch::matmul(to_torch(matrix), to_torch(vector)));
-            return aux;
+        //Tensor x Tensor
+        // Matrix Complex/Real, Vector Complex/Real
+        template<typename CType, typename RType>
+        NSL::Tensor<CType,RType>  mat_vec(const NSL::Tensor<CType,RType> & matrix, const NSL::Tensor<CType, RType> & vector){
+            return NSL::Tensor<CType,RType> (torch::matmul(
+                    matrix, vector
+            ));
         }
 
 
-
-        // =====================================================================
+    // =====================================================================
         // Expansion
         // =====================================================================
 

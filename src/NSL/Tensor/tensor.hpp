@@ -99,8 +99,12 @@ class Tensor {
             return data_;
         }
 
+        operator torch::Tensor() const{
+            return data_;
+        }
 
-        // =====================================================================
+
+    // =====================================================================
         // Tensor Creation Helpers
         // =====================================================================
 
@@ -294,11 +298,15 @@ class Tensor {
             return Tensor<bool>(this->data_ > value);
         }
 
-        constexpr bool is_complex(){
-            return std::is_same<Type,RealType>();
+        bool constexpr is_complex(){
+            return NSL::RT_extractor<Type>::value;
         }
 
-        // =====================================================================
+        bool constexpr is_complex() const {
+            return NSL::RT_extractor<Type>::value;
+        }
+
+    // =====================================================================
         // Print and stream
         // =====================================================================
 
