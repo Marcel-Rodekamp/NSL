@@ -82,6 +82,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
 
 }
 
+//return type
 template<typename Type>
 NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(const NSL::TimeTensor<Type> & psi){
     const std::size_t Nt = this->phi_.shape(0);
@@ -89,7 +90,7 @@ NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(co
     
 
     //for identity matrix
-    NSL::Matrices::Matrices<Type> T; 
+    NSL::Matrices::Matrices<Type> Id; 
     const Type length = Nx;
     
     NSL::TimeTensor<Type> prod;
@@ -102,11 +103,47 @@ NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(co
         out = out * prod.slice(/*dim=*/0,/*start=*/i+1,/*end=*/i+2);
         
     }
-    out = out + T.Identity(Nx);
+    out = out + Id.Identity(Nx);
     logdet = NSL::LinAlg::logdet(out);
 
     return logdet;
 
+}
+
+template<typename Type>
+NSL::complex<double> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMdagger(const NSL::TimeTensor<Type> & psi) {
+
+    const std::size_t Nt = this->phi_.shape(0);
+    const std::size_t Nx = this->phi_.shape(1); 
+    const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
+    
+
+    //for identity matrix
+    NSL::Matrices::Matrices<Type> Id; 
+    const Type length = Nx;
+    
+    NSL::TimeTensor<Type> prod;
+    NSL::TimeTensor<Type> Ainv;
+    NSL::complex<double> logdet(0,0), phiSum(0,0);
+    //F_{N_t-1}
+
+//    prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+//    Ainv = prod.slice(/*dim=*/Nt-1,/*start=*/Nt,/*end=*/Nt+1);
+//    for(int i=Nt-2; i>=0; i--){
+//        Ainv = Ainv * prod.slice(/*dim=*/0,/*start=*/i+1,/*end=*/i+2);
+        
+//    }
+//    Ainv = Ainv + Id.Identity(Nx);
+
+//    for(int j=0; j<Nt; j++){
+//        for(int k=0; k<Nx; k++){
+//            phiSum=phiSum + this->phi_(j,k); //check if it works
+//            }
+//    }
+//    logdet = NSL::LinAlg::logdet(Ainv) - (phiSum*I);
+
+    return logdet;
+   
 }
 
 /*
