@@ -112,7 +112,7 @@ class Tensor {
          *     * At least one argument must be passed (`size0`)
          *     * SizeType must be of integral type (convertible to `size_t`)
          *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
-         *
+         
          *
          * \n
          * Further behavior:\n
@@ -261,19 +261,24 @@ class Tensor {
         // =====================================================================
 
         //! Assignment operator: Tensor to Tensor
+        /*!
+         * Non-blocking (deep) copy of other into self
+         * */
         Tensor<Type,RealType> & operator=(const Tensor<Type> & other){
             // deep copy of other into this
-            this->data_ = other.data_.clone();
+            this->data_.copy_(other.data_,true);
             return *this;
         }
 
         //! Assignment operator: Scalar to Tensor
+        /*!
+         * Non-blocking (deep) copy of other into search element of self
+         * */
         Tensor<Type,RealType> & operator=(const Type & value){
             // overwrite data with value
-            this->data_ = torch::full_like(this->data_, value);
+            this->data_.copy_(torch::full_like(this->data_, value),true);
             return *this;
         }
-
 
         // =====================================================================
         // Boolean operators
@@ -910,14 +915,13 @@ class Tensor {
 
 //! Copy Tensor to device dev
 //! \todo: Add Documentation
-//! \todo: Can we do this with streaming instead of copying, s.t. the GPU can continue running.
 template<typename Type, class DeviceType>
-void to(NSL::Tensor<Type> T, DeviceType dev){
+NSL::Tensor<Type> to(NSL::Tensor<Type> T, DeviceType dev){
     // make it a no-op if no GPU is found
     if(dev.device() == torch::kCUDA && !torch::cuda::is_available()){
-        return ;
+        return T;
     }
-    auto Tcopy = T;
+    NSL::Tensor<Type> Tcopy = T;
 
     // move the tensor to device (CPU <-> GPU)
     Tcopy.to(dev);
