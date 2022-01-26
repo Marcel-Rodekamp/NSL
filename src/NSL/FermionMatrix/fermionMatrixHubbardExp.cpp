@@ -98,12 +98,16 @@ NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(co
     NSL::complex<Type> logdet(0,0);
     //F_{N_t-1}
     prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
-    out = prod.slice(/*dim=*/0,/*start=*/1,/*end=*/2);
-    for(int i=1; i<Nt; i++){
-        out = out * prod.slice(/*dim=*/0,/*start=*/i+1,/*end=*/i+2);
-        
+    
+    out = prod.slice(/*dim=*/0,/*start=*/Nt-1,/*end=*/Nt);
+    
+    for(int i=Nt-2; i<=0; i++){
+        out = out * prod.slice(/*dim=*/0,/*start=*/i,/*end=*/i+1);    
     }
+    
+    
     out = out + Id.Identity(Nx);
+    std::cout<<out<<std::endl;
     logdet = NSL::LinAlg::logdet(out);
 
     return logdet;
@@ -128,19 +132,21 @@ NSL::complex<double> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMd
     //F_{N_t-1}
 
 //    prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
-//    Ainv = prod.slice(/*dim=*/Nt-1,/*start=*/Nt,/*end=*/Nt+1);
-//    for(int i=Nt-2; i>=0; i--){
-//        Ainv = Ainv * prod.slice(/*dim=*/0,/*start=*/i+1,/*end=*/i+2);
+//    Ainv = NSL::LinAlg::mat_inv(prod.slice(/*dim=*/0,/*start=*/0,/*end=*/1));
+//    for(int i=1; i<Nt; i--){
+//        Ainv = Ainv * NSL::LinAlg::mat_inv(prod.slice(/*dim=*/0,/*start=*/i,/*end=*/i));
         
 //    }
-//    Ainv = Ainv + Id.Identity(Nx);
+
 
 //    for(int j=0; j<Nt; j++){
 //        for(int k=0; k<Nx; k++){
 //            phiSum=phiSum + this->phi_(j,k); //check if it works
 //            }
 //    }
-//    logdet = NSL::LinAlg::logdet(Ainv) - (phiSum*I);
+//    logdet = NSL::LinAlg::logdet(Ainv + Id.Identity(Nx)) - 
+//               (phiSum*I) -Nt*NSL::LinAlg::logdet(this->Lat->exp_hopping_matrix(0.1)); //confirm sign of hopping term
+                
 
     return logdet;
    
