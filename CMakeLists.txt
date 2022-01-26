@@ -59,5 +59,5 @@ add_subdirectory(Tests)
 add_subdirectory(Benchmarks)
 
 
-add_subdirectory(Documentation)
+add_subdirectory(Documentation EXCLUDE_FROM_ALL)
 
