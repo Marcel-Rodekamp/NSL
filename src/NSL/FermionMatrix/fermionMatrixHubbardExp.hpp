@@ -7,6 +7,7 @@
 #include "../LinAlg/mat_mul.hpp"
 #include "../LinAlg/mat_exp.hpp"
 #include "../LinAlg/mat_trans.hpp"
+#include "LinAlg/mat_inv.hpp"
 #include "../LinAlg/det.hpp"
 #include "../LinAlg/exp.hpp"
 #include "../Tensor/Matrices/matricesBase.hpp"
