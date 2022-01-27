@@ -62,32 +62,27 @@ void test_cube(const size_type & size, T kappa = 1.){
 // Test Cases
 // =============================================================================
 
-TEST_CASE( "Lattice: 1D Square", "[Lattice, Square, 1D]" ) {
+REAL_NSL_TEST_CASE( "Lattice: 1D Square", "[Lattice, Square, 1D]" ) {
     const size_type d0 = GENERATE(2, 4, 8, 16);
 
     std::vector<size_type> n(1);
     n[0] = d0;
-    // floating point types
-    test_square<float>(n);
-    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
-    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
+    test_square<TestType>(n);
+    test_square<NSL::complex<TestType>>(n, NSL::complex<TestType>(0.707, 0.707));
 }
 
-TEST_CASE( "Lattice: 2D Square", "[Lattice, Square, 2D]" ) {
+REAL_NSL_TEST_CASE( "Lattice: 2D Square", "[Lattice, Square, 2D]" ) {
     const size_type d0 = GENERATE(2, 3, 4, 8, 16);
     const size_type d1 = GENERATE(2, 4, 5, 8, 16);
 
     std::vector<size_type> n(2);
     n[0] = d0;
     n[1] = d1;
-    // floating point types
-    test_square<float>(n);
-    test_square<double>(n);
-    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
-    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
+    test_square<TestType>(n);
+    test_square<NSL::complex<TestType>>(n, NSL::complex<TestType>(0.707, 0.707));
 }
 
-TEST_CASE( "Lattice: 3D Square", "[Lattice, Square, 3D]" ) {
+REAL_NSL_TEST_CASE( "Lattice: 3D Square", "[Lattice, Square, 3D]" ) {
     const size_type d0 = GENERATE(2, 3, 4, 8, 16);
     const size_type d1 = GENERATE(2, 4, 5, 8, 16);
     const size_type d2 = GENERATE(2, 4, 8, 9, 16);
@@ -96,19 +91,13 @@ TEST_CASE( "Lattice: 3D Square", "[Lattice, Square, 3D]" ) {
     n[0] = d0;
     n[1] = d1;
     n[2] = d2;
-    // floating point types
-    test_square<float>(n);
-    test_square<double>(n);
-    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
-    // test_square<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
+    test_square<TestType>(n);
+    test_square<NSL::complex<TestType>>(n, NSL::complex<TestType>(0.707, 0.707));
 }
 
-TEST_CASE( "Lattice: Cube", "[Lattice, Cube, 3D]" ) {
+REAL_NSL_TEST_CASE( "Lattice: Cube", "[Lattice, Cube, 3D]" ) {
     const size_type n = GENERATE(2, 3, 4, 8, 16);
 
-    // floating point types
-    test_cube<float>(n);
-    test_cube<double>(n);
-    // Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
-    // test_cube<NSL::complex<double>>(n, NSL::complex<double>(0.707, 0.707));
+    test_cube<TestType>(n);
+    test_cube<NSL::complex<TestType>>(n, NSL::complex<TestType>(0.707, 0.707));
 }
