@@ -75,8 +75,9 @@ template<
         class Compare = std::less<Key>,
         class Allocator = std::allocator<std::pair<const Key, T>>
 >
-using map = MapHelper<Key, T, Compare, Allocator>::mapType;
-//pre c++20 we would have to use:
+using map = typename MapHelper<Key, T, Compare, Allocator>::mapType;
+// With clang ^ this typename is necessary, although with g++11 it is not.
+// Even with g++, before c++20 we would have to use:
 //using map = typename MapHelper<Key,T>::mapType;
 
 } //namespace NSL
