@@ -874,13 +874,13 @@ class Tensor {
         //! Move data to given device (`NSL::DEVICE::CPU`  or `NSL::DEVICE::GPU`)
         /*! \todo: Add Documentation*/
         template<class DeviceType>
-        void to(DeviceType dev){
+        void to(DeviceType dev, const bool non_blocking = false){
             // make it a no-op if no GPU is found
-            if(dev.device() == torch::kCUDA && !torch::cuda::is_available()){
+            if(dev.device()==torch::kCUDA&&!torch::cuda::is_available()){
                 return ;
             }
             // move the tensor to device (CPU <-> GPU)
-            this->data_ = this->data_.to(dev.device(), /*non-blocking=*/true);
+            this->data_.to(dev.device(), non_blocking);
         }
 
 

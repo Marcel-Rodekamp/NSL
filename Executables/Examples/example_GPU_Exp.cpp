@@ -40,12 +40,8 @@ int main(){
 
     // perform matrix exponential and measure its execution time
     auto start_gpu = std::chrono::system_clock::now();
-    T_gpu.mat_exp(); // automatically executed on the device
-
-    // not dev.synchronize() required as mat_exp is blocking
-    // \todo: When is pytorch blocking and when not?
-    // T_gpu.exp() is non-blocking...
-    // dev.synchronize();
+    T_gpu.exp(); // automatically executed on the device
+    dev.synchronize();
     auto end_gpu = std::chrono::system_clock::now();
 
     // =========================================================================
@@ -61,7 +57,7 @@ int main(){
 
     // perform matrix exponential and measure its execution time
     auto start_cpu = std::chrono::system_clock::now();
-    T_cpu.mat_exp();
+    T_cpu.exp();
     auto end_cpu = std::chrono::system_clock::now();
     // =========================================================================
 
