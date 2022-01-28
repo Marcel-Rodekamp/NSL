@@ -609,6 +609,16 @@ class Tensor {
             }
         }
 
+         //! Elementwise absolute value
+        /*!
+         *
+         * Whether a complex type or a real type, the absolute value is real.
+         *
+         * */
+        Tensor<RealType,RealType> abs(){
+            return Tensor<RealType>(torch::abs(this->data_));
+        }
+
         // =====================================================================
         // 2D Linear Algebra
         // =====================================================================

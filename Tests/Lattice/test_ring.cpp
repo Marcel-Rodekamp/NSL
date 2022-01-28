@@ -29,10 +29,8 @@ void test_ring(const size_type & size, T kappa = 1.){
 
     NSL::Tensor<double> x = ring.coordinates();
     NSL::Tensor<double> COM = x.sum(0);
-    double zero = 1e-12;
-    for(int i=0; i < COM.shape(0); i++){
-        REQUIRE( abs(COM(i)) <= zero );
-    }
+    double epsilon = 1e-12;
+    REQUIRE( (COM.abs() <= epsilon).all() );
 
     //  Perhaps make these their own stand-alone tests.
     //! \todo Require that adjacency^size has a diagonal of 2.
