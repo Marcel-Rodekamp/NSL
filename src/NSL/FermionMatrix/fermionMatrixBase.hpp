@@ -23,8 +23,8 @@ class FermionMatrixBase {
     virtual NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi) = 0;
     virtual NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi) = 0;
     virtual NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi) = 0;
-    virtual NSL::complex<Type> logDetM(const NSL::TimeTensor<Type> & psi) = 0;
-    virtual NSL::complex<double> logDetMdagger(const NSL::TimeTensor<Type> & psi) = 0;
+    virtual Type logDetM() = 0;
+    virtual Type logDetMdagger() = 0;
 //    virtual NSL::TimeTensor<Type> Mdagger(const NSL::TimeTensor<Type> & psi);
 //    virtual NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi);
 //    virtual NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi);

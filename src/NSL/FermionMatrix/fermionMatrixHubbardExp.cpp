@@ -84,7 +84,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
 
 //return type
 template<typename Type>
-NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(const NSL::TimeTensor<Type> & psi){
+Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1); 
     
@@ -93,21 +93,21 @@ NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(co
     NSL::Matrices::Matrices<Type> Id; 
     const Type length = Nx;
     
-    NSL::TimeTensor<Type> prod;
-    NSL::TimeTensor<Type> out;
-    NSL::complex<Type> logdet(0,0);
+    NSL::TimeTensor<Type> prod(Nt,Nx,Nx);
+    NSL::TimeTensor<Type> out(Nx,Nx);
+    Type logdet = 0.0;
     //F_{N_t-1}
     prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
     
     out = prod.slice(/*dim=*/0,/*start=*/Nt-1,/*end=*/Nt);
     
-    for(int i=Nt-2; i<=0; i++){
-        out = out * prod.slice(/*dim=*/0,/*start=*/i,/*end=*/i+1);    
+    for(int t=Nt-2; t<=0; t--){
+        out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));   
     }
     
     
-    out = out + Id.Identity(Nx);
-    std::cout<<out<<std::endl;
+    out += Id.Identity(Nx);
+    
     logdet = NSL::LinAlg::logdet(out);
 
     return logdet;
@@ -115,7 +115,7 @@ NSL::complex<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(co
 }
 
 template<typename Type>
-NSL::complex<double> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMdagger(const NSL::TimeTensor<Type> & psi) {
+Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMdagger() {
 
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1); 
@@ -128,7 +128,7 @@ NSL::complex<double> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMd
     
     NSL::TimeTensor<Type> prod;
     NSL::TimeTensor<Type> Ainv;
-    NSL::complex<double> logdet(0,0), phiSum(0,0);
+    Type logdet(0,0), phiSum(0,0);
     //F_{N_t-1}
 
 //    prod = this->Lat->exp_hopping_matrix(0.1)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
