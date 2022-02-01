@@ -73,6 +73,14 @@ namespace NSL{
             return aux;
         }
 
+        template<typename CType, typename RType>
+        NSL::Tensor<CType,RType>  shift_try(const NSL::Tensor<CType,RType> & matrix, const long int & shift){
+            return NSL::Tensor<CType,RType> (torch::roll(
+                    matrix, shift
+            ));
+        }
+
+
     } // namespace LinAlg
 } // namespace NSL
 
