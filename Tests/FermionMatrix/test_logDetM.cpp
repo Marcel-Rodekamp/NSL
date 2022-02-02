@@ -3,6 +3,7 @@
 #include "Tensor/tensor.hpp"
 #include "Lattice/Implementations/ring.hpp"
 #include "FermionMatrix/fermionMatrixHubbardExp.hpp"
+#include <iostream>
 
 
 using size_type = int64_t;
@@ -34,7 +35,7 @@ void test_logDetM(const size_type size0, const size_type size1) {
 }
 
 //Test cases
-TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
+TEST_CASE( "fermionMatrixHubbardExp: logDetM", "[fermionMatrixHubbardExp, logDetM]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
