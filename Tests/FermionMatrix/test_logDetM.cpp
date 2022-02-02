@@ -20,13 +20,14 @@ void test_logDetM(const size_type size0, const size_type size1) {
 
         }
     }
-
-    NSL::Lattice::Ring<T> r(size1);
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&r,phi);
+    //std::cout<<"yo"<<std::endl;
+    NSL::Lattice::Ring<T> ring(size1);
+   
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi);
     
     phiShift=NSL::LinAlg::shift(phi,4);
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&r,phiShift);
-
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&ring,phiShift);
+    
     //TEST  
     REQUIRE(M.logDetM().real() == Mshift.logDetM().real());
     REQUIRE(M.logDetM().imag() == Mshift.logDetM().imag());
@@ -35,11 +36,12 @@ void test_logDetM(const size_type size0, const size_type size1) {
 }
 
 //Test cases
-TEST_CASE( "fermionMatrixHubbardExp: logDetM", "[fermionMatrixHubbardExp, logDetM]" ) {
-
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM", "[fermionMatrixHubbardExp, logDetM]" ) {
+    
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_logDetM<float>(size_0, size_1);
-    test_logDetM<double>(size_0, size_1);
+    
+    test_logDetM<TestType>(size_0, size_1);
+    
 
 }
