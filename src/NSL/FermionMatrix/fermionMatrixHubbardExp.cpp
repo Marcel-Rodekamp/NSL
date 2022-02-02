@@ -101,11 +101,12 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
     
     out = prod.slice(/*dim=*/0,/*start=*/Nt-1,/*end=*/Nt);
     
-    for(int t=Nt-2; t<=0; t--){
-        out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));   
+    for(int t=Nt-2; t>=0; t--){
+        out = NSL::LinAlg::mat_vec(out,prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));
+        //out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1)); 
+         
     }
-    
-    
+      
     out += Id.Identity(Nx);
     
     logdet = NSL::LinAlg::logdet(out);
