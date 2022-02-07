@@ -47,6 +47,7 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
     protected:
     NSL::Tensor<Type> phi_;
     NSL::Tensor<Type> phiExp_;
+    static constexpr double sigma_=1.0;
 
     private:
     NSL::TimeTensor<Type> F_(const NSL::TimeTensor<Type> & psi);
