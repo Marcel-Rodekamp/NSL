@@ -5,4 +5,6 @@ target_sources(NSL PRIVATE
     mat_exp.hpp
     mat_mul.hpp
     mat_conj.hpp
+    mat_inv.hpp
+    matrix.hpp
 )
