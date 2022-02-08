@@ -3,17 +3,7 @@
 #include "Tensor/tensor.hpp"
 #include "Lattice/Implementations/ring.hpp"
 #include "FermionMatrix/fermionMatrixHubbardExp.hpp"
-#include "LinAlg/mat_conj.hpp"
-#include "LinAlg/mat_exp.hpp"
-#include "Tensor/Matrices/matricesBase.hpp"
 
-#include "LinAlg/mat_vec.hpp"
-#include "LinAlg/mat_mul.hpp"
-#include "LinAlg/mat_trans.hpp"
-#include "LinAlg/det.hpp"
-#include "LinAlg/mat_inv.hpp"
-#include "LinAlg/matrix.hpp"
-#include "math.h"
 
 
 
