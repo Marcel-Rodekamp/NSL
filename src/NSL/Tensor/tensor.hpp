@@ -740,7 +740,11 @@ class Tensor {
             data_ = data_.matrix_exp();
             return *this;
         }
-
+        
+        Tensor<Type> & mat_mul(const Tensor<Type> & other){
+            data_ = data_.matmul(other.data_);
+            return *this;
+        }
         // =====================================================================
         // Trigonometric functions
         // =====================================================================
