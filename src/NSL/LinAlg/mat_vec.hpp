@@ -40,6 +40,17 @@ namespace NSL{
             ));
         }
 
+        //Tensor x Tensor
+        // Matrix Real, Vector Real
+        template<typename RType>
+        NSL::Tensor<RType,RType>  mat_vec(const NSL::Tensor<RType,RType> & matrix, const NSL::Tensor<RType, RType> & vector){
+            return NSL::Tensor<RType,RType> (torch::matmul(
+                    matrix, vector
+            ));
+        }
+
+
+
 
     // =====================================================================
         // Expansion
