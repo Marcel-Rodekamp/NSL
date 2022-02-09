@@ -106,8 +106,8 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
     for(int t=Nt-2; t>=0; t--){
 
         //! \todo: figure out what mat_mul does
-        out = NSL::LinAlg::mat_vec(out,prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));
-        //out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1)); 
+        //out = NSL::LinAlg::mat_vec(out,prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));
+        out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1)); 
          
     }
       
@@ -140,7 +140,7 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetMdagger() {
     //F_{N_0}
     Ainv = NSL::LinAlg::mat_inv(prod.slice(/*dim=*/0,/*start=*/0,/*end=*/1));
     for(int t=1; t<Nt; t++){
-        Ainv *= NSL::LinAlg::mat_inv(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));
+        Ainv.mat_mul(NSL::LinAlg::mat_inv(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1)));
         
     }
 
