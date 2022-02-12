@@ -193,8 +193,8 @@ template<typename T>
 void test_logDetM_1(const size_type size0, const size_type size1) {
 
     //setting precision
-    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
-    //auto limit =  10*std::numeric_limits<T>::epsilon();
+    //auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
+    auto limit =  10*std::numeric_limits<T>::epsilon();
 
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
@@ -223,8 +223,8 @@ template<typename T>
 void test_logDetM_2(const size_type size0, const size_type size1) {
 
     //setting precision
-    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
-    //auto limit =  10*std::numeric_limits<T>::epsilon();
+    //auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
+    auto limit =  10*std::numeric_limits<T>::epsilon();
     
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
@@ -260,8 +260,8 @@ template<typename T>
 void test_logDetM_3(const size_type size0, const size_type size1) {
 
     //setting precision (this test fails for lower precision)
-    auto limit = std::pow(10, 3-std::numeric_limits<T>::digits10);
-    //auto limit =  10*std::numeric_limits<T>::epsilon();
+    //auto limit = std::pow(10, 3-std::numeric_limits<T>::digits10);
+    auto limit =  10000*std::numeric_limits<T>::epsilon();
 
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1); // phiShift(size0, size1);    
     NSL::Lattice::Ring<T> ring(size1);
@@ -289,8 +289,8 @@ template<typename T>
 void test_logDetM_4(const size_type size0, const size_type size1) {
 
     //setting precision
-    auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
-    //auto limit =  10*std::numeric_limits<T>::epsilon();
+    //auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
+    auto limit =  100*std::numeric_limits<T>::epsilon();
 
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1), phisum(1,size1), Id(size1,size1);    
     NSL::Lattice::Ring<T> ring(size1);
@@ -336,40 +336,39 @@ void test_logDetM_4(const size_type size0, const size_type size1) {
 
 
 //Test cases
-TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_fermionMatrixHubbardExp_M<float>(size_0, size_1);
-    test_fermionMatrixHubbardExp_M<double>(size_0, size_1);
+
+    test_fermionMatrixHubbardExp_M<TestType>(size_0, size_1);
 
 }
 
-TEST_CASE( "fermionMatrixHubbardExp: Mdagger", "[fermionMatrixHubbardExp, Mdagger]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: Mdagger", "[fermionMatrixHubbardExp, Mdagger]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_fermionMatrixHubbardExp_Mdagger<float>(size_0, size_1);
-    test_fermionMatrixHubbardExp_Mdagger<double>(size_0, size_1);
 
+    test_fermionMatrixHubbardExp_Mdagger<TestType>(size_0, size_1);
 
 }
 
-TEST_CASE( "fermionMatrixHubbardExp: MMdagger", "[fermionMatrixHubbardExp, MMdagger]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: MMdagger", "[fermionMatrixHubbardExp, MMdagger]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_fermionMatrixHubbardExp_MMdagger<double>(size_0, size_1);
-    test_fermionMatrixHubbardExp_MMdagger<float>(size_0, size_1);
+
+    test_fermionMatrixHubbardExp_MMdagger<TestType>(size_0, size_1);
 
 }
 
-TEST_CASE( "fermionMatrixHubbardExp: MdaggerM", "[fermionMatrixHubbardExp, MdaggerM]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: MdaggerM", "[fermionMatrixHubbardExp, MdaggerM]" ) {
 
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    test_fermionMatrixHubbardExp_MdaggerM<double>(size_0, size_1);
-    test_fermionMatrixHubbardExp_MdaggerM<float>(size_0, size_1);
+
+    test_fermionMatrixHubbardExp_MdaggerM<TestType>(size_0, size_1);
 
 }
 
@@ -388,28 +387,22 @@ REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_2", "[fermionMatrixHubbard
     
     test_logDetM_2<TestType>(size_0, size_1);
     
-    
-
 }
-TEST_CASE( "fermionMatrixHubbardExp: logDetM_3", "[fermionMatrixHubbardExp, logDetM_3]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_3", "[fermionMatrixHubbardExp, logDetM_3]" ) {
     
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_3<double>(size_0, size_1);
-    test_logDetM_3<float>(size_0, size_1);
+    test_logDetM_3<TestType>(size_0, size_1);
     
-
 }
 
-TEST_CASE( "fermionMatrixHubbardExp: logDetM_4", "[fermionMatrixHubbardExp, logDetM_4]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_4", "[fermionMatrixHubbardExp, logDetM_4]" ) {
     
     const size_type size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const size_type size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_4<double>(size_0, size_1);
-    test_logDetM_4<float>(size_0, size_1);
-    
+    test_logDetM_4<TestType>(size_0, size_1);
 
 }
 
