@@ -5,3 +5,7 @@
 add_executable(test_mat_exp test_mat_exp.cpp ../test_main.cpp)
 target_link_libraries(test_mat_exp NSL Catch2::Catch2)
 add_test(NAME test_mat_exp COMMAND test_mat_exp)
+
+add_executable(test_logdet test_logdet.cpp ../test_main.cpp)
+target_link_libraries(test_logdet NSL Catch2::Catch2)
+add_test(NAME test_logdet COMMAND test_logdet)
