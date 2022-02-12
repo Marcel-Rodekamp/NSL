@@ -8,7 +8,7 @@ namespace LinAlg {
 namespace Matrix{
 
 template <typename Type> 
-    NSL::TimeTensor<Type> Identity(const size_t & size, NSL::TimeTensor<Type> & t ) {
+    NSL::TimeTensor<Type> Identity(NSL::TimeTensor<Type> & t, const size_t & size ) {
         NSL::TimeTensor<Type> out(torch::eye(size, torch::TensorOptions().dtype<Type>()));
         return (out);
     }
