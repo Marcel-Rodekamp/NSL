@@ -200,16 +200,16 @@ void test_logDetM_1(const size_type size0, const size_type size1) {
     phi.rand();
     NSL::Lattice::Ring<T> ring(size1);
     //delta=beta/Nt
-    double delta = 2.0/size0;
+    double delta = 0.1/size0;
     
     //FermionMatrixHubbardExp Object M for ring lattice 
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,2.0);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,0.1);
     
     //FermionMatrixHubbardExp Object Mshift for the shifted phi
     phiShift=NSL::LinAlg::shift(phi,4);
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&ring,phiShift,2.0);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&ring,phiShift,0.1);
     
-    //TEST for shift in phi (in time slice)
+    //TEST 
     auto res1 = fabs(M.logDetM().real() - Mshift.logDetM().real());
     auto res2 = fabs(M.logDetM().imag() - Mshift.logDetM().imag());
   
@@ -229,9 +229,10 @@ void test_logDetM_2(const size_type size0, const size_type size1) {
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
     NSL::Lattice::Ring<T> ring(size1);
+    T delta = 0.1/size0;
     
     //FermionMatrixHubbardExp Object M 
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,0.1);
     
     //generating random time slice to add 2*pi
     srand (time(NULL));
@@ -243,9 +244,9 @@ void test_logDetM_2(const size_type size0, const size_type size1) {
         phi(t, i)=phi(t,i) + pi;
         }
     //FermionMatrixHubbardExp Object with modified phi    
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&ring,phi);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> Mshift(&ring,phi,0.1);
     
-    //TEST for shift in phi (in time slice)
+    //TEST 
     auto res1 = fabs(M.logDetM().real() - Mshift.logDetM().real());
     auto res2 = fabs(M.logDetM().imag() - Mshift.logDetM().imag());
     
@@ -259,28 +260,32 @@ void test_logDetM_2(const size_type size0, const size_type size1) {
 template<typename T>
 void test_logDetM_3(const size_type size0, const size_type size1) {
 
-    //setting precision (this test fails for lower precision)
+    //setting precision (this test fails for higher precision)
     //auto limit = std::pow(10, 3-std::numeric_limits<T>::digits10);
-    auto limit =  10000*std::numeric_limits<T>::epsilon();
+    T limit =  100*std::numeric_limits<T>::epsilon();
 
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1); // phiShift(size0, size1);    
     NSL::Lattice::Ring<T> ring(size1);
     //delta=beta/Nt
-    T delta = 2.0/size0;
+    T delta = 0.01/size0;
     //FermionMatrixHubbardExp Object 
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,2.0);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,0.01);
     
-    //When phi=0, logDetM = logdet(1 + exp_hopping_matrix(Kappa_tilda * Nt))
+    //When phi=0, logDetM = logdet(1 + exp_hopping_matrix(beta))
     NSL::TimeTensor<T> Id(size1,size1);
     NSL::complex<T> result = NSL::LinAlg::logdet(NSL::LinAlg::Matrix::Identity(Id, size1) + ring.exp_hopping_matrix(delta*size0)); //
     
     
-    //TEST for shift in phi (in time slice)
+    //TEST 
     T res1 = fabs(M.logDetM().real() - result.real());
     T res2 = fabs(M.logDetM().imag() - result.imag());
-
+    //double ratio = fabs(1- M.logDetM().real()/result.real());
+    //double maxXY = std::fmax( std::fabs(result.real()) , std::fabs(M.logDetM().real()) ) ;
+    //REQUIRE(ratio <= limit);
     REQUIRE(res1 <= limit);
     REQUIRE(res2 <= limit);
+    
+    
     
 }
 
@@ -290,12 +295,12 @@ void test_logDetM_4(const size_type size0, const size_type size1) {
 
     //setting precision
     //auto limit = std::pow(10, 2-std::numeric_limits<T>::digits10);
-    auto limit =  100*std::numeric_limits<T>::epsilon();
+    T limit =  10*std::numeric_limits<T>::epsilon();
 
     NSL::TimeTensor<NSL::complex<T>> phi(size0, size1), phisum(1,size1), Id(size1,size1);    
     NSL::Lattice::Ring<T> ring(size1);
     //delta=beta/Nt
-    T delta = 2.0/size0;
+    T delta = 0.1/size0;
     NSL::complex<T> I ={0,1};
 
     //setting up phi such that all the elements in a time slice are same
@@ -303,12 +308,12 @@ void test_logDetM_4(const size_type size0, const size_type size1) {
     NSL::complex<T> sum ={0,0};
     for(i=0; i<size0; i++){
         for(j=0; j<size1; j++){
-            phi(i,j) = {(2*i) +0.4 +(i/4), 2};           
+            phi(i,j) = {(2.0*i) +0.4 +(i/4.0), 2.0};           
         }        
     }
 
     //FermionMatrixHubbardExp Object M for phi and ring lattice
-    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,2.0);
+    NSL::FermionMatrix::FermionMatrixHubbardExp<NSL::complex<T>> M(&ring,phi,0.1);
 
     //summing up 
     for(int k=0; k<size0; k++){      
@@ -325,10 +330,13 @@ void test_logDetM_4(const size_type size0, const size_type size1) {
     NSL::complex<T> result = NSL::LinAlg::logdet(NSL::LinAlg::Matrix::Identity(Id,size1) + (((phisum) * ring.exp_hopping_matrix(delta*size0)))); //ring.exp_hopping_matrix(delta*size0));
     
     
-    //TEST for shift in phi (in time slice)
+    //TEST
+
+    //double ratio = fabs(1 - (result.real()/M.logDetM().real()));
     T res1 = fabs(M.logDetM().real() - result.real());
     T res2 = fabs(M.logDetM().imag() - result.imag());
     
+    //REQUIRE(ratio <= limit);
     REQUIRE(res1 <= limit);
     REQUIRE(res2 <= limit);
     
