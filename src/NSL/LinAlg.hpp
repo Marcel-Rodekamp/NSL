@@ -7,5 +7,6 @@
 #include "LinAlg/mat_exp.hpp"
 #include "LinAlg/mat_mul.hpp"
 #include "LinAlg/mat_vec.hpp"
+#include "LinAlg/conjugate_by.hpp"
 
 #endif
