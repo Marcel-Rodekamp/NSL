@@ -3,6 +3,8 @@
 
 #include "LinAlg/abs.hpp"
 #include "LinAlg/det.hpp"
+#include "LinAlg/transpose.hpp"
+#include "LinAlg/adjoint.hpp"
 #include "LinAlg/exp.hpp"
 #include "LinAlg/mat_exp.hpp"
 #include "LinAlg/mat_mul.hpp"
