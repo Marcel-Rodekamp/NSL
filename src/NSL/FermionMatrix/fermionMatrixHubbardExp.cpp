@@ -72,7 +72,7 @@ NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger
     NSL::TimeTensor<Type> out;
     const std::size_t Nt = this->phi_.shape(0);
     const std::size_t Nx = this->phi_.shape(1);
-    //const NSL::complex<typename RT_extractor<Type>::value_type> I(0,1);
+    
 
     //MMdagger(psi) = M(psi) + Mdagger(psi) + exp(-i*phi) * (exp_hopping_mtrix^2 x exp(-i*phi)* psi) - psi
     out= this->M(psi) + this->Mdagger(psi) + (NSL::LinAlg::adjoint(this->phiExp_) *
@@ -105,7 +105,6 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
     //Computing F_{Nt-1}.F_{Nt-2}.....F_0
     for(int t=Nt-2; t>=0; t--){
 
-        //! \todo: figure out what mat_mul does
         //out = NSL::LinAlg::mat_vec(out,prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1));
         out.mat_mul(prod.slice(/*dim=*/0,/*start=*/t,/*end=*/t+1)); 
          
@@ -117,7 +116,8 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
 
     return logdet;
 
-}
+} 
+
 
 
 
