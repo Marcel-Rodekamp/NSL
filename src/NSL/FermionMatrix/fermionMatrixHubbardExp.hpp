@@ -42,9 +42,7 @@ class FermionMatrixHubbardExp : public FermionMatrixBase<Type> {
     NSL::TimeTensor<Type> MMdagger(const NSL::TimeTensor<Type> & psi) override;
     NSL::TimeTensor<Type> MdaggerM(const NSL::TimeTensor<Type> & psi) override;
     Type logDetM() override;
-    /*NSL::complex<Type> logDetM(const NSL::TimeTensor<Type> & psi) override;
-    NSL::TimeTensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F() override;
-    */
+
     protected:
     NSL::Tensor<Type> phi_;
     NSL::Tensor<Type> phiExp_;
