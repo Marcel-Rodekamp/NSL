@@ -7,5 +7,6 @@
 #include "LinAlg.hpp"
 #include "Lattice.hpp"
 #include "FermionMatrix.hpp"
+#include "precisionMatching.hpp"
 
 #endif
