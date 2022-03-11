@@ -6,19 +6,21 @@
 namespace NSL {
 namespace LinAlg {
 
+//! Determinant of an n*n tensor or a stack of n*n tensors.
 template <typename Type> 
 Type det(const NSL::Tensor<Type> & t){
-    //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
-    
+    //! todo: handle the case of stacked determinants; see issue #42.
     return to_torch(t).det().template item<Type>();
 }
 
+//! Log Determinant of an n*n tensor or a stack of n*n tensors.
 template <typename Type> 
 Type logdet(const NSL::Tensor<Type> & t){
-    //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
-
-    return to_torch(t).logdet().template item<Type>();
+    //! todo: handle the case of stacked determinants; see issue #42.
+    return to_torch(t).det().log().template item<Type>();
 }
+
+
 
 } // namespace LinAlg
 } // namespace NSL
