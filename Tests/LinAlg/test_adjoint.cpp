@@ -1,6 +1,8 @@
 #include "complex.hpp"
 #include "../test.hpp"
 #include "LinAlg/adjoint.hpp"
+#include "LinAlg/transpose.hpp"
+#include "LinAlg/conj.hpp"
 #include <typeinfo>
 
 // Torch requirement
@@ -39,6 +41,17 @@ void test_stacked_adjoint(const size_type & size, size_type dim0, size_type dim1
 
 }
 
+template<typename T>
+void test_adjoint_definition(const size_type & size){
+    NSL::Tensor<T> t(10, size, size);
+    t.rand();
+
+    REQUIRE( (NSL::LinAlg::adjoint(t) == NSL::LinAlg::conj(NSL::LinAlg::transpose(t))).all());
+    REQUIRE( (NSL::LinAlg::adjoint(t) == NSL::LinAlg::transpose(NSL::LinAlg::conj(t))).all());
+
+}
+
+
 // =============================================================================
 // Test Cases
 // =============================================================================
@@ -58,6 +71,11 @@ FLOAT_NSL_TEST_CASE( "LinAlg: Stacked adjoint of axes that aren't last", "[LinAl
     const size_type size = GENERATE(1, 100, 200, 500, 1000);
     test_stacked_adjoint<TestType>(size,0,1);
     test_stacked_adjoint<TestType>(size,0,2);
+}
+
+FLOAT_NSL_TEST_CASE( "LinAlg: adjoint = conjugate transpose", "[LinAlg,adjoint,definition]" ) {
+    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+    test_adjoint_definition<TestType>(size);
 }
 
 /*!
