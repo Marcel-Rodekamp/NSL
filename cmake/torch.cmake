@@ -1,5 +1,5 @@
 # check if torch can be found on the system default
-find_package(Torch REQUIRED)
+#find_package(Torch REQUIRED)
 
 # if not found download a version and populate it
 if(Torch_FOUND)
