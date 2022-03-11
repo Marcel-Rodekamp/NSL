@@ -7,7 +7,7 @@
 namespace NSL::Matrix {
 
 template <typename Type>
-NSL::Tensor<Type> Identity(const size_t & size){
+inline NSL::Tensor<Type> Identity(const size_t & size){
     return NSL::Tensor<Type>(torch::eye(
                 size, 
                 torch::TensorOptions().dtype<Type>()
