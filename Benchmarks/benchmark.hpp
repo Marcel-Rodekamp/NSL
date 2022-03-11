@@ -16,7 +16,7 @@
  *      - std::chrono::microseconds 
  *      - std::chrono::milliseconds
  * */
-template<class clock = std::chrono::steady_clock, class timeUnit = std::chrono::seconds>
+template<class timeUnit = std::chrono::seconds, class clock = std::chrono::steady_clock>
 class Timer{
     private:
     std::chrono::time_point<clock> start_;
