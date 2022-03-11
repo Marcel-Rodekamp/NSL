@@ -1,2 +1,2 @@
-add_executable(benchmark_tensor benchmark_tensor.cpp ../benchmark_main.cpp)
-target_link_libraries(benchmark_tensor NSL Catch2::Catch2)
+add_executable(bench_tensor_add bench_tensor_add.cpp)
+target_link_libraries(bench_tensor_add NSL)
