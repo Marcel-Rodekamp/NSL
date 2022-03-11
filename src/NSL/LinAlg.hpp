@@ -2,6 +2,7 @@
 #define NSL_LINALG_INCLUDE_HPP
 
 #include "LinAlg/abs.hpp"
+#include "LinAlg/conj.hpp"
 #include "LinAlg/det.hpp"
 #include "LinAlg/transpose.hpp"
 #include "LinAlg/adjoint.hpp"
