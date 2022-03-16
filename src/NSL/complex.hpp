@@ -1,5 +1,5 @@
-#ifndef NANOSYSTEMLIBRARY_COMPLEX_HPP
-#define NANOSYSTEMLIBRARY_COMPLEX_HPP
+#ifndef NSL_COMPLEX_HPP
+#define NSL_COMPLEX_HPP
 
 //! \file complex.hpp
 
@@ -8,15 +8,11 @@
 #include <cmath>    // For floating-point type abs
 #include <cstdlib>  // For integral types      abs
 #include <numbers>
+#include <type_traits>
+
+#include "types.hpp"
 
 namespace NSL{
-
-//! Complex numbers
-/*!
- *  Alias to the complex type of PyTorch `c10::complex<Type>`
- * */
-template<typename Type>
-using complex = c10::complex<Type>;
 
 //! Helper struct to determine the real type of a `NSL::complex<RT>`
 /*!
@@ -148,4 +144,4 @@ inline RealType arg(const Type &value){
 
 }
 
-#endif //NANOSYSTEMLIBRARY_COMPLEX_HPP
+#endif //NSL_COMPLEX_HPP
