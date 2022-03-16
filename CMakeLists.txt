@@ -12,6 +12,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # To download required cmake modules
 include(FetchContent)
 
+# At current version of CUDA and Torch the population of the C++20 standard 
+# results in cmake errors. Moving the find_package call before seeting the 
+# standard is a hack which circumvents the problem.
+find_package(Torch REQUIRED)
 
 # set come C++ variables.
 # ToDo: Do this dynamically

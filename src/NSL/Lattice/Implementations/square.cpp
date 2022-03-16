@@ -221,8 +221,7 @@ NSL::Lattice::Square<Type>::Square(
 
 template class NSL::Lattice::Square<float>;
 template class NSL::Lattice::Square<double>;
-// Resolve https://github.com/Marcel-Rodekamp/NSL/issues/9 before implementing:
-//template class NSL::Lattice::Square<NSL::complex<float>>;
-//template class NSL::Lattice::Square<NSL::complex<double>>;
+template class NSL::Lattice::Square<NSL::complex<float>>;
+template class NSL::Lattice::Square<NSL::complex<double>>;
 
 #endif
