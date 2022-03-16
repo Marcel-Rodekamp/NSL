@@ -1,9 +1,16 @@
 #ifndef NSL_TEST_HPP
 #define NSL_TEST_HPP
 
+// That's what we want to test
+#include "NSL.hpp"
+
 // for CATCH2::INFO string computations
 #include<string>
 
+// to compare numbers to machine prec
+#include <limits>
+
+// Using this to test
 #include "catch2/catch.hpp"
 
 
@@ -36,5 +43,43 @@
 #define REAL_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, REAL_TYPES)
 // todo: Hopefully we can drop the real-only test-cases.
 // However, that requires solving issue #9.
+
+//! compare two floating point numbers a,b
+/*!
+ *  \param a,b: Arguments which are compared
+ *  \param factor: optional factor with which the machine precision can be scaled. Default is 1.
+ *
+ *  This is a relative compare. This means it checks for 
+ *  \f[
+ *      \left\vert 1 - \frac{a}{b} \right\vert \leq \text{factor} \cdot \epsilon<T>
+ *  \f]
+ *
+ * */
+template<NSL::Concept::isFloatingPoint T>
+bool compare_floating_point(T a, T b, typename NSL::RT_extractor<T>::type factor = 10){
+    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<typename NSL::RT_extractor<T>::type>::epsilon();
+}
+
+//! compare two integer numbers a,b
+/*!
+ *  \param a,b: Arguments which are compared
+ *  \param prec: optional precision to which the integers are compared. Default is 0.
+ *
+ *  This is an exact compare. This means it checks for 
+ *  \f[
+ *      \left\vert a - b \right\vert \leq \text{prec}
+ *  \f]
+ *
+ * */
+template<NSL::Concept::isIntegral Tint>
+bool compare_integer(Tint a, Tint b, Tint prec = 0){
+    if (prec == 0) {
+        return a == b;
+    } else {
+        return std::abs(a-b) <= prec;
+    }
+}
+
+
 
 #endif
