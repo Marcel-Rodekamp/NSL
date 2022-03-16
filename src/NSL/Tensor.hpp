@@ -1,6 +1,7 @@
-#ifndef NSL_TENSOR_INCLUDE_HPP
-#define NSL_TENSOR_INCLUDE_HPP
+#ifndef NSL_TENSOR_MAIN_HPP
+#define NSL_TENSOR_MAIN_HPP
 
+// 1. class definition
 #include "Tensor/tensor.hpp"
 
-#endif
+#endif // NSL_TENSOR_MAIN_HPP
