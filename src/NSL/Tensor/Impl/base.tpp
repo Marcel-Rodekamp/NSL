@@ -46,12 +46,27 @@ class TensorBase {
      * Copy the data from other into this new instance. 
      * The copy constructor creates a shallow copy, i.e. the two tensors
      * share the underlying data.
-     * For a deep copy consider the assignment operator `operator=`
      * */
     constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type>& other):
             data_(other.data_)
     {
         // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
+    }
+
+    //! deep copy constructor
+    /*!
+     * Copy the data from other into this new instance. 
+     * The copy constructor creates a deep copy, i.e. the two tensors
+     * don't share the underlying data.
+     * */
+    constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type>& other, bool deepcopy){
+        if (deepcopy) {
+            this->data_ = torch::clone(other.data_);
+        } else {
+            // copy constructor is shallow
+            this->data_(other.data_);
+        }
+        // std::cout << "NSL::Tensor(const NSL::Tensor &, bool deepcopy)" << std::endl;
     }
 
     //! move constructor
