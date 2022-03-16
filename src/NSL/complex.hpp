@@ -48,14 +48,22 @@ namespace NSL{
  * */
 template<typename T>
 struct RT_extractor : public std::false_type {
+    // lagacy:
+    //! \todo: remove value_type member
     using value_type = T;
+    // new way :)
+    using type = T;
 };
 
 //! Helper struct to determine the real type of a `NSL::complex<RT>`
 //! For details see `RT_extractor`
 template<typename RT>
 struct RT_extractor<NSL::complex<RT>> : public std::true_type {
+    // lagacy:
+    //! \todo: remove value_type member
     using value_type = RT;
+    // new way :)
+    using type = RT;
 };
 
 //! Helper function to identify that a template parameter is of type `NSL::complex`
