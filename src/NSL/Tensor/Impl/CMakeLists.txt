@@ -2,7 +2,6 @@ target_sources(NSL PRIVATE
     abs.tpp
     adjoint.tpp
     base.tpp
-    comparison.tpp
     complexConjugate.tpp
     contraction.tpp
     expand.tpp
