@@ -1,6 +1,6 @@
 # check if torch can be found on the system default
 find_package(Torch REQUIRED)
-
+find_package(rocblas)
 # if not found download a version and populate it
 if(Torch_FOUND)
     message(STATUS "Found Installed Torch: ${TORCH_INCLUDE_DIRS}")
