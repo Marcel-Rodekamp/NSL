@@ -3,7 +3,7 @@
 
 #include "LinAlg/abs.tpp"
 #include "LinAlg/adjoint.tpp"
-#include "LinAlg/conj.hpp"
+#include "LinAlg/conj.tpp"
 #include "LinAlg/det.hpp"
 #include "LinAlg/transpose.hpp"
 #include "LinAlg/exp.hpp"
