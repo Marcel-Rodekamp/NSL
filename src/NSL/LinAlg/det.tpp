@@ -1,26 +1,24 @@
-#ifndef NSL_LINALG_DET_HPP
-#define NSL_LINALG_DET_HPP
+#ifndef NSL_LINALG_DET_TPP
+#define NSL_LINALG_DET_TPP
 
-#include "../Tensor/tensor.hpp"
+#include "../Tensor.hpp"
 
-namespace NSL {
-namespace LinAlg {
+namespace NSL::LinAlg {
 
 template <typename Type> 
 Type det(const NSL::Tensor<Type> & t){
-    //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
-    
-    return to_torch(t).det().template item<Type>();
+    //! \todo: if t is not a matrix we would have a stack of determinants: Handle this case.
+    //! \todo: add det as a Tensor member
+    return torch::det( t ).template item<Type>(); 
 }
 
 template <typename Type> 
 Type logdet(const NSL::Tensor<Type> & t){
     //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
-
-    return to_torch(t).logdet().template item<Type>();
+    //! \todo: add logdet as a Tensor member
+    return torch::logdet(t).template item<Type>();
 }
 
-} // namespace LinAlg
-} // namespace NSL
+} // namespace NSL::LinAlg
 
-#endif
+#endif // NSL_LINALG_DET_TPP

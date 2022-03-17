@@ -1,17 +1,14 @@
 #ifndef NSL_LINALG_MAT_EXP_HPP
 #define NSL_LINALG_MAT_EXP_HPP
 
-#include "../Tensor/tensor.hpp"
+#include "../Tensor.hpp"
 
-namespace NSL {
-namespace LinAlg {
+namespace NSL::LinAlg {
 
 template <typename Type> NSL::Tensor<Type> mat_exp(const NSL::Tensor<Type> & t){
-    NSL::Tensor<Type> out(t);
-    return out.mat_exp();
+    return NSL::Tensor<Type>(t,true).mat_exp();
 }
 
-} // namespace LinAlg
-} // namespace NSL
+} // namespace NSL::LinAlg
 
 #endif
