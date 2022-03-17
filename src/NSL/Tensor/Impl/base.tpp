@@ -64,7 +64,7 @@ class TensorBase {
             this->data_ = torch::clone(other.data_);
         } else {
             // copy constructor is shallow
-            this->data_(other.data_);
+            this->data_ = other.data_;
         }
         // std::cout << "NSL::Tensor(const NSL::Tensor &, bool deepcopy)" << std::endl;
     }

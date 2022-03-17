@@ -12,15 +12,15 @@ class TensorAdjoint:
     public:
         //! Adjoint (elementwise complex conjugate & transpose) of `dim0` and `dim1`
         NSL::Tensor<Type> & adjoint(const NSL::size_t & dim0, const NSL::size_t & dim1) {
-            this->transpose(dim0,dim1);
-            this->conj();
+            this->data_.transpose_(dim0,dim1);
+            this->data_ = this->data_.conj();
             return NSL::Tensor<Type>(this);
         }
 
         //! Matrix adjoint (elementwise complex conjugate & matrix transpose)
         NSL::Tensor<Type> & adjoint() {
-            this->transpose();
-            this->conj();
+            this->data_.transpose_();
+            this->data_ = this->data_.conj();
             return NSL::Tensor<Type>(this);
         }
 
