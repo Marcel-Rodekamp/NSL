@@ -1,7 +1,4 @@
-#include "complex.hpp"
 #include "../test.hpp"
-#include "LinAlg/transpose.hpp"
-#include <typeinfo>
 
 // Torch requirement
 using size_type = long int;

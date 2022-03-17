@@ -13,6 +13,8 @@
 // Using this to test
 #include "catch2/catch.hpp"
 
+// printing the types sometimes is helpful
+#include <typeinfo>
 
 // ====================================================================
 // Type macros
