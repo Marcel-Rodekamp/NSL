@@ -36,7 +36,7 @@ class Slice {
     public:
 
     template<typename StartType = none_t, typename StopType = none_t, typename StepType = none_t>
-    Slice(StartType start = None, StopType stop = None, StepType step = None) {
+    explicit Slice(StartType start, StopType stop = None, StepType step = None) {
         static_assert(std::is_same<StartType,none_t>::value || std::is_convertible_v<StartType,NSL::size_t>, "StartType must be NSL::size_t or NSL::none_t");
         static_assert(std::is_same<StopType,none_t>::value || std::is_convertible_v<StopType,NSL::size_t>, "StopType must be NSL::size_t or NSL::none_t");
         static_assert(std::is_same<StepType,none_t>::value || std::is_convertible_v<StepType,NSL::size_t>, "StepType must be NSL::size_t or NSL::none_t");
@@ -58,10 +58,12 @@ class Slice {
             stop_ = stop;
         }
 
-
-
         t_ = std::make_tuple(start_,stop_,step_);
     };
+
+    Slice() : Slice(None,None,None) {}
+
+    //explicit Slice(NSL::size_t start) : Slice(start,None,None) {}
 
     inline NSL::size_t start() const {return std::get<0>(t_);}
     inline NSL::size_t  stop() const {return std::get<1>(t_);}
