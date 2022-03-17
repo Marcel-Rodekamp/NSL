@@ -20,11 +20,7 @@ void test_exponential_of_zero(const size_type & size){
         one(i,i) = 1.;
     }
 
-    for(int i = 0; i < size; ++i) {
-        for(int j = 0; j < size; ++j) {
-            REQUIRE(exponentiated(i,j) == one(i,j));
-        }
-    }
+    REQUIRE((exponentiated == one).all() );
 }
 
 template<typename T>
