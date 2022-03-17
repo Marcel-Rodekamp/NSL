@@ -50,6 +50,7 @@ class Tensor:
     public NSL::TensorImpl::TensorSlice<Type>,
     public NSL::TensorImpl::TensorStats<Type>,
     public NSL::TensorImpl::TensorTranspose<Type>,
+    public NSL::TensorImpl::TensorComplexConj<Type>,
     public NSL::TensorImpl::TensorAdjoint<Type>,
     public NSL::TensorImpl::TensorReal<Type>,
     public NSL::TensorImpl::TensorImag<Type>,
