@@ -4,6 +4,7 @@
 #include "base.tpp"
 #include "../../sliceObj.tpp"
 
+
 namespace NSL::TensorImpl{
 
 template <NSL::Concept::isNumber Type>

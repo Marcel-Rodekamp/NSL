@@ -16,7 +16,6 @@ target_sources(NSL PRIVATE
     types.hpp
 )
 
-
 # add the tensor class
 add_subdirectory(Tensor/)
 add_subdirectory(LinAlg/)

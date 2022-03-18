@@ -12,6 +12,7 @@ class TensorComplexConj:
     public:
     //! Complex Conjugation (Elementwise)
     NSL::Tensor<Type> conj() {
+
         if constexpr(NSL::is_complex<Type>()){
             //https://pytorch.org/docs/stable/generated/torch.conj.html?highlight=tensor%20conj_
             //conj returns a view with flipped bit.

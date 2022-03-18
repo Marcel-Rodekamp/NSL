@@ -4,6 +4,7 @@
 #include "base.tpp"
 #include "../../sliceObj.tpp"
 
+
 namespace NSL::TensorImpl {
 
 template <NSL::Concept::isNumber Type>
@@ -50,6 +51,7 @@ class TensorRandomAccess:
     template<NSL::Concept::isType<NSL::Slice> ... SliceTypes>
     NSL::Tensor<Type> operator()(NSL::Slice slice0, SliceTypes ... slices){
         return std::move(this->data_.index(std::initializer_list<torch::indexing::TensorIndex>{torch::indexing::Slice(slice0),torch::indexing::Slice(slices)...}));
+
     }
 
     //! Random Slice Access Operator (const)
@@ -67,6 +69,7 @@ class TensorRandomAccess:
     template<NSL::Concept::isType<NSL::Slice> ... SliceTypes>
     const NSL::Tensor<Type> operator()(NSL::Slice slice0, SliceTypes ... slices) const {
         return std::move(this->data_.index(std::initializer_list<torch::indexing::TensorIndex>{torch::indexing::Slice(slice0),torch::indexing::Slice(slices)...}));
+
     }
 
     //! Linear Random Access Operator
