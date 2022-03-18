@@ -4,4 +4,7 @@
 // 1. class definition
 #include "Tensor/tensor.hpp"
 
+// 2. Factories
+#include "Tensor/Factory/like.tpp"
+
 #endif // NSL_TENSOR_MAIN_HPP
