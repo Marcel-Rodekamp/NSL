@@ -1,5 +1,5 @@
-#ifndef NANOSYSTEMLIBRARY_COMPLEX_HPP
-#define NANOSYSTEMLIBRARY_COMPLEX_HPP
+#ifndef NSL_COMPLEX_HPP
+#define NSL_COMPLEX_HPP
 
 //! \file complex.hpp
 
@@ -8,15 +8,11 @@
 #include <cmath>    // For floating-point type abs
 #include <cstdlib>  // For integral types      abs
 #include <numbers>
+#include <type_traits>
+
+#include "types.hpp"
 
 namespace NSL{
-
-//! Complex numbers
-/*!
- *  Alias to the complex type of PyTorch `c10::complex<Type>`
- * */
-template<typename Type>
-using complex = c10::complex<Type>;
 
 //! Helper struct to determine the real type of a `NSL::complex<RT>`
 /*!
@@ -52,14 +48,22 @@ using complex = c10::complex<Type>;
  * */
 template<typename T>
 struct RT_extractor : public std::false_type {
+    // lagacy:
+    //! \todo: remove value_type member
     using value_type = T;
+    // new way :)
+    using type = T;
 };
 
 //! Helper struct to determine the real type of a `NSL::complex<RT>`
 //! For details see `RT_extractor`
 template<typename RT>
 struct RT_extractor<NSL::complex<RT>> : public std::true_type {
+    // lagacy:
+    //! \todo: remove value_type member
     using value_type = RT;
+    // new way :)
+    using type = RT;
 };
 
 //! Helper function to identify that a template parameter is of type `NSL::complex`
@@ -148,4 +152,4 @@ inline RealType arg(const Type &value){
 
 }
 
-#endif //NANOSYSTEMLIBRARY_COMPLEX_HPP
+#endif //NSL_COMPLEX_HPP
