@@ -1,32 +1,14 @@
-#ifndef NSL_SLICE_HPP
-#define NSL_SLICE_HPP
+#ifndef NSL_SLICE_OBJ_TPP
+#define NSL_SLICE_OBJ_TPP
 
 #include <cstdint>
 #include <array>
 #include <tuple>
 
 #include "torch/torch.h"
+#include "none.tpp"
 
 namespace NSL {
-
-struct none_t {
-    none_t() = default;
-
-    //! Static conversion to torch::indexing::None
-    static const c10::nullopt_t torch() {
-        return torch::indexing::None;
-    }
-
-    //! implicit conversion to torch::indexing::None
-    operator c10::optional<NSL::size_t> () {
-        return torch::indexing::None;
-    }
-
-    //! implicit conversion to torch::indexing::None
-    operator c10::nullopt_t () {
-        return torch::indexing::None;
-    }
-} None,End;
 
 //! Single Index Indexer
 /*!
@@ -73,7 +55,7 @@ class Slice {
     };
 
     operator torch::indexing::Slice () const {
-            return torch::indexing::Slice(std::get<0>(t_),std::get<1>(t_),std::get<2>(t_));
+        return torch::indexing::Slice(std::get<0>(t_),std::get<1>(t_),std::get<2>(t_));
     }
 
     private:
@@ -90,4 +72,4 @@ class Slice {
 
 } // namespace NSL
 
-#endif //NSL_SLICE_HPP
+#endif //NSL_SLICE_OBJ_TPP

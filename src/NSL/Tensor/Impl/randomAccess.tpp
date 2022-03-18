@@ -2,7 +2,7 @@
 #define NSL_TENSOR_IMPL_RANDOM_ACCESS_TPP
 
 #include "base.tpp"
-#include "../../slice.hpp"
+#include "../../sliceObj.tpp"
 
 namespace NSL::TensorImpl {
 
