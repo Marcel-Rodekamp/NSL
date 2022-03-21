@@ -1,6 +1,10 @@
-#ifndef NSL_TENSOR_INCLUDE_HPP
-#define NSL_TENSOR_INCLUDE_HPP
+#ifndef NSL_TENSOR_MAIN_HPP
+#define NSL_TENSOR_MAIN_HPP
 
+// 1. class definition
 #include "Tensor/tensor.hpp"
 
-#endif
+// 2. Factories
+#include "Tensor/Factory/like.tpp"
+
+#endif // NSL_TENSOR_MAIN_HPP

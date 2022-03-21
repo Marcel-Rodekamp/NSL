@@ -1,9 +1,4 @@
-//#include <complex>
-#include "complex.hpp"
 #include "../test.hpp"
-#include <typeinfo>
-#include "Lattice/Implementations/ring.hpp"
-
 
 /*! \file test_ring.cpp
  *  Test the `Lattice::Ring` implementation.

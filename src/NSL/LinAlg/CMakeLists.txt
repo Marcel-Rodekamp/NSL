@@ -1,7 +1,7 @@
 target_sources(NSL PRIVATE
-    abs.hpp
-    exp.hpp
-    mat_vec.hpp
-    mat_exp.hpp
-    mat_mul.hpp
+    abs.tpp
+    exp.tpp
+    mat_vec.tpp
+    mat_exp.tpp
+    mat_mul.tpp
 )

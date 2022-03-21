@@ -1,6 +1,3 @@
-#ifndef NSL_LATTICE_SQUARE_CPP
-#define NSL_LATTICE_SQUARE_CPP
-
 /*! \file square.cpp
  *  \author Evan Berkowitz
  *  \date October 2021
@@ -9,9 +6,6 @@
 
 #include <cmath>
 
-#include "../../assert.hpp"
-#include "../../Tensor/tensor.hpp"
-#include "../lattice.hpp"
 #include "square.hpp"
 
 namespace {
@@ -119,6 +113,8 @@ void NSL::Lattice::Square<Type>::init_(const std::vector<std::size_t> &n,
         }
     }
 
+    this->compute_adjacency();
+
 }
 
 //=====================================================================
@@ -223,5 +219,3 @@ template class NSL::Lattice::Square<float>;
 template class NSL::Lattice::Square<double>;
 template class NSL::Lattice::Square<NSL::complex<float>>;
 template class NSL::Lattice::Square<NSL::complex<double>>;
-
-#endif

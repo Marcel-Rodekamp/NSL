@@ -14,7 +14,8 @@
 #include "../assert.hpp"
 #include "../complex.hpp"
 #include "../map.hpp"
-#include "../Tensor/tensor.hpp"
+#include "../Tensor.hpp"
+#include "../LinAlg.hpp"
 
 namespace NSL::Lattice {
 
@@ -91,6 +92,8 @@ class SpatialLattice {
         const std::string name_;
         //! The hopping matrix.
         NSL::Tensor<Type> hops_;
+        //! The (computed) adjacency matrix.
+        NSL::Tensor<int> adj_;
         //! The sites connectd by the hopping amplitudes.
         NSL::Tensor<double> sites_;
         //! Since exponentiating can be costly, a place to memoize results.
@@ -102,19 +105,15 @@ class SpatialLattice {
         // Maybe the right thing is to have wrapper that can hold
         // a value or be Uninitialized
 
-    private:
-        //! We only compute the adjacency matrix on first request.
-        bool adj_is_initialized_ = false;
-        //! The (computed) adjacency matrix.
-        NSL::Tensor<int> adj_;
         //! Transform the hopping matrix into the adjacency matrix.
         /*!
          *  \param hops a matrix of hopping amplitudes.
          *         Zero amplitudes imply non-adjacent sites,
          *         nonzero amplitudes imply adjacency.
          **/
-        void compute_adjacency(NSL::Tensor<Type> hops);
-        
+        void compute_adjacency();
+
+    private:
         // A generic method, in case no short-cut is available
         void compute_bipartite();
     }; // SpatialLattice

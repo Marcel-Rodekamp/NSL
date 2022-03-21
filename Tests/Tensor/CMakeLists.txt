@@ -1,7 +1,27 @@
-add_executable(test_tensor test_tensor.cpp ../test_main.cpp)
-target_link_libraries(test_tensor NSL Catch2::Catch2)
-add_test(NAME test_tensor COMMAND test_tensor)
+add_executable(test_constructor test_constructor.cpp ../test_main.cpp)
+target_link_libraries(test_constructor NSL Catch2::Catch2)
+add_test(NAME test_constructor COMMAND test_constructor)
 
-add_executable(test_timetensor test_timetensor.cpp ../test_main.cpp)
-target_link_libraries(test_timetensor NSL Catch2::Catch2)
-add_test(NAME test_timetensor COMMAND test_timetensor)
+add_executable(test_torchConversion test_torchConversion.cpp ../test_main.cpp)
+target_link_libraries(test_torchConversion NSL Catch2::Catch2)
+add_test(NAME test_torchConversion COMMAND test_torchConversion)
+
+add_executable(test_randomAccess test_randomAccess.cpp ../test_main.cpp)
+target_link_libraries(test_randomAccess NSL Catch2::Catch2)
+add_test(NAME test_randomAccess COMMAND test_randomAccess)
+
+add_executable(test_operatorAddition test_operatorAddition.cpp ../test_main.cpp)
+target_link_libraries(test_operatorAddition NSL Catch2::Catch2)
+add_test(NAME test_operatorAddition COMMAND test_operatorAddition)
+
+add_executable(test_operatorMultiplication test_operatorMultiplication.cpp ../test_main.cpp)
+target_link_libraries(test_operatorMultiplication NSL Catch2::Catch2)
+add_test(NAME test_operatorMultiplication COMMAND test_operatorMultiplication)
+
+add_executable(test_operatorCompare test_operatorCompare.cpp ../test_main.cpp)
+target_link_libraries(test_operatorCompare NSL Catch2::Catch2)
+add_test(NAME test_operatorCompare COMMAND test_operatorCompare)
+
+add_executable(test_operatorAssignment test_operatorAssignment.cpp ../test_main.cpp)
+target_link_libraries(test_operatorAssignment NSL Catch2::Catch2)
+add_test(NAME test_operatorAssignment COMMAND test_operatorAssignment)

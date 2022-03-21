@@ -1,10 +1,4 @@
-//#include <complex>
-#include "complex.hpp"
 #include "../test.hpp"
-#include <typeinfo>
-#include "LinAlg/abs.hpp"
-#include "Lattice/Implementations/complete.hpp"
-
 
 /*! \file test_complete.cpp
  *  Test the `Lattice::Complete` implementation.
