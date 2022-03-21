@@ -62,7 +62,7 @@ concept isComplex = requires(T t) {
  * */
 template<typename T>
 concept isNumber = requires(T t) {
-    isComplex<T> || std::floating_point<T> || std::integral<T>;
+    isComplex<T> || std::is_floating_point_v<T> || std::is_integral_v<T>;
 };
 
 //! Concept to check for floating point numbers
@@ -75,7 +75,7 @@ concept isNumber = requires(T t) {
  * */
 template<typename T>
 concept isFloatingPoint = requires(T t) {
-    isComplex<T> || std::floating_point<T>;
+    isComplex<T> || std::is_floating_point_v<T>;
 };
 
 
