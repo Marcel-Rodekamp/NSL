@@ -42,7 +42,7 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void explicitConversion(SizeTypes ... sizes);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
-void explicitConversion(SizeTypes ... sizes);
+void implicitConversion(SizeTypes ... sizes);
 
 
 NSL_TEST_CASE("Tensor 1D Torch Conversion", "[Tensor,1D,Torch Conversion]"){
