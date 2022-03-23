@@ -2,7 +2,6 @@
 #define NSL_TENSOR_IMPL_MAT_MUL_TPP
 
 #include "base.tpp"
-#include <stdexcept>
 
 namespace NSL::TensorImpl{
 
