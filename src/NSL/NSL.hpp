@@ -13,6 +13,7 @@
 #include "complex.hpp"
 #include "Tensor.hpp"
 #include "LinAlg.hpp"
+#include "Matrix.hpp"
 #include "Lattice.hpp"
 #include "FermionMatrix.hpp"
 
