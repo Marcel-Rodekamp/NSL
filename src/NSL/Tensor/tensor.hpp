@@ -96,11 +96,7 @@ class Tensor:
     NSL::Tensor<Type> & operator=(const NSL::Tensor<Type> & other){
         // deep copy of other into this
         // by default GPU <-> is asynch on host site
-        if(this->data_.defined()){
-            this->data_.copy_(other,true);
-        } else {
-            this->data_ = other.data_.clone();
-        }
+        this->data_.copy_(other,true);
         return *this;
     }
 
