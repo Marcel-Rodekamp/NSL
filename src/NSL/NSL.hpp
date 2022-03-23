@@ -7,7 +7,7 @@
 // Helpers
 #include "map.hpp"
 #include "paramPack.hpp"
-#include "slice.hpp"
+#include "sliceObj.tpp"
 
 #include "types.hpp"
 #include "complex.hpp"
