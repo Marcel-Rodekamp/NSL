@@ -1,7 +1,7 @@
-#ifndef NSL_FERM_BASE_HPP
-#define NSL_FERM_BASE_HPP
+#ifndef NSL_FERMIONMATRIX_HPP
+#define NSL_FERMIONMATRIX_HPP
 
-/*! \file fermionMatrixBase.hpp
+/*! \file fermionMatrix.hpp
  *  Class for exponential discretization of fermion matrix.
  *
  *  The class contains methods which would be used for
@@ -14,14 +14,14 @@
 
 namespace NSL::FermionMatrix{
 
-//definition of class FermionMatrixBase
+//definition of class FermionMatrix
 
 /*! A base class for exponential dizcreatization of the fermion
 *   matrix
 **/
 
 template<NSL::Concept::isNumber Type>
-class FermionMatrixBase {
+class FermionMatrix {
 
     public:
 
@@ -58,13 +58,13 @@ class FermionMatrixBase {
 
     // constructors
     /*  There is no default constructor. */
-    FermionMatrixBase() = delete;
-    FermionMatrixBase(FermionMatrixBase<Type> &) = delete;
-    FermionMatrixBase(FermionMatrixBase<Type> &&) = delete;
+    FermionMatrix() = delete;
+    FermionMatrix(FermionMatrix<Type> &) = delete;
+    FermionMatrix(FermionMatrix<Type> &&) = delete;
     /*! 
     *  \param lat  an object of Lattice type (Ring, square, etc.).
     **/
-    FermionMatrixBase(NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type> * lat):
+    FermionMatrix(NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type> * lat):
         Lat(lat)
     {}
 
