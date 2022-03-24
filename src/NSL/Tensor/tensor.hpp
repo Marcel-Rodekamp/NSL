@@ -36,6 +36,8 @@
 #include "Tensor/Impl/reductions.tpp"
 #include "Tensor/Impl/matmul.tpp"
 
+#include <stdexcept>
+
 namespace NSL{
 
 //! Tensor class holding d-dimensional data and providing various algebraic methods.
@@ -90,7 +92,13 @@ class Tensor:
     NSL::Tensor<Type> & operator=(const NSL::Tensor<OtherType> & other){
         // deep copy of other into this
         // by default GPU <-> is asynch on host site
-        this->data_.copy_(other,true);
+        if(this->data_.defined()){
+            this->data_.copy_(static_cast<NSL::Tensor<Type>>(other),true);
+        } else {
+            // \todo: Implement Type conversion
+            throw std::runtime_error("Type conversion not implemented yet");
+            // this->data_ = torch::clone(static_cast<NSL::Tensor<Type>>(other));
+        }
         return *this;
     }
 
@@ -98,7 +106,11 @@ class Tensor:
     NSL::Tensor<Type> & operator=(const NSL::Tensor<Type> & other){
         // deep copy of other into this
         // by default GPU <-> is asynch on host site
-        this->data_.copy_(other,true);
+        if(this->data_.defined()){
+            this->data_.copy_(other,true);
+        } else {
+            this->data_ = other.data_.clone();
+        }
         return *this;
     }
 
@@ -106,7 +118,11 @@ class Tensor:
     NSL::Tensor<Type> & operator=(const torch::Tensor & other){
         // deep copy of other into this
         // by default GPU <-> is asynch on host site
-        this->data_.copy_(other,true);
+        if(this->data_.defined()){
+            this->data_.copy_(other,true);
+        } else {
+            this->data_ = other.clone();
+        }
         return *this;
     }
 

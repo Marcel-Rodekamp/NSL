@@ -40,20 +40,11 @@ NSL_TEST_CASE("Tensor Default Constructor", "[Tensor,Default,Constructor]"){
     INFO("type: " + std::string(typeid(TestType).name()));
 
     // default constructor
-    // Creates a one element Tensor (scalar) filled with 0
+    // Creates a none element Tensor.
+    // The underlying torch::Tensor carries the property "not defined"
     NSL::Tensor<TestType> T;
-    TestType * T_ptr = T.data();
 
-    // check the value
-    REQUIRE(T_ptr[0] == static_cast<TestType>(0));
-    // check the dimension of the tensor
-    REQUIRE(T.dim() == 0);
-    // check the number of elements of the tensor
-    REQUIRE(T.numel() == 1);
-    // check the shape of the tensor
-    for(auto x: T.shape()){
-        REQUIRE(x == 1);
-    }
+    REQUIRE(!torch::Tensor(T).defined());
 }
 
 NSL_TEST_CASE("Tensor 1D Constructor", "[Tensor,1D,Constructor]"){

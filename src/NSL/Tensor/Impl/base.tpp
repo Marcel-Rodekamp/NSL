@@ -25,11 +25,7 @@ class TensorBase {
      using RealType = typename NSL::RT_extractor<Type>::value_type;
 
     //! default constructor
-    TensorBase() :
-        data_(torch::zeros({}, torch::TensorOptions().dtype<Type>()) )
-    {
-        //std::cout << "NSL::Tensor()" << std::endl;
-    }
+    TensorBase() = default;
 
     //! D-dimensional constructor
     template<NSL::Concept::isIntegral ... SizeTypes>
