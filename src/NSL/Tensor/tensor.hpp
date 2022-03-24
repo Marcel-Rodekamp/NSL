@@ -34,6 +34,8 @@
 #include "Tensor/Impl/matrixExp.tpp"
 #include "Tensor/Impl/trigonometric.tpp"
 #include "Tensor/Impl/reductions.tpp"
+#include "Tensor/Impl/matmul.tpp"
+
 #include <stdexcept>
 
 namespace NSL{
@@ -61,7 +63,8 @@ class Tensor:
     public NSL::TensorImpl::TensorTrigonometric<Type>,
     public NSL::TensorImpl::TensorReductions<Type>,
     public NSL::TensorImpl::TensorExpand<Type>,
-    public NSL::TensorImpl::TensorShift<Type>
+    public NSL::TensorImpl::TensorShift<Type>,
+    public NSL::TensorImpl::TensorMatmul<Type>
 {
     public:
 

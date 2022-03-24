@@ -10,5 +10,6 @@
 #include "LinAlg/mat_exp.tpp"
 #include "LinAlg/mat_mul.tpp"
 #include "LinAlg/mat_vec.tpp"
+#include "LinAlg/shift.tpp"
 
 #endif
