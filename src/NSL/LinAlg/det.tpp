@@ -16,7 +16,7 @@ template <typename Type>
 Type logdet(const NSL::Tensor<Type> & t){
     //! \todo if t is not a matrix we would have a stack of determinants: Handle this case.
     //! \todo: add logdet as a Tensor member
-    return torch::logdet(t).template item<Type>();
+    return torch::log(torch::det(t)).template item<Type>();
 }
 
 } // namespace NSL::LinAlg
