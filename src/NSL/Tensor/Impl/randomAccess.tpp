@@ -3,6 +3,8 @@
 
 #include "base.tpp"
 #include "../../sliceObj.tpp"
+#include "../../paramPack.hpp"
+#include <type_traits>
 
 
 namespace NSL::TensorImpl {
@@ -12,6 +14,26 @@ class TensorRandomAccess:
     virtual private NSL::TensorImpl::TensorBase<Type>
 {
     public:
+
+    //! Random Access operator
+    /*!
+     * \param indexer, pack of `NSL::Slice` and `NSL::size_t` types. 
+     * 
+     * This indexer mixes the usage of `NSL::Slice` and `NSL::size_t`
+     * to have a simpler access on a particular slice of a axis.
+     * */
+    template<NSL::Concept::isIndexer... IndexTypes>
+        // use only if NSL::size_t in IndexTypes and NSL::Slice in IndexTypes
+        requires NSL::packContains<NSL::Slice,IndexTypes...>::value && NSL::packContainsConvertible<NSL::size_t,IndexTypes...>::value 
+    NSL::Tensor<Type> operator()(IndexTypes ... indexer) 
+    {
+        return std::move(
+            this->data_.index(
+                std::initializer_list{torch::indexing::TensorIndex(indexer)...}
+            )
+        );
+    }
+    
     //! Random Access Operator
     /*!
     *  \param indices: `NSL::size_t`, Indices for each dimension of the tensor
