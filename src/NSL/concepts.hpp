@@ -4,6 +4,7 @@
 #include<concepts>
 #include <type_traits>
 #include "complex.hpp"
+#include "sliceObj.tpp"
 
 namespace NSL::Concept{
 
@@ -78,8 +79,14 @@ concept isFloatingPoint = requires(T t) {
     isComplex<T> || std::is_floating_point_v<T>;
 };
 
+//! Concept to check for integers or `NSL::Slice`
+/*!
+ * */
+template<typename T>
+concept isIndexer = requires(T t) {
+    isIntegral<T> || std::is_same<T,NSL::Slice>::value;
+};
 
-
-} // namespace NSL::CONCEP 
+} // namespace NSL::Concept 
 
 #endif //NSL_CONCEPTS_HPP
