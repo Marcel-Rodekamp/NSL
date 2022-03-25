@@ -43,6 +43,19 @@ constexpr std::array<int, sizeof...(Types)> enumPack(Types ...args) {
     return std::array<int, sizeof...(args)>{(enumer(args))...};
 }
 
+//! Check if a type is contained in parameter pack
+template<typename T, typename ...Ts>
+struct packContains{
+    static constexpr bool value = (std::is_same<T, Ts>::value || ...);
+};
+
+//! Check if a type is contained in parameter pack
+template<typename T, typename ...Ts>
+struct packContainsConvertible{
+    static constexpr bool value = (std::is_convertible<T, Ts>::value || ...);
+};
+
+
 } // namespace NSL
 
 #endif // NSL_PARAMETERPACKHELPERS_HPP
