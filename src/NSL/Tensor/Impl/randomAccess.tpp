@@ -29,7 +29,7 @@ class TensorRandomAccess:
     {
         return std::move(
             this->data_.index(
-                std::initializer_list{torch::indexing::TensorIndex(indexer)...}
+                std::initializer_list<torch::indexing::TensorIndex>{torch::indexing::TensorIndex(indexer)...}
             )
         );
     }
