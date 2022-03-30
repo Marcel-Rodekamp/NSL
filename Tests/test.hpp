@@ -85,6 +85,38 @@ bool compare_integer(Tint a, Tint b, Tint prec = 0){
     }
 }
 
+//! Compare two floating point numbers up to numerical precision
+/*!
+ * Inspired by: https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
+ * and        : https://stackoverflow.com/a/15012792
+ *
+ * In realtion to http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.22.6768
+ * */
+template<typename Type>
+bool almost_equal(Type x, Type y, int ulp = std::numeric_limits<Type>::digits10)
+{
+    // the machine epsilon has to be scaled to the magnitude of the values used
+    // and multiplied by the desired precision in ULPs (units in the last place)
+    Type max = std::max( {static_cast<Type>(1), std::fabs(x), std::fabs(y)} );
 
+    return std::fabs(x-y) <= std::numeric_limits<Type>::epsilon() * max * ulp
+        // unless the result is subnormal
+        || std::fabs(x-y) < std::numeric_limits<Type>::min();
+}
+
+template<typename Type>
+bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int ulp = std::numeric_limits<Type>::digits10)
+{
+    // the machine epsilon has to be scaled to the magnitude of the values used
+    // and multiplied by the desired precision in ULPs (units in the last place)
+    Type maxReal = std::max( {static_cast<Type>(1), std::fabs(x.real()), std::fabs(y.real())} );
+    Type maxImag = std::max( {static_cast<Type>(1), std::fabs(x.imag()), std::fabs(y.imag())} );
+
+    return (std::fabs(x.real()-y.real()) <= std::numeric_limits<Type>::epsilon() * maxReal * ulp 
+            || std::fabs(x.real()-y.real()) < std::numeric_limits<Type>::min() ) 
+        &&  
+           ( std::fabs(x.imag()-y.imag()) <= std::numeric_limits<Type>::epsilon() * maxImag * ulp 
+            || std::fabs(x.imag()-y.imag()) < std::numeric_limits<Type>::min() );
+}
 
 #endif

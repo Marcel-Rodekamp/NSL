@@ -1,3 +1,4 @@
+add_subdirectory(FermionMatrix/)
 add_subdirectory(Tensor/)
 add_subdirectory(LinAlg/)
 add_subdirectory(Matrix/)
