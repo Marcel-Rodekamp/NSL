@@ -1,9 +1,4 @@
-//#include <complex>
-//#include "complex.hpp"
 #include "../test.hpp"
-#include <typeinfo>
-#include "Lattice/Implementations/square.hpp"
-
 
 /*! \file test_square.cpp
  *  Test the `Lattice::Square` implementation.

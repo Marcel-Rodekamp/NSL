@@ -1,15 +1,4 @@
-#ifndef NSL_LATTICE_RING_CPP
-#define NSL_LATTICE_RING_CPP
-
-/*! \file ring.cpp
-*/
-
-#include <cmath>
-
-#include "../../Tensor/tensor.hpp"
-#include "../lattice.hpp"
 #include "ring.hpp"
-#include <numbers>
 
 namespace NSL::Lattice {
 
@@ -41,6 +30,8 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
     // Periodic boundary conditions
     this->hops_(0, n - 1) = NSL::conj<Type>(kappa);
     this->hops_(n - 1, 0) = kappa;
+
+    this->compute_adjacency();
 }
 
 } // namespace NSL::Lattice
@@ -49,5 +40,3 @@ template class NSL::Lattice::Ring<float>;
 template class NSL::Lattice::Ring<double>;
 template class NSL::Lattice::Ring<NSL::complex<float>>;
 template class NSL::Lattice::Ring<NSL::complex<double>>;
-
-#endif

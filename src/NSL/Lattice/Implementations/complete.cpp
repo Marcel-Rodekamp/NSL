@@ -1,15 +1,7 @@
-#ifndef NSL_LATTICE_COMPLETE_CPP
-#define NSL_LATTICE_COMPLETE_CPP
-
 /*! \file complete.cpp
 */
 
-#include <cmath>
-
-#include "../../Tensor/tensor.hpp"
-#include "../lattice.hpp"
 #include "complete.hpp"
-#include <numbers>
 
 namespace NSL::Lattice {
 
@@ -41,6 +33,8 @@ NSL::Lattice::Complete<Type>::Complete(const std::size_t n, const Type &kappa, c
         this->hops_(i, i) = static_cast<Type>(0);
     }
 
+    this->compute_adjacency();
+
 }
 
 } // namespace NSL::Lattice
@@ -51,5 +45,3 @@ template class NSL::Lattice::Complete<double>;
 // There's not even a way to pick a convention, since every site
 // connects to every other site!
 // So, don't instantiate the complex<> types.
-
-#endif

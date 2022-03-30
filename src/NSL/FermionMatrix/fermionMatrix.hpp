@@ -1,52 +1,77 @@
-#ifndef NANOSYSTEMLIBRARY_FERMIONMATRIX_HPP
-#define NANOSYSTEMLIBRARY_FERMIONMATRIX_HPP
+#ifndef NSL_FERMIONMATRIX_HPP
+#define NSL_FERMIONMATRIX_HPP
 
+/*! \file fermionMatrix.hpp
+ *  Class for exponential discretization of fermion matrix.
+ *
+ *  The class contains methods which would be used for
+ *  the computation of fermionic action
+ *    
+ **/
 
-namespace NSL::TestingExpDisc {
-//ToDo: Is that correct?
-template<typename Type>
-NSL::TimeTensor<Type> BF(  NSL::TimeTensor<Type> & phi, NSL::Tensor<Type> & expKappa) {
-    const long Nt = phi.shape(0);
-    const long Nx = phi.shape(1);
+#include "../Lattice.hpp"
+#include "../Tensor.hpp"
 
-    NSL::TimeTensor<Type> out({Nt, Nx, Nx});
+namespace NSL::FermionMatrix{
 
-    c10::complex<double> num = (0,1);
-    for(std::size_t t=0; t<phi.shape(0); ++t){
-        out[t]=(((phi[t]*num).exp().expand(phi.shape(1))).prod(expKappa));
-    }
-    out[0] *= -1;
+//definition of class FermionMatrix
 
-    return out;
+/*! A base class for exponential dizcreatization of the fermion
+*   matrix
+**/
+
+template<NSL::Concept::isNumber Type>
+class FermionMatrix {
+
+    public:
+
+    //Declaration of methods methods M, M_dagger, MM_dagger and M
+
+    /*!
+    *  \param psi a vector with the dimensions N_t x N_x.
+    *  \returns M acting on psi, M.psi.
+    **/
+    virtual NSL::Tensor<Type> M(const NSL::Tensor<Type> & psi) = 0;
+
+    /*!
+    *  \param psi a vector with the dimensions N_t x N_x.
+    *  \returns Mdagger acting on psi, Mdagger.psi.
+    **/
+    virtual NSL::Tensor<Type> Mdagger(const NSL::Tensor<Type> & psi) = 0;
+
+    /*!
+    *  \param psi a vector with the dimensions N_t x N_x.
+    *  \returns MMdagger acting on psi, MMdagger.psi.
+    **/
+    virtual NSL::Tensor<Type> MMdagger(const NSL::Tensor<Type> & psi) = 0;
+
+    /*!
+    *  \param psi a vector with the dimensions N_t x N_x.
+    *  \returns MdaggerM acting on psi, MdaggerM.psi.
+    **/
+    virtual NSL::Tensor<Type> MdaggerM(const NSL::Tensor<Type> & psi) = 0;
+
+    /*!
+    *  \returns log of determinant of M.
+    **/
+    virtual Type logDetM() = 0;
+
+    // constructors
+    /*  There is no default constructor. */
+    FermionMatrix() = delete;
+    FermionMatrix(FermionMatrix<Type> &) = delete;
+    FermionMatrix(FermionMatrix<Type> &&) = delete;
+    /*! 
+    *  \param lat  an object of Lattice type (Ring, square, etc.).
+    **/
+    FermionMatrix(NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type> * lat):
+        Lat(lat)
+    {}
+
+    protected:
+    //! An object of Lattice type (Ring, square, etc.).
+    NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type>* Lat;
+};
 }
 
-template<typename Type>
-NSL::TimeTensor<Type> exp_disc_Mp(
-         NSL::TimeTensor<Type> &phi,
-         NSL::TimeTensor<Type> &psi,
-         NSL::Tensor<Type> &expKappa
-) {
-    NSL::TimeTensor<Type> M= NSL::TestingExpDisc::BF(phi, expKappa);
-    NSL::TimeTensor<Type> out(psi.shape());
-
-    for(std::size_t t = 0; t < psi.shape(0); ++t){
-        out[t] = NSL::LinAlg::mat_vec(M[t],(NSL::LinAlg::shift(psi,1))[t]);
-    }
-
-    return psi - out;
-}
-
-} // namespace NSL::TestingExpDisc
-
-// 1. NSL::LinAlg::mat_vec
-// 2. NSL::LinAlg::expand
-// 3. class Tensor{...};
-//    3.1 Copy constructor
-// 4. class TimeTensor{...};
-//    4.2 NSL::Tensor & shift(offset)
-// 5. foreach_timeslice:
-// functor on each time slice
-/*
- */
-#endif //NANOSYSTEMLIBRARY_FERMIONMATRIX_HPP*//*
-
+#endif

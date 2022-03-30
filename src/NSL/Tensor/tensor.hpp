@@ -1,842 +1,232 @@
 #ifndef NSL_TENSOR_HPP
 #define NSL_TENSOR_HPP
 
-//!  \file Tensor/tensor.hpp
+//! \file tensor.hpp
 
-//! Tensor is a wrapper of torch::tensor
-#include <torch/torch.h>
-//! Used for handling parameter packs to reduce amount of recursive functions
-#include <array>
-//! If not defined NDEBUG assertion handling
-#include "../assert.hpp"
-//! Helper functions for complex valued Tensor
-#include "../complex.hpp"
-////! TimeTensor, specialized class which first dimension will (!) be parallelized across multiple nodes
-//#include "time_tensor.hpp"
-
-//! Imported Namespace: torch::indexing
-using namespace torch::indexing;
-
-namespace NSL {
-
-//! Representation of multidimensional data.
-/*!
- * Storing data of various data types is one of the key requirements of any simulation.
- * This class provides an interface to torch::Tensor ([libtorch](https://pytorch.org/cppdocs/)) in order to allow
- * access and functionality on various architectures.
- * */
-template <typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
-class Tensor {
-    //! Alias: size_t = long int
-    using size_t = int64_t;
+#include "../complex.hpp" // get NSL::RT_extractor
+#include "../concepts.hpp" // get NSL::Concept::
 
 
+// Include the implementations of Tensor
+#include "Impl/base.tpp"
+#include "Tensor/Impl/base.tpp"
+#include "Tensor/Impl/factory.tpp"
+#include "Tensor/Impl/print.tpp"
+#include "Tensor/Impl/randomAccess.tpp"
+#include "Tensor/Impl/slice.tpp"
+#include "Tensor/Impl/stats.tpp"
+#include "Tensor/Impl/realImag.tpp"
+#include "Tensor/Impl/expand.tpp"
+#include "Tensor/Impl/shift.tpp"
+
+// Arithmetic
+#include "Tensor/Impl/operatorAdditionEqual.tpp"
+#include "Tensor/Impl/operatorSubtractionEqual.tpp"
+#include "Tensor/Impl/operatorMultiplicationEqual.tpp"
+#include "Tensor/Impl/operatorDivisionEqual.tpp"
+
+// Linear Algebra 
+#include "Tensor/Impl/transpose.tpp"
+#include "Tensor/Impl/complexConjugate.tpp"
+#include "Tensor/Impl/adjoint.tpp"
+#include "Tensor/Impl/abs.tpp"
+#include "Tensor/Impl/contraction.tpp"
+#include "Tensor/Impl/matrixExp.tpp"
+#include "Tensor/Impl/trigonometric.tpp"
+#include "Tensor/Impl/reductions.tpp"
+#include "Tensor/Impl/matmul.tpp"
+
+#include <stdexcept>
+
+namespace NSL{
+
+//! Tensor class holding d-dimensional data and providing various algebraic methods.
+template <NSL::Concept::isNumber Type>
+class Tensor:
+    virtual public NSL::TensorImpl::TensorBase<Type>,
+    public NSL::TensorImpl::TensorFactories<Type>,
+    public NSL::TensorImpl::TensorRandomAccess<Type>,
+    public NSL::TensorImpl::TensorAdditionEqual<Type>,
+    public NSL::TensorImpl::TensorSubtractionEqual<Type>,
+    public NSL::TensorImpl::TensorMultiplicationEqual<Type>,
+    public NSL::TensorImpl::TensorDivisionEqual<Type>,
+    public NSL::TensorImpl::TensorSlice<Type>,
+    public NSL::TensorImpl::TensorStats<Type>,
+    public NSL::TensorImpl::TensorTranspose<Type>,
+    public NSL::TensorImpl::TensorComplexConj<Type>,
+    public NSL::TensorImpl::TensorAdjoint<Type>,
+    public NSL::TensorImpl::TensorReal<Type>,
+    public NSL::TensorImpl::TensorImag<Type>,
+    public NSL::TensorImpl::TensorAbs<Type>,
+    public NSL::TensorImpl::TensorContraction<Type>,
+    public NSL::TensorImpl::TensorMatrixExp<Type>,
+    public NSL::TensorImpl::TensorTrigonometric<Type>,
+    public NSL::TensorImpl::TensorReductions<Type>,
+    public NSL::TensorImpl::TensorExpand<Type>,
+    public NSL::TensorImpl::TensorShift<Type>,
+    public NSL::TensorImpl::TensorMatmul<Type>
+{
     public:
-        //Default constructor not required
-        constexpr explicit Tensor() :
-            data_(torch::zeros({0},torch::TensorOptions().dtype<Type>()))
-        {}
 
-        //! D-dimensional constructor.
-        /*! Constructs the Tensor with D dimensions. D is determined by the number of arguments provided.\n
-         * \n
-         * Params:\n
-         *     * `size0`: Extend of the 0th dimension\n
-         *     * `sizes`: Parameter pack, extends of respective dimensions
-         *
-         * \n
-         * Assumptions:\n
-         *     * At least one argument must be passed (`size0`)
-         *     * SizeType must be of integral type (convertible to `size_t`)
-         *     * Tested Types: `bool`, `float`, `double`, `NSL::complex<float>`, `NSL::complex<double>`
-         *
-         *
-         * \n
-         * Further behavior:\n
-         *     * Initialization sets all values to `Type` equivalent of 0
-         */
-        template<typename... SizeType>
-        constexpr explicit Tensor(const size_t & size0, const SizeType &... sizes):
-            data_(torch::zeros({size0, sizes...},torch::TensorOptions().dtype<Type>()))
-        {}
+    Tensor() = default;
+    Tensor(Tensor &&) = default;
+    Tensor(const Tensor &) = default;
 
-        /*!
-         * param shape a std::vector giving the shape of the new Tensor.
-         **/
-        explicit Tensor(const std::vector<size_t> &shape):
-            data_(torch::zeros(torch::IntArrayRef(shape.data(), shape.size()),torch::TensorOptions().dtype<Type>()))
-        {}
+    // import the constructors
+    using NSL::TensorImpl::TensorBase<Type>::TensorBase;
+    //! \todo: Inherit documentation of constructors, INLINE_INHERITED_MEMB omits those.
+    
 
-        //! copy constructor
-        constexpr Tensor(const Tensor& other):
-            data_(other.data_)
-        {}
+    // For some reason I can't export the assignment operators so they
+    // need to come here. Other members are and their definitions are 
+    // listed below
+    //! assignment operator with value
+    template<NSL::Concept::isNumber OtherType>
+    NSL::Tensor<Type> & operator=(const OtherType & other){
+        this->data_.fill_(other);
+        return *this;
+    }
 
-        //! move constructor
-        constexpr Tensor(Tensor && other) noexcept:
-            data_(std::move(other.data_))
-        {}
-
-        explicit Tensor(torch::Tensor other):
-            data_(std::move(other))
-        {}
-
-        explicit constexpr Tensor(torch::Tensor & other):
-            data_(other)
-        {}
-
-        operator torch::Tensor(){
-            return data_;
+    //! assignement operator
+    template<NSL::Concept::isNumber OtherType>
+    NSL::Tensor<Type> & operator=(const NSL::Tensor<OtherType> & other){
+        // deep copy of other into this
+        // by default GPU <-> is asynch on host site
+        if(this->data_.defined()){
+            this->data_.copy_(static_cast<NSL::Tensor<Type>>(other),true);
+        } else {
+            // \todo: Implement Type conversion
+            throw std::runtime_error("Type conversion not implemented yet");
+            // this->data_ = torch::clone(static_cast<NSL::Tensor<Type>>(other));
         }
+        return *this;
+    }
 
-
-        // =====================================================================
-        // Tensor Creation Helpers
-        // =====================================================================
-
-        //! Fill the tensor with pseudo-random numbers
-        /*!
-         * Fills the Tensor with pseudo-random numbers from the uniform distribution
-         * \todo Generalize for different distributions
-         */
-        Tensor<Type,RealType> & rand(){
-            // Note: This should be a uniform U(0,1) distribution
-            this->data_.uniform_();
-            return *this;
-        }
-
-
-        //! Fill the tensor with pseudo-random numbers
-        /*!
-         * Fills the Tensor with pseudo-random numbers from the standard normal distribution
-         * \todo Generalize for different distributions
-         */
-        Tensor<Type,RealType> & randn(){
-            // Note: This should be a standard normal N(mean=0,var=1) distribution
-            this->data_.normal_();
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Accessors
-        // =====================================================================
-
-        //! Random Access operator
-        /*!
-         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
-         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
-         *
-         *  \n
-         *  Behavior:\n
-         *  each index in parameter pack `indices` corresponds to the index
-         *
-         * */
-        template<typename ...SizeType>
-        constexpr Type & operator()(const SizeType &... indices) {
-            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
-        }
-
-        //! Random Access operator
-        /*!
-         *  * `const SizeType &... indices`: parameter pack, indices of the tensor
-         *      * SizeType must be integer type e.g.: `int`, `size_t`,...
-         *
-         *  \n
-         *  Behavior:\n
-         *  each index in parameter pack `indices` corresponds to the index
-         *
-         * */
-        template<typename ...SizeType>
-        constexpr const Type & operator()(const SizeType &... indices) const {
-            return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
-        }
-
-        //! Explicitly access the torch::Tensor
-        /*! \todo: Add Documentation*/
-        friend torch::Tensor to_torch(const Tensor<Type> & other) {
-            return other.data_;
-        }
-
-        //! Access the underlying pointer (CPU only)
-        constexpr Type * data(){
-            return this->data_.template data_ptr<Type>();
-        }
-
-        //! Access the underlying pointer (CPU only)
-        constexpr const Type * data() const {
-            return this->data_.template data_ptr<Type>();
-        }
-
-        // =====================================================================
-        // Slice Operation
-        // =====================================================================
-
-        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1){
-            torch::Tensor slice = data_.slice(dim,start,end,step);
-            return Tensor<Type,RealType> (std::move(slice));
-        }
-
-        //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
-        /*! \todo: Add Documentation*/
-        const Tensor<Type,RealType> slice(const size_t & dim, const size_t & start, const size_t & end , const size_t & step = 1) const {
-            torch::Tensor && slice = data_.slice(dim,start,end,step);
-            return Tensor<Type,RealType>(std::move(slice));
-        }
-
-
-        // =====================================================================
-        // Assignment operators
-        // =====================================================================
-
-        //! Assignment operator: Tensor to Tensor
-        Tensor<Type,RealType> & operator=(const Tensor<Type> & other){
-            // deep copy of other into this
+    //! assignement operator
+    NSL::Tensor<Type> & operator=(const NSL::Tensor<Type> & other){
+        // deep copy of other into this
+        // by default GPU <-> is asynch on host site
+        if(this->data_.defined()){
+            this->data_.copy_(other,true);
+        } else {
             this->data_ = other.data_.clone();
-            return *this;
         }
-
-        //! Assignment operator: Scalar to Tensor
-        Tensor<Type,RealType> & operator=(const Type & value){
-            // overwrite data with value
-            this->data_ = torch::full_like(this->data_, value);
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Boolean operators
-        // =====================================================================
-
-        //! Elementwise equal: Tensor to Tensor
-        /*
-         * Checks if each element of this equals other.
-         * */
-        Tensor<bool> operator== (const NSL::Tensor<Type> & other) const {
-            return Tensor<bool>(this->data_ == other.data_);
-        }
-
-        //! Elementwise equal: Tensor to number
-        Tensor<bool> operator== (const Type & value) const {
-            return Tensor<bool>(this->data_ == value);
-        }
-
-        //! Elementwise not equal: Tensor to Tensor
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator!= (const NSL::Tensor<Type,RealType> & other) const {
-            return Tensor<bool>(this->data_ != other.data_);
-        }
-
-        //! Elementwise not equal: Tensor to number
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator!= (const Type & value) const {
-            return Tensor<bool>(this->data_ != value);
-        }
-
-        //! Elementwise smaller or equals: Tensor to Tensor
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator<= (const NSL::Tensor<Type,RealType> & other) const {
-            return Tensor<bool>(this->data_ <= other.data_);
-        }
-
-        //! Elementwise smaller or equals: Tensor to number
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator<= (const Type & value) const {
-            return Tensor<bool>(this->data_ <= value);
-        }
-
-        //! Elementwise smaller or equals: Tensor to Tensor
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator>= (const NSL::Tensor<Type,RealType> & other) const {
-            return Tensor<bool>(this->data_ >= other.data_);
-        }
-
-        //! Elementwise greater or equals: Tensor to number
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator>= (const Type & value) const {
-            return Tensor<bool>(this->data_ >= value);
-        }
-
-        //! Elementwise smaller : Tensor to Tensor
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator< (const NSL::Tensor<Type,RealType> & other) const {
-            return Tensor<bool>(this->data_ < other.data_);
-        }
-
-        //! Elementwise smaller: Tensor to number
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator< (const Type & value) const {
-            return Tensor<bool>(this->data_ < value);
-        }
-
-        //! Elementwise smaller or equals: Tensor to Tensor
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator> (const NSL::Tensor<Type,RealType> & other) const {
-            return Tensor<bool>(this->data_ > other.data_);
-        }
-
-        //! Elementwise greater or equals: Tensor to number
-        /*! \todo: Add Documentation*/
-        Tensor<bool> operator> (const Type & value) const {
-            return Tensor<bool>(this->data_ > value);
-        }
-
-        constexpr bool is_complex(){
-            return std::is_same<Type,RealType>();
-        }
-
-        // =====================================================================
-        // Print and stream
-        // =====================================================================
-
-        //! Streaming operator
-        //! \todo: We should code up our own.
-        friend std::ostream & operator << (std::ostream & os, const Tensor<Type> & T){
-            return (os << T.data_);
-        }
-
-
-        // =====================================================================
-        // Shape and dimension
-        // =====================================================================
-
-        //! Get the extent of a certain dimension.
-        /*!
-         * Parameters:\n
-         * * `const size_t & dim`: Dimension of which the extent should be queried.
-         *
-         * Behavior:\n
-         * Returns the extent of the dimension specified by `dim`.
-         * If no reallocation is performed the value will match the given parameter
-         * to the constructor `NSL::Tensor<Type,RealType>::Tensor(Arg size0, SizeType... sizes)`.
-         * */
-        [[nodiscard]] size_t shape(const size_t & dim) const {
-            return data_.size(dim);
-        }
-
-        //! Get the extents of the tensor
-        [[nodiscard]] std::vector<size_t> shape() const {
-            std::vector<size_t> out(data_.dim());
-            torch::IntArrayRef shape = this->data_.sizes();
-            std::copy(shape.begin(),shape.end(),out.begin());
-            return out;
-        }
-
-        //! Get the dimension of the Tensor.
-        /*!
-         *  The dimension of the tensor is specified at construction by the number
-         *  of integer arguments provided to the constructor `NSL::Tensor(Arg size0, SizeType... sizes)`
-         * */
-        [[nodiscard]] size_t dim() const {
-            return this->data_.dim();
-        }
-
-        //! Get the total number of elements.
-        /*! \todo: Add Documentaton*/
-        [[nodiscard]] size_t numel() const {
-            return this->data_.numel();
-        }
-
-        // =====================================================================
-        // Determinant
-        // =====================================================================
-
-        // Other .member functions are mutations which change .data_.
-        // Since .det and .logdet shouldn't do that, they go in LinAlg.
-
-        // =====================================================================
-        // Transpose + Adjoint
-        // =====================================================================
-
-        // TODO: transpose (and maybe adjoint) could be a view?
-
-        //! Transpose dim0 dim1
-        /*!
-         * \todo Add documentation
-         * */
-        NSL::Tensor<Type> & transpose(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1);
-            return *this;
-        }
-
-        //! Matrix transpose
-        /*!
-         * \todo: Add documentation
-         * */
-        NSL::Tensor<Type> & transpose() {
-            this->transpose(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        //! Adjoint (elementwise complex conjugate & transpose) of `dim0` and `dim1`
-        /*!
-         * \todo: Add documentation
-         * */
-        NSL::Tensor<Type> & adjoint(const size_t dim0, const size_t dim1) {
-            data_ = torch::transpose(data_, dim0, dim1).conj();
-            return *this;
-        }
-
-        //! Matrix adjoint (elementwise complex conjugate & matrix transpose)
-        /*!
-         * \todo: Add documentation
-         * */
-        NSL::Tensor<Type> & adjoint() {
-            this->adjoint(this->dim()-1, this->dim()-2);
-            return *this;
-        }
-
-        //! Complex Conjugation (Elementwise)
-        /*!
-         * \todo: Add documentation
-         * */
-        NSL::Tensor<Type> & conj() {
-            if constexpr(NSL::is_complex<Type>()){
-                this->data_ = this->data_.conj();
-            }
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Algebra Operators
-        // =====================================================================
-        // Here we create all the inplace linear algebra operation we need
-
-        // =====================================================================
-        // operator+;
-
-        //! Elementwise addition: Tensor + Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator+(const Tensor<Type,RealType> & other){
-            Tensor<Type,RealType> tmp(this->data_ + other.data_);
-            return tmp;
-        }
-
-        //! Elementwise addition: Tensor + number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator+(const Type & value){
-            Tensor<Type,RealType> tmp(this->data_ + value);
-            return tmp;
-        }
-
-        // =====================================================================
-        // operator+=;
-
-        //! Elementwise addition: Tensor + Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator+=(const Tensor<Type,RealType> & other){
-            this->data_ += other.data_;
-            return *this;
-        }
-
-        //! Elementwise addition: Tensor + number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator+=(const Type & value){
-            this->data_ += value;
-            return *this;
-        }
-
-
-        // =====================================================================
-        // operator-;
-
-        //! Elementwise subtraction: Tensor - Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator-(const Tensor<Type,RealType> & other){
-            Tensor<Type,RealType> tmp(this->data_ - other.data_);
-            return tmp;
-        }
-
-        //! Elementwise subtraction: Tensor - number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator-(const Type & value){
-            Tensor<Type,RealType> tmp(this->data_ - value);
-            return tmp;
-        }
-
-        // =====================================================================
-        // operator-=;
-
-        //! Elementwise subtraction: Tensor - Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator-=(const Tensor<Type,RealType> & other){
-            this->data_ -= other.data_;
-            return *this;
-        }
-
-        //! Elementwise subtraction: Tensor - number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator-=(const Type & value){
-            this->data_ -= value;
-            return *this;
-        }
-
-        // =====================================================================
-        // operator*;
-
-        //! Elementwise multiplication (Schur,Hadamard product): Tensor * Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator*(const Tensor<Type,RealType> & other){
-            Tensor<Type,RealType> tmp(this->data_ * other.data_);
-            return tmp;
-        }
-
-        //! Elementwise multiplication: Tensor * number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator*(const Type & value){
-            Tensor<Type,RealType> tmp(this->data_ * value);
-            return tmp;
-        }
-
-        // =====================================================================
-        // operator*=;
-
-        //! Elementwise multiplication (Schur,Hadamard product): Tensor * Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator*=(const Tensor<Type,RealType> & other){
-            this->data_ *= other.data_;
-            return *this;
-        }
-
-        //! Elementwise multiplication: Tensor * number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator*=(const Type & value){
-            this->data_ *= value;
-            return *this;
-        }
-
-
-        // =====================================================================
-        // operator/;
-
-        //! Elementwise division (Schur, Hadamard division): Tensor / Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator/(const Tensor<Type,RealType> & other){
-            Tensor<Type,RealType> tmp(this->data_ / other.data_);
-            return tmp;
-        }
-
-        //! Elementwise division: Tensor / number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> operator/(const Type & value){
-            Tensor<Type,RealType> tmp(this->data_ / value);
-            return tmp;
-        }
-
-        // =====================================================================
-        // operator/=;
-
-        //! Elementwise division (Schur, Hadamard division): Tensor / Tensor
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator/=(const Tensor<Type,RealType> & other){
-            this->data_ /= other.data_;
-            return *this;
-        }
-
-        //! Elementwise division: Tensor / number
-        /*!
-         * \todo Add documentation.
-         */
-        Tensor<Type,RealType> & operator/=(const Type & value){
-            this->data_ /= value;
-            return *this;
-        }
-
-        //! Elementwise real part
-        /*!
-         * If `Type` refers to `NSL::complex<RealType>` return the real part of
-         * each element of the tensor as `NSL::Tensor<RealType>`
-         * Else `Type` refers to a RealType expression (e.g. `float`,`double`, ...)
-         * and is simply returned.
-         * */
-        Tensor<RealType,RealType> real(){
-            if constexpr(NSL::is_complex<Type>()){
-                return Tensor<RealType>(torch::real(this->data_));
-            } else {
-                return *this;
-            }
-        }
-
-        //! Elementwise imaginary part
-        /*!
-         * If `Type` refers to `NSL::complex<RealType>` return the imaginary part of
-         * each element of the tensor as `NSL::Tensor<RealType>`
-         * Else `Type` refers to a RealType expression and does not have an imaginary
-         * part, a Tensor with zeros is returned.
-         * */
-        Tensor<RealType,RealType> imag(){
-            if constexpr(NSL::is_complex<Type>()){
-                return Tensor<RealType>(torch::imag(this->data_));
-            } else {
-                return Tensor<RealType>(torch::zeros(this->data_.sizes(),
-                                    torch::TensorOptions().dtype<RealType>()
-                                            .layout(this->data_.layout())
-                                            .device(this->data_.device())
-                ));
-            }
-        }
-
-         //! Elementwise absolute value
-        /*!
-         *
-         * Whether a complex type or a real type, the absolute value is real.
-         *
-         * */
-        Tensor<RealType,RealType> abs(){
-            return Tensor<RealType>(torch::abs(this->data_));
-        }
-
-        // =====================================================================
-        // 2D Linear Algebra
-        // =====================================================================
-
-        //! Matrix exponential.
-        /*!
-         * \todo: Add documentation
-         * */
-        Tensor<Type> & mat_exp() {
-            data_ = data_.matrix_exp();
-            return *this;
-        }
-
-        // =====================================================================
-        // Trigonometric functions
-        // =====================================================================
-
-        //! Elementwise exponential
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & exp() {
-            this->data_.exp_();
-            return *this;
-        }
-
-        //! Elementwise sine
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & sin() {
-            this->data_.sin_();
-            return *this;
-        }
-
-        //! Elementwise cosine
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & cos() {
-            this->data_.cos_();
-            return *this;
-        }
-
-        //! Elementwise tangent
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & tan() {
-            this->data_.tan_();
-            return *this;
-        }
-
-        //! Elementwise hyperbolic sine
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & sinh() {
-            this->data_.sinh_();
-            return *this;
-        }
-
-        //! Elementwise hyperbolic cosine
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & cosh() {
-            this->data_.cosh_();
-            return *this;
-        }
-
-        //! Elementwise hyperbolic tangent
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> & tanh() {
-            this->data_.tanh_();
-            return *this;
-        }
-
-
-        // =====================================================================
-        // Reductions
-        // =====================================================================
-
-        //! Reduction: +
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> sum(const size_t dim){
-            return Tensor<Type,RealType>(this->data_.sum(dim));
-        }
-
-        //! Reduction: +
-        /*! \todo: Add Documentation*/
-        Type sum(){
-            return this->data_.sum().template item<Type>();
-        }
-
-        //! Reduction: *
-        /*! \todo: Add Documentation*/
-        Tensor<Type,RealType> prod(const size_t dim){
-            return Tensor<Type,RealType>(this->data_.prod(dim));
-        }
-
-        //! Reduction: *
-        /*! \todo: Add Documentation*/
-        Type prod(){
-            return this->data_.prod().template item<Type>();
-        }
-
-        //! Reduction: && (logical and)
-        /*! \todo: Add Documentation*/
-        Tensor<bool> all(const size_t dim){
-            assert((std::is_same<Type,bool>()));
-            return Tensor<bool>(this->data_.all(dim));
-        }
-
-        //! Reduction: && (logical and)
-        /*! \todo: Add Documentation*/
-        Type all(){
-            assert((std::is_same<Type,bool>()));
-            return this->data_.all().template item<Type>();
-        }
-
-        //! Reduction: || (logical or)
-        /*! \todo: Add Documentation*/
-        Tensor<bool> any(const size_t dim){
-            assert((std::is_same<Type,bool>()));
-            return Tensor<bool>(this->data_.any(dim));
-        }
-
-        //! Reduction: || (logical or)
-        /*! \todo: Add Documentation*/
-        Type any(){
-            assert((std::is_same<Type,bool>()));
-            return this->data_.any().template item<Type>();
-        }
-
-
-        // =====================================================================
-        // Resize operations
-        // =====================================================================
-
-        //! Expanding the Tensor by one dimension with size `newSize`
-        /*! \todo: Add Documentation
-         * */
-        NSL::Tensor<Type> & expand(const size_t & newSize) {
-            std::vector<size_t> sizes = this->shape();
-            sizes.push_back(newSize);
-            this->data_ = data_.unsqueeze(-1).expand(torch::IntArrayRef(sizes.data(),sizes.size()));
-            return *this;
-        }
-
-        // =====================================================================
-        // Shift
-        // =====================================================================
-
-        //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction.
-        /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const size_t & shift){
-            this->data_ = this->data_.roll(shift,0);
-            return *this;
-        }
-
-        //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction.
-        /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const size_t & dim){
-            this->data_ = this->data_.roll(shift,dim);
-            return *this;
-        }
-
-        //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
-        /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const Type & boundary){
-            this->data_ = this->data_.roll(shift,0);
-
-            if(shift>0){
-                this->data_.slice(/*dim=*/0,/*start=*/0,/*end=*/shift,/*step=*/1)*=boundary;
-            } else {
-                this->data_.slice(/*dim=*/0,/*start=*/this->shape(0)-shift,/*end=*/this->shape(0),/*step=*/1)*=boundary;
-            }
-
-            return *this;
-        }
-
-        //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
-        /*! \todo: Add Documentation*/
-        NSL::Tensor<Type,RealType> & shift(const size_t & shift, const size_t & dim, const Type &boundary){
-            this->data_ = this->data_.roll(shift,dim);
-
-            if(shift>0){
-                this->data_.slice(/*dim=*/dim,/*start=*/0,/*end=*/shift,/*step=*/1)*=boundary;
-            } else {
-                this->data_.slice(/*dim=*/dim,/*start=*/this->shape(dim)-shift,/*end=*/this->shape(dim),/*step=*/1)*=boundary;
-            }
-
-            return *this;
-        }
-
-    protected:
-        //! Underlying torch::Tensor
-        torch::Tensor data_;
-
-        //! Transform a given set of D indices to the linear index used to reference
-        //! the 1 dimensional memory layout
-        template<typename... SizeType>
-        inline std::size_t linearIndex_(const SizeType &... indices) const{
-            // check that all arguments of the parameter pack are convertible to
-            // the defined size type (i.e. integer valued)
-            static_assert(NSL::all_convertible<size_t, SizeType...>::value);
-
-            // check that the number of arguments in indices matches the dimension of the tensor
-            assertm(!(sizeof...(indices) < data_.dim()), "operator()(const SizeType &... indices) called with to little indices");
-            assertm(!(sizeof...(indices) > data_.dim()), "operator()(const SizeType &... indices) called with to many indices");
-
-            // unpack the parameter pack
-            std::array<size_t, sizeof...(indices)> a_indices = {indices...};
-
-            size_t offset = 0;
-            for(size_t d = 0 ; d < sizeof...(indices); ++d){
-                offset += a_indices[d] * data_.stride(d);
-            }
-
-            return offset;
-        }
-
-}; //Tensor class
-
-
-template<typename Type, typename RealType = typename NSL::RT_extractor<Type>::value_type>
-using TimeTensor = NSL::Tensor<Type>;
-
-
-} // namespace NSL
+        return *this;
+    }
+
+    //! assignement operator from torch
+    NSL::Tensor<Type> & operator=(const torch::Tensor & other){
+        // deep copy of other into this
+        // by default GPU <-> is asynch on host site
+        if(this->data_.defined()){
+            this->data_.copy_(other,true);
+        } else {
+            this->data_ = other.clone();
+        }
+        return *this;
+    }
+
+    /* This is the interface class users should be using.
+     * All the different implementations are found in the files in Impl/ .
+     * The following lists provides an overview where to find what:
+     *
+     * - Base class: Impl/base.tpp
+     *      - Underlaying data implementation/interface to torch:Tensor (protected)
+     *      - Linear Indexing (protected)
+     *      - Constructors
+     *      - Conversion from and to torch
+     *      - operator<< (implemented in print.tpp)
+     * - Factories: Impl/factory.tpp
+     *      - Random data fill e.g. Tensor.rand()
+     * - Random Access: Impl/randomAccess.tpp
+     *      - random access operators: operator(NSL::size_t ...) & operator(NSL::Slice ...)
+     *      - Pointer access: data()
+     * - Equality: Impl/operatorEqual.tpp
+     *      - operator==
+     * - Not Equality: Impl/operatorNotEqual.tpp
+     *      - operator!=
+     * - Greater: Impl/operatorGreater.tpp
+     *      - operatpr>
+     * - Greater Equal: Impl/operatorGreaterEqual.tpp
+     *      - operatpr>=
+     * - Smaller: Impl/operatorSmaller.tpp
+     *      - operatpr<
+     * - Smaller Equal: Impl/operatorSmallerEqual.tpp
+     *      - operator<=
+     * - Addition: Impl/operatorAddition.tpp
+     *      - operator+
+      * - Addition Equal: Impl/operatorAdditionEqual.tpp
+     *      - operator+=
+     * - Subtraction: Impl/operatorsubtraction.tpp
+     *      - operator-
+     * - Subtraction Equal: Impl/operatorSubtractionEqual.tpp
+     *      - operator-=
+     * - Multiplication: Impl/operatorMultiplication.tpp
+     *      - operator*
+     * - Multiplication Equal: Impl/operatorMultiplicationEqual.tpp
+     *      - operator*=
+     * - Division: Impl/operatorDivision.tpp
+     *      - operator/
+     * - Division Equal: Impl/operatorDivisionEqual.tpp
+     *      - operator/=
+     * - Slice: Impl/slice.tpp
+     *      - slice
+     * - Stats: Impl/stats.tpp
+     *      - shape
+     *      - dim
+     *      - numel
+     * - Transpose: Impl/transpose.tpp
+     *      - transpose
+     *      - T
+     * - Adjoint: Impl/adjoint.tpp
+     *      - adjoint
+     *      - H
+     * - Real & Imag part: Impl/realImag.tpp
+     *      - real
+     *      -imag
+     * - abs: Impl/abs.tpp
+     *      - abs
+     * - Tensor contraction: Impl/contraction.tpp
+     *      - contraction
+     * - Matrix exponential: Impl/matrixExp.tpp
+     *      - mat_exp
+     * - Trigonometric functions: Impl/trigonometric.tpp
+     *      - exp
+     *      - sin
+     *      - cos
+     *      - tan
+     *      - sinh
+     *      - cosh
+     *      - tanh
+     * - Reductions: Impl/reductions.tpp
+     *      - sum (+)
+     *      - prod (*)
+     *      - all (&&)
+     *      - any (||)
+     * - Expand: Impl/expand.tpp 
+     *      - expand  
+     * - Shift: Impl/shift.tpp
+     *      - shift
+     * */
+
+};
+
+}
+
+// include externely defined operators 
+
+// boolean
+#include "Tensor/Impl/operatorEqual.tpp"
+#include "Tensor/Impl/operatorNotEqual.tpp"
+#include "Tensor/Impl/operatorGreater.tpp"
+#include "Tensor/Impl/operatorGreaterEqual.tpp"
+#include "Tensor/Impl/operatorSmaller.tpp"
+#include "Tensor/Impl/operatorSmallerEqual.tpp"
+
+// arithmetic
+#include "Tensor/Impl/operatorAddition.tpp"
+#include "Tensor/Impl/operatorSubtraction.tpp"
+#include "Tensor/Impl/operatorMultiplication.tpp"
+#include "Tensor/Impl/operatorDivision.tpp"
 
 #endif //NSL_TENSOR_HPP
