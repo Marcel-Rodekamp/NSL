@@ -65,8 +65,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(co
     NSL::Tensor<Type> out = this->M(psi) 
         + this->Mdagger(psi) 
         + NSL::LinAlg::mat_vec(
-            (this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_))*
-            (this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_)), 
+            (this->Lat->exp_hopping_matrix(2*delta_)), 
             NSL::LinAlg::transpose(psi)
         ).transpose();
 
@@ -82,8 +81,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MdaggerM(co
 
     //MMdagger(psi) = M(psi) + Mdagger(psi) + exp(-i*phi) * (exp_hopping_mtrix^2 x exp(-i*phi)* psi) - psi
     NSL::Tensor<Type> out= this->M(psi) + this->Mdagger(psi) + (NSL::LinAlg::adjoint(this->phiExp_) *
-        NSL::LinAlg::mat_vec((this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_))*
-         (this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_)),
+        NSL::LinAlg::mat_vec((this->Lat->exp_hopping_matrix(2*delta_)),
         ((this->phiExp_ * psi).transpose()))).transpose();
 
     return (out-psi);
