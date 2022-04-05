@@ -64,13 +64,13 @@ class FermionMatrix {
     /*! 
     *  \param lat  an object of Lattice type (Ring, square, etc.).
     **/
-    FermionMatrix(NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type> * lat):
+    FermionMatrix(NSL::Lattice::SpatialLattice<Type> * lat):
         Lat(lat)
     {}
 
     protected:
     //! An object of Lattice type (Ring, square, etc.).
-    NSL::Lattice::SpatialLattice<typename NSL::RT_extractor<Type>::value_type>* Lat;
+    NSL::Lattice::SpatialLattice<Type>* Lat;
 };
 }
 
