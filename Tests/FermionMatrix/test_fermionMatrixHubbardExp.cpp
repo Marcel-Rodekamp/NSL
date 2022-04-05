@@ -100,7 +100,7 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t size0, const NSL::size_t s
     NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
     psi.rand();
 
-    NSL::Lattice::Ring<Type> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
     //delta= beta/Nt
     double delta = 2.0/size0;
     //FermionMatrixHubbardExp Object M
@@ -144,7 +144,7 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t size0, const NSL::si
     NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
     psi.rand();
 
-    NSL::Lattice::Ring<Type> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
     //delta=beta/Nt
     double delta = 2.0/size0;
     //FermionMatrixHubbardExp Object M
@@ -190,7 +190,7 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t size0, const NSL::s
     psi.rand();
 
 
-    NSL::Lattice::Ring<Type> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
     //delta=beta/Nt
     double delta = 2.0/size0;
     //FermionMatrixHubbardExp Object M
@@ -201,7 +201,7 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t size0, const NSL::s
     NSL::Tensor<NSL::complex<Type>> out =  M.M(psi) 
                 + M.Mdagger(psi)
                 + NSL::LinAlg::mat_vec(
-                    (r.exp_hopping_matrix(delta))*(r.exp_hopping_matrix(delta)), 
+                    (r.exp_hopping_matrix(2*delta)), 
                     NSL::LinAlg::transpose(psi)
                 ).transpose();
 
@@ -235,7 +235,7 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::s
     NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
     psi.rand();
 
-    NSL::Lattice::Ring<Type> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
     //delta=beta/Nt
     double delta = 2.0/size0;
     //FermionMatrixHubbardExp Object M
@@ -245,8 +245,7 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::s
     // apply kronecker delta
     NSL::Tensor<NSL::complex<Type>> psiShift = NSL::LinAlg::shift(psi,1);
     NSL::Tensor<NSL::complex<Type>> out =  M.M(psi) + M.Mdagger(psi)+ ((((phi*min_I).exp()).transpose())  *
-        NSL::LinAlg::mat_vec((r.exp_hopping_matrix(delta))*
-        (r.exp_hopping_matrix(delta)), NSL::LinAlg::transpose((phi*I).exp()*psi))).
+        NSL::LinAlg::mat_vec((r.exp_hopping_matrix(2*delta)), NSL::LinAlg::transpose((phi*I).exp()*psi))).
     transpose();
 
     NSL::Tensor<NSL::complex<Type>> result_exa = out - psi;
@@ -275,7 +274,7 @@ void test_logDetM_1(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
-    NSL::Lattice::Ring<Type> ring(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
     //delta=beta/Nt
     double delta = 0.1/size0;
     
@@ -306,7 +305,7 @@ void test_logDetM_2(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
-    NSL::Lattice::Ring<Type> ring(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
     Type delta = 0.1/size0;
     
     //FermionMatrixHubbardExp Object M 
@@ -343,7 +342,7 @@ template<NSL::Concept::isNumber Type>
 void test_logDetM_3(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1); // phiShift(size0, size1);    
-    NSL::Lattice::Ring<Type> ring(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
     //delta=beta/Nt
     Type delta = 1./size0;
     //FermionMatrixHubbardExp Object 
@@ -372,7 +371,7 @@ template<NSL::Concept::isNumber Type>
 void test_logDetM_4(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phisum(1,size1);    
-    NSL::Lattice::Ring<Type> ring(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
     //delta=beta/Nt
     Type delta = 1./size0;
     NSL::complex<Type> I ={0,1};
