@@ -95,23 +95,30 @@ bool compare_integer(Tint a, Tint b, Tint prec = 0){
 template<typename Type>
 bool almost_equal(Type x, Type y, int ulp = std::numeric_limits<Type>::digits10)
 {
-    // the machine epsilon has to be scaled to the magnitude of the values used
-    // and multiplied by the desired precision in ULPs (units in the last place)
+    // Combining the relative magnitude of the inputs to express a relative tolerance.
+    // Combining the relative with the absolute tolerance and testing for the "worst case"
+    // allows the most sensible description of a finite precision error.
     Type max = std::max( {static_cast<Type>(1), std::fabs(x), std::fabs(y)} );
 
+    // an additional factor provides the accuracy in digits and by default 
+    // uses the default precision of the given Type
     return std::fabs(x-y) <= std::numeric_limits<Type>::epsilon() * max * ulp
-        // unless the result is subnormal
         || std::fabs(x-y) < std::numeric_limits<Type>::min();
 }
 
 template<typename Type>
 bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int ulp = std::numeric_limits<Type>::digits10)
 {
-    // the machine epsilon has to be scaled to the magnitude of the values used
-    // and multiplied by the desired precision in ULPs (units in the last place)
+    // Combining the relative magnitude of the inputs to express a relative tolerance.
+    // Combining the relative with the absolute tolerance and testing for the "worst case"
+    // allows the most sensible description of a finite precision error.
     Type maxReal = std::max( {static_cast<Type>(1), std::fabs(x.real()), std::fabs(y.real())} );
     Type maxImag = std::max( {static_cast<Type>(1), std::fabs(x.imag()), std::fabs(y.imag())} );
 
+    // an additional factor provides the accuracy in digits and by default 
+    // uses the default precision of the given Type
+    // We further demand that both the real and imaginary part agree up to
+    // the defined error tolerance.
     return (std::fabs(x.real()-y.real()) <= std::numeric_limits<Type>::epsilon() * maxReal * ulp 
             || std::fabs(x.real()-y.real()) < std::numeric_limits<Type>::min() ) 
         &&  
