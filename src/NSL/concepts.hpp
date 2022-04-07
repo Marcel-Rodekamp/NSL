@@ -87,6 +87,15 @@ concept isIndexer = requires(T t) {
     isIntegral<T> || std::is_same<T,NSL::Slice>::value;
 };
 
+//! Concept to check that `D` is derived from `B`
+/*!
+ * All kind of inheritances (public,protected,private) is allowed.
+ * */
+template<typename Base,typename Derived>
+concept isDerived = requires(Base B,Derived D){
+    std::is_base_of<Base,Derived>::value;
+};
+
 } // namespace NSL::Concept 
 
 #endif //NSL_CONCEPTS_HPP
