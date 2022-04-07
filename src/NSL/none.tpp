@@ -2,6 +2,7 @@
 #define NSL_NONE_TYPE_TPP
 
 #include "torch/torch.h"
+#include "types.hpp"
 
 namespace NSL {
 
