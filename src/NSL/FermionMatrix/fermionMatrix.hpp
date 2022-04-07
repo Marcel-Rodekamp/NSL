@@ -11,6 +11,7 @@
 
 #include "../Lattice.hpp"
 #include "../Tensor.hpp"
+#include <type_traits>
 
 namespace NSL::FermionMatrix{
 
@@ -20,7 +21,7 @@ namespace NSL::FermionMatrix{
 *   matrix
 **/
 
-template<NSL::Concept::isNumber Type>
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType >
 class FermionMatrix {
 
     public:
@@ -59,18 +60,18 @@ class FermionMatrix {
     // constructors
     /*  There is no default constructor. */
     FermionMatrix() = delete;
-    FermionMatrix(FermionMatrix<Type> &) = delete;
-    FermionMatrix(FermionMatrix<Type> &&) = delete;
+    FermionMatrix(FermionMatrix<Type,LatticeType> &) = delete;
+    FermionMatrix(FermionMatrix<Type,LatticeType> &&) = delete;
     /*! 
     *  \param lat  an object of Lattice type (Ring, square, etc.).
     **/
-    FermionMatrix(NSL::Lattice::SpatialLattice<Type> * lat):
+    FermionMatrix(LatticeType & lat):
         Lat(lat)
     {}
 
     protected:
     //! An object of Lattice type (Ring, square, etc.).
-    NSL::Lattice::SpatialLattice<Type>* Lat;
+    LatticeType & Lat;
 };
 }
 
