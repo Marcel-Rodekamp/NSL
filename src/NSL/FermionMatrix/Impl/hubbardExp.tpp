@@ -1,14 +1,15 @@
 #ifndef NSL_FERMION_MATRIX_HUBBARD_EXP_TPP
 #define NSL_FERMION_MATRIX_HUBBARD_EXP_TPP
 
+#include "Lattice/lattice.hpp"
 #include "hubbardExp.hpp"
 #include "../../Matrix.hpp"
 
 namespace NSL::FermionMatrix {
 
 //!
-template<NSL::Concept::isNumber Type>
-NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(const NSL::Tensor<Type> & psi){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL::Tensor<Type> & psi){
     const NSL::size_t Nt = this->phi_.shape(0);
     const NSL::size_t Nx = this->phi_.shape(1);
 
@@ -22,7 +23,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(const NS
         //! \todo: This argument needs to be variable with the beta coming from elsewhere
         //!        CHANGE THAT!!!
         // exp_hopping_matrix computes only once and stores the result accessible with the same function
-        this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_),
+        this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */delta_),
         (this->phiExp_ * psiShift).transpose()
     ).transpose();
 
@@ -32,13 +33,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::F_(const NS
     return Fpsi;
 }
 
-template <NSL::Concept::isNumber Type>
-NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::M(const NSL::Tensor<Type> & psi){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M(const NSL::Tensor<Type> & psi){
     return psi - this->F_(psi);
 }
 
-template<NSL::Concept::isNumber Type>
-NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger(const NSL::Tensor<Type> & psi){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(const NSL::Tensor<Type> & psi){
     NSL::Tensor<Type> out;
     const NSL::size_t Nt = this->phi_.shape(0);
     const NSL::size_t Nx = this->phi_.shape(1);
@@ -49,15 +50,15 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::Mdagger(con
 
     out= NSL::LinAlg::mat_vec(
         NSL::LinAlg::adjoint(this->phiExp_).transpose(),
-         this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */delta_))
+         this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */delta_))
      * psiShift;
     //anti-periodic boundary condition
     out.slice(0,0,1)*=-1;
     return (psi-out);
 }
 
-template<NSL::Concept::isNumber Type>
-NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(const NSL::Tensor<Type> & psi){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger(const NSL::Tensor<Type> & psi){
     const NSL::size_t Nt = this->phi_.shape(0);
     const NSL::size_t Nx = this->phi_.shape(1);
     
@@ -65,7 +66,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(co
     NSL::Tensor<Type> out = this->M(psi) 
         + this->Mdagger(psi) 
         + NSL::LinAlg::mat_vec(
-            (this->Lat->exp_hopping_matrix(2*delta_)), 
+            (this->Lat.exp_hopping_matrix(2*delta_)), 
             NSL::LinAlg::transpose(psi)
         ).transpose();
 
@@ -73,15 +74,15 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MMdagger(co
 
 }
 
-template<NSL::Concept::isNumber Type>
-NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MdaggerM(const NSL::Tensor<Type> & psi){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(const NSL::Tensor<Type> & psi){
     const NSL::size_t Nt = this->phi_.shape(0);
     const NSL::size_t Nx = this->phi_.shape(1);
     
 
     //MMdagger(psi) = M(psi) + Mdagger(psi) + exp(-i*phi) * (exp_hopping_mtrix^2 x exp(-i*phi)* psi) - psi
     NSL::Tensor<Type> out= this->M(psi) + this->Mdagger(psi) + (NSL::LinAlg::adjoint(this->phiExp_) *
-        NSL::LinAlg::mat_vec((this->Lat->exp_hopping_matrix(2*delta_)),
+        NSL::LinAlg::mat_vec((this->Lat.exp_hopping_matrix(2*delta_)),
         ((this->phiExp_ * psi).transpose()))).transpose();
 
     return (out-psi);
@@ -89,8 +90,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::MdaggerM(co
 }
 
 //return type
-template<NSL::Concept::isNumber Type>
-Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1); 
 
@@ -101,7 +102,7 @@ Type NSL::FermionMatrix::FermionMatrixHubbardExp<Type>::logDetM(){
     NSL::Tensor<Type> out(Nx,Nx);
     Type logdet = 0.0;
     
-    prod = this->Lat->exp_hopping_matrix(/*delta=(beta/Nt) */this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+    prod = this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
     //F_{Nt-1}
     out = prod(Nt-1, NSL::Slice(), NSL::Slice());
 

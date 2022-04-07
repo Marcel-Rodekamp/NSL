@@ -15,13 +15,13 @@ namespace NSL::FermionMatrix {
 
 //! \todo: Remove FermionMatrix from the name
 //! \todo: Remove Hubbard from the name and make it a namespace
-template<NSL::Concept::isNumber Type>
-class FermionMatrixHubbardExp : public FermionMatrix<Type> {
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType >
+class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     public:
         //  No default constructor
         /*  There is no default constructor. */
-    FermionMatrixHubbardExp() = delete;
+    HubbardExp() = delete;
 
     //!
     /*!
@@ -34,13 +34,11 @@ class FermionMatrixHubbardExp : public FermionMatrix<Type> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    FermionMatrixHubbardExp(NSL::Lattice::SpatialLattice<Type> * lat,  const NSL::Tensor<Type> &phi, double beta = 1.0 ):
-        FermionMatrix<Type>(lat),
+    HubbardExp(LatticeType & lat,  const NSL::Tensor<Type> &phi, double beta = 1.0 ):
+        FermionMatrix<Type,LatticeType>(lat),
         phi_(phi),
         delta_(beta/phi.shape(0)),
         phiExp_(NSL::LinAlg::exp(phi*NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,1)))
-        
-
     {}
 
     //Declaration of methods methods M, M_dagger, MM_dagger and M
@@ -80,7 +78,7 @@ class FermionMatrixHubbardExp : public FermionMatrix<Type> {
     //! Exponential of phi
     NSL::Tensor<Type> phiExp_;
     //! delta = beta/N_t
-    NSL::RT_extractor<Type>::value_type delta_;
+    Type delta_;
 
     private:
     NSL::Tensor<Type> F_(const NSL::Tensor<Type> & psi);
