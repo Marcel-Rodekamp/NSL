@@ -24,15 +24,35 @@ class TensorRandomAccess:
      * */
     template<NSL::Concept::isIndexer... IndexTypes>
         // use only if NSL::size_t in IndexTypes and NSL::Slice in IndexTypes
-        requires NSL::packContains<NSL::Slice,IndexTypes...>::value && NSL::packContainsConvertible<NSL::size_t,IndexTypes...>::value 
+        requires (NSL::packContains<NSL::Slice,IndexTypes...>::value && NSL::packContainsConvertible<NSL::size_t,IndexTypes...>::value)
     NSL::Tensor<Type> operator()(IndexTypes ... indexer) 
     {
-        return std::move(
-            this->data_.index(
-                std::initializer_list{torch::indexing::TensorIndex(indexer)...}
-            )
-        );
+        return this->data_.index(
+                std::initializer_list<torch::indexing::TensorIndex>{
+                    torch::indexing::TensorIndex(indexer)...
+                }
+            );
     }
+
+    //! Random Access operator (const)
+    /*!
+     * \param indexer, pack of `NSL::Slice` and `NSL::size_t` types. 
+     * 
+     * This indexer mixes the usage of `NSL::Slice` and `NSL::size_t`
+     * to have a simpler access on a particular slice of a axis.
+     * */
+    template<NSL::Concept::isIndexer... IndexTypes>
+        // use only if NSL::size_t in IndexTypes and NSL::Slice in IndexTypes
+        requires (NSL::packContains<NSL::Slice,IndexTypes...>::value && NSL::packContainsConvertible<NSL::size_t,IndexTypes...>::value)
+    NSL::Tensor<Type> operator()(IndexTypes ... indexer) const
+    {
+        return this->data_.index(
+                std::initializer_list<torch::indexing::TensorIndex>{
+                    torch::indexing::TensorIndex(indexer)...
+                }
+            );
+    }
+    
     
     //! Random Access Operator
     /*!
@@ -41,8 +61,12 @@ class TensorRandomAccess:
     * Returns the element of the tensor associated with the indices.
     *
     **/
+    // hotfix: The require-clause is needed as the assignment construction
+    //         would be called if a mixed indexing is used with an integer
+    //         in the first place
     template<NSL::Concept::isIntegral... SizeTypes >
-    Type & operator()(const NSL::size_t & index0, const SizeTypes & ... indices){
+        requires (!NSL::packContains<NSL::Slice,SizeTypes...>::value)
+    Type & operator()(NSL::size_t index0, const SizeTypes & ... indices){
         return this->data_.template data_ptr<Type>()[this->linearIndex_(index0,indices...)];
     }
 
@@ -53,8 +77,12 @@ class TensorRandomAccess:
      * Returns the element of the tensor associated with the indices.
      *
      * */
+    // hotfix: The require-clause is needed as the assignment construction
+    //         would be called if a mixed indexing is used with an integer
+    //         in the first place
     template<NSL::Concept::isIntegral... SizeTypes >
-    const Type & operator()(const NSL::size_t & index0,const SizeTypes & ... indices) const {
+        requires (!NSL::packContains<NSL::Slice,SizeTypes...>::value)
+    const Type & operator()(NSL::size_t index0,const SizeTypes & ... indices) const {
         return this->data_.template data_ptr<Type>()[this->linearIndex_(index0,indices...)];
     }
 
@@ -70,7 +98,10 @@ class TensorRandomAccess:
      *  tensor.
      *
      * */
+    // hotfix: The require-clause is needed as NSL::Slice can be constructed
+    //         from a single NSL::size_t. 
     template<NSL::Concept::isType<NSL::Slice> ... SliceTypes>
+        requires (!NSL::packContainsConvertible<NSL::size_t,SliceTypes...>::value)
     NSL::Tensor<Type> operator()(NSL::Slice slice0, SliceTypes ... slices){
         return std::move(this->data_.index(std::initializer_list<torch::indexing::TensorIndex>{torch::indexing::Slice(slice0),torch::indexing::Slice(slices)...}));
 
@@ -88,7 +119,10 @@ class TensorRandomAccess:
      *  tensor.
      *
      * */
+    // hotfix: The require-clause is needed as NSL::Slice can be constructed
+    //         from a single NSL::size_t. 
     template<NSL::Concept::isType<NSL::Slice> ... SliceTypes>
+        requires (!NSL::packContainsConvertible<NSL::size_t,SliceTypes...>::value)
     const NSL::Tensor<Type> operator()(NSL::Slice slice0, SliceTypes ... slices) const {
         return std::move(this->data_.index(std::initializer_list<torch::indexing::TensorIndex>{torch::indexing::Slice(slice0),torch::indexing::Slice(slices)...}));
 
