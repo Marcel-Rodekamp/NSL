@@ -45,6 +45,7 @@
 #define NUMERIC_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, NUMERIC_TYPES)
 #define FLOAT_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, FLOATING_POINT_TYPES)
 #define REAL_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, REAL_TYPES)
+#define COMPLEX_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, COMPLEX_TYPES)
 #define INTEGER_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, INTEGER_TYPES)
 // todo: Hopefully we can drop the real-only test-cases.
 // However, that requires solving issue #9.
