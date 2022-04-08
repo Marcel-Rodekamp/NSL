@@ -10,7 +10,8 @@ NSL::Lattice::SpatialLattice<Type>::SpatialLattice(
     ) :
     name_(name),
     hops_(hops),
-    adj_(static_cast<NSL::Tensor<bool>>(hops)),
+    // This construction for adj_ prevents the torch runtime warning "Casting complex values to real discards the imaginary part (function operator())"
+    adj_(static_cast<NSL::Tensor<bool>>(NSL::LinAlg::abs(hops))),
     sites_(sites)
     {
         // TODO: assert that hops_ is a square matrix, size matches sites_.
@@ -51,7 +52,8 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
 
 template <typename Type>
 void NSL::Lattice::SpatialLattice<Type>::compute_adjacency() {
-    this->adj_ = static_cast<NSL::Tensor<bool>>(this->hops_);
+    // This construction prevents the torch runtime warning "Casting complex values to real discards the imaginary part (function operator())"
+    this->adj_ = static_cast<NSL::Tensor<int>>(static_cast<NSL::Tensor<bool>>(NSL::LinAlg::abs(this->hops_)));
 }
 
 template <typename Type>
