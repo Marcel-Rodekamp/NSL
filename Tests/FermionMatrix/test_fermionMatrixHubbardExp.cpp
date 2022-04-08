@@ -1,90 +1,90 @@
 #include "../test.hpp"
 
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_M(const NSL::size_t size0, const NSL::size_t size1);
+void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t size0, const NSL::size_t size1);
+void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t size0, const NSL::size_t size1);
+void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::size_t size1);
+void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_time_shift_invariance(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_time_shift_invariance(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_phi_plus_two_pi(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_noninteracting(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_noninteracting(const NSL::size_t nt, const NSL::size_t nx);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_uniform_timeslices(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_uniform_timeslices(const NSL::size_t nt, const NSL::size_t nx);
 
 //! The logDetM_* tests are expected to fail, consider issue #36 & #43 
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
-    test_fermionMatrixHubbardExp_M<TestType>(size_0, size_1);
+    test_fermionMatrixHubbardExp_M<TestType>(nt, nx);
 
 }
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: Mdagger", "[fermionMatrixHubbardExp, Mdagger]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
-    test_fermionMatrixHubbardExp_Mdagger<TestType>(size_0, size_1);
+    test_fermionMatrixHubbardExp_Mdagger<TestType>(nt, nx);
 
 }
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: MMdagger", "[fermionMatrixHubbardExp, MMdagger]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
-    test_fermionMatrixHubbardExp_MMdagger<TestType>(size_0, size_1);
+    test_fermionMatrixHubbardExp_MMdagger<TestType>(nt, nx);
 
 }
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: MdaggerM", "[fermionMatrixHubbardExp, MdaggerM]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
-    test_fermionMatrixHubbardExp_MdaggerM<TestType>(size_0, size_1);
+    test_fermionMatrixHubbardExp_MdaggerM<TestType>(nt, nx);
 
 }
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_time_shift_invariance", "[fermionMatrixHubbardExp, logDetM_time_shift_invariance]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_time_shift_invariance<TestType>(size_0, size_1);
+    test_logDetM_time_shift_invariance<TestType>(nt, nx);
     
 }   
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_phi_plus_two_pi", "[fermionMatrixHubbardExp, logDetM_phi_plus_two_pi]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_phi_plus_two_pi<TestType>(size_0, size_1);
+    test_logDetM_phi_plus_two_pi<TestType>(nt, nx);
     
 }
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_noninteracting", "[fermionMatrixHubbardExp, logDetM_noninteracting]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_noninteracting<TestType>(size_0, size_1);
+    test_logDetM_noninteracting<TestType>(nt, nx);
     
 }
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_uniform_timeslices", "[fermionMatrixHubbardExp, logDetM_uniform_timeslices]" ) {
-    const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
-    const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_uniform_timeslices<TestType>(size_0, size_1);
+    test_logDetM_uniform_timeslices<TestType>(nt, nx);
 }
 
 // ======================================================================
@@ -93,16 +93,16 @@ REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_uniform_timeslices", "[fer
 
 //Test for the function M(psi)
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_M(const NSL::size_t size0, const NSL::size_t size1) {
+void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, const NSL::size_t nx) {
 
     //hardcoding the calculation done in the method M of fermionMatrixHubbardExp class
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1);
-    NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx);
+    NSL::Tensor<NSL::complex<Type>> psi(nt, nx);     
     psi.rand();
 
-    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(nx);
     //delta= beta/Nt
-    double delta = 2.0/size0;
+    double delta = 2.0/nt;
     //FermionMatrixHubbardExp Object M
     NSL::FermionMatrix::HubbardExp M(r,phi,2.0);
     NSL::complex<Type> I ={0,1};
@@ -137,16 +137,16 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t size0, const NSL::size_t s
 
 //Test for the function Mdagger(psi)
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t size0, const NSL::size_t size1) {
+void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, const NSL::size_t nx) {
 
     //hardcoding the calculation done in the method Mdagger of fermionMatrixHubbardExp class
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1);
-    NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx);
+    NSL::Tensor<NSL::complex<Type>> psi(nt, nx);     
     psi.rand();
 
-    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(nx);
     //delta=beta/Nt
-    double delta = 2.0/size0;
+    double delta = 2.0/nt;
     //FermionMatrixHubbardExp Object M
     NSL::FermionMatrix::HubbardExp M(r,phi,2.0);
     NSL::complex<Type> min_I ={0,-1};
@@ -182,17 +182,17 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t size0, const NSL::si
 
 //Test for the function MMdagger(psi)
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t size0, const NSL::size_t size1) {
+void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, const NSL::size_t nx) {
 
     //hardcoding the calculation done in the method MMdagger of fermionMatrixHubbardExp class
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1);
-    NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx);
+    NSL::Tensor<NSL::complex<Type>> psi(nt, nx);     
     psi.rand();
 
 
-    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(nx);
     //delta=beta/Nt
-    double delta = 2.0/size0;
+    double delta = 2.0/nt;
     //FermionMatrixHubbardExp Object M
     NSL::FermionMatrix::HubbardExp M(r,phi,2.0);
     
@@ -228,16 +228,16 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t size0, const NSL::s
 
 //Test for the function MdaggerM(psi)
 template<NSL::Concept::isNumber Type>
-void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::size_t size1) {
+void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, const NSL::size_t nx) {
 
     //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardExp class
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1);
-    NSL::Tensor<NSL::complex<Type>> psi(size0, size1);     
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx);
+    NSL::Tensor<NSL::complex<Type>> psi(nt, nx);     
     psi.rand();
 
-    NSL::Lattice::Ring<NSL::complex<Type>> r(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> r(nx);
     //delta=beta/Nt
-    double delta = 2.0/size0;
+    double delta = 2.0/nt;
     //FermionMatrixHubbardExp Object M
     NSL::FermionMatrix::HubbardExp M(r,phi,2.0);
     NSL::complex<Type> min_I ={0,-1}, I={0,1};
@@ -270,13 +270,13 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::s
 
 //Test for the function logDetM() (shift in phi)
 template<NSL::Concept::isNumber Type>
-void test_logDetM_time_shift_invariance(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_time_shift_invariance(const NSL::size_t nt, const NSL::size_t nx) {
 
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx), phiShift(nt, nx);
     phi.rand();
-    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(nx);
     //delta=beta/Nt
-    double delta = 0.1/size0;
+    double delta = 0.1/nt;
     
     //FermionMatrixHubbardExp Object M for ring lattice 
     NSL::FermionMatrix::HubbardExp M(ring,phi,0.1);
@@ -301,23 +301,23 @@ void test_logDetM_time_shift_invariance(const NSL::size_t size0, const NSL::size
 
 //Test for logDetM() (adding 2*pi in one of the time slices )
 template<NSL::Concept::isNumber Type>
-void test_logDetM_phi_plus_two_pi(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, const NSL::size_t nx) {
 
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx), phiShift(nt, nx);
     phi.rand();
-    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
-    Type delta = 0.1/size0;
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(nx);
+    Type delta = 0.1/nt;
     
     //FermionMatrixHubbardExp Object M 
     NSL::FermionMatrix::HubbardExp M(ring,phi,0.1);
     
     //generating random time slice to add 2*pi
     srand (time(NULL));
-    int t = rand() % size0;
+    int t = rand() % nt;
     //pi
     NSL::complex<Type> pi ={2*std::numbers::pi,0};
     //adding 2*pi at the t_th position
-    for(int i=0; i< size1; i++){
+    for(int i=0; i< nx; i++){
         phi(t, i)=phi(t,i) + pi;
         }
     //FermionMatrixHubbardExp Object with modified phi    
@@ -339,18 +339,18 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t size0, const NSL::size_t siz
 
 //Test for logDetM() when phi=0
 template<NSL::Concept::isNumber Type>
-void test_logDetM_noninteracting(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_noninteracting(const NSL::size_t nt, const NSL::size_t nx) {
 
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1); // phiShift(size0, size1);    
-    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx);
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(nx);
     //delta=beta/Nt
-    Type delta = 1./size0;
+    Type delta = 1./nt;
     //FermionMatrixHubbardExp Object 
     NSL::FermionMatrix::HubbardExp M(ring,phi,1.);
     
     //When phi=0, logDetM = logdet(1 + exp_hopping_matrix(beta))
     NSL::complex<Type> result_exa = NSL::LinAlg::logdet(
-            NSL::Matrix::Identity<Type>(size1) + ring.exp_hopping_matrix(1.)
+            NSL::Matrix::Identity<Type>(nx) + ring.exp_hopping_matrix(1.)
     );
     
     NSL::complex<Type> result_alg = M.logDetM();
@@ -368,19 +368,19 @@ void test_logDetM_noninteracting(const NSL::size_t size0, const NSL::size_t size
 
 //Test for logDetM() when  all the elemets in every time slice are same
 template<NSL::Concept::isNumber Type>
-void test_logDetM_uniform_timeslices(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_uniform_timeslices(const NSL::size_t nt, const NSL::size_t nx) {
 
-    NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phisum(1,size1);    
-    NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
+    NSL::Tensor<NSL::complex<Type>> phi(nt, nx), phisum(1,nx);    
+    NSL::Lattice::Ring<NSL::complex<Type>> ring(nx);
     //delta=beta/Nt
-    Type delta = 1./size0;
+    Type delta = 1./nt;
     NSL::complex<Type> I ={0,1};
 
     //setting up phi such that all the elements in a time slice are same
     int i=0, j=0;
     NSL::complex<Type> sum ={0,0};
-    for(i=0; i<size0; i++){
-        for(j=0; j<size1; j++){
+    for(i=0; i<nt; i++){
+        for(j=0; j<nx; j++){
             phi(i,j) = {(2.0*i) +0.4 +(i/4.0), 2.0};           
         }        
     }
@@ -389,20 +389,20 @@ void test_logDetM_uniform_timeslices(const NSL::size_t size0, const NSL::size_t 
     NSL::FermionMatrix::HubbardExp M(ring,phi,1.);
 
     //summing up 
-    for(int k=0; k<size0; k++){      
+    for(int k=0; k<nt; k++){      
         sum = sum + phi(k,0);        
     }
 
     //phisum matrix 
-    for(i=0; i<size1; i++){
+    for(i=0; i<nx; i++){
         phisum(0,i) = sum*I;
     }
     phisum.exp();
 
     //logdetM() = logdet(1 + exp(/Phi)exp_hopping_matrix(Kappa_tilda * Nt)) where /Phi = sum over all time slices
     NSL::complex<Type> result_exa = NSL::LinAlg::logdet(
-            NSL::Matrix::Identity<NSL::complex<Type>>(size1) + 
-            (((phisum) * ring.exp_hopping_matrix(delta*size0)))
+            NSL::Matrix::Identity<NSL::complex<Type>>(nx) + 
+            (((phisum) * ring.exp_hopping_matrix(delta*nt)))
     ); //ring.exp_hopping_matrix(delta*size0));
     
     
