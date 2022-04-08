@@ -34,7 +34,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardExp(LatticeType & lat,  const NSL::Tensor<Type> &phi, double beta = 1.0 ):
+    HubbardExp(LatticeType & lat,  const NSL::Tensor<Type> &phi, const Type & beta = 1.0 ):
         FermionMatrix<Type,LatticeType>(lat),
         phi_(phi),
         delta_(beta/phi.shape(0)),
