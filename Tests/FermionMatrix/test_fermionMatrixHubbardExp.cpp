@@ -13,18 +13,18 @@ template<NSL::Concept::isNumber Type>
 void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::size_t size1);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_1(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_time_shift_invariance(const NSL::size_t size0, const NSL::size_t size1);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_2(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_phi_plus_two_pi(const NSL::size_t size0, const NSL::size_t size1);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_3(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_noninteracting(const NSL::size_t size0, const NSL::size_t size1);
 
 template<NSL::Concept::isNumber Type>
-void test_logDetM_4(const NSL::size_t size0, const NSL::size_t size1);
+void test_logDetM_uniform_timeslices(const NSL::size_t size0, const NSL::size_t size1);
 
-//! The logDetM_* tests are expected to fail, considere issue #36 & #43 
+//! The logDetM_* tests are expected to fail, consider issue #36 & #43 
 
 REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
     const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
@@ -58,33 +58,33 @@ REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: MdaggerM", "[fermionMatrixHubbardE
 
 }
 
-REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_1", "[fermionMatrixHubbardExp, logDetM_1]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_time_shift_invariance", "[fermionMatrixHubbardExp, logDetM_time_shift_invariance]" ) {
     const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_1<TestType>(size_0, size_1);
+    test_logDetM_time_shift_invariance<TestType>(size_0, size_1);
     
 }   
-REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_2", "[fermionMatrixHubbardExp, logDetM_2]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_phi_plus_two_pi", "[fermionMatrixHubbardExp, logDetM_phi_plus_two_pi]" ) {
     const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_2<TestType>(size_0, size_1);
+    test_logDetM_phi_plus_two_pi<TestType>(size_0, size_1);
     
 }
-REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_3", "[fermionMatrixHubbardExp, logDetM_3]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_noninteracting", "[fermionMatrixHubbardExp, logDetM_noninteracting]" ) {
     const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_3<TestType>(size_0, size_1);
+    test_logDetM_noninteracting<TestType>(size_0, size_1);
     
 }
 
-REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_4", "[fermionMatrixHubbardExp, logDetM_4]" ) {
+REAL_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_uniform_timeslices", "[fermionMatrixHubbardExp, logDetM_uniform_timeslices]" ) {
     const NSL::size_t size_0 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t size_1 = GENERATE(2, 4, 8, 10, 12, 14, 16);
     
-    test_logDetM_4<TestType>(size_0, size_1);
+    test_logDetM_uniform_timeslices<TestType>(size_0, size_1);
 }
 
 // ======================================================================
@@ -265,12 +265,12 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t size0, const NSL::s
 }
 
 // ======================================================================
-// Implementation Details: test_logDetM_1
+// Implementation Details: test_logDetM_time_shift_invariance
 // ======================================================================
 
 //Test for the function logDetM() (shift in phi)
 template<NSL::Concept::isNumber Type>
-void test_logDetM_1(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_time_shift_invariance(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
@@ -295,13 +295,13 @@ void test_logDetM_1(const NSL::size_t size0, const NSL::size_t size1) {
 }
 
 // ======================================================================
-// Implementation Details: test_logDetM_2
+// Implementation Details: test_logDetM_phi_plus_two_pi
 // ======================================================================
 
 
 //Test for logDetM() (adding 2*pi in one of the time slices )
 template<NSL::Concept::isNumber Type>
-void test_logDetM_2(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_phi_plus_two_pi(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phiShift(size0, size1);
     phi.rand();
@@ -334,12 +334,12 @@ void test_logDetM_2(const NSL::size_t size0, const NSL::size_t size1) {
 }
 
 // ======================================================================
-// Implementation Details: test_logDetM_3
+// Implementation Details: test_logDetM_noninteracting
 // ======================================================================
 
 //Test for logDetM() when phi=0
 template<NSL::Concept::isNumber Type>
-void test_logDetM_3(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_noninteracting(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1); // phiShift(size0, size1);    
     NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
@@ -363,12 +363,12 @@ void test_logDetM_3(const NSL::size_t size0, const NSL::size_t size1) {
 }
 
 // ======================================================================
-// Implementation Details: test_logDetM_4
+// Implementation Details: test_logDetM_uniform_timeslices
 // ======================================================================
 
 //Test for logDetM() when  all the elemets in every time slice are same
 template<NSL::Concept::isNumber Type>
-void test_logDetM_4(const NSL::size_t size0, const NSL::size_t size1) {
+void test_logDetM_uniform_timeslices(const NSL::size_t size0, const NSL::size_t size1) {
 
     NSL::Tensor<NSL::complex<Type>> phi(size0, size1), phisum(1,size1);    
     NSL::Lattice::Ring<NSL::complex<Type>> ring(size1);
