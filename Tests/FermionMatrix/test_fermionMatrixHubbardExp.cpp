@@ -133,7 +133,7 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     //hardcoding the calculation done in the method M of fermionMatrixHubbardExp class
     NSL::Tensor<Type> phi(nt, nx);
     NSL::Tensor<Type> psi(nt, nx);
-
+    phi.rand();
     psi.rand();
 
     Type delta = beta/nt;
@@ -178,6 +178,7 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
     //hardcoding the calculation done in the method Mdagger of fermionMatrixHubbardExp class
     NSL::Tensor<Type> phi(nt, nx);
     NSL::Tensor<Type> psi(nt, nx);
+    phi.rand();
     psi.rand();
 
     Type delta = beta/nt;
@@ -223,6 +224,7 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
     //hardcoding the calculation done in the method MMdagger of fermionMatrixHubbardExp class
     NSL::Tensor<Type> phi(nt, nx);
     NSL::Tensor<Type> psi(nt, nx);
+    phi.rand();
     psi.rand();
 
     Type delta = beta/nt;
@@ -268,6 +270,7 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
     //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardExp class
     NSL::Tensor<Type> phi(nt, nx);
     NSL::Tensor<Type> psi(nt, nx);
+    phi.rand();
     psi.rand();
 
     Type delta = beta/nt;
