@@ -150,6 +150,19 @@ inline RealType arg(const Type &value){
     }
 }
 
+template <typename Type>
+inline std::string to_string(const Type &z){
+    if constexpr(is_complex<Type>()){
+        auto re = NSL::real(z);
+        auto im = NSL::imag(z);
+        if (im < 0){
+            return std::to_string(re)+std::to_string(im)+"i";
+        }
+        return std::to_string(re)+"+"+std::to_string(im)+"i";
+    } else {
+        return std::to_string(z); 
+    }
 }
 
+}
 #endif //NSL_COMPLEX_HPP
