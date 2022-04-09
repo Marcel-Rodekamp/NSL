@@ -10,7 +10,13 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::Spat
 void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+void test_fermionMatrixHubbardExp_MMdagger_consistency(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+void test_fermionMatrixHubbardExp_MdaggerM_consistency(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 1);
@@ -53,12 +59,30 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: MMdagger", "[fermionMatrixHubba
 
 }
 
+COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: MMdagger consistency", "[fermionMatrixHubbardExp, MMdagger, consistency]" ) {
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
+
+    NSL::Lattice::Ring<TestType> Lattice(nx);
+    test_fermionMatrixHubbardExp_MMdagger_consistency<TestType>(nt, Lattice);
+
+}
+
 COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: MdaggerM", "[fermionMatrixHubbardExp, MdaggerM]" ) {
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
     NSL::Lattice::Ring<TestType> Lattice(nx);
     test_fermionMatrixHubbardExp_MdaggerM<TestType>(nt, Lattice);
+
+}
+
+COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: MdaggerM consistency", "[fermionMatrixHubbardExp, MdaggerM, consistency]" ) {
+    const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
+
+    NSL::Lattice::Ring<TestType> Lattice(nx);
+    test_fermionMatrixHubbardExp_MdaggerM_consistency<TestType>(nt, Lattice);
 
 }
 
@@ -270,6 +294,66 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
     for(int i = 0; i < result_exa.numel(); ++i){
         REQUIRE(almost_equal(result_exa[i],result_alg[i]));
     }
+}
+
+// ======================================================================
+// Implementation Details: test_MdaggerM_consistency
+// ======================================================================
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+void test_fermionMatrixHubbardExp_MdaggerM_consistency(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
+
+    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
+    NSL::size_t nx = Lattice.sites();
+
+    //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardExp class
+    NSL::Tensor<Type> phi(nt, nx);
+    NSL::Tensor<Type> psi(nt, nx);
+    phi.rand();
+    psi.rand();
+
+    Type delta = beta/nt;
+    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    ComplexType I={0,1};
+ 
+    auto direct = M.MdaggerM(psi);
+    auto indirect = M.Mdagger(M.M(psi));
+    auto diff = direct - indirect;
+
+    for(int i = 0; i < direct.numel(); ++i){
+        REQUIRE(almost_equal(direct[i],indirect[i]));
+    }
+
+}
+
+// ======================================================================
+// Implementation Details: test_MdaggerM_consistency
+// ======================================================================
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+void test_fermionMatrixHubbardExp_MMdagger_consistency(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
+
+    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
+    NSL::size_t nx = Lattice.sites();
+
+    //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardExp class
+    NSL::Tensor<Type> phi(nt, nx);
+    NSL::Tensor<Type> psi(nt, nx);
+    phi.rand();
+    psi.rand();
+
+    Type delta = beta/nt;
+    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    ComplexType I={0,1};
+ 
+    auto direct = M.MMdagger(psi);
+    auto indirect = M.M(M.Mdagger(psi));
+    auto diff = direct - indirect;
+
+    for(int i = 0; i < direct.numel(); ++i){
+        REQUIRE(almost_equal(direct[i],indirect[i]));
+    }
+
 }
 
 // ======================================================================
