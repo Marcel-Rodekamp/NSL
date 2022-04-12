@@ -9,26 +9,28 @@ namespace NSL::FermionMatrix {
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL::Tensor<Type> & psi){
-    const NSL::size_t Nt = this->phi_.shape(0);
-    const NSL::size_t Nx = this->phi_.shape(1);
-
-    //! \todo Add complex literals
-    //const NSL::complex<NSL::Concept::isNumber RT_extractor<Type>::value_type> I(0,1);
-
-    // apply kronecker delta
-    NSL::Tensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
+    // We want to compute 
+    //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
+    // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
+    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    //        |---shift---> |---mat mul---> |--- element-wise mul ---|
 
     NSL::Tensor<Type> Fpsi = NSL::LinAlg::mat_vec(
-        //! \todo: This argument needs to be variable with the beta coming from elsewhere
-        //!        CHANGE THAT!!!
-        // exp_hopping_matrix computes only once and stores the result accessible with the same function
-        this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */delta_),
-        (this->phiExp_ * psiShift).transpose()
+    // The needed matrix multiplication is on the spatial index.
+        this->Lat.exp_hopping_matrix(delta_),
+    // To get correct broadcasting we transpose the element-wise multiplication
+    // so that each column is Nx big.
+        (this->phiExp_ * psi).transpose()
     ).transpose();
+    // and then transpose back.
 
-    // anti-periodic boundary condition
+    // Now Fpsi contains
+    // [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    // What remains is to shift it
+    Fpsi.shift(0,1);
+    // and apply B
+    Fpsi(0,NSL::Slice()) *= -1;
 
-    Fpsi.slice(0,0,1)*=-1;
     return Fpsi;
 }
 
@@ -39,21 +41,36 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M(const NSL:
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(const NSL::Tensor<Type> & psi){
-    NSL::Tensor<Type> out;
-    const NSL::size_t Nt = this->phi_.shape(0);
-    const NSL::size_t Nx = this->phi_.shape(1);
-    //const NSL::complex<NSL::Concept::isNumber RT_extractor<Type>::value_type> I(0,1);
+    
+    /** We derive M† as follows:
+      *     M_{tx,iy}   = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}   exp(+iφ_{iy}  ) δ_{t,i+1}
+      *     M_{tx,iy}^* = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}^* exp(-iφ_{iy}^*) δ_{t,i+1}
+      *         = (M^*T)_{iy,tx} = (M†)_{iy,tx}
+      * so now we just relabel
+      *     M†_{tx,iy}  = δ_{yx} δ_{it} - B_i [exp(δΚ)]_{yx}^* exp(-iφ_{tx}^*) δ_{i,t+1}
+      * and massage
+      *     M†_{tx,iy}  = δ_{xy} δ_{ti} - B_i [exp(δΚ)†]_{xy} exp(-iφ_{tx}^*) δ_{t+1,i}.
+      *                 = δ_{xy} δ_{ti} - B_i [exp(δ^* Κ)]_{xy} exp(-iφ_{tx}^*) δ_{t+1,i}.
+      * which simplified slightly as K is Hermitian.
+      **/
 
-    // apply kronecker delta
-    NSL::Tensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
+    /** If we now consider applying M† to ψ_{iy} we get
+      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} B_i     [exp(δ^* K)]_{xy}  ψ_{iy}
+      *                                                         |- * -> |--- matrix multiply ---|
+      **/
+    NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_vec(
+        this->Lat.exp_hopping_matrix(NSL::conj(delta_)),
+        NSL::LinAlg::transpose(psi)
+        ).transpose();
+    BexpKpsi(0, NSL::Slice()) *= -1;
 
-    out= NSL::LinAlg::mat_vec(
-        NSL::LinAlg::adjoint(this->phiExp_).transpose(),
-         this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */delta_))
-     * psiShift;
-    //anti-periodic boundary condition
-    out.slice(0,0,1)*=-1;
-    return (psi-out);
+    /** We now need to evaluate
+      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} expKpsi_{ix}
+      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t,i-1} expKpsi_{ix}
+      *                          |- element-wise * -->|------- shift ------|
+      **/
+
+    return psi - ( NSL::conj(this->phiExp_) * (BexpKpsi.shift(0,-1)));
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
