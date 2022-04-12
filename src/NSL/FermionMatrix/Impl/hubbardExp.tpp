@@ -7,7 +7,14 @@
 
 namespace NSL::FermionMatrix {
 
-//!
+/*!
+ * F_(psi) returns a vector the same shape as psi that is given by
+ *
+ * \f$ \texttt{F_(psi)}_{tx} = [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1}\f$
+ *
+ * which is the off-diagonal piece of \f$M\f$ itself applied to an appropriate vector.
+ *
+ **/
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL::Tensor<Type> & psi){
     const NSL::size_t Nt = this->phi_.shape(0);

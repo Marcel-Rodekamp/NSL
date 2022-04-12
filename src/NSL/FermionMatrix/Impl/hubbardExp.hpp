@@ -1,20 +1,31 @@
 #ifndef NSL_FERMION_MATRIX_HUBBARD_EXP_HPP
 #define NSL_FERMION_MATRIX_HUBBARD_EXP_HPP
 
-/*! \file fermionMatrixHubbardExp.hpp
+/*! \file HubbardExp.hpp
  *  Class for exponential discretization of fermion matrix.
  *
  *  The class contains methods which would be used for
  *  the computation of fermionic action
- *    
+ *  
  **/
 
 #include "../fermionMatrix.hpp"
 
 namespace NSL::FermionMatrix {
 
-//! \todo: Remove FermionMatrix from the name
 //! \todo: Remove Hubbard from the name and make it a namespace
+/*!
+ * The discretization, in index notation, is given by
+ *      \f$M_{tx,iy} = δ_{ti} δ_{xy} - [\exp(δK)]_{xy} \exp(i φ_{tx}) B_t δ_{t,i+1}\f$
+ *  where
+ *   - t and i run over times
+ *   - x and y run over spatial sites
+ *   - φ is the auxiliary field
+ *   - K is the hopping matrix of the lattice
+ *   - Most of the δs are Kronecker deltas; the one multiplying K is β/nt
+ *   - B encodes the boundary conditions;
+ *
+ **/
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType >
 class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
