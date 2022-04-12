@@ -130,14 +130,11 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1); 
 
-    //For identity matrix 
-    const Type length = Nx;
-    
     NSL::Tensor<Type> prod(Nt,Nx,Nx);
     NSL::Tensor<Type> out(Nx,Nx);
     Type logdet = 0.0;
     
-    prod = this->Lat.exp_hopping_matrix(/*delta=(beta/Nt) */this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+    prod = this->Lat.exp_hopping_matrix(this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
     //F_{Nt-1}
     out = prod(Nt-1, NSL::Slice(), NSL::Slice());
 
