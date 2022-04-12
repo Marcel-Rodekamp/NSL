@@ -95,9 +95,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     private:
     /*!
-     * F_(psi) returns a vector the same shape as psi that is given by
+     * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by
      *
-     * \f$ \texttt{F_(psi)}_{tx} = δ_{ti} δ_{xy} - [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1}\f$
+     * \f$ \texttt{F_(psi)}_{tx} = - [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}\f$
      *
      * which is the off-diagonal piece of \f$M\f$ itself applied to an appropriate vector.
      *
