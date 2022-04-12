@@ -75,34 +75,53 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger(const NSL::Tensor<Type> & psi){
-    const NSL::size_t Nt = this->phi_.shape(0);
-    const NSL::size_t Nx = this->phi_.shape(1);
-    
-   //MMdagger(psi) = M(psi) + Mdagger(psi) + exp_hopping_mtrix^2 x psi - psi
-    NSL::Tensor<Type> out = this->M(psi) 
-        + this->Mdagger(psi) 
-        + NSL::LinAlg::mat_vec(
-            (this->Lat.exp_hopping_matrix(2*delta_)), 
-            NSL::LinAlg::transpose(psi)
-        ).transpose();
-
-    return (out-psi);
+    /** Let's evaluate MM† using the index representations above.
+      *     (MM†)_{tx,iy}   = M_{tx,uz} (M†)_{uz,iy}
+      *                     = (δ_{tu} δ_{xz} - [\exp(δK)]_{xz} \exp(i φ_{uz}) B_t δ_{t,u+1} ) 
+      *                       (δ_{ui} δ_{zy} - B_i [exp(δ^* Κ)]_{zy} exp(-iφ_{uz}^*) δ_{u+1,i})
+      * Note that the first term in each paren is just the identity matrix.
+      * So, if we expand the parentheses we can write 
+      *     (MM†)_{tx,iy}   = M_{tx,iy} + M†_{tx,iy) - δ_{ti} δ_{xy}
+      *                     + [\exp(δK)]_{xz} exp(i φ_{uz}) B_t δ_{t,u+1} B_i [exp(δ^* K)]_{zy} exp(-iφ_{uz}^*) δ_{u+1,i}
+      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,u+1} δ_{u+1,i} [exp(δK)]_{xz} [exp(δ^* Κ)]_{zy} exp(i (φ-φ^*)_{uz}) 
+      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,i} [exp(δK)]_{xz}  exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *                     = (M + M† - 1)_{tx,iy} + (B_t)^2 δ_{t,i} [exp(δK)]_{xz}  exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *                     = (M + M† - 1)_{tx,iy} + [exp(δK)]_{xz}  exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *
+      * In the case that phi is real this simplifies because the φ-dependent term is 1 and one finds
+      *                     = (M + M† - 1)_{tx,iy} + [exp((δ+δ^*)K)]_{xy}
+      **/
+    return (this->M(psi) + this->Mdagger(psi) - psi) + NSL::LinAlg::mat_vec(
+        this->Lat.exp_hopping_matrix(delta_),
+        (   NSL::LinAlg::shift(this->phiExp_ * NSL::conj(this->phiExp_), 0, +1)
+          * NSL::LinAlg::mat_vec(
+                this->Lat.exp_hopping_matrix(NSL::conj(delta_)),
+                NSL::LinAlg::transpose(psi)
+            ).transpose()
+        ).transpose()
+    ).transpose();
 
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(const NSL::Tensor<Type> & psi){
-    const NSL::size_t Nt = this->phi_.shape(0);
-    const NSL::size_t Nx = this->phi_.shape(1);
-    
-
-    //MMdagger(psi) = M(psi) + Mdagger(psi) + exp(-i*phi) * (exp_hopping_mtrix^2 x exp(-i*phi)* psi) - psi
-    NSL::Tensor<Type> out= this->M(psi) + this->Mdagger(psi) + (NSL::LinAlg::adjoint(this->phiExp_) *
-        NSL::LinAlg::mat_vec((this->Lat.exp_hopping_matrix(2*delta_)),
-        ((this->phiExp_ * psi).transpose()))).transpose();
-
-    return (out-psi);
-
+    /** Let's evaluate MM† using the index representations above.
+      *     (M†M)_{tx,iy}   = (M†)_{tx,uz} M_{uz,iy}
+      *                     = (δ_{tu} δ_{xz} - B_u [exp(δ^* K)]_{xz} exp(-iφ_{tx}^*) δ_{t+1,u})
+      *                       (δ_{ui} δ_{zy} - B_u δ_{u,i+1} [exp(δK)]_{zy} exp(+iφ_{iy}) )
+      * Note that the first term in each paren is just the identity matrix.
+      * So, if we expand the parentheses we can write 
+      *     (MM†)_{tx,iy}   = M_{tx,iy} + M†_{tx,iy) - δ_{ti} δ_{xy}
+      *                     + B_u^2 δ_{t+1,u} δ_{u,i+1} exp(-iφ_{tx}^*) [exp(δ^* Κ)]_{xz} [exp(δ K)]_{zy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t+1,i+1} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t,i} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + exp(-iφ_{ix}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *
+      **/
+    return this->M(psi) + this->Mdagger(psi) - psi + NSL::conj(this->phiExp_) * NSL::LinAlg::mat_mul(
+        this->Lat.exp_hopping_matrix(NSL::conj(delta_)+delta_),
+        (this->phiExp_ * psi ).transpose()
+    ).transpose();
 }
 
 //return type
