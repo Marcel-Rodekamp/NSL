@@ -159,7 +159,7 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
 // ======================================================================
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta, const Type & epsilon) {
+void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
@@ -194,7 +194,7 @@ void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & La
 
 //Test for the function Mdagger(psi)
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta, const Type & epsilon) {
+void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
@@ -232,7 +232,7 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
 // ======================================================================
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta, const Type & epsilon) {
+void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
@@ -258,7 +258,7 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
 // ======================================================================
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta, const Type & epsilon) {
+void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
