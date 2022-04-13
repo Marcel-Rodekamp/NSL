@@ -127,4 +127,18 @@ bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int ulp = std::num
             || std::fabs(x.imag()-y.imag()) < std::numeric_limits<Type>::min() );
 }
 
+template<typename Type>
+NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int ulp = std::numeric_limits<typename NSL::RT_extractor<Type>::value_type>::digits10){
+    assertm( y.shape() == x.shape(), "To be almost equal two tensors must be the same shape.");
+
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    result = false;
+    NSL::size_t elements = x.numel();
+    for(NSL::size_t i = 0; i < elements; i++){
+        result[i] = almost_equal(x[i], y[i], ulp);
+    }
+
+    return result;
+}
+
 #endif

@@ -6,8 +6,6 @@
 // THEN we can use the correctness of M and Mdagger to check if MMdagger and MdaggerM are correct,
 // since in principle the result of MMdagger should just be M•Mdagger (and similarly for MdaggerM).
 
-// TODO Without an almost_equal for NSL::Tensors we accept an epsilon.
-
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
@@ -15,16 +13,16 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
 //  - (matrix * identity matrix) * vector
 //  - matrix * vector
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2, const Type & epsilon = 1e-6);
+void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2, const Type & epsilon = 1e-6);
+void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2, const Type & epsilon = 1e-6);
+void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2, const Type & epsilon = 1e-6);
+void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 2);
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Lattice, const Type & beta = 1);
@@ -152,15 +150,8 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     NSL::Tensor<Type> result_exa = psi - out;
     NSL::Tensor<Type> result_alg = M.M(psi);
 
-    REQUIRE(result_exa.dim() == result_alg.dim());
-    REQUIRE(result_exa.numel() == result_alg.numel());
-    for(int d = 0; d < result_exa.dim(); ++d){
-        REQUIRE(result_exa.shape(d) == result_alg.shape(d));
-    }
-
-    for(int i = 0; i < result_exa.numel(); ++i){
-        REQUIRE(almost_equal(result_exa[i],result_alg[i]));
-    }
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    REQUIRE( almost_equal(result_exa, result_alg, 3).all() );
 }
 
 // ======================================================================
@@ -193,9 +184,8 @@ void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & La
         }
     }
 
-    INFO("nx: "+NSL::to_string(nx)+" nt: "+NSL::to_string(nt));
-    // TODO: get an almost_equals for NSL::Tensors
-    REQUIRE(((sparse-dense).abs() < NSL::abs(epsilon)).all());
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    REQUIRE( almost_equal(sparse, dense).all() );
 }
 
 // ======================================================================
@@ -233,9 +223,8 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
         }
     }
 
-    INFO("nx: "+NSL::to_string(nx)+" nt: "+NSL::to_string(nt));
-    // TODO: get an almost_equals for NSL::Tensors
-    REQUIRE(((sparse-dense).abs() < NSL::abs(epsilon)).all());
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    REQUIRE( almost_equal(sparse,dense).all() );
 }
 
 // ======================================================================
@@ -259,12 +248,9 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
  
     auto direct = M.MdaggerM(psi);
     auto indirect = M.Mdagger(M.M(psi));
-    auto diff = direct - indirect;
 
-    for(int i = 0; i < direct.numel(); ++i){
-        REQUIRE(almost_equal(direct[i],indirect[i]));
-    }
-
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    REQUIRE( almost_equal(direct,indirect).all() );
 }
 
 // ======================================================================
@@ -289,10 +275,8 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
     auto indirect = M.M(M.Mdagger(psi));
     auto diff = direct - indirect;
 
-    for(int i = 0; i < direct.numel(); ++i){
-        REQUIRE(almost_equal(direct[i],indirect[i]));
-    }
-
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    REQUIRE( almost_equal(direct,indirect).all() );
 }
 
 // ======================================================================
