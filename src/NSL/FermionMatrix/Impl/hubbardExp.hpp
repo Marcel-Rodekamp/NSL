@@ -37,11 +37,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     HubbardExp() = delete;
 
     //!
-    /*!
-     *
-     * \todo: SpatialLattice accepts only real type template arguments
-     *   
-    *! 
+    /*! 
     *  \param lat  an object of lattice type (Ring, square, etc.).
     *  \param phi  a tensor with dimensions N_t x N_x
     *  \param beta  a floating point number where delta=beta/N_t.
