@@ -26,7 +26,7 @@ class FermionMatrix {
 
     public:
 
-    //Declaration of methods methods M, M_dagger, MM_dagger and M
+    //Declaration of methods methods M, M_dagger, MM_dagger and MdaggerM
 
     /*!
     *  \param psi a vector with the dimensions N_t x N_x.
