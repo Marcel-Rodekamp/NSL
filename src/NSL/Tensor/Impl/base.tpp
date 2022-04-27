@@ -85,6 +85,13 @@ class TensorBase {
         //! \todo: Is this efficient?
         return this->data_.to(torch::TensorOptions().dtype<OtherType>());
     }
+
+    //! type conversion
+    template<NSL::Concept::isNumber OtherType>
+    operator NSL::Tensor<OtherType> () const {
+        //! \todo: Is this efficient?
+        return this->data_.to(torch::TensorOptions().dtype<OtherType>());
+    }
     
     //! copy from `torch::Tensor` constructor
     constexpr TensorBase(const torch::Tensor & other) :
@@ -113,7 +120,6 @@ class TensorBase {
     template<NSL::Concept::isNumber PrintType>
     friend std::ostream & operator<<(std::ostream & os, const NSL::Tensor<PrintType> & tensor);
 
-    protected:
     //! explicitly convert a polymorphism to this class by performing a shallow copy
     /*!
      * This is a convenience function such that other Impl classes can return
@@ -127,6 +133,14 @@ class TensorBase {
     {
         //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
     }
+    template<NSL::Concept::isNumber OtherType>
+    explicit TensorBase<Type>(TensorBase<OtherType> * other) : 
+        TensorBase(*other)
+    {
+        //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
+    }
+
+    protected:
 
     //! Underlying torch::Tensor holding the data
     torch::Tensor data_;
