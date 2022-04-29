@@ -94,7 +94,7 @@ bool compare_integer(Tint a, Tint b, Tint prec = 0){
  * In realtion to http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.22.6768
  * */
 template<typename Type>
-bool almost_equal(Type x, Type y, int ulp = std::numeric_limits<Type>::digits10)
+bool almost_equal(Type x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10)
 {
     // Combining the relative magnitude of the inputs to express a relative tolerance.
     // Combining the relative with the absolute tolerance and testing for the "worst case"
@@ -103,12 +103,12 @@ bool almost_equal(Type x, Type y, int ulp = std::numeric_limits<Type>::digits10)
 
     // an additional factor provides the accuracy in digits and by default 
     // uses the default precision of the given Type
-    return std::fabs(x-y) <= std::numeric_limits<Type>::epsilon() * max * ulp
+    return std::fabs(x-y) <= std::pow(10,1-matchingDigits) * max
         || std::fabs(x-y) < std::numeric_limits<Type>::min();
 }
 
 template<typename Type>
-bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int ulp = std::numeric_limits<Type>::digits10)
+bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10 )
 {
     // Combining the relative magnitude of the inputs to express a relative tolerance.
     // Combining the relative with the absolute tolerance and testing for the "worst case"
@@ -120,22 +120,22 @@ bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int ulp = std::num
     // uses the default precision of the given Type
     // We further demand that both the real and imaginary part agree up to
     // the defined error tolerance.
-    return (std::fabs(x.real()-y.real()) <= std::numeric_limits<Type>::epsilon() * maxReal * ulp 
+    return (std::fabs(x.real()-y.real()) <= std::pow(10,1-matchingDigits) * maxReal
             || std::fabs(x.real()-y.real()) < std::numeric_limits<Type>::min() ) 
         &&  
-           ( std::fabs(x.imag()-y.imag()) <= std::numeric_limits<Type>::epsilon() * maxImag * ulp 
+           (std::fabs(x.imag()-y.imag()) <= std::pow(10,1-matchingDigits) * maxImag 
             || std::fabs(x.imag()-y.imag()) < std::numeric_limits<Type>::min() );
 }
 
 template<typename Type>
-NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int ulp = std::numeric_limits<typename NSL::RT_extractor<Type>::value_type>::digits10){
+NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10){
     assertm( y.shape() == x.shape(), "To be almost equal two tensors must be the same shape.");
 
     NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
     result = false;
     NSL::size_t elements = x.numel();
     for(NSL::size_t i = 0; i < elements; i++){
-        result[i] = almost_equal(x[i], y[i], ulp);
+        result[i] = almost_equal(x[i], y[i], matchingDigits);
     }
 
     return result;
