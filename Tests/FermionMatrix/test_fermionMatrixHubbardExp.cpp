@@ -1,4 +1,6 @@
 #include "../test.hpp"
+#include <iomanip>
+#include <limits>
 
 // We rely on the accuracy of the application of M for testing.
 // If M is implemented correctly and M_dense is implemented correctly we can
@@ -253,7 +255,8 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
     auto indirect = M.Mdagger(M.M(psi));
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
-    REQUIRE( almost_equal(direct,indirect).all() );
+
+    REQUIRE( almost_equal(direct,indirect, std::numeric_limits<Type>::digits10-1).all() );
 }
 
 // ======================================================================
@@ -279,7 +282,7 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
     auto diff = direct - indirect;
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
-    REQUIRE( almost_equal(direct,indirect).all() );
+    REQUIRE( almost_equal(direct,indirect, std::numeric_limits<Type>::digits10-1).all() );
 }
 
 // ======================================================================
@@ -352,7 +355,7 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
     INFO("result   shifted: "+NSL::to_string(result_shift));
     INFO("difference      : "+NSL::to_string(result-result_shift));
 
-    REQUIRE(almost_equal(result_shift,result));
+    REQUIRE(almost_equal(result_shift,result,std::numeric_limits<Type>::digits10-1));
 
 }
 
@@ -383,7 +386,7 @@ void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, co
     INFO("result exact    : "+NSL::to_string(result_exa));
     INFO("difference      : "+NSL::to_string(result_exa-result_alg));
 
-    REQUIRE(almost_equal(result_alg,result_exa));
+    REQUIRE(almost_equal(result_alg,result_exa,std::numeric_limits<Type>::digits10-1));
 }
 
 // ======================================================================
@@ -402,8 +405,9 @@ void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice
     ComplexType I ={0,1};
 
     // When phi on a given timeslice is the same on every spatial site
+    NSL::Tensor<Type> tmp (nt); tmp.rand();
     for(int i=0; i<nt; i++){
-        phi(i, NSL::Slice() ) = 2.0*i + 0.4 + i/4.0;
+        phi(i, NSL::Slice() ) = tmp(i) ;
     }
     // exp(i phi(t)) matrix is proportional to the identity matrix and can be
     // treated like a scalar.
@@ -427,7 +431,10 @@ void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice
     INFO("result exact    : "+NSL::to_string(result_exa));
     INFO("difference      : "+NSL::to_string(result_exa-result_alg));
 
-    REQUIRE(almost_equal(result_alg,result_exa));
+    // The double precision works fine with - 1 however, the floating point
+    // requires a digit less precision hence the -2.
+    // It is adviced to use float only if preciseness doesn't matter to much.
+    REQUIRE(almost_equal(result_alg,result_exa, std::numeric_limits<Type>::digits10 - 2));
 
 }
 
