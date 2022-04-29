@@ -45,6 +45,7 @@
 #define NUMERIC_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, NUMERIC_TYPES)
 #define FLOAT_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, FLOATING_POINT_TYPES)
 #define REAL_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, REAL_TYPES)
+#define COMPLEX_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, COMPLEX_TYPES)
 #define INTEGER_NSL_TEST_CASE(_1, _2) TEMPLATE_TEST_CASE(_1, _2, INTEGER_TYPES)
 // todo: Hopefully we can drop the real-only test-cases.
 // However, that requires solving issue #9.
@@ -85,6 +86,59 @@ bool compare_integer(Tint a, Tint b, Tint prec = 0){
     }
 }
 
+//! Compare two floating point numbers up to numerical precision
+/*!
+ * Inspired by: https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
+ * and        : https://stackoverflow.com/a/15012792
+ *
+ * In realtion to http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.22.6768
+ * */
+template<typename Type>
+bool almost_equal(Type x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10)
+{
+    // Combining the relative magnitude of the inputs to express a relative tolerance.
+    // Combining the relative with the absolute tolerance and testing for the "worst case"
+    // allows the most sensible description of a finite precision error.
+    Type max = std::max( {static_cast<Type>(1), std::fabs(x), std::fabs(y)} );
 
+    // an additional factor provides the accuracy in digits and by default 
+    // uses the default precision of the given Type
+    return std::fabs(x-y) <= std::pow(10,1-matchingDigits) * max
+        || std::fabs(x-y) < std::numeric_limits<Type>::min();
+}
+
+template<typename Type>
+bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10 )
+{
+    // Combining the relative magnitude of the inputs to express a relative tolerance.
+    // Combining the relative with the absolute tolerance and testing for the "worst case"
+    // allows the most sensible description of a finite precision error.
+    Type maxReal = std::max( {static_cast<Type>(1), std::fabs(x.real()), std::fabs(y.real())} );
+    Type maxImag = std::max( {static_cast<Type>(1), std::fabs(x.imag()), std::fabs(y.imag())} );
+
+    // an additional factor provides the accuracy in digits and by default 
+    // uses the default precision of the given Type
+    // We further demand that both the real and imaginary part agree up to
+    // the defined error tolerance.
+    return (std::fabs(x.real()-y.real()) <= std::pow(10,1-matchingDigits) * maxReal
+            || std::fabs(x.real()-y.real()) < std::numeric_limits<Type>::min() ) 
+        &&  
+           (std::fabs(x.imag()-y.imag()) <= std::pow(10,1-matchingDigits) * maxImag 
+            || std::fabs(x.imag()-y.imag()) < std::numeric_limits<Type>::min() );
+}
+
+template<typename Type>
+NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10){
+    assertm( y.shape() == x.shape(), "To be almost equal two tensors must be the same shape.");
+
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    result = false;
+    NSL::size_t elements = x.numel();
+    for(NSL::size_t i = 0; i < elements; i++){
+        result[i] = almost_equal(x[i], y[i], matchingDigits);
+    }
+
+    return result;
+}
 
 #endif

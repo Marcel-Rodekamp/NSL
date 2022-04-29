@@ -44,4 +44,7 @@ template class NSL::Lattice::Complete<double>;
 // There's no way to make obvious sense of complex hopping.
 // There's not even a way to pick a convention, since every site
 // connects to every other site!
-// So, don't instantiate the complex<> types.
+// But, for compatibility with FermionMatrix, which wants complex types, we implement them anyway.
+// See issue #70
+template class NSL::Lattice::Complete<NSL::complex<float>>;
+template class NSL::Lattice::Complete<NSL::complex<double>>;
