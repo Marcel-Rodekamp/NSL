@@ -138,20 +138,23 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     ComplexType I ={0,1};
 
     // apply kronecker delta
-    NSL::Tensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
+    //NSL::Tensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
     NSL::Tensor<Type> out = NSL::LinAlg::mat_vec(
         Lattice.exp_hopping_matrix(delta),
-        ((phi*I).exp() * psiShift).transpose()
+        ((phi*I).exp() * psi).transpose()
     );
 
     // anti-periodic boundary condition
     out.transpose();
+    out.shift(0,1);
+
     out.slice(0,0,1)*=-1;
     NSL::Tensor<Type> result_exa = psi - out;
     NSL::Tensor<Type> result_alg = M.M(psi);
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
-    REQUIRE( almost_equal(result_exa, result_alg, 3).all() );
+
+    REQUIRE( almost_equal(result_exa, result_alg, std::numeric_limits<Type>::digits10).all() );
 }
 
 // ======================================================================
