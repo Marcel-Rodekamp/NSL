@@ -148,7 +148,7 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
 
     // anti-periodic boundary condition
     out.transpose();
-    out.shift(0,1);
+    out.shift(1,0);
 
     out.slice(0,0,1)*=-1;
     NSL::Tensor<Type> result_exa = psi - out;
