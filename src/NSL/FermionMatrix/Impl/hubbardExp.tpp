@@ -27,7 +27,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL
     // Now Fpsi contains
     // [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
     // What remains is to shift it
-    Fpsi.shift(0,1);
+    Fpsi.shift(1,0);
     // and apply B
     Fpsi(0,NSL::Slice()) *= -1;
 
@@ -70,7 +70,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
       *                          |- element-wise * -->|------- shift ------|
       **/
 
-    return psi - ( NSL::conj(this->phiExp_) * (BexpKpsi.shift(0,-1)));
+    return psi - ( NSL::conj(this->phiExp_) * (BexpKpsi.shift(-1,0)));
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -93,7 +93,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger(con
       **/
     return (this->M(psi) + this->Mdagger(psi) - psi) + NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(delta_),
-        (   NSL::LinAlg::shift(this->phiExp_ * NSL::conj(this->phiExp_), 0, +1)
+        (   NSL::LinAlg::shift(this->phiExp_ * NSL::conj(this->phiExp_), +1, 0)
           * NSL::LinAlg::mat_vec(
                 this->Lat.exp_hopping_matrix(NSL::conj(delta_)),
                 NSL::LinAlg::transpose(psi)
