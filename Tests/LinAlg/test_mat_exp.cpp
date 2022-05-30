@@ -98,10 +98,10 @@ void test_exponential_of_hermitian(const size_type & size){
     // avoid complex numbers (assuming you've got a real type).
     T det = NSL::LinAlg::det(U);
     INFO(" det U  = " << det);
-    INFO("|det U| = " << NSL::LinAlg::abs(det));
+    INFO("|det U| = " << NSL::abs(det));
 
     // Check that U is orthogonal / unitary (but allow for non-special).
-    REQUIRE(std::pow(NSL::LinAlg::abs(NSL::LinAlg::abs(det) - static_cast<T>(1)),2) < limit);
+    REQUIRE(std::pow(NSL::abs(NSL::abs(det) - static_cast<T>(1)),2) < limit);
 
     NSL::Tensor<T> Udagger(size,size);
     Udagger += U;
@@ -119,7 +119,7 @@ void test_exponential_of_hermitian(const size_type & size){
     // to be equal, up to some numerical precision.
     for(int i = 0; i < size; ++i) {
         for(int j = 0; j < size; ++j) {
-            auto res = NSL::LinAlg::abs(clever(i,j)-brute(i,j));
+            auto res = NSL::abs(clever(i,j)-brute(i,j));
             INFO("Type = " << typeid(T).name() << ", Res = " << res << ", limit = " << limit);
             REQUIRE( res <= limit);
         }

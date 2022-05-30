@@ -24,11 +24,11 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
     }
 
     for (int i = 1; i < n; ++i) {
-        this->hops_(i , i - 1) = NSL::LinAlg::conj(kappa);
+        this->hops_(i , i - 1) = NSL::conj<Type>(kappa);
     }
 
     // Periodic boundary conditions
-    this->hops_(0, n - 1) = NSL::LinAlg::conj(kappa);
+    this->hops_(0, n - 1) = NSL::conj<Type>(kappa);
     this->hops_(n - 1, 0) = kappa;
 
     this->compute_adjacency();
