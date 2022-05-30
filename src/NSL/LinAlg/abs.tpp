@@ -8,14 +8,16 @@
 
 namespace NSL::LinAlg {
 
-template<typename Type>
-inline Type abs(Type number){
-    return std::abs(number);
-}
-
-template<typename Type>
-inline Type abs(NSL::complex<Type> number){
-    return std::abs(number);
+    //! Returns the real-type absolute value, regardless of whether the passed value is real or `complex<>`.
+template<NSL::Concept::isNumber Type>
+typename NSL::RT_extractor<Type>::type abs(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        // See NOTE above for std::explanation.
+        return std::abs(value);
+    }
+    else {
+        return std::abs(value);
+    }
 }
 
 template<typename Type>
