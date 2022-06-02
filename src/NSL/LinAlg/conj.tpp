@@ -4,6 +4,12 @@
 #include "../Tensor.hpp"
 
 namespace NSL::LinAlg {
+// NOTE: Why call std for c10 manipulations?
+// I know it looks wrong!
+//
+// c10 puts its real, imag, abs, arg, and norm into the std namespace.
+// See https://github.com/pytorch/pytorch/blob/master/c10/util/complex.h
+// (as recently as 085e2f7)
 
 //! Returns the complex conjugate, maintaining type (`complex<>` if `complex<>`, not if not).
 template<NSL::Concept::isNumber Type>
