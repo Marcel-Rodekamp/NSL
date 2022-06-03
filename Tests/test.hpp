@@ -141,4 +141,16 @@ NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int mat
     return result;
 }
 
+template<typename Type>
+NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10){
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    result = false;
+    NSL::size_t elements = x.numel();
+    for(NSL::size_t i = 0; i < elements; i++){
+        result[i] = almost_equal(x[i], y, matchingDigits);
+    }
+
+    return result;
+}
+
 #endif

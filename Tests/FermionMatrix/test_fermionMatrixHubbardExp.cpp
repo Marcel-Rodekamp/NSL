@@ -202,34 +202,84 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::Spat
 void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
+    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
 
-    NSL::Tensor<Type> phi(nt, nx);
-    NSL::Tensor<Type> psi(nt, nx);
-    NSL::Tensor<Type> dense(nt, nx);
+    NSL::Tensor<ComplexType> phi(nt, nx);
+    NSL::Tensor<ComplexType> psi(nt, nx);
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
-    NSL::Tensor<Type> sparse = M.Mdagger(psi);
+    // To simplify this test one can force the field
+    //phi = phi.real() + ComplexType(0,0);  // phi to be real
+    //psi = psi.real() + ComplexType(0,0);  // psi to be real
+    //psi = psi.imag() * ComplexType(0,1);  // psi to be imaginary
 
-    // Get a dense representation of M and construct M†
-    NSL::Tensor<Type> Mdagger_dense = M.M_dense(nt)
-                                        .transpose(0,2)     // switch time  indices
-                                        .transpose(1,3)     // switch space indices
-                                        .conj();
-    // Then do the obvious mat-vec.
+    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+
+
+    // First let's check Mdagger against the dagger of the dense implementation of M.
+    
+    // Construct a dense representation of M† from a dense representation of M
+    NSL::Tensor<ComplexType> Mdense_dagger = M.M_dense(nt).transpose(0,2).transpose(1,3).conj();
+
+    //  We can also apply Mdagger to the identity matrix in order to get a dense Mdagger.
+    //  Follow the M_dense implementation:
+
+    NSL::Tensor<ComplexType> dense(nt, nx, nt, nx);
+
+    // Construct the identity matrix.
+    NSL::Tensor<ComplexType> identity(nt, nx, nt, nx);
+    for(int t = 0; t < nt; t++){
+        identity(t,NSL::Slice(), t, NSL::Slice()) = NSL::Matrix::Identity<ComplexType>(nx);
+    }
+
+    // Ensure it's really the identity in the mat-vec sense.
+    // Apply the identity to psi via obvious mat-vec
+    NSL::Tensor<ComplexType> Ipsi(nt, nx);
     for(int t=0; t < nt; t++){
         for(int x=0; x < nx; x++){
             for(int i=0; i< nt; i++){
                 for(int y=0; y<nx; y++){
-                    dense(t,x) += Mdagger_dense(t,x,i,y) * psi(i,y);
+                    Ipsi(t,x) += identity(t,x,i,y) * psi(i,y);
                 }
             }
         }
     }
+    // If it's really the identity then nothing should have changed.
+    REQUIRE( (Ipsi == psi).all() );
 
-    INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
-    REQUIRE( almost_equal(sparse,dense).all() );
+    // Then we apply Mdagger to each column.
+    for(int i = 0; i < nt; i++){
+        for(int y = 0; y < nx; y++){
+            dense(NSL::Slice(), NSL::Slice(), i, y) = M.Mdagger(identity(NSL::Slice(), NSL::Slice(), i, y));
+        }
+    }
+    
+    // So, we can compare M†.I to (M.I)†
+    REQUIRE( almost_equal(Mdense_dagger-dense, ComplexType(0,0)).all() );
+    // This REQUIREment looks funny; why not just check that the two tensors are almost_equal directly, as in
+    //      REQUIRE( almost_equal(Mdense_dagger, dense).all() );
+    // TODO: almost_equal of +0.0000... and -0.0000... evaluates to False and that's extremely misleading
+    // and this sign difference shows up when we construct these two tensors in different ways.
+
+
+
+    // Finally, compare two ways of computing M†ψ
+    NSL::Tensor<ComplexType>Mdense_dagger_psi(nt, nx), M_dagger_psi(nt, nx);
+    // by doing the obvious mat-vec,
+    for(int t=0; t < nt; t++){
+        for(int x=0; x < nx; x++){
+            for(int i=0; i< nt; i++){
+                for(int y=0; y<nx; y++){
+                    Mdense_dagger_psi(t,x) += Mdense_dagger(t,x,i,y) * psi(i,y);
+                }
+            }
+        }
+    }
+    // and by applying Mdagger
+    M_dagger_psi = M.Mdagger(psi);
+
+    REQUIRE( almost_equal(Mdense_dagger_psi, M_dagger_psi).all() );
 }
 
 // ======================================================================

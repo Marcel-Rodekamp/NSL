@@ -16,5 +16,6 @@
 #include "Matrix.hpp"
 #include "Lattice.hpp"
 #include "FermionMatrix.hpp"
+#include "IO.hpp"
 
 #endif
