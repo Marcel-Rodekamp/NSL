@@ -17,12 +17,12 @@ void test_det(const size_type & size){
 template<typename T>
 void test_det_transpose(const size_type & size){
     auto A = NSL::Tensor<T>(size, size).rand();
-    auto AT = NSL::Tensor<T>::transpose();
+    auto AT = NSL::LinAlg::transpose(A);
 
     auto detA = NSL::LinAlg::det(A);
     auto detAT = NSL::LinAlg::det(AT);
     
-    REQUIRE( detA == detAT );
+    REQUIRE( almost_equal(detA, detAT, std::numeric_limits<T>::digits10-5) );
     
 }
 
@@ -69,12 +69,12 @@ FLOAT_NSL_TEST_CASE( "LinAlg: determinant of transpose", "[LinAlg,detprod]" ) {
     test_det_prod<TestType>(size);
 }
 
-FLOAT_NSL_TEST_CASE( "LinAlg: determinant of product", "[LinAlg,detprod]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: determinant of product", "[LinAlg,dettranspose]" ) {
     const size_type size = GENERATE(1, 5, 10, 15, 20);
-    test_det_prod<TestType>(size);
+    test_det_transpose<TestType>(size);
 }
 
-FLOAT_NSL_TEST_CASE( "LinAlg: determinant and trace identity", "[LinAlg,detprod]" ) {
+FLOAT_NSL_TEST_CASE( "LinAlg: determinant and trace identity", "[LinAlg,detexptr]" ) {
     const size_type size = GENERATE(1, 5, 10, 15, 20);
     test_det_exp_tr<TestType>(size);
 }
