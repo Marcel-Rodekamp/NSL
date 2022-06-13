@@ -25,6 +25,11 @@ void test_trig_hyperbolic_relations(SizeTypes ... Ns);
 // TEST CASES
 //=======================================================================
 
+COMPLEX_NSL_TEST_CASE("Tensor exp(0) = 1", "[Tensor,exp-of-zero-is-one]"){
+    NSL::Tensor<TestType> A(1,2,4);
+    REQUIRE( almost_equal(A.exp(), TestType(1)).all() );
+}
+
 COMPLEX_NSL_TEST_CASE("Tensor sin^2+cos^2=1", "[Tensor,pythagoras]"){
     NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
     NSL::size_t size1 = GENERATE(1,2,4,8,16,32);
