@@ -1,5 +1,5 @@
 name: Compile-and-Test-MacOs
-#on: [push]
+on: [push]
 jobs:
   check-MacOs-compilation-cpu:
     runs-on: macos-latest 
