@@ -214,8 +214,3 @@ NSL::Lattice::Square<Type>::Square(
 }
 
 } // namespace NSL::Lattice
-
-template class NSL::Lattice::Square<float>;
-template class NSL::Lattice::Square<double>;
-template class NSL::Lattice::Square<NSL::complex<float>>;
-template class NSL::Lattice::Square<NSL::complex<double>>;

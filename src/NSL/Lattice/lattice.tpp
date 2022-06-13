@@ -123,8 +123,3 @@ void NSL::Lattice::SpatialLattice<Type>::compute_bipartite(){
 }
 
 } // namespace NSL
-
-template class NSL::Lattice::SpatialLattice<float>;
-template class NSL::Lattice::SpatialLattice<double>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<float>>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<double>>;
