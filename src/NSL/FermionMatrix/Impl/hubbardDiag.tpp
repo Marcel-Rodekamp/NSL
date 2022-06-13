@@ -57,8 +57,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::Mdagger(con
       **/
     
     
-    NSL::Tensor<Type> Bexpconjphipsi;
-    Bexpconjphipsi =  psi;
+    NSL::Tensor<Type> Bexpconjphipsi(psi,true);
+    //Bexpconjphipsi =  psi;
     Bexpconjphipsi(0,NSL::Slice()) *= -1;
     Bexpconjphipsi = NSL::LinAlg::conj(this->phiExp_) * Bexpconjphipsi.shift(-1);
     
@@ -138,21 +138,19 @@ Type NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::logDetM(){
     const int Nx = this->phi_.shape(1); 
 
     NSL::Tensor<Type> prod(Nt,Nx,Nx);
-    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx);
-    Type sum;
+    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx), tes(Nx,Nx);
+    Type sum, I_plus = {0,1}, I_minus = {0,-1}; //put one I
     
-    //Not sure if it can be done this way:
-    prod = NSL::LinAlg::mat_vec((NSL::LinAlg::shift(NSL::LinAlg::exp(this->phi_*NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,-1)),-1).expand(Nx).transpose(1,2)),this->Lat.hopping_matrix(delta_));
+    
+    prod = (NSL::LinAlg::shift(NSL::LinAlg::exp(this->phi_*I_minus),-1).expand(Nx).transpose(1,2));//* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_)));
     for(int t = 0;  t < Nt ; t++){
-        sausage.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
+        tes = prod(t,NSL::Slice(),NSL::Slice())* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_));
+        sausage.mat_mul(tes); 
     }
-    for(int i=0 ; i<Nt ; i++){
-      for(int j=0 ; j<Nx ; j++){
-        sum += this->phi_(i,j);
-      }
-    }
-    sum *= NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,1);
-return (sum + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
+
+   sum = (this->phi_).sum(); //( NSL::Slice(), 0).sum() + this->phi_( NSL::Slice(), 1).sum();
+  
+return ((sum*I_plus) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
 
 } 
 }
