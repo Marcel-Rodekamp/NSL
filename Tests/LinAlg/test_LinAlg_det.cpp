@@ -37,8 +37,8 @@ void test_det_prod(const size_type & size){
     auto detAB = NSL::LinAlg::det(NSL::LinAlg::mat_mul(A, B));
     auto detBA = NSL::LinAlg::det(NSL::LinAlg::mat_mul(B, A));
     
-    REQUIRE( almost_equal(detA * detB, detAB, std::numeric_limits<T>::digits10-2) );
-    REQUIRE( almost_equal(detA * detB, detBA, std::numeric_limits<T>::digits10-2) );
+    REQUIRE( almost_equal(detA * detB, detAB, std::numeric_limits<T>::digits10-3) );
+    REQUIRE( almost_equal(detA * detB, detBA, std::numeric_limits<T>::digits10-3) );
 
 }
 
@@ -50,8 +50,8 @@ void test_det_exp_tr(const size_type & size){
     
     T trA = 0;
     for(auto i = 0; i < size; ++i) trA += A(i,i);
-   
-    REQUIRE( almost_equal(NSL::LinAlg::det(expA), (T)NSL::LinAlg::exp(trA), 3) );
+
+    REQUIRE( almost_equal(NSL::LinAlg::det(expA), (T)NSL::LinAlg::exp(trA), 2) );
 
 }
 
