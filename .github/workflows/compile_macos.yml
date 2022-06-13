@@ -1,0 +1,16 @@
+name: Compile-and-Test-MacOs
+on: [push]
+jobs:
+  check-MacOs-compilation-cpu:
+    runs-on: macos-latest 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Install Torch
+        run: pip3 install torch --extra-index-url https://download.pytorch.org/whl/cpu
+      - name: CMake NSL Debug
+        run: cmake -DTorch_DIR=$(pip3 show torch | grep Location | cut -d ' ' -f 2)/torch/share/cmake/Torch -DCMAKE_BUILD_TYPE=Debug 
+      - name: Make NSL
+        run: make -j 4
+      - name: Make Test NSL
+        run: make test
