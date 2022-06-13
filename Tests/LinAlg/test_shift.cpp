@@ -8,6 +8,9 @@
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void shiftTensor(SizeTypes ... sizes);
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
+void shiftTensorBySize(SizeTypes ... sizes);
+
 NSL_TEST_CASE("Tensor 1D Random Access", "[Tensor,1D,Random Access]"){
     NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
     shiftTensor<TestType>(size0);
