@@ -1,3 +1,7 @@
+#ifndef NSL_LATTICE_SQUARE_TPP
+#define NSL_LATTICE_SQUARE_TPP
+
+
 /*! \file square.cpp
  *  \author Evan Berkowitz
  *  \date October 2021
@@ -214,3 +218,4 @@ NSL::Lattice::Square<Type>::Square(
 }
 
 } // namespace NSL::Lattice
+#endif //NSL_LATTICE_SQUARE_HPP

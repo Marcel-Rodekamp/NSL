@@ -1,3 +1,6 @@
+#ifndef NSL_LATTICE_RING_TPP
+#define NSL_LATTICE_RING_TPP
+
 #include "ring.hpp"
 
 namespace NSL::Lattice {
@@ -35,3 +38,5 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
 }
 
 } // namespace NSL::Lattice
+
+#endif

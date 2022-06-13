@@ -1,3 +1,5 @@
+#ifndef NSL_LATTICE_TPP
+#define NSL_LATTICE_TPP
 #include "lattice.hpp"
 
 namespace NSL::Lattice {
@@ -123,3 +125,4 @@ void NSL::Lattice::SpatialLattice<Type>::compute_bipartite(){
 }
 
 } // namespace NSL
+#endif // NSL_LATTICE_TPP

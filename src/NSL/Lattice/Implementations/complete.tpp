@@ -1,3 +1,5 @@
+#ifndef NSL_LATTICE_COMPLETE_TPP
+#define NSL_LATTICE_COMPLETE_TPP
 /*! \file complete.cpp
 */
 
@@ -38,3 +40,4 @@ NSL::Lattice::Complete<Type>::Complete(const std::size_t n, const Type &kappa, c
 }
 
 } // namespace NSL::Lattice
+#endif //NSL_LATTICE_COMPLETE_TPP
