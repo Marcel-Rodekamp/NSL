@@ -21,3 +21,7 @@ add_test(NAME test_transpose COMMAND test_transpose)
 add_executable(test_LinAlg_shift test_shift.cpp ../test_main.cpp)
 target_link_libraries(test_LinAlg_shift NSL Catch2::Catch2)
 add_test(NAME test_LinAlg_shift COMMAND test_LinAlg_shift)
+
+add_executable(test_mat_mul test_mat_mul.cpp ../test_main.cpp)
+target_link_libraries(test_mat_mul NSL Catch2::Catch2)
+add_test(NAME test_mat_mul COMMAND test_mat_mul)
