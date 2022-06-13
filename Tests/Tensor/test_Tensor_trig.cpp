@@ -18,6 +18,9 @@ void test_half_periods(SizeTypes ... Ns);
 template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
 void test_euler(SizeTypes ... Ns);
 
+template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
+void test_trig_hyperbolic_relations(SizeTypes ... Ns);
+
 //=======================================================================
 // TEST CASES
 //=======================================================================
@@ -55,6 +58,13 @@ COMPLEX_NSL_TEST_CASE("Tensor euler identity", "[Tensor,trig,euler-identity]"){
     NSL::size_t size1 = GENERATE(1,2,4,8,16,32);
     NSL::size_t size2 = GENERATE(1,2,4,8,16,32);
     test_euler<TestType>(size0,size1,size2);
+}
+
+COMPLEX_NSL_TEST_CASE("Tensor trig/hyperbolic", "[Tensor,trig,hyperbolic]"){
+    NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
+    NSL::size_t size1 = GENERATE(1,2,4,8,16,32);
+    NSL::size_t size2 = GENERATE(1,2,4,8,16,32);
+    test_trig_hyperbolic_relations<TestType>(size0,size1,size2);
 }
 
 //=======================================================================
@@ -166,4 +176,31 @@ void test_euler(SizeTypes ... Ns){
 
 }
 
+//=======================================================================
+// Implementation Details: test_trig_hyperbolic_relations
+//=======================================================================
+template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
+void test_trig_hyperbolic_relations(SizeTypes ... Ns){
+    NSL::Tensor<Type> A(Ns...);A.rand();
+
+    // sinh x = -i sin ix
+    {
+        NSL::Tensor<Type> left(A,true);
+        NSL::Tensor<Type> right(A*Type(0,1),true);
+        REQUIRE( almost_equal(left.sinh() + Type(0,1) * right.sin(), Type(0) ).all() );
+    }
+    // cosh x = cos ix
+    {
+        NSL::Tensor<Type> left(A,true);
+        NSL::Tensor<Type> right(A*Type(0,1),true);
+        REQUIRE( almost_equal(left.cosh() - right.cos(), Type(0) ).all() );
+    }
+    // tanh x = -i tan ix
+    {
+        NSL::Tensor<Type> left(A,true);
+        NSL::Tensor<Type> right(A*Type(0,1),true);
+        REQUIRE( almost_equal(left.tanh() + Type(0,1) * right.tan(), Type(0) ).all() );
+    }
+
+}
 
