@@ -50,7 +50,13 @@ class Configuration {
         dict_{ {std::get<0>(keyVal),std::get<1>(keyVal)} ... }
     {}
 
-    //! Access the field with a given key
+	Configuration zero(){
+		for(auto fName: fieldNames()){
+			field(fName) = zeros_like(field(fName));
+		}
+		return *this;
+	}
+	//! Access the field with a given key
     /*!
      * This function requires to specify the desired dtype which should 
      * match the original dtype of the field.
@@ -62,6 +68,14 @@ class Configuration {
         return std::any_cast<NSL::Tensor<TensorType>>(dict_[key]);
     }
     
+	// Configuration<TensorTypes ...> & operator=(const Configuration<TensorTypes ...> & other){
+	// 	int i = 0;
+	// 	for(std::string fName : fieldNames()) {
+	// 		dict_[fName] = NSL::Tensor(other.field<NthTypeOf<i, TensorTypes>>(fName), true);
+	// 		i++;
+	// 	}
+	// 	return *this;
+    // }
     //! Acces the field with a given key (Homogeneous Configuration only)
     /*!
      * Provided as convenience function. If the configuration is considered

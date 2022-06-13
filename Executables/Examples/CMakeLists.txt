@@ -1,4 +1,5 @@
 add_executable(example_configuration example_configuration.cpp)
 target_link_libraries(example_configuration NSL)
 
-
+add_executable(example_action example_action.cpp)
+target_link_libraries(example_action NSL)

@@ -43,12 +43,20 @@ int main(){
         {"spin 2",spins2} 
     );
 
-   // for homogeneous configs it works without template parameter
-   std::cout << "spin 1 = " << homConfig.field("spin 1") << std::endl;
-   std::cout << "spin 2 = " << homConfig.field("spin 2") << std::endl;
 
+	// for homogeneous configs it works without template parameter
+	std::cout << "spin 1 = " << homConfig.field("spin 1") << std::endl;
+	std::cout << "spin 2 = " << homConfig.field("spin 2") << std::endl;
 
-    return EXIT_SUCCESS;
+	NSL::Configuration<int, int> homConfig2(
+		{"spin 1",spins}, 
+        {"spin 2",spins2});
+	homConfig2 = homConfig;
+	// homConfig2.field("spin 2")[0]			= 42;
+	// std::cout << "spin 2 = " << homConfig.field("spin 2") << std::endl;
+	// std::cout << "spin 2 = " << homConfig2.field("spin 2") << std::endl;
+
+	return EXIT_SUCCESS;
 
 }
 
