@@ -27,6 +27,7 @@ COMPLEX_NSL_TEST_CASE( "FermionMatrix: MMdagger hermitian", "[FermionMatrix, MMd
 
     NSL::Lattice::Complete<TestType> LatticeC(nx);
     test_FermionMatrix_MMdagger_hermitian<TestType>(nt, LatticeC, "Complete");
+    
 }
 
 COMPLEX_NSL_TEST_CASE( "FermionMatrix: MdaggerM hermitian", "[FermionMatrix, MdaggerM_hermitian]" ) {
@@ -74,8 +75,9 @@ void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & L
 	}
 
 	// Finally we construct the adjoint matrix and ensure it is equal to the original
-	NSL::Tensor<Type> MMdaggerH = MMdagger.adjoint();
+	NSL::Tensor<Type> MMdaggerH = MMdagger.T(0,2).H(1,3);
 
+    REQUIRE(MMdaggerH.data() != MMdagger.data());
 	REQUIRE(almost_equal(MMdagger, MMdaggerH, std::numeric_limits<Type>::digits10).all());
 }
 
@@ -111,8 +113,9 @@ void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & L
 	}
 
 	// Finally we construct the adjoint matrix and ensure it is equal to the original
-	NSL::Tensor<Type> MdaggerMH = MdaggerM.adjoint();
+	NSL::Tensor<Type> MdaggerMH = MdaggerM.T(0,2).H(1,3);
 
+    REQUIRE(MdaggerMH.data() != MdaggerM.data());
 	REQUIRE(almost_equal(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10).all());
 }
 
