@@ -29,14 +29,14 @@ class TensorAdjoint:
         //! Adjoint of `dim0` and `dim1` creates an explicit copy (elementwise complex conjugate & matrix transpose)
         NSL::Tensor<Type> H(const NSL::size_t & dim0, const NSL::size_t & dim1) {
 
-            torch::Tensor data = torch::transpose(this->data_,dim0,dim1);
+            torch::Tensor data = torch::transpose(this->data_,dim0,dim1).clone();
             data = data.conj();
             return data;
         }
 
         //! Matrix adjoint creates an explicit copy (elementwise complex conjugate & matrix transpose)
         NSL::Tensor<Type> H() {
-            torch::Tensor data = torch::transpose(this->data_,this->data_.dim()-1,this->data_.dim()-2);
+            torch::Tensor data = torch::transpose(this->data_,this->data_.dim()-1,this->data_.dim()-2).clone();
 
             data = data.conj();
             return data;
