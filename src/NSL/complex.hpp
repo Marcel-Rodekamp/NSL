@@ -73,7 +73,5 @@ constexpr bool is_complex(){
     return RT_extractor<T>::value;
 }
 
-
-
 }
 #endif //NSL_COMPLEX_HPP

@@ -5,6 +5,7 @@
 #include "NSL.hpp"
 
 // for CATCH2::INFO string computations
+#include <stdexcept>
 #include<string>
 
 // to compare numbers to machine prec
@@ -152,7 +153,6 @@ NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, Type y, int matchingDigits =
 
     return result;
 }
-
 
 //! Get the number of Matching Digits from floating point precision
 /*!
