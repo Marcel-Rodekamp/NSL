@@ -14,4 +14,7 @@
 #include "LinAlg/mat_vec.tpp"
 #include "LinAlg/shift.tpp"
 
+#include "LinAlg/Solver/Solver.hpp"
+#include "LinAlg/Solver/Impl/CG.tpp" 
+
 #endif
