@@ -4,25 +4,25 @@
 template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
 void test_conj_transpose(SizeTypes ... Ns);
 
-FLOAT_NSL_TEST_CASE("Tensor 1D Complex Conjugate", "[Tensor,1D,Complex Conjugate]"){
+COMPLEX_NSL_TEST_CASE("Tensor 1D Complex Conjugate", "[Tensor,1D,Complex Conjugate]"){
     NSL::size_t size0 = GENERATE(1,8,32);
     test_conj_transpose<TestType>(size0);
 }
 
-FLOAT_NSL_TEST_CASE("Tensor 2D Complex Conjugate", "[Tensor,2D,Complex Conjugate]"){
+COMPLEX_NSL_TEST_CASE("Tensor 2D Complex Conjugate", "[Tensor,2D,Complex Conjugate]"){
     NSL::size_t size0 = GENERATE(1,8,32);
     NSL::size_t size1 = GENERATE(1,8,32);
     test_conj_transpose<TestType>(size0,size1);
 }
 
-FLOAT_NSL_TEST_CASE("Tensor 3D Complex Conjugate", "[Tensor,3D,Complex Conjugate]"){
+COMPLEX_NSL_TEST_CASE("Tensor 3D Complex Conjugate", "[Tensor,3D,Complex Conjugate]"){
     NSL::size_t size0 = GENERATE(1,8,32);
     NSL::size_t size1 = GENERATE(1,8,32);
     NSL::size_t size2 = GENERATE(1,8,32);
     test_conj_transpose<TestType>(size0,size1,size2);
 }
 
-FLOAT_NSL_TEST_CASE("Tensor 4D Complex Conjugate", "[Tensor,4D,Complex Conjugate]"){
+COMPLEX_NSL_TEST_CASE("Tensor 4D Complex Conjugate", "[Tensor,4D,Complex Conjugate]"){
     NSL::size_t size0 = GENERATE(1,8,32);
     NSL::size_t size1 = GENERATE(1,8,32);
     NSL::size_t size2 = GENERATE(1,8,32);
