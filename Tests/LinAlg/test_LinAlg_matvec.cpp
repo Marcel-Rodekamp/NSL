@@ -45,7 +45,12 @@ void test_linalg_mat_vec(NSL::size_t size){
         }
     }
 
-    REQUIRE( almost_equal(tmp, b).all() );
+    int precision = std::numeric_limits<Type>::digits10;
+    if(size > 128){
+        precision -= 1;
+    }
+
+    REQUIRE( almost_equal(b,tmp, precision).all() );
 }
     
 template<NSL::Concept::isNumber Type>
