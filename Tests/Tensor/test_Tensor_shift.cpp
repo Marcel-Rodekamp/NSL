@@ -1,17 +1,17 @@
-/*!
- * this tests the different versions of `NSL::LinAlg::shift`
- * \todo Not fully developed!
- * */
 
 #include "../test.hpp"
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void shiftTensor(SizeTypes ... sizes);
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
+void shiftTensorBySize(SizeTypes ... sizes);
+
+
 NSL_TEST_CASE("Tensor 1D Random Access", "[Tensor,1D,Random Access]"){
     NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
     shiftTensor<TestType>(size0);
-}
+} 
 
 FLOAT_NSL_TEST_CASE("Tensor 1D LinAlg Shift", "[Tensor,1D,Equality]"){
     NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
@@ -47,10 +47,10 @@ void shiftTensor(SizeTypes ... sizes){
     NSL::Tensor<Type> A(sizes...);
 
     // shift the tensor
-    NSL::Tensor<Type> Ashift = NSL::LinAlg::shift(A,1);
+    NSL::Tensor<Type> Ashift = A.shift(2);
 
-    // check that the memory spaces are disjunct
-    REQUIRE(A.data() != Ashift.data() );
+    // check that the memory spaces are same
+    REQUIRE(A.data() == Ashift.data() );
 }
 
 // ======================================================================
@@ -61,7 +61,6 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void shiftTensorBySize(SizeTypes ... sizes){
 
     std::array<NSL::size_t, sizeof...(sizes)> size_arr = {sizes...};
-
         //create new Tensor
         NSL::Tensor<Type> A(sizes...);
 
@@ -69,10 +68,9 @@ void shiftTensorBySize(SizeTypes ... sizes){
         A.rand(); 
 
         //shifting the above tensor in dim 0 by the size of dimension 0 such that the shift does not affect the tensor
-        NSL::Tensor<Type> A_shift = NSL::LinAlg::shift(A,size_arr[0],0);
+        NSL::Tensor<Type> A_shift = A.shift(size_arr[0]);
         
         // check for equality
         REQUIRE((A == A_shift).all() );  
 
 }
-

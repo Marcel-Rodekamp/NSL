@@ -29,3 +29,11 @@ add_test(NAME test_operatorAssignment COMMAND test_operatorAssignment)
 add_executable(test_Tensor_conj test_Tensor_conj.cpp ../test_main.cpp)
 target_link_libraries(test_Tensor_conj NSL Catch2::Catch2)
 add_test(NAME test_Tensor_conj COMMAND test_Tensor_conj)
+
+add_executable(test_Tensor_shift test_Tensor_shift.cpp ../test_main.cpp)
+target_link_libraries(test_Tensor_shift NSL Catch2::Catch2)
+add_test(NAME test_Tensor_shift COMMAND test_Tensor_shift)
+
+add_executable(test_Tensor_transpose test_Tensor_transpose.cpp ../test_main.cpp)
+target_link_libraries(test_Tensor_transpose NSL Catch2::Catch2)
+add_test(NAME test_Tensor_transpose COMMAND test_Tensor_transpose)
