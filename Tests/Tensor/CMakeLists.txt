@@ -34,6 +34,10 @@ add_executable(test_Tensor_stats test_Tensor_stats.cpp ../test_main.cpp)
 target_link_libraries(test_Tensor_stats NSL Catch2::Catch2)
 add_test(NAME test_Tensor_stats COMMAND test_Tensor_stats)
 
+add_executable(test_Tensor_slice test_Tensor_slice.cpp ../test_main.cpp)
+target_link_libraries(test_Tensor_slice NSL Catch2::Catch2)
+add_test(NAME test_Tensor_slice COMMAND test_Tensor_slice)
+
 add_executable(test_Tensor_trig test_Tensor_trig.cpp ../test_main.cpp)
 target_link_libraries(test_Tensor_trig NSL Catch2::Catch2)
 add_test(NAME test_Tensor_trig COMMAND test_Tensor_trig)
@@ -41,4 +45,3 @@ add_test(NAME test_Tensor_trig COMMAND test_Tensor_trig)
 add_executable(test_Tensor_adjointH test_Tensor_adjointH.cpp ../test_main.cpp)
 target_link_libraries(test_Tensor_adjointH NSL Catch2::Catch2)
 add_test(NAME test_Tensor_adjointH COMMAND test_Tensor_adjointH)
-
