@@ -1,28 +1,24 @@
-/*!
- * this tests the different versions of `NSL::LinAlg::shift`
- * \todo Not fully developed!
- * */
-
 #include "../test.hpp"
 
-template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral SizeTypes>
-void test_linalg_mat_vec(SizeTypes size);
+template<NSL::Concept::isNumber Type>
+void test_linalg_mat_vec(NSL::size_t size);
 
-FLOAT_NSL_TEST_CASE("LinAlg MatVec", "[LinAlg,mat_vec]"){
-    NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
+template<NSL::Concept::isNumber Type>
+void test_mat_vec_linearity(NSL::size_t size);
+
+FLOAT_NSL_TEST_CASE("LinAlg mat_vec", "[LinAlg,mat_vec]"){
+    NSL::size_t size0 = GENERATE(1,2,4,8,16,32,1024);
     test_linalg_mat_vec<TestType>(size0);
 }
 
+FLOAT_NSL_TEST_CASE("LinAlg mat_vec linearity", "[LinAlg,mat_vec,linearity]"){
+    NSL::size_t size0 = GENERATE(1,2,4,8,16,32,64,128,256,512,1024);
+    test_mat_vec_linearity<TestType>(size0);
+}
 
-// ======================================================================
-// Implementation details: shiftTensor
-// ======================================================================
 
-template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral SizeTypes>
-void test_linalg_mat_vec(SizeTypes size){
-    
-    // Forgive 2 decimal places of floating-point precision loss.
-    auto limit = std::pow(10, 2-std::numeric_limits<Type>::digits10);
+template<NSL::Concept::isNumber Type>
+void test_linalg_mat_vec(NSL::size_t size){
     
     //create necessary Tensors
     NSL::Tensor<Type> A(size,size);
@@ -42,29 +38,38 @@ void test_linalg_mat_vec(SizeTypes size){
     NSL::Tensor<Type> b = NSL::LinAlg::mat_vec(A,x);
 
     // And now on foot
+    NSL::Tensor<Type> tmp(size);
     for(int i=0; i<size; i++){
-	Type tmp = 0;
-	for(int j=0; j<size; j++){
-	    tmp += A(i,j)*x(j);
-	}
-	auto res = NSL::LinAlg::abs(b(i)-tmp);
-	REQUIRE( res <= limit );
+        for(int j=0; j<size; j++){
+            tmp(i) += A(i,j)*x(j);
+        }
     }
 
+    REQUIRE( almost_equal(tmp, b).all() );
+}
     
+template<NSL::Concept::isNumber Type>
+void test_mat_vec_linearity(NSL::size_t size){
+
     // Check additivity: (A+B).(x+y) = A.x + A.y + B.x + B.y
     // =====================================================
     // perform the multiplication
-    NSL::Tensor<Type> B(size,size);
-    NSL::Tensor<Type> y(size);
+    NSL::Tensor<Type> A(size,size); A.rand();
+    NSL::Tensor<Type> B(size,size); B.rand();
+    NSL::Tensor<Type> x(size);      x.rand();
+    NSL::Tensor<Type> y(size);      y.rand();
 
-    B.rand();
-    y.rand();
-    
-    b = NSL::LinAlg::mat_vec(A+B,x+y);
+    NSL::Tensor<Type> b = NSL::LinAlg::mat_vec(A+B,x+y);
     NSL::Tensor<Type> c = NSL::LinAlg::mat_vec(A,x) + NSL::LinAlg::mat_vec(A,y) + NSL::LinAlg::mat_vec(B,x) + NSL::LinAlg::mat_vec(B,y);
 
-    REQUIRE( almost_equal(b,c).all() );
+    INFO(size);
+
+    int precision = std::numeric_limits<Type>::digits10;
+    if(size > 128){
+        precision -= 1;
+    }
+
+    REQUIRE( almost_equal(b,c, precision).all() );
     
 }
 
