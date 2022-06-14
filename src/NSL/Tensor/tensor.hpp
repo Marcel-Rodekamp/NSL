@@ -18,6 +18,7 @@
 #include "Tensor/Impl/realImag.tpp"
 #include "Tensor/Impl/expand.tpp"
 #include "Tensor/Impl/shift.tpp"
+#include "Tensor/Impl/device.tpp"
 
 // Arithmetic
 #include "Tensor/Impl/operatorAdditionEqual.tpp"
@@ -64,7 +65,8 @@ class Tensor:
     public NSL::TensorImpl::TensorReductions<Type>,
     public NSL::TensorImpl::TensorExpand<Type>,
     public NSL::TensorImpl::TensorShift<Type>,
-    public NSL::TensorImpl::TensorMatmul<Type>
+    public NSL::TensorImpl::TensorMatmul<Type>,
+    public NSL::TensorImpl::TensorDevice<Type> 
 {
     public:
 
