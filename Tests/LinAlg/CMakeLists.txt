@@ -33,3 +33,5 @@ add_test(NAME test_mat_mul COMMAND test_LinAlg_mat_mul)
 add_executable(test_LinAlg_det test_LinAlg_det.cpp ../test_main.cpp)
 target_link_libraries(test_LinAlg_det NSL Catch2::Catch2)
 add_test(NAME test_LinAlg_det COMMAND test_LinAlg_det)
+
+add_subdirectory(Solver/)
