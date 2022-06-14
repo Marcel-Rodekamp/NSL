@@ -33,3 +33,7 @@ add_test(NAME test_Tensor_conj COMMAND test_Tensor_conj)
 add_executable(test_Tensor_stats test_Tensor_stats.cpp ../test_main.cpp)
 target_link_libraries(test_Tensor_stats NSL Catch2::Catch2)
 add_test(NAME test_Tensor_stats COMMAND test_Tensor_stats)
+
+add_executable(test_Tensor_adjointH test_Tensor_adjointH.cpp ../test_main.cpp)
+target_link_libraries(test_Tensor_adjointH NSL Catch2::Catch2)
+add_test(NAME test_Tensor_adjointH COMMAND test_Tensor_adjointH)
