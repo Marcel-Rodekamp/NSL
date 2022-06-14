@@ -25,3 +25,7 @@ add_test(NAME test_operatorCompare COMMAND test_operatorCompare)
 add_executable(test_operatorAssignment test_operatorAssignment.cpp ../test_main.cpp)
 target_link_libraries(test_operatorAssignment NSL Catch2::Catch2)
 add_test(NAME test_operatorAssignment COMMAND test_operatorAssignment)
+
+add_executable(test_Tensor_conj test_Tensor_conj.cpp ../test_main.cpp)
+target_link_libraries(test_Tensor_conj NSL Catch2::Catch2)
+add_test(NAME test_Tensor_conj COMMAND test_Tensor_conj)
