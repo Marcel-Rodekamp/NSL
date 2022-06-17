@@ -11,6 +11,7 @@
 
 #include "../Lattice.hpp"
 #include "../Tensor.hpp"
+#include "../Matrix.hpp"
 #include <type_traits>
 
 namespace NSL::FermionMatrix{

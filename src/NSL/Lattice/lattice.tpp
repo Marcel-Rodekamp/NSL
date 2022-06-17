@@ -1,6 +1,8 @@
 #ifndef NSL_LATTICE_TPP
 #define NSL_LATTICE_TPP
 #include "lattice.hpp"
+#include "../LinAlg/abs.tpp"
+#include "../LinAlg/mat_exp.tpp"
 
 namespace NSL::Lattice {
 

@@ -15,7 +15,6 @@
 #include "../complex.hpp"
 #include "../map.hpp"
 #include "../Tensor.hpp"
-#include "../LinAlg.hpp"
 
 namespace NSL::Lattice {
 
