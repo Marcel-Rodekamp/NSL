@@ -22,6 +22,10 @@ add_executable(test_LinAlg_shift test_LinAlg_shift.cpp ../test_main.cpp)
 target_link_libraries(test_LinAlg_shift NSL Catch2::Catch2)
 add_test(NAME test_LinAlg_shift COMMAND test_LinAlg_shift)
 
+add_executable(test_LinAlg_matvec test_LinAlg_matvec.cpp ../test_main.cpp)
+target_link_libraries(test_LinAlg_matvec NSL Catch2::Catch2)
+add_test(NAME test_LinAlg_matvec COMMAND test_LinAlg_matvec)
+
 add_executable(test_LinAlg_det test_LinAlg_det.cpp ../test_main.cpp)
 target_link_libraries(test_LinAlg_det NSL Catch2::Catch2)
 add_test(NAME test_LinAlg_det COMMAND test_LinAlg_det)

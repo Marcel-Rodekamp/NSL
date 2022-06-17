@@ -24,13 +24,13 @@ class TensorTranspose:
 
     //! Transpose dim0 dim1 creating an explicit copy
     NSL::Tensor<Type> T(const NSL::size_t dim0, const NSL::size_t dim1) {
-        torch::Tensor data = torch::transpose(this->data_,dim0,dim1);
+        torch::Tensor data = torch::transpose(this->data_,dim0,dim1).clone();
         return std::move(data);
     }
 
     //! Matrix transpose creating an explicit copy
     NSL::Tensor<Type> T() {
-        torch::Tensor data = torch::transpose(this->data_,this->data_.dim()-1, this->data_.dim()-2);
+        torch::Tensor data = torch::transpose(this->data_,this->data_.dim()-1, this->data_.dim()-2).clone();
         return std::move(data);
     }
 
