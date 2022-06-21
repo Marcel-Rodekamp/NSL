@@ -82,7 +82,7 @@ class Solver{
             // Check that the given FermionMatrix<Type,LatticeType> is
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
-            requires( NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>,FermionMatrix<Type,LatticeType>> )
+            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         Solver(FermionMatrix<Type,LatticeType> & M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination = NSL::FermionMatrix::M
         ) {

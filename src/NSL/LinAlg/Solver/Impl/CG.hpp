@@ -79,7 +79,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // Check that the given FermionMatrix<Type,LatticeType> is
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
-            requires( NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>,FermionMatrix<Type,LatticeType>> )
+            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         CG(FermionMatrix<Type,LatticeType> & M,
                const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
@@ -138,7 +138,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // Check that the given FermionMatrix<Type,LatticeType> is
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
-            requires( NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>,FermionMatrix<Type,LatticeType>> )
+            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         CG(FermionMatrix<Type,LatticeType> & M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination,
                const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
