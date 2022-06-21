@@ -91,10 +91,8 @@ concept isIndexer = requires(T t) {
 /*!
  * All kind of inheritances (public,protected,private) is allowed.
  * */
-template<typename Base,typename Derived>
-concept isDerived = requires(Base B,Derived D){
-    requires std::is_base_of<Derived,Base>::value;
-};
+template<typename Derived,typename Base>
+concept isDerived = std::is_base_of_v<Base,Derived>;
 
 } // namespace NSL::Concept 
 
