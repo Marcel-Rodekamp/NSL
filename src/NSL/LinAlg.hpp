@@ -15,6 +15,7 @@
 #include "LinAlg/shift.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
+// includes CG.hpp
 #include "LinAlg/Solver/Impl/CG.tpp" 
 
 #endif
