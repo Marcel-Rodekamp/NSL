@@ -94,7 +94,6 @@ concept isIndexer = requires(T t) {
 template<typename Derived,typename Base>
 concept isDerived = std::is_base_of_v<Base,Derived>;
 
-
 } // namespace NSL::Concept 
 
 #endif //NSL_CONCEPTS_HPP
