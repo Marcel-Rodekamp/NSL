@@ -4,6 +4,7 @@
 #include "CG.hpp"
 
 #include "../../../LinAlg/inner_product.tpp"
+#include "../../../LinAlg/complex.tpp"
 #include "../../../Tensor/Factory/like.tpp"
 #include "complex.hpp"
 
@@ -36,6 +37,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
+        //std::cout << "Reached precision " << rsqr_curr << " after 0'ths step" << std::endl;
         return x_;
     }
 
@@ -68,6 +70,8 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
+
+            //std::cout << std::setprecision(5) << "CG converged with precision " << rsqr_curr << "<" << errSq_ << " after " << count << " steps" << std::endl;
             return x_;
         }
 
