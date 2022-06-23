@@ -264,7 +264,7 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    // We should find that by shifting any element of phi by 2π the determinant doesn't change.
+    // We should find that by shifting any element of phi by 2π the real part of the determinant doesn't change.
 
     typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
@@ -313,7 +313,7 @@ void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, co
     Type delta = beta/nt;
     NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
     
-    //When phi=0, logDetM = logdet(1 + exp_hopping_matrix(beta))
+    //When phi=0, logDetM = logdet(1 + K^{t})
     for(int t=0; t<nt; t++){
         sausage.mat_mul(NSL::Matrix::Identity<Type>(nx) - Lattice.hopping_matrix(delta));
     }
