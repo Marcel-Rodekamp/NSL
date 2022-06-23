@@ -58,7 +58,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::Mdagger(con
     
     
     NSL::Tensor<Type> Bexpconjphipsi(psi,true);
-    //Bexpconjphipsi =  psi;
+
     Bexpconjphipsi(0,NSL::Slice()) *= -1;
     Bexpconjphipsi = NSL::LinAlg::conj(this->phiExp_) * Bexpconjphipsi.shift(-1);
     
@@ -91,7 +91,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::MMdagger(co
   KexpconjphiBpsi = psi;
   KexpconjphiBpsi(0,NSL::Slice()) *= -1;
   out += NSL::LinAlg::mat_vec(this->Lat.hopping_matrix(delta_), (NSL::LinAlg::conj(this->phiExp_) * KexpconjphiBpsi.shift(-1)).transpose()).transpose();
-  //out_ = psi;
  
   BexpconjdelKpsi = (this->phiExp_) * NSL::LinAlg::mat_vec(this->Lat.hopping_matrix(NSL::LinAlg::conj(delta_)), NSL::LinAlg::transpose(psi)).transpose();
   BexpconjdelKpsi.shift(1);
@@ -122,8 +121,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::MdaggerM(co
   KexpconjphiBpsi = psi;
   KexpconjphiBpsi(0,NSL::Slice()) *= -1;
   out += NSL::LinAlg::conj(this->phiExp_) * NSL::LinAlg::mat_vec(this->Lat.hopping_matrix(delta_), KexpconjphiBpsi.shift(-1).transpose()).transpose();
-  out_ = (this->phiExp_) * psi;
-  BexpconjdelKpsi =   NSL::LinAlg::mat_vec(this->Lat.hopping_matrix(NSL::LinAlg::conj(delta_)), out_.transpose()).transpose();
+  
+  BexpconjdelKpsi =   NSL::LinAlg::mat_vec(this->Lat.hopping_matrix(NSL::LinAlg::conj(delta_)), ((this->phiExp_) * psi).transpose()).transpose();
   BexpconjdelKpsi.shift(1);
   BexpconjdelKpsi(0,NSL::Slice()) *= -1;
   out += BexpconjdelKpsi + ((this->phiExp_) * NSL::LinAlg::conj(this->phiExp_)) * psi;
@@ -138,19 +137,22 @@ Type NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::logDetM(){
     const int Nx = this->phi_.shape(1); 
 
     NSL::Tensor<Type> prod(Nt,Nx,Nx);
-    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx), tes(Nx,Nx);
-    Type sum, I_plus = {0,1}, I_minus = {0,-1}; //put one I
+    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx), fk(Nx,Nx);
+    Type sum, I = {0,1};
     
-    
-    prod = (NSL::LinAlg::shift(NSL::LinAlg::exp(this->phi_*I_minus),-1).expand(Nx).transpose(1,2));//* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_)));
+    //F^{-1} in expanded form    
+    prod = (NSL::LinAlg::shift(NSL::LinAlg::exp(this->phi_*(-1*I)),-1).expand(Nx).transpose(1,2));
     for(int t = 0;  t < Nt ; t++){
-        tes = prod(t,NSL::Slice(),NSL::Slice())* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_));
-        sausage.mat_mul(tes); 
-    }
 
-   sum = (this->phi_).sum(); //( NSL::Slice(), 0).sum() + this->phi_( NSL::Slice(), 1).sum();
+        //mat-vec of F^{-1} and K
+        fk = prod(t,NSL::Slice(),NSL::Slice())* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_));
+        
+        sausage.mat_mul(fk); 
+    }
+   //sum over all the elements of phi 
+   sum = (this->phi_).sum(); 
   
-return ((sum*I_plus) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
+return ((sum*I) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
 
 } 
 }
