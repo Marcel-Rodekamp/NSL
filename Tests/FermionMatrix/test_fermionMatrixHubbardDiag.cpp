@@ -69,15 +69,41 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: MdaggerM", "[fermionMatrixHubb
 }
 
 COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: logDetM_time_shift_invariance", "[fermionMatrixHubbardDiag, logDetM_time_shift_invariance]" ) {
+   
+    if(std::is_same_v<TestType, NSL::complex<float> >){
+        WARN("This test is currently expected to fail with float.");
+        // The issue is the accuracy of the log det.
+        // In fact, the code is (otherwise) correct, and we have manually checked that
+        // if you divide the sausage in HubbardDiag.logdetM by 100, calculate the log det,
+        // and then add back in Nx log 100 you get a reasonable answer that can be
+        // computed.
+        // That is,
+        //      log det M = log det α M + Nx log 1/α
+        // with α=100 gives reliable results (for these randomly sampled phi).
+    }
+
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
     NSL::Lattice::Ring<TestType> Lattice(nx);
-    test_logDetM_time_shift_invariance<TestType>(nt, Lattice);
+    test_logDetM_time_shift_invariance<TestType>(nt, Lattice, 0.0625);
 
 }
 
 COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: logDetM_phi_plus_two_pi", "[fermionMatrixHubbardDiag, logDetM_phi_plus_two_pi]" ) {
+   
+    if(std::is_same_v<TestType, NSL::complex<float> >){
+        WARN("This test is currently expected to fail with float.");
+        // The issue is the accuracy of the log det.
+        // In fact, the code is (otherwise) correct, and we have manually checked that
+        // if you divide the sausage in HubbardDiag.logdetM by 100, calculate the log det,
+        // and then add back in Nx log 100 you get a reasonable answer that can be
+        // computed.
+        // That is,
+        //      log det M = log det α M + Nx log 1/α
+        // with α=100 gives reliable results (for these randomly sampled phi).
+    }
+
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
@@ -251,8 +277,9 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     INFO("result unshifted: "+NSL::to_string(result));
     INFO("result   shifted: "+NSL::to_string(result_shift));
     INFO("difference      : "+NSL::to_string(result-result_shift));
+    INFO("ratio-1         : "+NSL::to_string(result/result_shift -1));
 
-    REQUIRE(almost_equal(result_shift,result));
+    REQUIRE(almost_equal(result_shift,result, std::numeric_limits<Type>::digits10-1) );
 }
 
 // ======================================================================
@@ -266,19 +293,27 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
 
     // We should find that by shifting any element of phi by 2π the real part of the determinant doesn't change.
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
+    typedef typename NSL::RT_extractor<Type>::value_type RealType;
+    typedef NSL::complex<RealType> ComplexType;
     NSL::size_t nx = Lattice.sites();
     Type delta = beta/nt;
 
     NSL::Tensor<Type> phi(nt, nx), phiShift(nt, nx), random(nt, nx);
     phi.rand();
 
-    // We can't generate random integers due to a torch issue.
-    // But we can generate Types between 0 and 1 and then truncate to ints.
+    //!\todo: We tried NSL::Tensor<int> orbits(nt, nx); orbits.
+    //        However, when orbits is an int-type tensor we get failures in this test
+    //        for complex<double>; it passes as written.
+    //        It seems likely that this failure is due to some typecasting 
+    //        or type compatibility issue.
+    //        
+    //        One thing to note is the way that it fails is that the logs
+    //        wind up differing by some integer multiple of 2πi; it's taking a wrong
+    //        branch, or something?
     random.rand();
     NSL::Tensor<Type> orbits = static_cast<NSL::Tensor<int>>(10*random);
 
-    Type two_pi = 2*std::numbers::pi;
+    RealType two_pi = 2*std::numbers::pi_v<RealType>;
     phiShift = phi + two_pi * orbits;
 
     NSL::FermionMatrix::HubbardDiag M     (Lattice,phi     ,beta);
@@ -286,14 +321,23 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
+    RealType diff_imag_mod_two_pi = std::remainder(
+            static_cast<RealType>(NSL::imag(result - result_shift)),
+            static_cast<RealType>(two_pi)
+            );
+
 
     INFO("nx: "+std::to_string(nx)+" nt: "+std::to_string(nt));
     INFO("result unshifted: "+NSL::to_string(result));
     INFO("result   shifted: "+NSL::to_string(result_shift));
     INFO("difference      : "+NSL::to_string(result-result_shift));
+    INFO("Im(∆)%2π        : "+NSL::to_string(diff_imag_mod_two_pi));
 
     //comparing only the real parts
     REQUIRE(almost_equal(result_shift.real(),result.real(),std::numeric_limits<Type>::digits10-1));
+    REQUIRE(almost_equal(static_cast<RealType>(0), 
+        diff_imag_mod_two_pi,
+        std::numeric_limits<Type>::digits10-3));
 
 }
 

@@ -149,8 +149,8 @@ Type NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::logDetM(){
         
         sausage.mat_mul(fk); 
     }
-   //sum over all the elements of phi 
-   sum = (this->phi_).sum(); 
+    //sum over all the elements of phi 
+    sum = (this->phi_).sum(); 
   
 return ((sum*I) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
 
