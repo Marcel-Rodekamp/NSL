@@ -43,9 +43,10 @@ void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice
 COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: M", "[fermionMatrixHubbardExp, M]" ) {
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
+    const TestType beta = 2;
 
     NSL::Lattice::Ring<TestType> Lattice(nx);
-    test_fermionMatrixHubbardExp_M<TestType>(nt, Lattice);
+    test_fermionMatrixHubbardExp_M(nt, Lattice, beta);
 
 }
 

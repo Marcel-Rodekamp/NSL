@@ -1,4 +1,9 @@
+#ifndef NSL_LATTICE_TPP
+#define NSL_LATTICE_TPP
 #include "lattice.hpp"
+
+#include "../LinAlg/abs.tpp"
+#include "../LinAlg/mat_exp.tpp"
 
 namespace NSL::Lattice {
 
@@ -123,8 +128,4 @@ void NSL::Lattice::SpatialLattice<Type>::compute_bipartite(){
 }
 
 } // namespace NSL
-
-template class NSL::Lattice::SpatialLattice<float>;
-template class NSL::Lattice::SpatialLattice<double>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<float>>;
-template class NSL::Lattice::SpatialLattice<NSL::complex<double>>;
+#endif // NSL_LATTICE_TPP
