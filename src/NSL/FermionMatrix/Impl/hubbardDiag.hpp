@@ -89,16 +89,6 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
     //! delta = beta/N_t
     Type delta_;
 
-    private:
-    //! \todo: Remove F_ if it's not necessary and implement all the calculation in M instead
-    /*!
-     * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by
-     *
-     * \f$ \texttt{F_(psi)}_{tx} = $
-     *
-     **/
-    NSL::Tensor<Type> F_(const NSL::Tensor<Type> & psi);
-
 };
 } // namespace FermionMatrix
 
