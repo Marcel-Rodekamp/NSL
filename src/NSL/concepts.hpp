@@ -29,7 +29,7 @@ namespace NSL::Concept{
  * */
 template<typename T, typename U>
 concept isType = requires(U u) {
-    std::is_same<T, U>::value;
+    requires std::is_same<T, U>::value;
 };
 
 //! Ensuring Types of a parameter pack are integer
@@ -41,14 +41,14 @@ concept isType = requires(U u) {
  * */
 template<typename T>
 concept isIntegral = requires(T t) {
-    std::is_integral_v<T>;
+    requires std::is_integral_v<T>;
 };
 
 
 //! Concept to check for complex numbers
 template<typename T>
 concept isComplex = requires(T t) {
-    NSL::is_complex<T>;
+    requires NSL::is_complex<T>();
 };
 
 //! Concept to check for numbers
@@ -63,7 +63,7 @@ concept isComplex = requires(T t) {
  * */
 template<typename T>
 concept isNumber = requires(T t) {
-    isComplex<T> || std::is_floating_point_v<T> || std::is_integral_v<T>;
+    requires isComplex<T> || std::is_floating_point_v<T> || std::is_integral_v<T>;
 };
 
 //! Concept to check for floating point numbers
@@ -76,7 +76,7 @@ concept isNumber = requires(T t) {
  * */
 template<typename T>
 concept isFloatingPoint = requires(T t) {
-    isComplex<T> || std::is_floating_point_v<T>;
+    requires isComplex<T> || std::is_floating_point_v<T>;
 };
 
 //! Concept to check for integers or `NSL::Slice`
@@ -84,17 +84,15 @@ concept isFloatingPoint = requires(T t) {
  * */
 template<typename T>
 concept isIndexer = requires(T t) {
-    isIntegral<T> || std::is_same<T,NSL::Slice>::value;
+    requires isIntegral<T> || std::is_same<T,NSL::Slice>::value;
 };
 
 //! Concept to check that `D` is derived from `B`
 /*!
  * All kind of inheritances (public,protected,private) is allowed.
  * */
-template<typename Base,typename Derived>
-concept isDerived = requires(Base B,Derived D){
-    std::is_base_of<Base,Derived>::value;
-};
+template<typename Derived,typename Base>
+concept isDerived = std::is_base_of_v<Base,Derived>;
 
 } // namespace NSL::Concept 
 

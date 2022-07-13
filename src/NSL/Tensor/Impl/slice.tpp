@@ -24,8 +24,7 @@ class TensorSlice:
     
     //! Slice the Tensors `dim`th dimension from `start` to `end` with taking only every `step`th element.
     NSL::Tensor<Type> slice(const NSL::size_t & dim, const NSL::size_t & start, const NSL::size_t & end , const NSL::size_t & step = 1){
-        torch::Tensor slice = this->data_.slice(dim,start,end,step);
-        return std::move(slice);
+        return at::slice(this->data_,dim,start,end,step);
     }
 
 };

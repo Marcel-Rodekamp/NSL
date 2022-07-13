@@ -5,6 +5,7 @@
 #include "NSL.hpp"
 
 // for CATCH2::INFO string computations
+#include <stdexcept>
 #include<string>
 
 // to compare numbers to machine prec
@@ -139,6 +140,44 @@ NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int mat
     }
 
     return result;
+}
+
+template<typename Type>
+NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10){
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    result = false;
+    NSL::size_t elements = x.numel();
+    for(NSL::size_t i = 0; i < elements; i++){
+        result[i] = almost_equal(x[i], y, matchingDigits);
+    }
+
+    return result;
+}
+
+//! Get the number of Matching Digits from floating point precision
+/*!
+ * \param epsilon, desired precision which should be converted to matching digits. This functions assumes `0<epsilon<1`!
+ *
+ * Given a precision in the form 
+ * \f[ a * 10^{-b} \f]
+ * the matching digits are determined by b
+ * */
+template<NSL::Concept::isFloatingPoint Type>
+int getMatchingDigits(Type epsilon){
+
+    if (epsilon < 0 || epsilon > 1){
+        throw std::runtime_error(
+            "Given precision is not in the interval (0,1)."
+        );
+    }
+
+    // compute log_10(epsilon) = -b + log_10(a) 
+    // with 0 <= log_10(a) < 1 as a \in [1,10)
+    // we can round down to get -b
+    // Then multiply by -1 to get the desired matching digits b
+    return -static_cast<int>(
+        std::floor(std::log10( epsilon ))
+    );
 }
 
 #endif
