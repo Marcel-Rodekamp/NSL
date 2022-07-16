@@ -4,7 +4,7 @@
 #include "../../assert.hpp"
 #include "../../concepts.hpp"
 
-#include "../device.tpp"
+#include "../../device.tpp"
 
 namespace NSL{
 // declare the interface as many operators will need to return a Tensor 

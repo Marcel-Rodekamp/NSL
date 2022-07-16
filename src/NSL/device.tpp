@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <torch/torch.h>
 
-#include "../types.hpp"
+#include "types.hpp"
 
 namespace NSL {
 
