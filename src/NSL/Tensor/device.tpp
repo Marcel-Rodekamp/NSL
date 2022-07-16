@@ -80,6 +80,12 @@ struct CPU : public Device{
     CPU() : Device("CPU") {}
     CPU(const NSL::size_t ID) : Device("CPU",ID) {}
 };
+
+//! Checks if a gpu is available
+bool gpu_available(){
+    return torch::cuda::is_available();
+}
+
 } // namspace NSL
 
 #endif //NSL_DEVICE_TPP
