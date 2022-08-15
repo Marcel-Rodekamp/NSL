@@ -8,10 +8,11 @@
 
 void bench_diag_square_M(int nt, int nx){
     std::vector<std::size_t> n = {nx,nx};
-    NSL::Tensor<NSL::complex<double>> psi(nt, nx*nx), phi(nt, nx*nx);
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx), phi(NSL::GPU(),nt, nx*nx);
     phi.rand();
     psi.rand();
     NSL::Lattice::Square<NSL::complex<double>> lat(n);
+    lat.to(NSL::GPU());
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -32,7 +33,7 @@ void bench_diag_square_M(int nt, int nx){
     std::cout << "Estimated Time [s] for function call to M: "<<timings<<std::endl;
     std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
     std::string filename;
-    filename = "results/results_bench_diag_square_M_nx_" + std::to_string(nx) + ".txt"; 
+    filename = "results_gpu/results_bench_diag_square_gpu_M_nx_" + std::to_string(nx) + ".txt";
     std::ofstream fout; 
     fout.open(filename, std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<std::endl;
@@ -42,10 +43,11 @@ void bench_diag_square_M(int nt, int nx){
 
 void bench_diag_square_MdaggerM(int nt, int nx){
     std::vector<std::size_t> n = {nx,nx};
-    NSL::Tensor<NSL::complex<double>> psi(nt, nx*nx), phi(nt, nx*nx);
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx), phi(NSL::GPU(),nt, nx*nx);
     phi.rand();
     psi.rand();
     NSL::Lattice::Square<NSL::complex<double>> lat(n);
+    lat.to(NSL::GPU());
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -66,7 +68,7 @@ void bench_diag_square_MdaggerM(int nt, int nx){
     std::cout << "Estimated Time [s] for function call to MdaggerM: "<<timings<<std::endl;
     std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
     std::string filename;
-    filename = "results/results_bench_diag_square_MdaggerM_nx_" + std::to_string(nx) + ".txt"; 
+    filename = "results_gpu/results_bench_diag_square_gpu_MdaggerM_nx_" + std::to_string(nx) + ".txt";
     std::ofstream fout; 
     fout.open(filename, std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<std::endl;
@@ -76,10 +78,11 @@ void bench_diag_square_MdaggerM(int nt, int nx){
 
 void bench_diag_square_logDetM(int nt, int nx){
     std::vector<std::size_t> n = {nx,nx};
-    NSL::Tensor<NSL::complex<double>> psi(nt, nx*nx), phi(nt, nx*nx);
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx), phi(NSL::GPU(),nt, nx*nx);
     phi.rand();
     psi.rand();
     NSL::Lattice::Square<NSL::complex<double>> lat(n);
+    lat.to(NSL::GPU());
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -100,7 +103,7 @@ void bench_diag_square_logDetM(int nt, int nx){
     std::cout << "Estimated Time [s] for function call to logDetM: "<<timings<<std::endl;
     std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
     std::string filename;
-    filename = "results/results_bench_diag_square_logDetM_nx_" + std::to_string(nx) + ".txt"; 
+    filename = "results_gpu/results_bench_diag_square_gpu_logDetM_nx_" + std::to_string(nx) + ".txt"; 
     std::ofstream fout; 
     fout.open(filename, std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<std::endl;
