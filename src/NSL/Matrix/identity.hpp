@@ -13,6 +13,14 @@ inline NSL::Tensor<Type> Identity(const NSL::size_t & size){
                 torch::TensorOptions().dtype<Type>()
                 ));
 }
+template <typename Type>
+inline NSL::Tensor<Type> Identity(const NSL::Device & dev, const NSL::size_t & size){
+    return NSL::Tensor<Type>(torch::eye(
+            size, 
+            torch::TensorOptions().dtype<Type>().device(dev)
+        )
+    );
+}
 
 }
 
