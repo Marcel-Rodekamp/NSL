@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <fstream>
 
 //! \file Benchmarks/benchmark.hpp
 

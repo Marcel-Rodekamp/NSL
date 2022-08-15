@@ -99,7 +99,7 @@ void bench_exp_ring_logDetM(int nt, int nx){
     std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
 
     std::string filename;
-    filename = "results/results_bench_exp_ring_logDetM_nx_" + std::to_string(nx) + ".txt" ;
+    filename = "results/results_bench_exp_ring_logDetM_nx_" + std::to_string(nx) + "_cpu.txt" ;
     std::ofstream fout; 
     fout.open(filename, std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<std::endl;
@@ -109,14 +109,14 @@ void bench_exp_ring_logDetM(int nt, int nx){
 int main(){
 
     std::vector<int> Nt = {2,4,8,16,32,64,128,256};
-    for(int i=0; i< Nt.size(); i++){       
-            bench_exp_ring_M(Nt[i],8);
-    }
+    //for(int i=0; i< Nt.size(); i++){       
+    //        bench_exp_ring_M(Nt[i],8);
+    //}
 
-    
-    for(int i=0; i< Nt.size(); i++){       
-            bench_exp_ring_MdaggerM(Nt[i],8);
-    }
+    //
+    //for(int i=0; i< Nt.size(); i++){       
+    //        bench_exp_ring_MdaggerM(Nt[i],8);
+    //}
 
     
     for(int i=0; i< Nt.size(); i++){       
