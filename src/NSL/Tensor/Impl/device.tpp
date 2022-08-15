@@ -42,6 +42,10 @@ class TensorDevice:
         this->data_ = this->data_.to(device.device().device(),non_blocking);
     }
 
+    NSL::Device device(){
+        return NSL::Device(this->data_.device());
+    }
+
 };
 
 } // namespace NSL::TensorImpl
