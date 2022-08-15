@@ -48,9 +48,17 @@ class Device {
         ) 
     {}
 
+    explicit Device(const torch::Device & dev) : dev_(dev) 
+    {}
+
     torch::TensorOptions device() {
         return dev_;
     }
+
+    operator torch::Device() const {
+        return dev_.device();
+    }
+    
     
     private:
     //! This is an enum for the different devices
