@@ -136,24 +136,28 @@ Type NSL::FermionMatrix::HubbardDiag<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1); 
 
-    NSL::Tensor<Type> prod(Nt,Nx,Nx);
-    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx), fk(Nx,Nx);
+
+    NSL::Tensor<Type> prod(NSL::GPU(),Nt,Nx,Nx);
+    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx), id(NSL::GPU(),Nx,Nx), fk(Nx,Nx);
+    id = sausage.to(NSL::GPU());
+    //id.to(NSL::GPU());
     Type sum, I = {0,1};
     
     //F^{-1} in expanded form    
     prod = (NSL::LinAlg::shift(NSL::LinAlg::exp(this->phi_*(-1*I)),-1).expand(Nx).transpose(1,2));
+
     for(int t = 0;  t < Nt ; t++){
 
         //mat-vec of F^{-1} and K
-        fk = prod(t,NSL::Slice(),NSL::Slice())* (NSL::Matrix::Identity<Type>(Nx) - this->Lat.hopping_matrix(delta_));
+        fk = prod(t,NSL::Slice(),NSL::Slice())* (id - this->Lat.hopping_matrix(delta_));
         
         sausage.mat_mul(fk); 
     }
     //sum over all the elements of phi 
     sum = (this->phi_).sum(); 
-  
-return ((sum*I) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
 
+    
+    return ((sum*I) + NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage));
 } 
 }
 
