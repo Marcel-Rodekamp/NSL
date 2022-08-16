@@ -5,6 +5,32 @@
 #include <iostream>
 #include <fstream>
 
+
+double mean(std::vector<double> v) {
+    double res = 0;
+
+    for(auto e: v){
+        res+=e;
+    }
+    res/=v.size();
+
+    return res;
+}
+
+double err(std::vector<double> v) {
+
+    double est = mean(v);
+
+    double res = 0;
+
+    for(auto e: v){
+        res+= (e - est)*(e - est) ;
+    }
+    res/=v.size()-1;
+
+    return std::sqrt(res);
+}
+
 //! \file Benchmarks/benchmark.hpp
 
 
