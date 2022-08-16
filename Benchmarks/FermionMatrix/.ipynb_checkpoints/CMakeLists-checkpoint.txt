@@ -36,3 +36,9 @@ target_link_libraries(bench_diag_square_gpu NSL)
 
 add_executable(bench_exp_square_gpu bench_exp_square_gpu.cpp)
 target_link_libraries(bench_exp_square_gpu NSL)
+
+add_executable(bench_diag_cube_gpu bench_diag_cube_gpu.cpp)
+target_link_libraries(bench_diag_cube_gpu NSL)
+
+add_executable(bench_exp_cube_gpu bench_exp_cube_gpu.cpp)
+target_link_libraries(bench_exp_cube_gpu NSL)

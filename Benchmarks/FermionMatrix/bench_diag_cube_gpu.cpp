@@ -4,13 +4,15 @@
 #include "../benchmark.hpp"
 #include "FermionMatrix/Impl/hubbardDiag.hpp"
 #include "FermionMatrix/Impl/hubbardDiag.tpp"
-#include <fstream>
 
-void bench_diag_ring_M(int nt, int nx){
-    NSL::Tensor<NSL::complex<double>> psi(nt,nx), phi(nt,nx);
+void bench_diag_cube_M(int nt, int nx){
+
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx*nx), phi(NSL::GPU(),nt, nx*nx*nx);
     phi.rand();
     psi.rand();
-    NSL::Lattice::Ring<NSL::complex<double>> lat(nx);
+    NSL::Lattice::Cube3D<NSL::complex<double>> lat(nx);
+    lat.to(NSL::GPU());
+    
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -35,26 +37,30 @@ void bench_diag_ring_M(int nt, int nx){
     
     timings = (timings) * pow(10,-9);
     est_err = est_err * pow(10,-9);
-    est_bw = ((nt*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
+    
+
     std::cout<<"Nt = "<<nt<<" Nx = "<<nx<<std::endl;
     std::cout.precision(17);
+    est_bw = ((nt*nx*nx*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
+    
     std::cout << "Estimated Time [s] for function call to M: "<<timings<<" +/- "<<est_err<<std::endl;
-    std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
+    std::cout<< "Estimated bandwidth [Gb/s]: "<<est_bw<<std::endl;
     std::string filename;
-    filename = "results/results_bench_diag_ring_cpu_M_nx_" + std::to_string(nx) + ".txt"; 
+    filename = "results_gpu/results_bench_diag_cube_gpu_M_nx_" + std::to_string(nx) + ".txt";  
     std::ofstream fout; 
-    fout.open(filename, std::ios::out | std::ios::app);
+    fout.open(filename , std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<" "<<est_err<<std::endl;
     fout.close();
-    
 
 }
 
-void bench_diag_ring_MdaggerM(int nt, int nx){
-    NSL::Tensor<NSL::complex<double>> psi(nt,nx), phi(nt,nx);
+void bench_diag_cube_MdaggerM(int nt, int nx){
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx*nx), phi(NSL::GPU(),nt, nx*nx*nx);
     phi.rand();
     psi.rand();
-    NSL::Lattice::Ring<NSL::complex<double>> lat(nx);
+    NSL::Lattice::Cube3D<NSL::complex<double>> lat(nx);
+    lat.to(NSL::GPU());
+    
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -79,28 +85,29 @@ void bench_diag_ring_MdaggerM(int nt, int nx){
     
     timings = (timings) * pow(10,-9);
     est_err = est_err * pow(10,-9);
-    est_bw = ((nt*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
+
     std::cout<<"Nt = "<<nt<<" Nx = "<<nx<<std::endl;
     std::cout.precision(17);
+    est_bw = ((nt*nx*nx*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
+    
     std::cout << "Estimated Time [s] for function call to MdaggerM: "<<timings<<" +/- "<<est_err<<std::endl;
     std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
     std::string filename;
-    filename = "results/results_bench_diag_ring_cpu_MdaggerM_nx_" + std::to_string(nx) + ".txt"; 
-    
+    filename = "results_gpu/results_bench_diag_cube_gpu_MdaggerM_nx_" + std::to_string(nx) + ".txt";  
     std::ofstream fout; 
-    fout.open(filename, std::ios::out | std::ios::app);
+    fout.open(filename , std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<" "<<est_err<<std::endl;
-    fout.close();   
-    
-    
+    fout.close();
 
 }
 
-void bench_diag_ring_logDetM(int nt, int nx){
-    NSL::Tensor<NSL::complex<double>> psi(nt,nx), phi(nt,nx);
+void bench_diag_cube_logDetM(int nt, int nx){
+    NSL::Tensor<NSL::complex<double>> psi(NSL::GPU(),nt, nx*nx*nx), phi(NSL::GPU(),nt, nx*nx*nx);
     phi.rand();
     psi.rand();
-    NSL::Lattice::Ring<NSL::complex<double>> lat(nx);
+    NSL::Lattice::Cube3D<NSL::complex<double>> lat(nx);
+    lat.to(NSL::GPU());
+    
     NSL::FermionMatrix::HubbardDiag M(lat,phi);
 
     int Nsweep=1000;
@@ -125,55 +132,38 @@ void bench_diag_ring_logDetM(int nt, int nx){
     
     timings = (timings) * pow(10,-9);
     est_err = est_err * pow(10,-9);
-    est_bw = ((nt*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
+
     std::cout<<"Nt = "<<nt<<" Nx = "<<nx<<std::endl;
     std::cout.precision(17);
-    std::cout << "Estimated Time [s] for function call to logDetM: "<<timings<<" +/- "<<est_err<<std::endl;
-    std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl; 
-    std::string filename;
-    filename = "results/results_bench_diag_ring_cpu_logDetM_nx_" + std::to_string(nx) + ".txt"; 
+    est_bw = ((nt*nx*nx*nx * sizeof(NSL::complex<double>) * 9.3 * pow(10,-10))/timings);
     
+    std::cout << "Estimated Time [s] for function call to logDetM: "<<timings<<" +/- "<<est_err<<std::endl;
+    std::cout<< "Estimated bandwidth: "<<est_bw<<std::endl;
+    std::string filename;
+    filename = "results_gpu/results_bench_diag_cube_gpu_logDetM_nx_" + std::to_string(nx) + ".txt";  
     std::ofstream fout; 
-    fout.open(filename, std::ios::out | std::ios::app);
+    fout.open(filename , std::ios::out | std::ios::app);
     fout<<nt<<" "<<nx<<" "<<timings<<" "<<est_bw<<" "<<est_err<<std::endl;
     fout.close();
 
 }
 int main(){
-
-    std::vector<int> Nt = {2,4,8,16,32,64,128,256};
-    
-    for(int i=0; i< Nt.size(); i++){       
-            bench_diag_ring_M(Nt[i],128);
-    }
-
-    
-    for(int i=0; i< Nt.size(); i++){       
-            bench_diag_ring_MdaggerM(Nt[i],128);
-    }
-
-    
-    for(int i=0; i< Nt.size(); i++){       
-            bench_diag_ring_logDetM(Nt[i],128);
-    }
-
-    /*
-    std::vector<int> Nt = {16,32,64,256}, Nx = {2,4,8,16,32};
+    std::vector<int> Nt = {2,2,4,8,16,32,64,128,256};
     for(int i=0; i< Nt.size(); i++){
-        for(int j=0; j<Nx.size(); j++){
-            bench_diag_ring_M(Nt[i],Nx[j]);
-        }
+        
+            bench_diag_cube_M(Nt[i],8);
+        
     }
     for(int i=0; i< Nt.size(); i++){
-        for(int j=0; j<Nx.size(); j++){
-            bench_diag_ring_MdaggerM(Nt[i],Nx[j]);
-        }
+        
+            bench_diag_cube_MdaggerM(Nt[i],8);
+        
     }
     for(int i=0; i< Nt.size(); i++){
-        for(int j=0; j<Nx.size(); j++){
-            bench_diag_ring_logDetM(Nt[i],Nx[j]);
-        }
+        
+            bench_diag_cube_logDetM(Nt[i],8);
+        
     }
-    */
+    
 
 }
