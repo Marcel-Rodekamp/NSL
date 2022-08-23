@@ -32,6 +32,9 @@ void sliceAccess(SizeTypes ... sizes);
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void sliceWriteAccess(SizeTypes ... sizes);
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
+void mixedAccess(SizeTypes ... sizes);
+
 NSL_TEST_CASE("Tensor 1D Random Access", "[Tensor,1D,Random Access]"){
     NSL::size_t size0 = GENERATE(1,2,4,8,16,32);
     indexAccess<TestType>(size0);
@@ -55,6 +58,13 @@ NSL_TEST_CASE("Tensor 2D Slice Access", "[Tensor,2D,Slice Access]"){
     NSL::size_t size1 = GENERATE(1,2,4,8);
     sliceAccess<TestType>(size0,size1);
     sliceWriteAccess<TestType>(size0,size1);
+}
+NSL_TEST_CASE("Tensor 2D Mixed Slice/Random Access", "[Tensor,2D,Mixed Access]"){
+    NSL::size_t size0 = GENERATE(1,2,4,8);
+    NSL::size_t size1 = GENERATE(1,2,4,8);
+    mixedAccess<TestType>(size0,size1);
+    //sliceWriteAccess<TestType>(size0,size1);
+    // MARKER1
 }
 
 NSL_TEST_CASE("Tensor 3D Random Access", "[Tensor,3D,Random Access]"){
@@ -537,6 +547,101 @@ void sliceWriteAccess(SizeTypes ... sizes){
 
     } else {
         INFO("Random Access: Slice, has no implementation for dim>3");
+        REQUIRE(false);
+    }
+
+}
+
+//=======================================================================
+// Implementation Details: Mixed Access
+//=======================================================================
+template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
+void mixedAccess(SizeTypes ... sizes){
+    std::array<NSL::size_t,sizeof...(sizes)> shape{sizes...};
+    const NSL::size_t numElements = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<NSL::size_t>());
+    const NSL::size_t dim = sizeof...(sizes);
+
+    INFO( "dim :" + std::to_string(dim) );
+    INFO( "type :" + std::string(typeid(Type).name()) );
+
+    // create a Tensor filled with zeros
+    NSL::Tensor<Type> T(sizes...);
+    Type * T_ptr = T.data();
+
+    // fill the Tensor with data
+    for(NSL::size_t i = 0; i < numElements; ++i){
+        T_ptr[i] = static_cast<Type>(i);
+    }
+
+    // 2D
+    if constexpr(sizeof...(sizes) == 2) {
+        for(NSL::size_t start = 0; start < shape[0]; ++start){
+        for(NSL::size_t stop = start+1; stop < shape[0]; ++stop){
+        for(NSL::size_t step = 1; step < stop - start; ++step){
+
+            NSL::size_t sliceSize = static_cast<NSL::size_t>(std::ceil(static_cast<float>(stop-start)/step)); 
+
+            INFO( "start: " + std::to_string(start) );
+            INFO( "stop : " + std::to_string(stop) );
+            INFO( "step : " + std::to_string(step) );
+            INFO( "size : " + std::to_string(sliceSize) );
+
+            for(NSL::size_t index = 0; index < shape[1]; ++index){ 
+                NSL::Tensor<Type> Tsliced = T(NSL::Slice(start,stop,step),index);
+
+                // check dimension
+                REQUIRE( Tsliced.dim() == 1 );
+                // check shape
+                REQUIRE( Tsliced.shape(0) == sliceSize);
+                REQUIRE_THROWS(Tsliced.shape(1) == 0);
+                // check number of elements: only the remainder of the slice
+                REQUIRE( Tsliced.numel() == sliceSize);
+
+                for(NSL::size_t i = 0; i < sliceSize; ++i){
+                    NSL::size_t value = linearIndex(T.strides(), start+i*step,index);
+                    // check that the values match original tensor
+                    REQUIRE(Tsliced(i) == static_cast<Type>(value) );
+                    // check that the addresses match the original tensor
+                    REQUIRE(&Tsliced(i) == &T[value]);
+                }
+            } // index dim=1
+        }}} // slice dim=0
+    
+        // and the other way round
+        for(NSL::size_t start = 0; start < shape[1]; ++start){
+        for(NSL::size_t stop = start+1; stop < shape[1]; ++stop){
+        for(NSL::size_t step = 1; step < stop - start; ++step){
+
+            NSL::size_t sliceSize = static_cast<NSL::size_t>(std::ceil(static_cast<float>(stop-start)/step)); 
+
+            INFO( "start: " + std::to_string(start) );
+            INFO( "stop : " + std::to_string(stop) );
+            INFO( "step : " + std::to_string(step) );
+            INFO( "size : " + std::to_string(sliceSize) );
+
+            for(NSL::size_t index = 0; index < shape[0]; ++index){ 
+                NSL::Tensor<Type> Tsliced = T(index,NSL::Slice(start,stop,step));
+
+                // check dimension
+                REQUIRE( Tsliced.dim() == 1 );
+                // check shape
+                REQUIRE( Tsliced.shape(0) == sliceSize);
+                REQUIRE_THROWS(Tsliced.shape(1) == 0);
+                // check number of elements: only the remainder of the slice
+                REQUIRE( Tsliced.numel() == sliceSize);
+
+                for(NSL::size_t i = 0; i < sliceSize; ++i){
+                    NSL::size_t value = linearIndex(T.strides(),index, start+i*step);
+                    // check that the values match original tensor
+                    REQUIRE(Tsliced(i) == static_cast<Type>(value) );
+                    // check that the addresses match the original tensor
+                    REQUIRE(&Tsliced(i) == &T[value]);
+                }
+            } // index dim=1
+        }}} // slice dim=0
+            
+    } else {
+        INFO("Mixed Access: Slice, has no implementation for dim != 2");
         REQUIRE(false);
     }
 

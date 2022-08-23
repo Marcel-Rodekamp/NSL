@@ -17,6 +17,7 @@
 #include "Lattice.hpp"
 #include "FermionMatrix.hpp"
 #include "Configuration.hpp"
+#include "IO.hpp"
 #include "Action.hpp"
 
 #endif

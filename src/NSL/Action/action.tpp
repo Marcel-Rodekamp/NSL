@@ -22,7 +22,6 @@ namespace NSL::Action {
 template<class Action> 
 struct params;
 
-
 /*! A base class for actions.
  *      Offers the default functionality of actions and 
  *  	is acting as the parent class for the specific actions.
@@ -41,40 +40,29 @@ class BaseAction{
  **/
 
 template<class ActionImp> 
-class Action {
+class SingleAction {
 	private:
-	ActionImp Act;			//? derive from ActionImp instead?
-	std::string key;		//TODO make general for actions with multiple fields
+	ActionImp Act;
+	std::string key;		//TODO make general for actions with multiple fields... How would ActionImp return the force of multiple fields?
 	
 	public:
-	Action(std::string pkey, params<ActionImp> params) :Act(ActionImp(params)),key(pkey) {}
-
-	template<class Configuration>
-	Configuration force(Configuration & config, Configuration & force, bool add = false){
-		if(!add) force.zero();
-		for(auto fName: config.fieldNames()){
-			if (std::string(fName) == key){			// later there will be multiple keys
-				force.field(key) += (Act.force(config.field(key))).field("force");	//
-			}
-		}
-		return force;
-	};
-
-	template<class Configuration>
-	Configuration grad(Configuration & config, Configuration & grad, bool add = false){
-		if(!add) grad.zero();
-		for(auto fName: config.fieldNames()){
-			if (std::string(fName) == key){			// later there will be multiple keys
-				grad.field(key) += (Act.grad(config.field(key))).field("grad");	//
-			}
-		}
-		return grad;
-	};
+	SingleAction(std::string pkey, params<ActionImp> params) :Act(ActionImp(params)),key(pkey) {}
 
 	template<class Configuration>
 	complex<double> eval(Configuration& config) { 
 		return Act.eval(config.field(key)); 
-	};						//TODO implement for non homogeneous configs
+	};
+
+	template<class Configuration>
+	Configuration force(Configuration & config){
+		return Configuration(key, Act.force(config.field(key)).field("force"));
+	};
+
+	template<class Configuration>
+	Configuration grad(Configuration & config){
+		return Configuration(key, Act.grad(config.field(key)).field("grad"));
+	};
+
 };
 
 /*! Container class for modular actions.
@@ -82,37 +70,37 @@ class Action {
  * It contains multiple actions and sums up their outputs.
  **/
 
-template<class ...Actions>
-class SumAction {
+template<class ...SingleActions>
+class Action {
 	private:
-	std::tuple<Actions...>  Summands;
+	std::tuple<SingleActions...>  Summands;
 	
 	template<int I, class Configuration>
     void recursive_sum_eval(complex<double> & sum, Configuration & config){
-        if constexpr (I < sizeof...(Actions)){
+        if constexpr (I < sizeof...(SingleActions)){
             sum += std::get<I>(Summands).eval(config);
             recursive_sum_eval<I+1>(sum, config);
         } 
     }
 
 	template<int I, class Configuration>
-    void recursive_sum_force(Configuration & config, Configuration & force){
-        if constexpr (I < sizeof...(Actions)){
-			force = std::get<I>(Summands).force(config, force, true);
-			recursive_sum_force<I+1>(config, force);
+    void recursive_sum_force(Configuration & sum, Configuration & config){
+        if constexpr (I < sizeof...(SingleActions)){
+			sum += std::get<I>(Summands).force(config);
+			recursive_sum_force<I+1>(sum, config);
         } 
     }
 
 	template<int I, class Configuration>
-    void recursive_sum_grad(Configuration & config, Configuration & grad){
-        if constexpr (I < sizeof...(Actions)){
-			grad = std::get<I>(Summands).grad(config, grad, true);
-			recursive_sum_grad<I+1>(config, grad);
+    void recursive_sum_grad(Configuration & sum, Configuration & config){
+        if constexpr (I < sizeof...(SingleActions)){
+			sum += std::get<I>(Summands).grad(config);
+			recursive_sum_grad<I+1>(sum, config);
         } 
     }
 	
 	public:
-	SumAction(Actions ... pSummands) :Summands(pSummands ...){}
+	Action(SingleActions ... pSummands) :Summands(pSummands ...){}
 
 	template<class Configuration>
     complex<double> eval(Configuration & config){
@@ -123,21 +111,19 @@ class SumAction {
     }
 
 	template<class Configuration>
-    Configuration force(Configuration & config, Configuration & force){
-        force.zero();
-		
-		recursive_sum_force<0>(config, force);
+    Configuration force(Configuration & config){
+		Configuration sum;
+		recursive_sum_force<0>(sum, config);
 
-        return force;
+        return sum;
     }
 
 	template<class Configuration>
-    Configuration grad(Configuration & config, Configuration & grad){
-        grad.zero();
-		
-		recursive_sum_grad<0>(config, grad);
+    Configuration grad(Configuration & config){
+		Configuration sum;
+		recursive_sum_grad<0>(sum, config);
 
-        return grad;
+        return sum;
     }
 
 };

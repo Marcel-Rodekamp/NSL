@@ -4,6 +4,8 @@
 #include "../../assert.hpp"
 #include "../../concepts.hpp"
 
+#include "../device.tpp"
+
 namespace NSL{
 // declare the interface as many operators will need to return a Tensor 
 // type.
@@ -32,6 +34,16 @@ class TensorBase {
     constexpr explicit TensorBase(const NSL::size_t & size0, const SizeTypes & ... sizes) :
             data_(torch::zeros({size0,sizes...},
                                torch::TensorOptions().dtype<Type>()
+            ))
+    {
+        //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
+    }
+
+    //! D-dimensional constructor
+    template<NSL::Concept::isIntegral ... SizeTypes>
+    explicit TensorBase( NSL::Device dev, const NSL::size_t & size0, const SizeTypes & ... sizes) :
+            data_(torch::zeros({size0,sizes...},
+                               dev.device().dtype<Type>()
             ))
     {
         //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;

@@ -1,3 +1,5 @@
+#ifndef NSL_LATTICE_COMPLETE_TPP
+#define NSL_LATTICE_COMPLETE_TPP
 /*! \file complete.cpp
 */
 
@@ -38,10 +40,4 @@ NSL::Lattice::Complete<Type>::Complete(const std::size_t n, const Type &kappa, c
 }
 
 } // namespace NSL::Lattice
-
-template class NSL::Lattice::Complete<float>;
-template class NSL::Lattice::Complete<double>;
-// There's no way to make obvious sense of complex hopping.
-// There's not even a way to pick a convention, since every site
-// connects to every other site!
-// So, don't instantiate the complex<> types.
+#endif //NSL_LATTICE_COMPLETE_TPP
