@@ -18,8 +18,8 @@ class HubbardGaugeAction : public BaseAction<complex<double>> {
 
 	public:
 	HubbardGaugeAction(params<HubbardGaugeAction> params) : U(params.U){}
-	Configuration<complex<double>> force(const Tensor<complex<double>>& phi){return Configuration<complex<double>>({"force", phi});};
-	Configuration<complex<double>> grad(const Tensor<complex<double>>& phi){return Configuration<complex<double>>({"grad", phi});};
+	Configuration<complex<double>> force(const Tensor<complex<double>>& phi){return Configuration<complex<double>>{{"force", phi}};};
+	Configuration<complex<double>> grad(const Tensor<complex<double>>& phi){return Configuration<complex<double>>{{"grad", phi}};};
 	complex<double> eval(const Tensor<complex<double>>& field) { return field[1]*U; };
 };
 

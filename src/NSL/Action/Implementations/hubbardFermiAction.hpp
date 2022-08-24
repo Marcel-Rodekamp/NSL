@@ -23,8 +23,8 @@ class HubbardFermiAction : public BaseAction<complex<double>> {
 
 	public:
 	HubbardFermiAction(params<HubbardFermiAction> params) : kappa(params.kappa), beta(params.beta), mu(params.mu){}
-	Configuration<complex<double>> force(const Tensor<complex<double>>& phi){return Configuration<complex<double>>({"force", phi});};
-	Configuration<complex<double>> grad(const Tensor<complex<double>>& phi){return Configuration<complex<double>>({"grad", phi});};
+	Configuration<complex<double>> force(const Tensor<complex<double>>& phi){return Configuration<complex<double>>{{"force", phi}};};
+	Configuration<complex<double>> grad(const Tensor<complex<double>>& phi){return Configuration<complex<double>>{{"grad", phi}};};
 	complex<double> eval(const Tensor<complex<double>>& field) { return field[0]+mu; };
 };
 
