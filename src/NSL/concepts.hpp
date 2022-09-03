@@ -6,6 +6,9 @@
 #include "complex.hpp"
 #include "sliceObj.tpp"
 
+// forward declare
+
+
 namespace NSL::Concept{
 
 //! Ensuring Types of a parameter pack agree
@@ -93,6 +96,23 @@ concept isIndexer = requires(T t) {
  * */
 template<typename Derived,typename Base>
 concept isDerived = std::is_base_of_v<Base,Derived>;
+} // namespace NSL::Concept
+  
+// foward declare tensor 
+namespace NSL {template<NSL::Concept::isNumber Type> class Tensor;}
+
+namespace NSL::Concept {
+// Hide this from the user
+namespace {
+template<typename T>
+struct is_tensor: public std::true_type {};
+template<NSL::Concept::isNumber T>
+struct is_tensor<NSL::Tensor<T>>: public std::false_type {};
+}
+
+//! Concept to check if a type is a NSL::Tensor type
+template<typename T>
+concept isTensor = is_tensor<T>::value;
 
 } // namespace NSL::Concept 
 
