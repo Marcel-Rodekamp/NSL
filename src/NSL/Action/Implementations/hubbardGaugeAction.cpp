@@ -2,16 +2,19 @@
 
 namespace NSL::Action {
 
-	complex<double> HubbardGaugeAction::eval(const Tensor<complex<double>>& field){
+	template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+	Type HubbardGaugeAction<Type, TensorType>::eval(const TensorType& field){
 		return (field * field).sum() / 2 / this->Utilde;
 	}
 	
-	Configuration<complex<double>> HubbardGaugeAction::force(const Tensor<complex<double>>& phi){
-		return Configuration<complex<double>>{{"force", phi /-this->Utilde}};
+	template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+	Configuration<Type> HubbardGaugeAction<Type, TensorType>::force(const TensorType& phi){
+		return Configuration<Type>{{"force", phi /-this->Utilde}};
 	}
 
-	Configuration<complex<double>> HubbardGaugeAction::grad(const Tensor<complex<double>>& phi){
-		return Configuration<complex<double>>{{"grad", phi / this->Utilde}};
+	template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+	Configuration<Type> HubbardGaugeAction<Type, TensorType>::grad(const TensorType& phi){
+		return Configuration<Type>{{"grad", phi / this->Utilde}};
 	}
 
 }  // namespace HubbardGaugeAction

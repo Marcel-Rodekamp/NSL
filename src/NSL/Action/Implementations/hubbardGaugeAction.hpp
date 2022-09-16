@@ -5,21 +5,24 @@
 
 namespace NSL::Action {
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 class HubbardGaugeAction;
 
-template<> 
-struct params<HubbardGaugeAction> { 
-	double U = 0.;
-	double beta = 1.;
+template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+struct params<HubbardGaugeAction<Type, TensorType>> { 
+	Type U = 0.;
+	Type beta = 1.;
 	int nt = 16;
 };
 
-class HubbardGaugeAction : public BaseAction<complex<double>> {
+template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+class HubbardGaugeAction : public BaseAction<Type, TensorType> {
 	public:
+	typedef Type type;
 	HubbardGaugeAction(params<HubbardGaugeAction> _params) : par(_params), Utilde(par.U * par.beta / par.nt){}
-	Configuration<complex<double>> force(const Tensor<complex<double>>& phi);
-	Configuration<complex<double>> grad(const Tensor<complex<double>>& phi);
-	complex<double> eval(const Tensor<complex<double>>& field);
+	Configuration<type> force(const TensorType& phi);
+	Configuration<type> grad(const TensorType& phi);
+	type eval(const TensorType& field);
 
 	private:
 	params<HubbardGaugeAction> par;

@@ -27,12 +27,13 @@ struct params;
  *  	is acting as the parent class for the specific actions.
  **/
 
-template<typename ... TensorTypes>
+template<NSL::Concept::isNumber Type, NSL::Concept::isNumber ... TensorTypes>
 class BaseAction{
 	public:
+	typedef Type type;
 	virtual Configuration<TensorTypes...> force(const Tensor<TensorTypes>&... fields) = 0;
 	virtual Configuration<TensorTypes...> grad(const Tensor<TensorTypes>&... fields) = 0;
-	virtual complex<double> eval(const Tensor<TensorTypes>& ... fields) = 0;
+	virtual Type eval(const Tensor<TensorTypes>& ... fields) = 0;
 };
 
 /*! A wrapper class for Action implementations.
@@ -46,10 +47,11 @@ class SingleAction {
 	std::string key;		//TODO make general for actions with multiple fields... How would ActionImp return the force of multiple fields?
 	
 	public:
-	SingleAction(std::string pkey, params<ActionImp> params) :Act(ActionImp(params)),key(pkey) {}
+	typedef ActionImp::type type;
+	SingleAction(std::string pkey, params<ActionImp> params) : Act(ActionImp(params)), key(pkey) {}
 
 	template<class Configuration>
-	complex<double> eval(Configuration& config){ 
+	type eval(Configuration& config){ 
 		return Act.eval(config[key]); 
 	};
 
@@ -74,6 +76,7 @@ template<class ...SingleActions>
 class Action {	
 public:
 	std::tuple<SingleActions...>  Summands;
+	typedef std::tuple_element<0, std::tuple<SingleActions...>>::type type;				//TODO deduce type of sum
 	Action(SingleActions ... pSummands) :Summands(pSummands ...){}
 
 	// template<class SingleAction>
@@ -82,8 +85,8 @@ public:
 	// }
 
 	template<class Configuration>
-    complex<double> eval(Configuration & config){
-		complex<double> sum = 0;
+    type eval(Configuration & config){
+		type sum = 0;
         recursive_sum_eval<0>(sum, config);
         return sum;
     }
@@ -104,7 +107,7 @@ public:
 	private:
 
 	template<int I, class Configuration>
-    void recursive_sum_eval(complex<double> & sum, Configuration & config){
+    void recursive_sum_eval(type & sum, Configuration & config){
         if constexpr (I < sizeof...(SingleActions)){
             sum += std::get<I>(Summands).eval(config);
             recursive_sum_eval<I+1>(sum, config);
@@ -153,5 +156,7 @@ Action<SingleAction1 , SingleAction2> operator+ ( const SingleAction1 & left, co
 };
 
 } // namespace NSL::Action
+
+#include "Implementations/hubbardGaugeAction.cpp"
 
 #endif //NANOSYSTEMLIBRARY_ACTION_HPP*//*
