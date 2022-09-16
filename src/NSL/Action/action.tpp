@@ -76,7 +76,7 @@ template<class ...SingleActions>
 class Action {	
 public:
 	std::tuple<SingleActions...>  Summands;
-	typedef std::tuple_element<0, std::tuple<SingleActions...>>::type type;				//TODO deduce type of sum
+	typedef std::tuple_element<0, std::tuple<SingleActions...>>::type::type type;				//TODO deduce type of sum
 	Action(SingleActions ... pSummands) :Summands(pSummands ...){}
 
 	// template<class SingleAction>
