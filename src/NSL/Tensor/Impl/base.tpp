@@ -4,7 +4,8 @@
 #include "../../assert.hpp"
 #include "../../concepts.hpp"
 
-#include "../../device.tpp"
+#include "../device.tpp"
+#include "complex.hpp"
 
 namespace NSL{
 // declare the interface as many operators will need to return a Tensor 
@@ -20,11 +21,18 @@ class TensorBase {
     //! Real Type of a NSL::complex
     /*!
      * For Tensors of complex type RealType is provided as a convenience member.
-     * It is accessible as Tensor<NSL::complex<RealType>>::RealType
+     * It is accessible as Tensor<Type>::RealType
      * If the Tensor is real valued `RealType = Type` as of the implementation of
-     * `NSL::RT_extractor`
+     * `NSL::RealTypeOf`
      */
-     using RealType = typename NSL::RT_extractor<Type>::value_type;
+    using RealType = NSL::RealTypeOf<Type>;
+
+    //! scalar type of the Tensor
+    /*!
+     * The scalar type of the tensor is provided as a convenience member.
+     * It is accessible via NSL::Tensor<Type>::scalarType. 
+     * */
+    using scalarType = Type;
 
     //! default constructor
     TensorBase() = default;
@@ -61,6 +69,19 @@ class TensorBase {
         // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
     }
 
+    //! copy constructor
+    /*!
+     * Copy the data from other into this new instance. 
+     * The copy constructor creates a shallow copy, i.e. the two tensors
+     * share the underlying data.
+     * */
+    template<NSL::Concept::isNumber OtherType>
+    constexpr TensorBase(const NSL::TensorImpl::TensorBase<OtherType>& other):
+            data_(torch::Tensor(other).to(torch::TensorOptions().dtype<OtherType>()))
+    {
+        // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
+    }
+
     //! deep copy constructor
     /*!
      * Copy the data from other into this new instance. 
@@ -82,13 +103,6 @@ class TensorBase {
         data_(std::move(other.data_))
     {
         // std::cout << "NSL::Tensor(NSL::Tensor &&)" << std::endl;
-    }
-
-    //! move constructor
-    constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type> && other):
-        data_(std::move(other.data_))
-    {
-        std::cout << "NSL::Tensor(const NSL::Tensor &&)" << std::endl;
     }
 
     //! type conversion

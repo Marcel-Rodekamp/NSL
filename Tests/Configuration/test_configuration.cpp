@@ -12,15 +12,25 @@
 template<typename Type>
 void useConfiguration();
 
+template<typename Type>
+void addPlusEqual();
+
+template<typename Type>
+void addPlus();
+
 NSL_TEST_CASE( "Configuration", "[Configuration]" ) {
-    useConfiguration<TestType>();
+    //useConfiguration<TestType>();
+
+    //if constexpr(!std::is_same_v<TestType,bool> and !std::is_same_v<TestType,int>){
+        addPlusEqual<TestType>();
+        addPlus<TestType>();
+    //}
 }
 
 
 // ======================================================================
 // Implementation
 // ======================================================================
-
 
 template<typename Type>
 void useConfiguration(){
@@ -64,3 +74,132 @@ void useConfiguration(){
     REQUIRE( (chi == static_cast<Type>(4)).all() );
 }
 
+
+template<typename Type>
+void addPlusEqual(){
+    // create a configuration with two fields
+    NSL::Configuration<Type> config1{
+        {"Phi", NSL::Tensor<Type>(8,4) },
+        {"Psi", NSL::Tensor<Type>(4,4) }
+    };
+    NSL::Configuration<Type> config2{
+        {"Phi", NSL::Tensor<Type>(8,4) },
+        {"Psi", NSL::Tensor<Type>(4,4) },
+        {"Chi", NSL::Tensor<Type>(4,4) }
+    };
+
+    // fill the fields with random numbers
+    if constexpr ( std::is_same_v<Type,bool> ) {
+        for(auto & [key,field]: config1){
+            field.randint(1);
+        }
+        for(auto & [key,field]: config2){
+            field.randint(1);
+        }
+    } else if constexpr(std::is_same_v<Type,int>){
+        for(auto & [key,field]: config1){
+            field.randint(1000);
+        }
+        for(auto & [key,field]: config2){
+            field.randint(1000);
+        }
+    } else {
+        for(auto & [key,field]: config1){
+            field.rand();
+        }
+        for(auto & [key,field]: config2){
+            field.rand();
+        }
+    }
+
+    // backup the first configuration
+    NSL::Configuration<Type> config3(config1,true);
+    
+    config1 += config2;
+
+    INFO("\n\nconfig1\n" << config1);
+    INFO("\n\nconfig2\n" << config2);
+    INFO("\n\nconfig3\n" << config3);
+
+    for( auto & key: {"Phi","Psi"} ){
+        INFO(key);
+        // Ceck that the fields which were apperent in in config1 are 
+        // added correctly
+        REQUIRE((
+            config1[key] == (config2[key]+config3[key])
+        ).all());
+        // Check that the data locality is different
+        REQUIRE(config1[key].data() != config2[key].data());
+        REQUIRE(config1[key].data() != config3[key].data());
+        REQUIRE(config2[key].data() != config3[key].data());
+    }
+    // Check that the new field is copied into config1
+    REQUIRE((
+        config1["Chi"] == (config2["Chi"])
+    ).all());
+    // Check that the data locality is different
+    REQUIRE(config1["Chi"].data() != config2["Chi"].data());
+}
+
+template<typename Type>
+void addPlus(){
+    // create a configuration with two fields
+    NSL::Configuration<Type> config1{
+        {"Phi", NSL::Tensor<Type>(8,4) },
+        {"Psi", NSL::Tensor<Type>(4,4) }
+    };
+    NSL::Configuration<Type> config2{
+        {"Phi", NSL::Tensor<Type>(8,4) },
+        {"Psi", NSL::Tensor<Type>(4,4) },
+        {"Chi", NSL::Tensor<Type>(4,4) }
+    };
+
+    // fill the fields with random numbers
+    if constexpr ( std::is_same_v<Type,bool> ) {
+        for(auto & [key,field]: config1){
+            field.randint(1);
+        }
+        for(auto & [key,field]: config2){
+            field.randint(1);
+        }
+    } else if constexpr(std::is_same_v<Type,int>){
+        for(auto & [key,field]: config1){
+            field.randint(1000);
+        }
+        for(auto & [key,field]: config2){
+            field.randint(1000);
+        }
+    } else {
+        for(auto & [key,field]: config1){
+            field.rand();
+        }
+        for(auto & [key,field]: config2){
+            field.rand();
+        }
+    }
+
+    auto config3 = config1 + config2;
+
+    INFO("\n\nconfig1\n" << config1);
+    INFO("\n\nconfig2\n" << config2);
+    INFO("\n\nconfig3\n" << config3);
+
+    for( auto & key: {"Phi","Psi"} ){
+        INFO(key);
+        // Ceck that the fields which were apperent in in config1 are 
+        // added correctly
+        REQUIRE((
+            config3[key] == (config1[key]+config2[key])
+        ).all());
+        // Check that the data locality is different
+        REQUIRE(config1[key].data() != config2[key].data());
+        REQUIRE(config1[key].data() != config3[key].data());
+        REQUIRE(config2[key].data() != config3[key].data());
+    }
+    // Check that the new field is copied into config1
+    REQUIRE((
+        config3["Chi"] == (config2["Chi"])
+    ).all());
+    // Check that the data locality is different
+    REQUIRE(config3["Chi"].data() != config2["Chi"].data());
+}
