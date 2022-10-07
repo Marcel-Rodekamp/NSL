@@ -51,7 +51,7 @@ struct RT_extractor : public std::false_type {
     // lagacy:
     //! \todo: remove value_type member
     using value_type = T;
-    // new way :)
+    //! \todo: remove this old type
     using type = T;
 };
 
@@ -62,9 +62,12 @@ struct RT_extractor<NSL::complex<RT>> : public std::true_type {
     // lagacy:
     //! \todo: remove value_type member
     using value_type = RT;
-    // new way :)
+    //! \todo: remove this old type
     using type = RT;
 };
+
+template<typename T>
+using RealTypeOf = typename RT_extractor<T>::type;
 
 //! Helper function to identify that a template parameter is of type `NSL::complex`
 //! This function returns `RT_extractor<T>::value`. For details see `RT_extractor`

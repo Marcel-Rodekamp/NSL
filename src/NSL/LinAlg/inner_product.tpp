@@ -16,6 +16,17 @@ namespace NSL::LinAlg{
  * \f]
  *
  * */
+template<NSL::Concept::isNumber LeftType, NSL::Concept::isNumber RightType>
+NSL::CommonTypeOf<LeftType,RightType> inner_product(
+        const NSL::Tensor<LeftType> & a,  
+        const NSL::Tensor<RightType> & b){
+    return (NSL::LinAlg::conj(
+                NSL::Tensor<NSL::CommonTypeOf<LeftType,RightType>>(a)
+            ) * 
+                NSL::Tensor<NSL::CommonTypeOf<LeftType,RightType>>(b)
+    ).sum();
+}
+
 template<NSL::Concept::isNumber Type>
 Type inner_product(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b ){
     return (NSL::LinAlg::conj(a)*b).sum();
