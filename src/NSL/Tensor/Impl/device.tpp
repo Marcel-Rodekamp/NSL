@@ -31,6 +31,17 @@ class TensorDevice:
         return this->data_.to(device.device().device(),non_blocking);
     }
 
+    //! Copy data to device (inplace)
+    /*!
+     * \param device, NSL::Device instance, which is the target of the function
+     * \param non_blocking, if True makes the copy call non blocking.
+     *
+     * This can be non blocking call
+     * */
+    void to(bool inplace, NSL::Device device, bool non_blocking = false){
+        this->data_ = this->data_.to(device.device().device(),non_blocking);
+    }
+
 };
 
 } // namespace NSL::TensorImpl
