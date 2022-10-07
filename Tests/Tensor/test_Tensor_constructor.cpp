@@ -35,6 +35,8 @@ void copyConstructor(SizeTypes ... sizes);
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void moveConstructor(SizeTypes ... sizes);
 
+void copyConstructTypeConversion();
+
 
 NSL_TEST_CASE("Tensor Default Constructor", "[Tensor,Default,Constructor]"){
     INFO("type: " + std::string(typeid(TestType).name()));
@@ -52,7 +54,6 @@ NSL_TEST_CASE("Tensor 1D Constructor", "[Tensor,1D,Constructor]"){
     dimConstructor<TestType>(size0);
     copyConstructor<TestType>(size0);
     moveConstructor<TestType>(size0);
-
 }
 
 NSL_TEST_CASE("Tensor 2D Constructor", "[Tensor,2D,Constructor]"){
@@ -61,7 +62,6 @@ NSL_TEST_CASE("Tensor 2D Constructor", "[Tensor,2D,Constructor]"){
     dimConstructor<TestType>(size0,size1);
     copyConstructor<TestType>(size0,size1);
     moveConstructor<TestType>(size0,size1);
-
 }
 
 NSL_TEST_CASE("Tensor 3D Constructor", "[Tensor,3D,Constructor]"){
@@ -71,7 +71,6 @@ NSL_TEST_CASE("Tensor 3D Constructor", "[Tensor,3D,Constructor]"){
     dimConstructor<TestType>(size0,size1,size2);
     copyConstructor<TestType>(size0,size1,size2);
     moveConstructor<TestType>(size0,size1,size2);
-
 }
 
 NSL_TEST_CASE("Tensor 4D Constructor", "[Tensor,4D,Constructor]"){
@@ -82,7 +81,6 @@ NSL_TEST_CASE("Tensor 4D Constructor", "[Tensor,4D,Constructor]"){
     dimConstructor<TestType>(size0,size1,size2,size3);
     copyConstructor<TestType>(size0,size1,size2,size3);
     moveConstructor<TestType>(size0,size1,size2,size3);
-
 }
 
 
@@ -218,4 +216,3 @@ void moveConstructor(SizeTypes ... sizes){
     // i.e. no method nor data is accessible
     REQUIRE_THROWS(T.data());
 }
-

@@ -8,9 +8,11 @@
 #include "map.hpp"
 #include "paramPack.hpp"
 #include "sliceObj.tpp"
-
+#include "typePromotion.hpp"
 #include "types.hpp"
 #include "complex.hpp"
+
+// NSL
 #include "Tensor.hpp"
 #include "LinAlg.hpp"
 #include "Matrix.hpp"
