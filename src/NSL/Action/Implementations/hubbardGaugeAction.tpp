@@ -40,18 +40,15 @@ class HubbardGaugeAction :
 	    const Type U;
 
         Parameters(const Type & beta, const NSL::size_t & Nt, const Type & U) :
-            beta(beta), Nt(Nt), U(U), delta_(beta/Nt)
+            beta(beta), Nt(Nt), U(U), delta(beta/Nt), Utilde(U*delta)
         {}
 
-        //! Get the on-site interaction in lattice units.
-        const Type Utilde(){
-            return delta_*U;
-        }
-
-        private:
-
         // lattice spacing
-        const Type delta_;
+        const Type delta;
+
+        // on-site interaction in lattice units
+        const Type Utilde;
+
     };
 
 	HubbardGaugeAction(const Parameters & params) : 
@@ -68,7 +65,10 @@ class HubbardGaugeAction :
         params_(params)
     {}
 
-
+    // We import the eval/grad/force functions from the BaseAction such 
+    // that we do not need to reimplement the Configuration based versions
+    // We don't understand why this is not automatically done, probably due 
+    // to BaseAction being an abstract base class
     using BaseAction<Type,TensorType>::eval;
     using BaseAction<Type,TensorType>::grad;
     using BaseAction<Type,TensorType>::force;
@@ -77,24 +77,23 @@ class HubbardGaugeAction :
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
 
-
     protected:
     Parameters params_;
 };
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Type HubbardGaugeAction<Type, TensorType>::eval(const Tensor<TensorType>& phi){
-    return (phi * phi).sum() / 2 / this->params_.Utilde();
+    return (phi * phi).sum() / 2 / this->params_.Utilde;
 }
 	
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::force(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{"force", phi /- this->params_.Utilde()}};
+    return Configuration<Type>{{"force", phi /- this->params_.Utilde}};
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::grad(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{"grad", phi / this->params_.Utilde()}};
+    return Configuration<Type>{{"grad", phi / this->params_.Utilde}};
 }
 
 } // namespace NSL::Action
