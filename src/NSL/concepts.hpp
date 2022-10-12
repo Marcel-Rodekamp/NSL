@@ -114,6 +114,29 @@ struct is_tensor<NSL::Tensor<T>>: public std::false_type {};
 template<typename T>
 concept isTensor = is_tensor<T>::value;
 
+template <typename Derived, template <typename...> class Base>
+struct isTemplateDerivedHelper {
+    // We extract the template arguments of Derived 
+    // which need to match the template argument of Base (assumption) 
+    // Then compare the child structure of Base using the concept 'isDerived' 
+    template <template<typename ...> class Derived_, typename... Args_>
+        requires(isDerived<Derived_<Args_...>,Base<Args_...> >)
+    constexpr static std::true_type checkConversionToBase(const Derived_<Args_...>*);
+    
+    // If it is just not a base class we return false
+    constexpr static std::false_type checkConversionToBase(...);
+
+    constexpr static bool value = decltype(
+        isTemplateDerivedHelper<Derived,Base>::checkConversionToBase(std::declval<Derived*>())
+    )::value;
+
+};
+
+//! Concept to check that a class is derived from a base class if the Base
+//! and derived class are templated
+template <typename Derived, template <typename...> class BaseClass>
+concept isTemplateDerived = isTemplateDerivedHelper<Derived,BaseClass>::value;
+
 } // namespace NSL::Concept 
 
 #endif //NSL_CONCEPTS_HPP

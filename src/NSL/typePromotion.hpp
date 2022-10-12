@@ -109,6 +109,18 @@ struct TypePromotion<TypeLeft,NSL::Tensor<TypeRight>>{
 template<typename TypeLeft, typename TypeRight>
 using CommonTypeOf = typename TypePromotion<TypeLeft,TypeRight>::CommonType;
 
+template< typename Type1, typename Type2, typename ... Types_>
+static constexpr auto deduceIteration(){
+    // stop condition
+    if constexpr (sizeof...(Types_) == 0) {
+        return CommonTypeOf<Type1,Type2>{};
+    } else {
+        return CommonTypeOf<Type1, decltype(deduceIteration<Type2,Types_...>)>{};
+    }
+}
+
+template<typename ... Types>
+using CommonTypeOfPack = decltype(deduceIteration<Types...>());
 
 } // namespace NSL
 #endif //NSL_TYPE_PROMOTION_HPP
