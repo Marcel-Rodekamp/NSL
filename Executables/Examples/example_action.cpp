@@ -2,7 +2,7 @@
  * This example shows how a `NSL::Action` is constructed and used.
  * */
 #include <iostream>
-#include "Action.hpp"
+#include "NSL.hpp"
 
 template<class Configuration>
 Configuration zero(Configuration& config){
@@ -25,46 +25,37 @@ int main(){
 	std::cout << phi1 << std::endl;
     std::cout << phi2 << std::endl;
 
-	NSL::Action::HubbardGaugeAction<cd, cd> act1({1.0, 1.0, 10});
-	NSL::Action::HubbardGaugeAction<cd, cd> act2({2.0, 2.0, 20});
+    NSL::Action::HubbardGaugeAction<cd>::Parameters params(
+        /*beta=*/  1,
+        /*Nt = */  32,    
+        /*U =  */  1
+    );
 
-	NSL::Action::SingleAction<NSL::Action::HubbardGaugeAction<cd, cd>> act3("phi", {1.0, 1.0, 10});
-	NSL::Action::SingleAction<NSL::Action::HubbardGaugeAction<cd, cd>> act4("phi", {2.0, 2.0, 20});
+    // create action with just a params class
+	NSL::Action::HubbardGaugeAction<cd> act1(params);
 
+    // create the action with an auto induced parameter class 
+    // The order is always {beta,Nt,U}
+    // Provide a specialized field name as second argument
+	NSL::Action::HubbardGaugeAction<cd> act2({2, 16, 1}, "phi2");
+
+    // Add the two actions to form the final desired action
 	// NSL::Action::Action act5(act3, act4);
-	NSL::Action::Action act5 = act3 + act4;
+	NSL::Action::Action S = act1 + act2;
 
-	std::cout << "Actions -> eval (TensorTypes)" << std::endl;
-	std::cout << act1.eval(phi1) << std::endl;
-	std::cout << act2.eval(phi1) << std::endl;
-
+    // Compute the action
 	std::cout << "Actions -> eval (Configurations)" << std::endl;
-	std::cout << act3.eval(config) << std::endl;
-	std::cout << act4.eval(config) << std::endl;
-	std::cout << "Actions -> eval (SumAction)" << std::endl;
-	std::cout << act5.eval(config) << std::endl << std::endl;
+    std::cout << S(config) << std::endl;
+    // or use (the operator() just calls this function)
+    //std::cout << S.eval(config) << std::endl;
 
-	std::cout << "Actions -> force (TensorTypes)" << std::endl;
-	std::cout << act1.force(phi1) << std::endl;
-	std::cout << act2.force(phi1) << std::endl;
+    // Compute the force
+	std::cout << "Actions -> force" << std::endl;
+	std::cout << S.force(config) << std::endl;
 
-	std::cout << "Actions -> force (Configurations)" << std::endl;
-	std::cout << act3.force(config) << std::endl;
-	std::cout << act4.force(config) << std::endl;
-
-	std::cout << "Actions -> force (SumAction)" << std::endl;
-	std::cout << act5.force(config) << std::endl;
-
-	std::cout << "Actions -> grad (TensorTypes)" << std::endl;
-	std::cout << act1.grad(phi1) << std::endl;
-	std::cout << act2.grad(phi1) << std::endl;
-
-	std::cout << "Actions -> grad (Configurations)" << std::endl;
-	std::cout << act3.grad(config) << std::endl;
-	std::cout << act4.grad(config) << std::endl;
-
-	std::cout << "Actions -> grad (SumAction)" << std::endl;
-	std::cout << act5.grad(config) << std::endl;
+    // Compute the gradient dS/dPhi
+	std::cout << "Actions -> grad" << std::endl;
+	std::cout << S.grad(config) << std::endl;
 
 	return EXIT_SUCCESS;
 
