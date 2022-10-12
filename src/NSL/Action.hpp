@@ -3,4 +3,7 @@
 
 #include "Action/action.tpp"
 
+// implementations
+#include "Action/Implementations/hubbardGaugeAction.tpp"
+
 #endif //NSL_ACTION_HPP

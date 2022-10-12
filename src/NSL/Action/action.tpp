@@ -1,5 +1,5 @@
-#ifndef NANOSYSTEMLIBRARY_ACTION_HPP
-#define NANOSYSTEMLIBRARY_ACTION_HPP
+#ifndef NSL_ACTION_TPP
+#define NSL_ACTION_TPP
 
 /*! \file action.hpp
  *  Classes for different actions.
@@ -12,151 +12,140 @@
  * Provides `grad` providing the derivative of the action in respect to a given config
  **/
 
-#include "../Configuration.hpp"
+#include "Configuration.hpp"
+#include "concepts.hpp"
+#include "typePromotion.hpp"
+#include "map.hpp"
+
 #include<tuple>
-#include<concepts>
-#include <type_traits>
 
 namespace NSL::Action {
-
-template<class Action> 
-struct params;
 
 /*! A base class for actions.
  *      Offers the default functionality of actions and 
  *  	is acting as the parent class for the specific actions.
  **/
 
-template<NSL::Concept::isNumber Type, NSL::Concept::isNumber ... TensorTypes>
+template<
+    NSL::Concept::isNumber Type, 
+    NSL::Concept::isNumber ... TensorTypes
+>
 class BaseAction{
 	public:
-	typedef Type type;
+	typedef Type ActionValueType;
+
 	virtual Configuration<TensorTypes...> force(const Tensor<TensorTypes>&... fields) = 0;
 	virtual Configuration<TensorTypes...> grad(const Tensor<TensorTypes>&... fields) = 0;
-	virtual Type eval(const Tensor<TensorTypes>& ... fields) = 0;
+	virtual ActionValueType eval(const Tensor<TensorTypes>& ... fields) = 0;
+
+	inline Configuration<TensorTypes...> force(Configuration<TensorTypes...> & config){
+		return Configuration<TensorTypes...>{{configKey_, force(config[configKey_])["force"]}};
+	}
+
+	inline Configuration<TensorTypes...> grad(Configuration<TensorTypes...> & config){
+		return Configuration<TensorTypes...>({{configKey_, grad(config[configKey_])["grad"]}});
+	}
+
+	inline Type eval(Configuration<TensorTypes...>& config){ 
+		return eval(config[configKey_]); 
+	}
+
+	BaseAction(const std::string & configKey) : 
+        configKey_(configKey) 
+    {}
+
+    protected:
+    std::string configKey_;
 };
 
-/*! A wrapper class for Action implementations.
- * Handles the interaction between configurations and actions
- **/
-
-template<class ActionImp> 
-class SingleAction {
-	private:
-	ActionImp Act;
-	std::string key;		//TODO make general for actions with multiple fields... How would ActionImp return the force of multiple fields?
-	
-	public:
-	typedef ActionImp::type type;
-	SingleAction(std::string pkey, params<ActionImp> params) : Act(ActionImp(params)), key(pkey) {}
-
-	template<class Configuration>
-	type eval(Configuration& config){ 
-		return Act.eval(config[key]); 
-	};
-
-	template<class Configuration>
-	Configuration force(Configuration & config){
-		return Configuration{{key, Act.force(config[key])["force"]}};
-	};
-
-	template<class Configuration>
-	Configuration grad(Configuration & config){
-		return Configuration({{key, Act.grad(config[key])["grad"]}});
-	};
-
-};
 
 /*! Container class for modular actions.
  * Offers the same functionality as the Action class.
  * It contains multiple actions and sums up their outputs.
  **/
 
-template<class ...SingleActions>
+template<NSL::Concept::isTemplateDerived<BaseAction> ... SingleActions>
 class Action {	
 public:
-	std::tuple<SingleActions...>  Summands;
-	typedef std::tuple_element<0, std::tuple<SingleActions...>>::type::type type;				//TODO deduce type of sum
-	Action(SingleActions ... pSummands) :Summands(pSummands ...){}
+	Action(SingleActions ... psummands_) : 
+        summands_({psummands_ ...})
+    {}
 
-	// template<class SingleAction>
-	// Action<SingleActions...,SingleAction> operator += (const SingleAction& other){
-	// 	return *this + other;
-	// }
+    template<NSL::Concept::isNumber ... TensorTypes>
+	Configuration<TensorTypes...> force(Configuration<TensorTypes...> & config){
+        Configuration<TensorTypes...> sum;
+        std::apply(
+            [&sum, &config](auto & ... terms) {
+                (sum += ... += terms.force(config));
+            },
+            summands_
+        );
+        return sum;
+    };
 
-	template<class Configuration>
-    type eval(Configuration & config){
-		type sum = 0;
-        recursive_sum_eval<0>(sum, config);
+    template<NSL::Concept::isNumber ... TensorTypes>
+	Configuration<TensorTypes...> grad(Configuration<TensorTypes...> & config){
+        Configuration<TensorTypes...> sum;
+        std::apply(
+            [&sum, &config](auto & ... terms) {
+                (sum += ... += terms.grad(config));
+            },
+            summands_
+        );
+        return sum;
+    };
+
+    template<NSL::Concept::isNumber ... TensorTypes>
+	auto eval(Configuration<TensorTypes...> & config){
+
+        typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
+        ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+
+        std::apply(
+            [&sum, &config](auto & ... terms) {
+                (sum += ... += terms.eval(config));
+            },
+            summands_
+        );
+
         return sum;
     }
-	template<class Configuration>
-    Configuration force(Configuration & config){
-		Configuration sum;
-		recursive_sum_force<0>(sum, config);
-        return sum;
-    }
-	template<class Configuration>
-    Configuration grad(Configuration & config){
-		Configuration sum;
-		recursive_sum_grad<0>(sum, config);
 
-        return sum;
+
+    template<NSL::Concept::isNumber ... TensorTypes>
+	auto operator()(Configuration<TensorTypes...> & config){
+        return this->eval(config);
     }
 
 	private:
+	std::tuple<SingleActions...>  summands_;
 
-	template<int I, class Configuration>
-    void recursive_sum_eval(type & sum, Configuration & config){
-        if constexpr (I < sizeof...(SingleActions)){
-            sum += std::get<I>(Summands).eval(config);
-            recursive_sum_eval<I+1>(sum, config);
-        } 
-    }
-
-	template<int I, class Configuration>
-    void recursive_sum_force(Configuration & sum, Configuration & config){
-        if constexpr (I < sizeof...(SingleActions)){
-			sum += std::get<I>(Summands).force(config);
-			recursive_sum_force<I+1>(sum, config);
-        } 
-    }
-
-	template<int I, class Configuration>
-    void recursive_sum_grad(Configuration & sum, Configuration & config){
-        if constexpr (I < sizeof...(SingleActions)){
-			sum += std::get<I>(Summands).grad(config);
-			recursive_sum_grad<I+1>(sum, config);
-        } 
-    }
 };
 
 template<class ...SingleActions1, class ...SingleActions2>
 Action<SingleActions1... , SingleActions2...> operator+ ( const Action<SingleActions1...> & left, const Action<SingleActions2...> & right ){
-	auto Summands = std::tuple_cat(left.Summands, right.Summands);
-	return std::make_from_tuple<Action<SingleActions1... , SingleActions2...>>(Summands);
+	auto summands_ = std::tuple_cat(left.summands_, right.summands_);
+	return std::make_from_tuple<Action<SingleActions1... , SingleActions2...>>(summands_);
 }
 
 template<class ...SingleActions1, class SingleAction2>
 Action<SingleActions1... , SingleAction2> operator+ ( const Action<SingleActions1...> & left, const SingleAction2 & right ){
-	auto Summands = std::tuple_cat(left.Summands, std::make_tuple(right));
-	return std::make_from_tuple<Action<SingleActions1... , SingleAction2>>(Summands);
+	auto summands_ = std::tuple_cat(left.summands_, std::make_tuple(right));
+	return std::make_from_tuple<Action<SingleActions1... , SingleAction2>>(summands_);
 }
 
 template<class SingleAction1, class ...SingleActions2>
 Action<SingleAction1 , SingleActions2...> operator+ ( const SingleAction1 & left, const Action<SingleActions2...> & right ){
-	auto Summands = std::tuple_cat(std::make_tuple(left), right.Summands);
-	return std::make_from_tuple<Action<SingleAction1 , SingleActions2...>>(Summands);
+	auto summands_ = std::tuple_cat(std::make_tuple(left), right.summands_);
+	return std::make_from_tuple<Action<SingleAction1 , SingleActions2...>>(summands_);
 }
 
 template<class SingleAction1, class SingleAction2>
 Action<SingleAction1 , SingleAction2> operator+ ( const SingleAction1 & left, const SingleAction2 & right ){
-	auto Summands = std::make_tuple(left, right);
-	return std::make_from_tuple<Action<SingleAction1 , SingleAction2>>(Summands);
+	auto summands_ = std::make_tuple(left, right);
+	return std::make_from_tuple<Action<SingleAction1 , SingleAction2>>(summands_);
 };
 
 } // namespace NSL::Action
 
-#include "Implementations/hubbardGaugeAction.cpp"
-
-#endif //NANOSYSTEMLIBRARY_ACTION_HPP*//*
+#endif //NSL_ACTION_TPP*//*
