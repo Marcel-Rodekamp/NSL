@@ -40,7 +40,7 @@ int main(){
 	NSL::Action::HubbardGaugeAction<cd> act2({2, 16, 1}, "phi2");
 
     // Add the two actions to form the final desired action
-	// NSL::Action::Action act5(act3, act4);
+	// NSL::Action::Action S(act1, act2);
 	NSL::Action::Action S = act1 + act2;
 
     // Compute the action
