@@ -4,7 +4,7 @@
 #include "../../assert.hpp"
 #include "../../concepts.hpp"
 
-#include "../device.tpp"
+#include "../../device.tpp"
 #include "complex.hpp"
 
 namespace NSL{
