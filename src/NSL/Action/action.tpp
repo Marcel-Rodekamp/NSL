@@ -39,11 +39,11 @@ class BaseAction{
 	virtual ActionValueType eval(const Tensor<TensorTypes>& ... fields) = 0;
 
 	inline Configuration<TensorTypes...> force(Configuration<TensorTypes...> & config){
-		return Configuration<TensorTypes...>{{configKey_, force(config[configKey_])["force"]}};
+		return Configuration<TensorTypes...>{{configKey_, force(config[configKey_])[configKey_]}};
 	}
 
 	inline Configuration<TensorTypes...> grad(Configuration<TensorTypes...> & config){
-		return Configuration<TensorTypes...>({{configKey_, grad(config[configKey_])["grad"]}});
+		return Configuration<TensorTypes...>({{configKey_, grad(config[configKey_])[configKey_]}});
 	}
 
 	inline Type eval(Configuration<TensorTypes...>& config){ 

@@ -88,12 +88,12 @@ Type HubbardGaugeAction<Type, TensorType>::eval(const Tensor<TensorType>& phi){
 	
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::force(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{"force", phi /- this->params_.Utilde}};
+    return Configuration<Type>{{this->configKey_, phi /- this->params_.Utilde}};
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::grad(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{"grad", phi / this->params_.Utilde}};
+    return Configuration<Type>{{this->configKey_, phi / this->params_.Utilde}};
 }
 
 } // namespace NSL::Action
