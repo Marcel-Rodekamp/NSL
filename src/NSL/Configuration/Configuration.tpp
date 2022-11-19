@@ -69,6 +69,31 @@ Configuration<Type> operator+( const Configuration<Type> & lhs,
     tmp+=rhs;
     return std::move(tmp);
 }
+
+//! Multiply a configuration by a number 
+/*!
+ * Multiply each field by a number
+ * */
+template<NSL::Concept::isNumber Type>
+Configuration<Type> operator*( Configuration<Type> config, const Type & number) {
+    for(auto & [key,field] : config ){
+        field *= number;
+    }
+}
+
+//! Multiply a configuration by a number 
+/*!
+ * Multiply each field by a number
+ * */
+template<NSL::Concept::isNumber Type>
+Configuration<Type> operator*( const Type & number, Configuration<Type> config) {
+    for(auto & [key,field] : config ){
+        field *= number;
+    }
+
+    return config;
+}
+
 } // namespace NSL
 
 #endif //NSL_CONFIGURATION_TPP
