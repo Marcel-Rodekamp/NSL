@@ -30,31 +30,29 @@ class Leapfrog: Integrator<ActionTermTypes...> {
     //! Integrate a differential equation defined by force given in 'action'
     /*!
      * */
-    template<NSL::Concept::isNumber ... TensorTypes>
-    std::tuple<NSL::Configuration<TensorTypes...>, NSL::Configuration<TensorTypes ...> > operator()(
-        const NSL::Configuration<TensorTypes ...> & q_, const NSL::Configuration<TensorTypes ...> & p_
+    template<NSL::Concept::isNumber TensorType>
+    std::tuple<NSL::Configuration<TensorType>, NSL::Configuration<TensorType> > operator()(
+        const NSL::Configuration<TensorType> & q_, const NSL::Configuration<TensorType> & p_
     ){
 
         // deep copy to generate a new configuration
-        NSL::Configuration<TensorTypes...> q (q_,true);
-        NSL::Configuration<TensorTypes...> p (p_,true);
-        
-        //! \todo: I should add proper overloads to NSL::Configuration
-        auto stepSize = static_cast<NSL::complex<double>>(stepSize_);
+        NSL::Configuration<TensorType> q (q_,true);
+        NSL::Configuration<TensorType> p (p_,true);
 
         // first half step 
-        q += 0.5 * stepSize * p;
+        p += static_cast<TensorType>(0.5*stepSize_)* this->action_.force(q);
 
         // a bunch of full steps
-        for(NSL::size_t n = 0; n < numSteps_; ++n){
-            p+= stepSize * this->action_.force(q);
-            q+= stepSize * p;
+        q += static_cast<TensorType>(stepSize_) * p;
+        
+        for(NSL::size_t n = 0; n < numSteps_-1; ++n){
+            p += static_cast<TensorType>(stepSize_) * this->action_.force(q);
+            q += static_cast<TensorType>(stepSize_) * p;
         }
 
-        // final half step 
-        p += 0.5 * stepSize * this->action_.force(q);
-        q += 0.5 * stepSize * p;
-        
+        // final half step
+        p += static_cast<TensorType>(0.5*stepSize_) * this->action_.force(q);
+
         return {q,p};
     }
 
