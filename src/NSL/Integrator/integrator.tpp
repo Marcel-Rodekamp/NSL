@@ -25,7 +25,8 @@ class Integrator{
      * configuration of the evolution and returns the desired endpoint.
      * */
     template<NSL::Concept::isNumber ... TensorTypes>
-    NSL::Configuration<TensorTypes...> operator()(NSL::Configuration<TensorTypes ...>);
+    std::tuple<NSL::Configuration<TensorTypes...>, NSL::Configuration<TensorTypes ...> > 
+        operator()(const NSL::Configuration<TensorTypes ...> & q, const NSL::Configuration<TensorTypes ...> & p);
 
     protected:
     NSL::Action::Action<ActionTermTypes...> action_;
