@@ -3,6 +3,7 @@
 
 #include "../concepts.hpp"
 #include "../Tensor.hpp"
+#include "typePromotion.hpp"
 
 #include<unordered_map>
 #include<string>
@@ -45,6 +46,20 @@ class Configuration : public std::unordered_map<std::string, NSL::Tensor<Type>> 
 
             return *this;
         }
+        template<NSL::Concept::isNumber OtherType>
+        auto & operator += ( const Configuration<OtherType> & other ){
+            for(auto &[key,field]: other){
+                if(this->contains(key)){
+                    this->operator[](key) += field;
+                } else {
+                    this->operator[](key) = field;
+                }
+            } 
+
+            return *this;
+        }
+
+
 
         //! Streaming operator
         friend std::ostream & operator<<(std::ostream & os, const Configuration<Type> & conf){
@@ -74,24 +89,26 @@ Configuration<Type> operator+( const Configuration<Type> & lhs,
 /*!
  * Multiply each field by a number
  * */
-template<NSL::Concept::isNumber Type>
-Configuration<Type> operator*( Configuration<Type> config, const Type & number) {
-    for(auto & [key,field] : config ){
+template<NSL::Concept::isNumber NumberType, NSL::Concept::isNumber ConfigType>
+auto operator*( const Configuration<ConfigType> config, const NumberType & number) {
+    Configuration<ConfigType> config_(config,true);
+    for(auto & [key,field] : config_ ){
         field *= number;
     }
+    return config_;
 }
 
 //! Multiply a configuration by a number 
 /*!
  * Multiply each field by a number
  * */
-template<NSL::Concept::isNumber Type>
-Configuration<Type> operator*( const Type & number, Configuration<Type> config) {
-    for(auto & [key,field] : config ){
+template<NSL::Concept::isNumber NumberType, NSL::Concept::isNumber ConfigType>
+auto operator*(const NumberType & number, const Configuration<ConfigType> config) {
+    Configuration<ConfigType> config_(config,true);
+    for(auto & [key,field] : config_ ){
         field *= number;
     }
-
-    return config;
+    return config_;
 }
 
 } // namespace NSL
