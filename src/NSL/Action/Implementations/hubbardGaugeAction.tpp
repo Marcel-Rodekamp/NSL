@@ -83,12 +83,12 @@ class HubbardGaugeAction :
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Type HubbardGaugeAction<Type, TensorType>::eval(const Tensor<TensorType>& phi){
-    return (phi * phi).sum() / 2 / this->params_.Utilde;
+    return (phi * phi).sum() / ( 2 * this->params_.Utilde ) ;
 }
 	
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::force(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{this->configKey_, phi /- this->params_.Utilde}};
+    return Configuration<Type>{{this->configKey_, phi /(- this->params_.Utilde)}};
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
