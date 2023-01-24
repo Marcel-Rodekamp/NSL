@@ -28,25 +28,25 @@ namespace NSL::Action {
 
 template<
     NSL::Concept::isNumber Type, 
-    NSL::Concept::isNumber ... TensorTypes
+    NSL::Concept::isNumber TensorType
 >
 class BaseAction{
 	public:
 	typedef Type ActionValueType;
 
-	virtual Configuration<TensorTypes...> force(const Tensor<TensorTypes>&... fields) = 0;
-	virtual Configuration<TensorTypes...> grad(const Tensor<TensorTypes>&... fields) = 0;
-	virtual ActionValueType eval(const Tensor<TensorTypes>& ... fields) = 0;
+	virtual Configuration<TensorType> force(const Tensor<TensorType>& fields) = 0;
+	virtual Configuration<TensorType> grad(const Tensor<TensorType>& fields) = 0;
+	virtual ActionValueType eval(const Tensor<TensorType>& fields) = 0;
 
-	inline Configuration<TensorTypes...> force(Configuration<TensorTypes...> & config){
-		return Configuration<TensorTypes...>{{configKey_, force(config[configKey_])["force"]}};
+	inline Configuration<TensorType> force(Configuration<TensorType> & config){
+		return Configuration<TensorType>{{configKey_, force(config[configKey_])[configKey_]}};
 	}
 
-	inline Configuration<TensorTypes...> grad(Configuration<TensorTypes...> & config){
-		return Configuration<TensorTypes...>({{configKey_, grad(config[configKey_])["grad"]}});
+	inline Configuration<TensorType> grad(Configuration<TensorType> & config){
+		return Configuration<TensorType>({{configKey_, grad(config[configKey_])[configKey_]}});
 	}
 
-	inline Type eval(Configuration<TensorTypes...>& config){ 
+	inline Type eval(Configuration<TensorType>& config){ 
 		return eval(config[configKey_]); 
 	}
 
@@ -71,9 +71,9 @@ public:
         summands_({psummands_ ...})
     {}
 
-    template<NSL::Concept::isNumber ... TensorTypes>
-	Configuration<TensorTypes...> force(Configuration<TensorTypes...> & config){
-        Configuration<TensorTypes...> sum;
+    template<NSL::Concept::isNumber TensorType>
+	Configuration<TensorType> force(Configuration<TensorType> & config){
+        Configuration<TensorType> sum;
         std::apply(
             [&sum, &config](auto & ... terms) {
                 (sum += ... += terms.force(config));
@@ -83,9 +83,9 @@ public:
         return sum;
     };
 
-    template<NSL::Concept::isNumber ... TensorTypes>
-	Configuration<TensorTypes...> grad(Configuration<TensorTypes...> & config){
-        Configuration<TensorTypes...> sum;
+    template<NSL::Concept::isNumber TensorType>
+	Configuration<TensorType> grad(Configuration<TensorType> & config){
+        Configuration<TensorType> sum;
         std::apply(
             [&sum, &config](auto & ... terms) {
                 (sum += ... += terms.grad(config));
@@ -95,25 +95,41 @@ public:
         return sum;
     };
 
-    template<NSL::Concept::isNumber ... TensorTypes>
-	auto eval(Configuration<TensorTypes...> & config){
+    template<NSL::Concept::isNumber TensorType>
+	auto eval(Configuration<TensorType> & config){
 
-        typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
-        ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+        if constexpr (sizeof...(SingleActions)!=1){
+            typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
+            ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+            std::apply(
+                [&sum, &config](auto & ... terms) {
+                    (sum += ... += terms.eval(config));
+                },
+                summands_
+            );
 
-        std::apply(
-            [&sum, &config](auto & ... terms) {
-                (sum += ... += terms.eval(config));
-            },
-            summands_
-        );
+            return sum;
 
-        return sum;
+        } else {
+            typedef TensorType ReturnTypeProposal;
+            ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+            std::apply(
+                [&sum, &config](auto & ... terms) {
+                    (sum += ... += terms.eval(config));
+                },
+                summands_
+            );
+
+            return sum;
+
+        }
+
+
     }
 
 
-    template<NSL::Concept::isNumber ... TensorTypes>
-	auto operator()(Configuration<TensorTypes...> & config){
+    template<NSL::Concept::isNumber TensorType>
+	auto operator()(Configuration<TensorType> & config){
         return this->eval(config);
     }
 

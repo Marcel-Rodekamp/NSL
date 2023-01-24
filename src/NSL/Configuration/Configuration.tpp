@@ -3,6 +3,7 @@
 
 #include "../concepts.hpp"
 #include "../Tensor.hpp"
+#include "typePromotion.hpp"
 
 #include<unordered_map>
 #include<string>
@@ -45,6 +46,20 @@ class Configuration : public std::unordered_map<std::string, NSL::Tensor<Type>> 
 
             return *this;
         }
+        template<NSL::Concept::isNumber OtherType>
+        auto & operator += ( const Configuration<OtherType> & other ){
+            for(auto &[key,field]: other){
+                if(this->contains(key)){
+                    this->operator[](key) += field;
+                } else {
+                    this->operator[](key) = field;
+                }
+            } 
+
+            return *this;
+        }
+
+
 
         //! Streaming operator
         friend std::ostream & operator<<(std::ostream & os, const Configuration<Type> & conf){
@@ -69,6 +84,33 @@ Configuration<Type> operator+( const Configuration<Type> & lhs,
     tmp+=rhs;
     return std::move(tmp);
 }
+
+//! Multiply a configuration by a number 
+/*!
+ * Multiply each field by a number
+ * */
+template<NSL::Concept::isNumber NumberType, NSL::Concept::isNumber ConfigType>
+auto operator*( const Configuration<ConfigType> config, const NumberType & number) {
+    Configuration<ConfigType> config_(config,true);
+    for(auto & [key,field] : config_ ){
+        field *= number;
+    }
+    return config_;
+}
+
+//! Multiply a configuration by a number 
+/*!
+ * Multiply each field by a number
+ * */
+template<NSL::Concept::isNumber NumberType, NSL::Concept::isNumber ConfigType>
+auto operator*(const NumberType & number, const Configuration<ConfigType> config) {
+    Configuration<ConfigType> config_(config,true);
+    for(auto & [key,field] : config_ ){
+        field *= number;
+    }
+    return config_;
+}
+
 } // namespace NSL
 
 #endif //NSL_CONFIGURATION_TPP
