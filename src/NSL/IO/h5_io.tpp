@@ -8,48 +8,49 @@
 using namespace HighFive;
 
 namespace NSL {
-template <NSL::Concept::isNumber Type>
-inline int h5_write(const Type &tensor, const std::string node, const std::string h5file){
 
-       File h5(h5file, File::ReadWrite | File::OpenOrCreate); // if h5file doesn't exist, it will be created
+class H5IO {
+      H5IO(std::string h5file) :
+      h5file_(h5file),
+      h5f_(h5file, File::ReadWrite | File::OpenOrCreate)
+      (
+      )
+
+public:
+inline int write(const NSL::Tensor<Type> &tensor, const std::string node){
        auto flat_tensor = tensor.flatten();
        if constexpr (NSL::is_complex<Type>()) {
        	  std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(flat_tensor.data(), flat_tensor.data()+flat_tensor.numel());
-    	  h5.createDataSet(node, phi);
+    	  h5_.createDataSet(node, phi);
   } else {
     std::vector<Type> phi(flat_tensor.data(), flat_tensor.data()+flat_tensor.numel());
-    h5.createDataSet(node, phi);
+    h5_.createDataSet(node, phi);
   }
 
        return 0;       
 }
 
 template <NSL::Concept::isNumber Type>
-inline int h5_read(const Type &tensor, const std::string node, const std::string h5file){
+inline NSL::Tensor<Type> read(const std::string node){
 
-       if(std::filesystem::exists(h5file)){
-	File h5(h5file, File::Read | File::Open);
+       if(h5f_.exist(node)){ // check if the node exists
 	return 0;
        } else {
-       	 // file does not exist
+       	 // node does not exist
        	 return 1;
        }
-}
 
-\*
-inline std::string to_string(const Type &z){
-    if constexpr(NSL::is_complex<Type>()){
-        auto re = NSL::real(z);
-        auto im = NSL::imag(z);
-        if (im < 0){
-            return std::to_string(re)+std::to_string(im)+"i";
-        }
-        return std::to_string(re)+"+"+std::to_string(im)+"i";
-    } else {
-        return std::to_string(z); 
-    }
+private:
+
+std::string h5file_;
+File h5f_;
+
+
 }
-*/
+};
+
+
+
 } // namespace NSL
 
 #endif // NSL_IO_H5_IO_TPP
