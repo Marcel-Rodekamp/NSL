@@ -1,7 +1,7 @@
 #include "../test.hpp"
-//#include <highfive/H5DataSet.hpp>
-//#include <highfive/H5DataSpace.hpp>
-#include "highfive/H5File.hpp"
+//#include "highfive/H5File.hpp"
+#include <highfive/H5Attribute.hpp>
+#include <highfive/H5File.hpp>
 #include <iostream>
 
 using namespace HighFive;
@@ -30,28 +30,45 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
 
   std::string FILE_NAME("./test_IO.h5");
   std::string DATASET_NAME("configurations/"+std::to_string(0)+"/phi");
+  std::string DIM("Nt Nx");
     
   // We create an empty HDF5 file, by truncating an existing
   // file if required:
   File h5file(FILE_NAME, File::Truncate);
 
-  // make a random configuration
-  //  std::vector<Type> phi(Nx*Nt,static_cast<Type> (.5));
-
   //  NSL::Tensor <Type> pp(Nt,Nx).rand();
   auto pp = NSL::Tensor<Type>(Nt, Nx).rand();
   auto ppflat = pp.flatten();
   
-  std::cout << ppflat[0] << std::endl;
+  //std::cout << ppflat[0] << std::endl;
 
+  std::vector<int> NtNx(2);
+
+  NtNx[0] = Nt;
+  NtNx[1] = Nx;
+  
   //  phi = pp.flatten();
   if constexpr (NSL::is_complex<Type>()) {
     std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(pp.data(), pp.data()+pp.numel());
-    h5file.createDataSet(DATASET_NAME, phi);
+    //    h5file.createDataSet(DATASET_NAME, phi);
+    DataSet dataset = h5file.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(DATASET_NAME,  DataSpace::From(phi));
+    dataset.write(phi);
+
+    // now write out the dimension of the tensor as an attribute
+    Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(NtNx));
+    dim.write(NtNx);
   } else {
     std::vector<Type> phi(pp.data(), pp.data()+pp.numel());
-    h5file.createDataSet(DATASET_NAME, phi);
+    //    h5file.createDataSet(DATASET_NAME, phi);
+    DataSet dataset = h5file.createDataSet<Type>(DATASET_NAME,  DataSpace::From(phi));
+    dataset.write(phi);
+
+    // now write out the dimension of the tensor as an attribute
+    Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(NtNx));
+    dim.write(NtNx);
   }
+
+
   
   
   //REQUIRE( det == static_cast<Type>(1) );
