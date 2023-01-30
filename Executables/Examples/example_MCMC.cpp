@@ -44,7 +44,7 @@ int main(){
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx); 
 
-    std::cout   << "Setting up a gauge action with beta=" << beta
+    std::cout   << "Setting up a Hubbard-Gauge action with beta=" << beta
                 << ", Nt=" << Nt << ", U=" << U << " on a ring with " << Nx << " sites." << std::endl;
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
