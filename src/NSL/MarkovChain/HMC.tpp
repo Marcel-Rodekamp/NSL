@@ -145,7 +145,7 @@ class HMC{
         Type proposal_H = proposal_S;
         Type starting_H = state.actionValue;
         for( const auto& [key,field]: proposal_momentum){
-            Type psq = (field * field).sum();
+            Type psq = 0.5*(field * field).sum();
             proposal_H += psq;
             starting_H += psq;
         }
