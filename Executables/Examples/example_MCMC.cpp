@@ -96,7 +96,7 @@ int main(){
     // which is returned is of length Nconf.
     // 
     // Note: This also has a overload for providing a configuration only.
-    std::cout << "Generating   " << Nconf << " steps..." << std::endl;
+    std::cout << "Generating   " << Nconf << " steps, saving every " << saveFreq << "..." << std::endl;
     auto productionStartTime = std::chrono::steady_clock::now();
     std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
     auto productionEndTime = std::chrono::steady_clock::now();
