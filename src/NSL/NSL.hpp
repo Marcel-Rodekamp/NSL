@@ -22,5 +22,6 @@
 #include "IO.hpp"
 #include "Action.hpp"
 #include "Integrator.hpp"
+#include "MCMC.hpp"
 
 #endif
