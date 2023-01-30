@@ -44,6 +44,8 @@ int main(){
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx); 
 
+    std::cout   << "Setting up a Hubbard-Gauge action with beta=" << beta
+                << ", Nt=" << Nt << ", U=" << U << " on a ring with " << Nx << " sites." << std::endl;
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
         /*beta=*/  beta,
@@ -63,6 +65,8 @@ int main(){
     };
     config["phi"].rand();
 
+    std::cout       << "Setting up a leapfrog integrator with trajectory length " << trajectoryLength
+                    << " and " << numberMDsteps << " MD steps." << std::endl;
     // Initialize the integrator
     NSL::Integrator::Leapfrog leapfrog( 
         /*action*/S,  
@@ -81,6 +85,7 @@ int main(){
     // whether the entire chain is stored in a std::vector or of only 
     // a single state is stored at the time. The second option is more 
     // efficient and might be used for e.g. burn in.
+    std::cout << "Thermalizing " << NburnIn << " steps..." << std::endl;
     auto burnInStartTime = std::chrono::steady_clock::now();
     NSL::MCMC::MarkovState<Type> start_state = hmc.generate<false>(config, NburnIn);
     auto burnInEndTime = std::chrono::steady_clock::now();
@@ -91,6 +96,7 @@ int main(){
     // which is returned is of length Nconf.
     // 
     // Note: This also has a overload for providing a configuration only.
+    std::cout << "Generating   " << Nconf << " steps..." << std::endl;
     auto productionStartTime = std::chrono::steady_clock::now();
     std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<true>(start_state, Nconf, saveFreq);
     auto productionEndTime = std::chrono::steady_clock::now();
