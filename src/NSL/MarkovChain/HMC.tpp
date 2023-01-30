@@ -10,6 +10,8 @@
 
 namespace NSL::MCMC{
 
+enum Chain{ AllStates, LastState };
+
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
           NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType
 >
@@ -38,10 +40,10 @@ class HMC{
      * \p saveFrequency, Number of configurations to be skipped generated
      *                  (default=1)
      *
-     * if returnChain:
+     * if chain == Chain::AllStates:
      *      Returns a `std::vector<MarkovState<Type>>` of size \f(N_{conf}\f) 
      *      representing the Markov Chain where only every `saveFrequency`s 
-     *      element is returnChaind 
+     *      element is returned
      *      Usage Example: Production of independent Markov Chain
      * else:
      *      Returns a `MarkovState<Type>` produced as the \f(N_{conf}\f)s 
@@ -49,19 +51,19 @@ class HMC{
      *      Usage Example: Burn In
      *
      * */
-    template<bool returnChain, NSL::Concept::isNumber Type>
-        std::conditional_t<returnChain, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
+    template<Chain chain, NSL::Concept::isNumber Type>
+        std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
     generate(const NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t saveFrequency = 1){
         // ensure that saveFrequency is at least 1. 
         if (saveFrequency <= 0) {
             saveFrequency = 1;
         }
 
-        if constexpr(returnChain) {
-            // prepare some memory to returnChain the markov chain
+        if constexpr(chain == Chain::AllStates) {
+            // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
 
-            // returnChain the initial configuration in the 0th element
+            // Put the initial configuration in the 0th element
             MC[0] = state;
 
             // generate Nconf-1 configurations
@@ -80,12 +82,12 @@ class HMC{
             // return the Markov Chain
             return MC;
         } else {
-            // returnChain the initial configuration in the 0th element
+            // for Chain::LastState we only need a new state that becomes overwritten over and over again.
             NSL::MCMC::MarkovState<Type> newState = state;
 
 
             // generate Nconf-1 configurations
-            // As none is returnChaind we just multiply the number of configurations
+            // As none is returned we just multiply the number of configurations
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
                 newState = this->generate_(newState);
             }
@@ -95,8 +97,8 @@ class HMC{
         }
     }
 
-    template<bool returnChain, NSL::Concept::isNumber Type>
-        std::conditional_t<returnChain, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
+    template<Chain chain, NSL::Concept::isNumber Type>
+        std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
     generate(NSL::Configuration<Type> & config, NSL::size_t Nconf, NSL::size_t saveFrequency = 1){
         NSL::MCMC::MarkovState<Type> initialState(
             /*Configuration                        */ config,
@@ -106,7 +108,7 @@ class HMC{
             /*accepted                             */ true
         );
 
-        return this->generate<returnChain,Type>(initialState, Nconf, saveFrequency);
+        return this->generate<chain,Type>(initialState, Nconf, saveFrequency);
     }
 
     template<NSL::Concept::isNumber Type>

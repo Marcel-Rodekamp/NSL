@@ -77,12 +77,12 @@ int main(){
     // We can pass just a config to the generate function a MarkovState is 
     // generated automatically. If we want more control you cane also provide
     // a MarkovState.
-    // The boolean provided as template argument `returnChain` switches 
-    // whether the entire chain is stored in a std::vector or of only 
-    // a single state is stored at the time. The second option is more 
-    // efficient and might be used for e.g. burn in.
+    // The Template argument Chain{AllStates,LastState} is a memory optimization
+    // where the LastState will return only the last generated state and does 
+    // not keep the rest in memory while the AllStates (see production for use)
+    // will store all states according to the saveFrequency.
     auto burnInStartTime = std::chrono::steady_clock::now();
-    NSL::MCMC::MarkovState<Type> start_state = hmc.generate<false>(config, NburnIn);
+    NSL::MCMC::MarkovState<Type> start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, NburnIn);
     auto burnInEndTime = std::chrono::steady_clock::now();
 
     // Generate Markov Chain
@@ -92,7 +92,7 @@ int main(){
     // 
     // Note: This also has a overload for providing a configuration only.
     auto productionStartTime = std::chrono::steady_clock::now();
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<true>(start_state, Nconf, saveFreq);
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
     auto productionEndTime = std::chrono::steady_clock::now();
 
     // Print some final statistics
