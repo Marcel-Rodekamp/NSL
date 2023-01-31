@@ -7,3 +7,5 @@ target_link_libraries(example_action NSL)
 add_executable(example_leapfrog example_leapfrog.cpp)
 target_link_libraries(example_leapfrog NSL)
 
+add_executable(example_IO example_IO.cpp)
+target_link_libraries(example_IO NSL)
