@@ -59,12 +59,19 @@ class HMC{
             saveFrequency = 1;
         }
 
+        std::size_t logFrequency = 1;
+        if(Nconf >= 100){
+            logFrequency = static_cast<NSL::size_t>( 0.01*Nconf );
+        }
+
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
 
             // Put the initial configuration in the 0th element
             MC[0] = state;
+
+            double runningAcceptence = 1.;
 
             // generate Nconf-1 configurations
             for(NSL::size_t n = 1; n < Nconf; ++n){
@@ -77,6 +84,20 @@ class HMC{
                 }
 
                 MC[n] = this->generate_(tmp);
+
+                runningAcceptence += static_cast<double>(MC[n].accepted);
+
+                // ToDo: have a proper hook being called here
+                if (n % logFrequency == 0){
+                    std::cout << "HMC: "
+                              << n 
+                              << "/"
+                              << Nconf 
+                              << "; Running Acceptence Rate: " 
+                              << runningAcceptence*100/n
+                              << "% \n";
+
+                }
             }
 
             // return the Markov Chain
