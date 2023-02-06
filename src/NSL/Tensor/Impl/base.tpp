@@ -4,6 +4,9 @@
 #include "../../assert.hpp"
 #include "../../concepts.hpp"
 
+#include "../../device.tpp"
+#include "complex.hpp"
+
 namespace NSL{
 // declare the interface as many operators will need to return a Tensor 
 // type.
@@ -18,11 +21,18 @@ class TensorBase {
     //! Real Type of a NSL::complex
     /*!
      * For Tensors of complex type RealType is provided as a convenience member.
-     * It is accessible as Tensor<NSL::complex<RealType>>::RealType
+     * It is accessible as Tensor<Type>::RealType
      * If the Tensor is real valued `RealType = Type` as of the implementation of
-     * `NSL::RT_extractor`
+     * `NSL::RealTypeOf`
      */
-     using RealType = typename NSL::RT_extractor<Type>::value_type;
+    using RealType = NSL::RealTypeOf<Type>;
+
+    //! scalar type of the Tensor
+    /*!
+     * The scalar type of the tensor is provided as a convenience member.
+     * It is accessible via NSL::Tensor<Type>::scalarType. 
+     * */
+    using scalarType = Type;
 
     //! default constructor
     TensorBase() = default;
@@ -37,6 +47,16 @@ class TensorBase {
         //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
     }
 
+    //! D-dimensional constructor
+    template<NSL::Concept::isIntegral ... SizeTypes>
+    explicit TensorBase( NSL::Device dev, const NSL::size_t & size0, const SizeTypes & ... sizes) :
+            data_(torch::zeros({size0,sizes...},
+                               dev.device().dtype<Type>()
+            ))
+    {
+        //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
+    }
+
     //! copy constructor
     /*!
      * Copy the data from other into this new instance. 
@@ -45,6 +65,19 @@ class TensorBase {
      * */
     constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type>& other):
             data_(other.data_)
+    {
+        // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
+    }
+
+    //! copy constructor
+    /*!
+     * Copy the data from other into this new instance. 
+     * The copy constructor creates a shallow copy, i.e. the two tensors
+     * share the underlying data.
+     * */
+    template<NSL::Concept::isNumber OtherType>
+    constexpr TensorBase(const NSL::TensorImpl::TensorBase<OtherType>& other):
+            data_(torch::Tensor(other).to(torch::TensorOptions().dtype<OtherType>()))
     {
         // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
     }
@@ -72,16 +105,16 @@ class TensorBase {
         // std::cout << "NSL::Tensor(NSL::Tensor &&)" << std::endl;
     }
 
-    //! move constructor
-    constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type> && other):
-        data_(std::move(other.data_))
-    {
-        std::cout << "NSL::Tensor(const NSL::Tensor &&)" << std::endl;
+    //! type conversion
+    template<NSL::Concept::isNumber OtherType>
+    operator NSL::Tensor<OtherType> (){
+        //! \todo: Is this efficient?
+        return this->data_.to(torch::TensorOptions().dtype<OtherType>());
     }
 
     //! type conversion
     template<NSL::Concept::isNumber OtherType>
-    operator NSL::Tensor<OtherType> (){
+    operator NSL::Tensor<OtherType> () const {
         //! \todo: Is this efficient?
         return this->data_.to(torch::TensorOptions().dtype<OtherType>());
     }
@@ -113,7 +146,6 @@ class TensorBase {
     template<NSL::Concept::isNumber PrintType>
     friend std::ostream & operator<<(std::ostream & os, const NSL::Tensor<PrintType> & tensor);
 
-    protected:
     //! explicitly convert a polymorphism to this class by performing a shallow copy
     /*!
      * This is a convenience function such that other Impl classes can return
@@ -127,6 +159,14 @@ class TensorBase {
     {
         //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
     }
+    template<NSL::Concept::isNumber OtherType>
+    explicit TensorBase<Type>(TensorBase<OtherType> * other) : 
+        TensorBase(*other)
+    {
+        //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
+    }
+
+    protected:
 
     //! Underlying torch::Tensor holding the data
     torch::Tensor data_;

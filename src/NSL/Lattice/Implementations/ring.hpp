@@ -2,6 +2,7 @@
 #define NSL_LATTICE_RING_HPP
 
 #include "../lattice.hpp"
+#include "../../LinAlg/conj.tpp"
 
 namespace NSL::Lattice {
 

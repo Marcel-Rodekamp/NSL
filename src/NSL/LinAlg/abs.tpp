@@ -7,15 +7,23 @@
 #include "../Tensor.hpp"
 
 namespace NSL::LinAlg {
+// NOTE: Why call std for c10 manipulations?
+// I know it looks wrong!
+//
+// c10 puts its real, imag, abs, arg, and norm into the std namespace.
+// See https://github.com/pytorch/pytorch/blob/master/c10/util/complex.h
+// (as recently as 085e2f7)
 
-template<typename Type>
-inline Type abs(Type number){
-    return std::abs(number);
-}
-
-template<typename Type>
-inline Type abs(NSL::complex<Type> number){
-    return std::abs(number);
+    //! Returns the real-type absolute value, regardless of whether the passed value is real or `complex<>`.
+template<NSL::Concept::isNumber Type>
+typename NSL::RT_extractor<Type>::type abs(const Type &value){
+    if constexpr(is_complex<Type>()) {
+        // See NOTE above for std::explanation.
+        return std::abs(value);
+    }
+    else {
+        return std::abs(value);
+    }
 }
 
 template<typename Type>

@@ -5,13 +5,24 @@
 
 namespace NSL::LinAlg{
 
-//! matrix multiplication
+
+//! matrix @ matrix / tensor @ tensor
 /*!
- * out = left @ right 
+ * Implementation is the same as `NSL::LinAlg::mat_vec` 
  * */
-template<typename T>
-NSL::Tensor<T> mat_mul(const NSL::Tensor<T> & left, const NSL::Tensor<T> & right){
-    return torch::matmul(left,right);    
+template<NSL::Concept::isNumber MatrixType, NSL::Concept::isNumber VectorType>
+NSL::Tensor<NSL::CommonTypeOf<MatrixType,VectorType>> mat_mul(
+        const NSL::Tensor<MatrixType> & leftTensor,  
+        const NSL::Tensor<VectorType> & rightTensor){
+    return torch::matmul(
+        NSL::Tensor<NSL::CommonTypeOf<MatrixType,VectorType>>(leftTensor),
+        NSL::Tensor<NSL::CommonTypeOf<MatrixType,VectorType>>(rightTensor)
+    );
+}
+
+template<NSL::Concept::isNumber Type>
+NSL::Tensor<Type> mat_mul(const NSL::Tensor<Type> & leftTensor, const NSL::Tensor<Type> & rightTensor){
+    return torch::matmul(leftTensor,rightTensor);
 }
         
 } // namespace NSL::LinAlg
