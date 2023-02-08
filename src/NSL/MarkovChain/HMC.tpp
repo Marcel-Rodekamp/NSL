@@ -96,7 +96,6 @@ class HMC{
                               << "; Running Acceptence Rate: " 
                               << runningAcceptence*100/n
                               << "% \n";
-
                 }
             }
 
@@ -164,13 +163,17 @@ class HMC{
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
 
-        // compute the Hamiltonian p^2 + S
-        Type proposal_H = proposal_S;
+        // compute the Hamiltonian H = p^2 + S
+        // Starting point of the trajectory
         Type starting_H = state.actionValue;
+        for( const auto& [key,field]: momentum){
+            starting_H += 0.5*(field * field).sum();
+        }
+        
+        // End point of the trajectory i.e. proposal
+        Type proposal_H = proposal_S;
         for( const auto& [key,field]: proposal_momentum){
-            Type psq = 0.5*(field * field).sum();
-            proposal_H += psq;
-            starting_H += psq;
+            proposal_H += 0.5*(field * field).sum();
         }
 
         // We always assume real part of the action, i.e. automatic reweighting
