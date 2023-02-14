@@ -21,7 +21,6 @@ public:
     std::string DIM("shape");
     std::vector<NSL::size_t> shape = tensor.shape();
     
-    //    auto flat_tensor = tensor.flatten();
     if constexpr (NSL::is_complex<Type>()) {
       std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
 
@@ -45,15 +44,15 @@ public:
     return 0; 
   }
 
-  //  template <NSL::Concept::isNumber Type> inline NSL::Tensor<Type> read(const std::string node){
+    template <NSL::Concept::isNumber Type> inline NSL::Tensor<Type> read(const std::string node){
     
-  //    if(h5f_.exist(node)){ // check if the node exists
-  //      return 0;
-  //    } else {
+      if(h5f_.exist(node)){ // check if the node exists
+        return 0;
+      } else {
       // node does not exist
-  //      return 1;
-  //    }
-  //}
+        return 1;
+      }
+  }
   
 private:
   
