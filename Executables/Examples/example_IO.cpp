@@ -3,7 +3,7 @@
 int main(){
 
   NSL::H5IO io("example_io.h5");
-  NSL::Tensor<NSL::complex<double>> tensor(2,2);
+  NSL::Tensor<NSL::complex<double>> tensor(2,2,3,3);
 
   tensor.rand();
 
