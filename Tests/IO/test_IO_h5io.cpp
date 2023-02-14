@@ -12,7 +12,7 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx);
 // Test Cases
 // =============================================================================
 
-FLOAT_NSL_TEST_CASE( "LinAlg: determinant of identity", "[LinAlg,det,default]" ) {
+FLOAT_NSL_TEST_CASE( "IO: read/write to h5 file", "[IO,read/write,default]" ) {
   const NSL::size_t Nt = 32; //GENERATE(32);
   const NSL::size_t Nx = 18; //GENERATE(18);
   test_h5io<TestType>(Nt,Nx);
@@ -26,15 +26,18 @@ template<typename Type>
 void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
 
   std::string FILE_NAME("./test_IO.h5");
-  std::string DATASET_NAME("configurations/"+std::to_string(0)+"/phi");
+  std::string DATASET_NAME("configurations/"+std::to_string(0)+"/phi/"+typeid(Type).name());
 
   NSL::H5IO h5(FILE_NAME);
   
   // create a random tensor array
-  auto pp = NSL::Tensor<Type>(Nt, Nx).rand();
+  auto pout = NSL::Tensor<Type>(Nt, Nx).rand();
 
   // write it into the h5 file
-  h5.write(pp,DATASET_NAME);
+  h5.write(pout,DATASET_NAME);
+
+  // read in the same data
+  //  auto pin = h5.read(DATASET_NAME);
 
   
   
