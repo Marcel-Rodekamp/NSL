@@ -44,13 +44,24 @@ public:
     return 0; 
   }
 
-    template <NSL::Concept::isNumber Type> inline NSL::Tensor<Type> read(const std::string node){
+    template <NSL::Concept::isNumber Type> inline int read(NSL::Tensor<Type> &tensor,const std::string node){
     
       if(h5f_.exist(node)){ // check if the node exists
+        DataSet dataset = h5f_.getDataSet(node);
+	
+	/* can use the following to list all attributes
+      	std::vector<std::string> all_attributes_keys = dataset.listAttributeNames();
+        for (const auto& attr: all_attributes_keys) {
+            std::cout << "attribute: " << attr << std::endl;
+        }
+	*/
+	
       	// first read the attributes to get the shape of the tensor
 	std::vector<int> shape;
-	Attribute dim = h5f_.getAttribute("shape");
+	Attribute dim = dataset.getAttribute("shape");
 	dim.read(shape);
+
+	// now get the data
         return 0;
       } else {
       // node does not exist

@@ -36,8 +36,9 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   // write it into the h5 file
   h5.write(pout,DATASET_NAME);
 
+  NSL::Tensor<Type> pin;
   // read in the same data
-  //  auto pin = h5.read(DATASET_NAME);
+  h5.read(pin, DATASET_NAME);
 
   
   
