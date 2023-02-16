@@ -3,6 +3,7 @@
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include <iostream>
+#include <vector>
 #include "highfive/H5File.hpp"
 
 using namespace HighFive;
@@ -62,6 +63,18 @@ public:
 	dim.read(shape);
 
 	// now get the data
+	if constexpr (NSL::is_complex<Type>()) {
+	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi;
+	   dataset.read(phi);
+
+
+	} else {
+	  std::vector<Type> phi;
+	  dataset.read(phi);
+
+
+	}
+
         return 0;
       } else {
       // node does not exist
