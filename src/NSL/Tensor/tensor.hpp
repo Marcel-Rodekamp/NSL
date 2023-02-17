@@ -20,6 +20,7 @@
 #include "Tensor/Impl/shift.tpp"
 #include "Tensor/Impl/device.tpp"
 #include "Tensor/Impl/flatten.tpp"
+#include "Tensor/Impl/reshape.tpp"
 
 // Arithmetic
 #include "Tensor/Impl/operatorAdditionEqual.tpp"
@@ -68,7 +69,8 @@ class Tensor:
     public NSL::TensorImpl::TensorShift<Type>,
     public NSL::TensorImpl::TensorMatmul<Type>,
     public NSL::TensorImpl::TensorDevice<Type>,
-    public NSL::TensorImpl::TensorFlatten<Type>
+    public NSL::TensorImpl::TensorFlatten<Type>,
+    public NSL::TensorImpl::TensorReshape<Type>
 {
     public:
 
