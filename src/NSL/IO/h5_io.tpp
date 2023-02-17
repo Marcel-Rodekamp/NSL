@@ -69,8 +69,12 @@ public:
 	if(!tensor.defined()){
 	   tensor = NSL::Tensor<Type> (numElems);
 	} else {
-	   // tensor.shape() =
-	   // need more work here
+	   tensor.flatten();  // flatten the array
+	   if(tensor.numel() != numElems)
+	   {
+	      //tensor.resize(numElems);  // Need to resize the array here!
+	   }
+	   //std::cout << tensor.shape() << std::endl;
 	}
 
 	// now get the data
