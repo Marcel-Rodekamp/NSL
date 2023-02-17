@@ -21,6 +21,7 @@
 #include "Tensor/Impl/device.tpp"
 #include "Tensor/Impl/flatten.tpp"
 #include "Tensor/Impl/reshape.tpp"
+#include "Tensor/Impl/resize.tpp"
 
 // Arithmetic
 #include "Tensor/Impl/operatorAdditionEqual.tpp"
@@ -70,6 +71,7 @@ class Tensor:
     public NSL::TensorImpl::TensorMatmul<Type>,
     public NSL::TensorImpl::TensorDevice<Type>,
     public NSL::TensorImpl::TensorFlatten<Type>,
+    public NSL::TensorImpl::TensorResize<Type>,
     public NSL::TensorImpl::TensorReshape<Type>
 {
     public:
