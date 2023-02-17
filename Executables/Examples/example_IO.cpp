@@ -11,7 +11,7 @@ int main(){
 
   io.write(pout,"config/0/phi");
   
-  NSL::Tensor<NSL::complex<double>> pin(2,3);
+  NSL::Tensor<NSL::complex<double>> pin(3,4);
   io.read(pin,"config/0/phi");
 
   std::cout << pin.shape() << std::endl;

@@ -72,9 +72,8 @@ public:
 	   tensor.flatten();  // flatten the array
 	   if(tensor.numel() != numElems)
 	   {
-	      //tensor.resize(numElems);  // Need to resize the array here!
+	      tensor.resize(numElems);  // Need to resize the array here!
 	   }
-	   //std::cout << tensor.shape() << std::endl;
 	}
 
 	// now get the data
@@ -92,8 +91,8 @@ public:
 
         return 0;
       } else {
-      // node does not exist
-      std::cout << "# Error! Node " + node + " doesn't exist!" << std::endl;
+        // node does not exist
+        std::cout << "# Error! Node " + node + " doesn't exist!" << std::endl;
         return 1;
       }
 

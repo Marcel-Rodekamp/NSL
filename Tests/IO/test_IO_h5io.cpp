@@ -37,11 +37,16 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   h5.write(pout,DATASET_NAME);
 
   NSL::Tensor<Type> pin;
-  // read in the same data
+  // read in the same data with a "null" tensor
   h5.read(pin, DATASET_NAME);
 
   REQUIRE( (pin == pout).all() );
-  
+
+  NSL::Tensor<Type> pin_d(2,3,4);
+  // read in the same data, but now using a previously allocated tensor
+  h5.read(pin_d, DATASET_NAME);
+
+  REQUIRE( (pin_d == pout).all() );
 }
 
 
