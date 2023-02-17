@@ -132,6 +132,24 @@ class Tensor:
         return *this;
     }
 
+  template <typename OtherType>
+  NSL::Tensor<Type> & operator=(const std::vector<OtherType> & other){
+    for (NSL::size_t i=0;i<other.size();i++)
+      { this->data_.index_put_({i},static_cast <Type> (other[i])); }
+
+    return *this;
+  }
+
+  
+  NSL::Tensor<Type> & operator=(const std::vector<Type> & other){
+    //    this->data_ = torch::from_blob((void*) other.data(), {other.size()});
+    for (NSL::size_t i=0;i<other.size();i++)
+      { this->data_.index_put_({i},other[i]); }
+    
+    return *this;
+  }
+  
+
     /* This is the interface class users should be using.
      * All the different implementations are found in the files in Impl/ .
      * The following lists provides an overview where to find what:

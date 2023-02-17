@@ -40,7 +40,7 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   // read in the same data
   h5.read(pin, DATASET_NAME);
 
-  
+  REQUIRE( (pin == pout).all() );
   
 }
 

@@ -58,21 +58,32 @@ public:
 	*/
 	
       	// first read the attributes to get the shape of the tensor
-	std::vector<int> shape;
+	std::vector<NSL::size_t> shape;
 	Attribute dim = dataset.getAttribute("shape");
 	dim.read(shape);
+	int numElems = 1;
+
+	for (NSL::size_t i=0;i<shape.size();i++)
+	{ numElems *= shape[i]; }
+	
+	if(!tensor.defined()){
+	   tensor = NSL::Tensor<Type> (numElems);
+	} else {
+	   // tensor.shape() =
+	   // need more work here
+	}
 
 	// now get the data
 	if constexpr (NSL::is_complex<Type>()) {
 	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi;
 	   dataset.read(phi);
-
-
+	   tensor = phi;
+	   tensor.reshape(shape);
 	} else {
-	  std::vector<Type> phi;
-	  dataset.read(phi);
-
-
+	   std::vector<Type> phi;
+	   dataset.read(phi);
+	   tensor = phi;
+	   tensor.reshape(shape);
 	}
 
         return 0;
@@ -81,6 +92,8 @@ public:
       std::cout << "# Error! Node " + node + " doesn't exist!" << std::endl;
         return 1;
       }
+
+      // I assume that once phi is 'off the stack', its destructor will be called and its memeory released
   }
   
 private:
