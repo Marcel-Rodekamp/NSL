@@ -28,7 +28,7 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   std::string FILE_NAME("./test_IO.h5");
   std::string DATASET_NAME("configurations/"+std::to_string(0)+"/phi/"+typeid(Type).name());
 
-  NSL::H5IO h5(FILE_NAME);
+  NSL::H5IO h5(FILE_NAME, File::Truncate);
   
   // create a random tensor array
   auto pout = NSL::Tensor<Type>(Nt, Nx).rand();

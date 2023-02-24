@@ -14,8 +14,13 @@ class H5IO {
 public:
   H5IO(std::string h5file) :
     h5file_(h5file),
-    h5f_(h5file, File::ReadWrite | File::OpenOrCreate ) //| File::Truncate)
-  {}
+    h5f_(h5file, File::ReadWrite | File::OpenOrCreate )
+    {}
+    
+    H5IO(std::string h5file, auto FileHandle) :
+    h5file_(h5file),
+    h5f_(h5file, FileHandle)  //| File::Truncate)
+    {}
 
     template <NSL::Concept::isNumber Type> inline int write(const NSL::Tensor<Type> &tensor, const std::string node){
     

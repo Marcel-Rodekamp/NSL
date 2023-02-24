@@ -2,7 +2,7 @@
 
 int main(){
 
-  NSL::H5IO io("example_io.h5");
+  NSL::H5IO io("example_io.h5", File::Truncate);
   NSL::Tensor<NSL::complex<double>> pout(2,3,4);
 
   pout.rand();
