@@ -110,8 +110,17 @@ public:
         return 1;
       }
 
-      // I assume that once phi is 'off the stack', its destructor will be called and its memeory released
-  }
+      // I assume that once phi is 'off the stack', its destructor will be called and its memory released
+    }
+
+    template <NSL::Concept::isNumber Type> inline int read(NSL::Configuration<Type> &config, const std::string node){
+    
+	for (auto [key,field] : config) {
+	    this -> read(field, node+'/'+key);
+	}
+    
+	return 0; 
+    }
   
 private:
   
