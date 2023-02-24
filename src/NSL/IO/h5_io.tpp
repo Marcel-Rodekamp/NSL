@@ -24,31 +24,40 @@ public:
 
     template <NSL::Concept::isNumber Type> inline int write(const NSL::Tensor<Type> &tensor, const std::string node){
     
-    std::string DIM("shape");
-    std::vector<NSL::size_t> shape = tensor.shape();
+	std::string DIM("shape");
+    	std::vector<NSL::size_t> shape = tensor.shape();
     
-    if constexpr (NSL::is_complex<Type>()) {
-      std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
+	if constexpr (NSL::is_complex<Type>()) {
+      	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
 
-      DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(node,  DataSpace::From(phi));
-      dataset.write(phi);
+      	   DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(node,  DataSpace::From(phi));
+      	   dataset.write(phi);
       
-      // now write out the dimension of the tensor as an attribute
-      Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
-      dim.write(shape);
-    } else {
-      std::vector<Type> phi(tensor.data(), tensor.data()+tensor.numel());
+	   // now write out the dimension of the tensor as an attribute
+      	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
+      	   dim.write(shape);
+    	} else {
+      	   std::vector<Type> phi(tensor.data(), tensor.data()+tensor.numel());
 
-      DataSet dataset = h5f_.createDataSet<Type>(node,  DataSpace::From(phi));
-      dataset.write(phi);
+      	   DataSet dataset = h5f_.createDataSet<Type>(node,  DataSpace::From(phi));
+      	   dataset.write(phi);
 
-      // now write out the dimension of the tensor as an attribute
-      Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
-      dim.write(shape);
-    }
+      	   // now write out the dimension of the tensor as an attribute
+      	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
+      	   dim.write(shape);
+    	}
     
-    return 0; 
-  }
+	return 0; 
+    }
+
+    template <NSL::Concept::isNumber Type> inline int write(const NSL::Configuration<Type> &config, const std::string node){
+    
+	for (auto [key,field] : config) {
+	    this -> write(field, node+'/'+key);
+	}
+    
+	return 0; 
+    }
 
     template <NSL::Concept::isNumber Type> inline int read(NSL::Tensor<Type> &tensor,const std::string node){
     
