@@ -71,7 +71,7 @@ class HMC{
             // Put the initial configuration in the 0th element
             MC[0] = state;
 
-            double runningAcceptence = 1.;
+            double runningAcceptance = 1.;
 
             // generate Nconf-1 configurations
             for(NSL::size_t n = 1; n < Nconf; ++n){
@@ -85,7 +85,7 @@ class HMC{
 
                 MC[n] = this->generate_(tmp);
 
-                runningAcceptence += static_cast<double>(MC[n].accepted);
+                runningAcceptance += static_cast<double>(MC[n].accepted);
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
@@ -93,8 +93,8 @@ class HMC{
                               << n 
                               << "/"
                               << Nconf 
-                              << "; Running Acceptence Rate: " 
-                              << runningAcceptence*100/n
+                              << "; Running Acceptance Rate: " 
+                              << runningAcceptance*100/n
                               << "% \n";
 
                 }
@@ -175,14 +175,14 @@ class HMC{
 
         // We always assume real part of the action, i.e. automatic reweighting
         // for complex actions!
-        NSL::RealTypeOf<Type> acceptenceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
+        NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
         // accept reject 
-        if ( r_.rand()[0] <= acceptenceProb ){
+        if ( r_.rand()[0] <= acceptanceProb ){
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 proposal_S,
-                acceptenceProb,
+                acceptanceProb,
                 state.markovTime+1,
                 true
                 /*For this algorithm there are no weights to be added*/
@@ -191,7 +191,7 @@ class HMC{
             return NSL::MCMC::MarkovState<Type>(
                 state.configuration,
                 state.actionValue,
-                state.acceptenceProbability,
+                state.acceptanceProbability,
                 state.markovTime+1,
                 false
             );

@@ -102,7 +102,7 @@ int main(){
     auto productionEndTime = std::chrono::steady_clock::now();
 
     // Print some final statistics
-    std::cout << "Acceptance Rate: " << NSL::MCMC::getAcceptenceRate(markovChain) * 100 << "%" << std::endl;
+    std::cout << "Acceptance Rate: " << NSL::MCMC::getAcceptanceRate(markovChain) * 100 << "%" << std::endl;
     std::cout << "Burn In took   : " << std::chrono::duration_cast<std::chrono::nanoseconds>(burnInEndTime - burnInStartTime).count() * 1e-9 << " s" << std::endl;
     std::cout << "Production took: " << std::chrono::duration_cast<std::chrono::nanoseconds>(productionEndTime - productionStartTime).count() * 1e-9 << " s" << std::endl;
 
