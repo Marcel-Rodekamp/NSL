@@ -53,7 +53,11 @@ public:
     template <NSL::Concept::isNumber Type> inline int write(const NSL::Configuration<Type> &config, const std::string node){
     
 	for (auto [key,field] : config) {
-	    this -> write(field, node+'/'+key);
+	    if (node.back() == '/' ) {
+	       this -> write(field, node+key);
+	    } else {
+	       this -> write(field, node+"/"+key);
+	    }
 	}
     
 	return 0; 
@@ -116,7 +120,11 @@ public:
     template <NSL::Concept::isNumber Type> inline int read(NSL::Configuration<Type> &config, const std::string node){
     
 	for (auto & [key,field] : config) {
-	    this -> read(field, node+'/'+key);
+	    if (node.back() == '/' ){
+	      this -> read(field, node+key);
+	    } else {
+	      this -> read(field, node+"/"+key);
+	    }
 	}
     
 	return 0; 

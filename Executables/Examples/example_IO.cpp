@@ -23,10 +23,6 @@ int main(){
   NSL::Configuration<NSL::complex<double>> config_in{{"phi", phi_in}};
   io.read(config_in,"config/0");
 
-  std::cout << config_in["phi"] << std::endl;
-  
-  std::cout << config_in["phi"].shape() << std::endl;
-    
   return 0;
 }
 
