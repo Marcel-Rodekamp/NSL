@@ -26,9 +26,9 @@ template<typename Type>
 void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
 
   std::string FILE_NAME("./test_IO.h5");
-  std::string DATASET_NAME("configurations/"+std::to_string(0)+"/phi/"+typeid(Type).name());
+  std::string DATASET_NAME("configurations/"+std::to_string(0)+"/"+typeid(Type).name()+"/phi");
 
-  NSL::H5IO h5(FILE_NAME, File::Truncate);
+  NSL::H5IO h5(FILE_NAME); //File::Truncate);
   
   // create a random tensor array
   auto pout = NSL::Tensor<Type>(Nt, Nx).rand();
@@ -47,6 +47,17 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   h5.read(pin_d, DATASET_NAME);
 
   REQUIRE( (pin_d == pout).all() );
+
+  // store in a configuration
+  NSL::Configuration<NSL::complex<double>> config_out{{"phi", pout}};
+  config_out["phi"].rand(); // re-assign random values
+  h5.write(config_out, "configurations/"+std::to_string(1)+"/"+typeid(Type).name());
+
+  // read in the same configuration
+  NSL::Configuration<NSL::complex<double>> config_in{{"phi", pin}};
+  h5.read(config_in, "configurations/"+std::to_string(1)+"/"+typeid(Type).name());
+
+  REQUIRE( (pin == pout).all() );
 }
 
 
