@@ -15,7 +15,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
     /*! 
      * */
     Leapfrog(const NSL::Action::Action<ActionTermTypes...> & action, 
-             const NSL::size_t & trajectoryLength,
+             const double & trajectoryLength,
              const NSL::size_t & numberSteps,
              bool backward = false):
             Integrator<ActionTermTypes...>(action),
@@ -57,7 +57,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
     }
 
     protected:
-        NSL::size_t trajLength_;
+        double trajLength_;
         NSL::size_t numSteps_;
         double stepSize_;
 };

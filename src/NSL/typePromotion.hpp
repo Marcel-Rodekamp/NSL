@@ -119,8 +119,14 @@ static constexpr auto deduceIteration(){
     }
 }
 
+template<typename Type>
+static constexpr auto deduceIteration(){
+    return Type{};
+}
+
 template<typename ... Types>
 using CommonTypeOfPack = decltype(deduceIteration<Types...>());
+
 
 } // namespace NSL
 #endif //NSL_TYPE_PROMOTION_HPP
