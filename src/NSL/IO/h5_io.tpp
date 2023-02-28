@@ -115,7 +115,7 @@ public:
 
     template <NSL::Concept::isNumber Type> inline int read(NSL::Configuration<Type> &config, const std::string node){
     
-	for (auto [key,field] : config) {
+	for (auto & [key,field] : config) {
 	    this -> read(field, node+'/'+key);
 	}
     
