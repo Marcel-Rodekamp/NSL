@@ -24,7 +24,68 @@ public:
     {}
 
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
-    	this -> write(markovstate.configuration, node+"/"+str(markovstate.markovTime));
+        std::string baseNode;
+	if (node.back() == '/') { // define the node
+	   baseNode = node + str(markovstate.markovTime);
+	} else {
+	   baseNode = node + "/" + str(markovstate.markovTime);
+	}
+	
+    	this -> write(markovstate.configuration, baseNode); // write out the configuration
+
+	// write out the actionValue
+	DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",DataSpace::From(markovstate.actionValue));
+	dataset.write(markovstate.actionValue);
+
+	// write out the acceptanceProbability
+	dataset = h5f_.createDataSet<Type>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
+	dataset.write(markovstate.acceptanceProbability);
+
+	// write out the markovTime
+	dataset = h5f_.createDataSet<Type>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	dataset.write(markovstate.markovTime);
+
+	// write out the weights (eg logdetJ, etc. . .)
+	for (auto [key,field] : markovstate.weights) {
+	    dataset = h5f_.createDataSet<Type>(baseNode+"/weights/"+key,DataSpace::From(field));
+	    dataset.write(field);
+	}
+	
+        return 0;
+    }
+
+    template <NSL::Concept::isNumber Type> inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
+        std::string baseNode;
+
+	// need a way to find the latest state of the markov chain!!
+	// need logic for this here!!!
+	
+	if (node.back() == '/') { // define the node
+	   baseNode = node + str(markovstate.markovTime);
+	} else {
+	   baseNode = node + "/" + str(markovstate.markovTime);
+	}
+	
+    	this -> read(markovstate.configuration, baseNode); // read in the configuration
+
+	// read in the actionValue
+	DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	dataset.read(markovstate.actionValue);
+
+	// read in the acceptanceProbability
+	dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
+	dataset.read(markovstate.acceptanceProbability);
+
+	// read in the markovTime
+	dataset = h5f_.getDataSet(baseNode+"/markovTime");
+	dataset.read(markovstate.markovTime);
+
+	// read in the weights (eg logdetJ, etc. . .)
+	for (auto [key,field] : markovstate.weights) {
+	    dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
+	    dataset.read(field);
+	}
+	
         return 0;
     }
 
