@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include "highfive/H5File.hpp"
+#include "MCMC.hpp"
 
 using namespace HighFive;
 
@@ -21,6 +22,11 @@ public:
     h5file_(h5file),
     h5f_(h5file, FileHandle)  //| File::Truncate)
     {}
+
+    template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
+    	this -> write(markovstate.configuration, node+"/"+str(markovstate.markovTime));
+        return 0;
+    }
 
     template <NSL::Concept::isNumber Type> inline int write(const NSL::Tensor<Type> &tensor, const std::string node){
     
