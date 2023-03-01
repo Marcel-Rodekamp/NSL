@@ -15,7 +15,6 @@ int main(){
   NSL::Tensor<NSL::complex<double>> phi_out(3,3);
   NSL::Configuration<NSL::complex<double>> config_out{{"phi", phi_out}};
   config_out["phi"].rand(); // assign random values
-  std::cout << config_out["phi"].shape() << std::endl;
   io.write(config_out, "config/0"); // write out configuration
 
   // now read in a configuration
@@ -23,6 +22,18 @@ int main(){
   NSL::Configuration<NSL::complex<double>> config_in{{"phi", phi_in}};
   io.read(config_in,"config/0");
 
+  // now do something similar for a markov state
+  NSL::MCMC::MarkovState<NSL::complex<double>> markovstate;
+  NSL::Tensor<NSL::complex<double>> phi(3,3);
+  NSL::Configuration<NSL::complex<double>> config{{"phi", phi}};
+  config["phi"].rand(); // assign random values
+  markovstate.configuration = config;
+  markovstate.actionValue = 1000.0;
+  markovstate.acceptanceProbability = .6667;
+  markovstate.markovTime = 0;
+  io.write(markovstate,"markovstate");
+
+  
   return 0;
 }
 

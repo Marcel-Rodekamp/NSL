@@ -26,9 +26,9 @@ public:
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 	if (node.back() == '/') { // define the node
-	   baseNode = node + str(markovstate.markovTime);
+	   baseNode = node + std::to_string(markovstate.markovTime);
 	} else {
-	   baseNode = node + "/" + str(markovstate.markovTime);
+	   baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	}
 	
     	this -> write(markovstate.configuration, baseNode); // write out the configuration
@@ -42,7 +42,7 @@ public:
 	dataset.write(markovstate.acceptanceProbability);
 
 	// write out the markovTime
-	dataset = h5f_.createDataSet<Type>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
 	dataset.write(markovstate.markovTime);
 
 	// write out the weights (eg logdetJ, etc. . .)
@@ -61,9 +61,9 @@ public:
 	// need logic for this here!!!
 	
 	if (node.back() == '/') { // define the node
-	   baseNode = node + str(markovstate.markovTime);
+	   baseNode = node + std::to_string(markovstate.markovTime);
 	} else {
-	   baseNode = node + "/" + str(markovstate.markovTime);
+	   baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	}
 	
     	this -> read(markovstate.configuration, baseNode); // read in the configuration
@@ -81,7 +81,7 @@ public:
 	dataset.read(markovstate.markovTime);
 
 	// read in the weights (eg logdetJ, etc. . .)
-	for (auto [key,field] : markovstate.weights) {
+	for (auto & [key,field] : markovstate.weights) {
 	    dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
 	    dataset.read(field);
 	}
