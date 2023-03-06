@@ -22,17 +22,26 @@ int main(){
   NSL::Configuration<NSL::complex<double>> config_in{{"phi", phi_in}};
   io.read(config_in,"config/0");
 
+  // NSL::MCMC::MarkovState<double> markovstate;
+  // NSL::Tensor<double> phi(3,3);
+  // NSL::Configuration<double> config{{"phi", phi}};
+  // config["phi"].rand(); // assign random values
+  // markovstate.configuration = config;
+  // markovstate.actionValue =  1000.0;
+  // markovstate.acceptanceProbability = .6667;
+  // markovstate.markovTime = 0;
+  // io.write(markovstate,"markovstate");
+
   // now do something similar for a markov state
   NSL::MCMC::MarkovState<NSL::complex<double>> markovstate;
   NSL::Tensor<NSL::complex<double>> phi(3,3);
   NSL::Configuration<NSL::complex<double>> config{{"phi", phi}};
   config["phi"].rand(); // assign random values
   markovstate.configuration = config;
-  markovstate.actionValue = 1000.0;
+  markovstate.actionValue = NSL::complex<double> (1000.0,0.0);
   markovstate.acceptanceProbability = .6667;
   markovstate.markovTime = 0;
   io.write(markovstate,"markovstate");
-
   
   return 0;
 }

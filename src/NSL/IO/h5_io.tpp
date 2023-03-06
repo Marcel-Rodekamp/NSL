@@ -33,23 +33,45 @@ public:
 	
     	this -> write(markovstate.configuration, baseNode); // write out the configuration
 
-	// write out the actionValue
-	DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",DataSpace::From(markovstate.actionValue));
-	dataset.write(markovstate.actionValue);
+	if constexpr (NSL::is_complex<Type>()) {
+	   // write out the actionValue
+	   DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
+	   dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue));
 
-	// write out the acceptanceProbability
-	dataset = h5f_.createDataSet<Type>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
-	dataset.write(markovstate.acceptanceProbability);
+	   // write out the acceptanceProbability
+	   dataset = h5f_.createDataSet<double>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
+	   dataset.write(markovstate.acceptanceProbability);
 
-	// write out the markovTime
-	dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
-	dataset.write(markovstate.markovTime);
+	   // write out the weights (eg logdetJ, etc. . .)
+	   for (auto [key,field] : markovstate.weights) {
+	       dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/weights/"+key,DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field)));
+	       dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field));
+	   }
+	   
+	   // write out the markovTime
+	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	   dataset.write(markovstate.markovTime);
 
-	// write out the weights (eg logdetJ, etc. . .)
-	for (auto [key,field] : markovstate.weights) {
-	    dataset = h5f_.createDataSet<Type>(baseNode+"/weights/"+key,DataSpace::From(field));
-	    dataset.write(field);
+	 } else {
+	   // write out the actionValue
+	   DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",DataSpace::From(markovstate.actionValue));
+	   dataset.write(markovstate.actionValue);
+
+	   // write out the acceptanceProbability
+	   dataset = h5f_.createDataSet<Type>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
+	   dataset.write(markovstate.acceptanceProbability);
+
+	   // write out the weights (eg logdetJ, etc. . .)
+	   for (auto [key,field] : markovstate.weights) {
+	       dataset = h5f_.createDataSet<Type>(baseNode+"/weights/"+key,DataSpace::From(field));
+	       dataset.write(field);
+	   }
+
+	   // write out the markovTime
+	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	   dataset.write(markovstate.markovTime);
 	}
+
 	
         return 0;
     }
