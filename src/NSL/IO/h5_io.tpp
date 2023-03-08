@@ -77,7 +77,6 @@ public:
     }
 
     template <NSL::Concept::isNumber Type> inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
-        std::string baseNode;
 
 	// no specific Markov time is given, so find the latest one
 	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
