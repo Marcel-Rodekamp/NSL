@@ -81,6 +81,24 @@ public:
 
 	// need a way to find the latest state of the markov chain!!
 	// need logic for this here!!!
+	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
+        // this list is not given in ascending order!  Really annoying!  I have to loop over them to find the most recent config. . .
+        int index = 0;
+        int currentTrajectory = std::stoi(configs[index]);
+        for (int i=1;i<configs.size();i++){
+          //if (std::stoi(configs[i]) < startConfig)
+	  //   startConfig = std::stoi(configs[i]);
+      
+          if (std::stoi(configs[i])>currentTrajectory) {
+	    currentTrajectory = std::stoi(configs[i]);
+	    //endConfig = currentTrajectory;
+	    //cfg = configs[i];
+	    index = i;
+          }
+        }
+
+	std::cout << "currentTrajectory = " << currentTrajectory << std::endl;
+	return 0;
 	
 	if (node.back() == '/') { // define the node
 	   baseNode = node + std::to_string(markovstate.markovTime);
