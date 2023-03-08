@@ -67,7 +67,10 @@ int main(){
   io.write(markovstateCD,"markovstate");
 
   // now read in the most recent markovstate
-  io.read(markovstateD,"markovstate");
+  io.read(markovstateCD,"markovstate");
+
+  // now read in a specific markovstate
+  io.read(markovstateD,"markovstate",1);
   
   return 0;
 }

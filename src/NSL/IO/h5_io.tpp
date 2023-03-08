@@ -79,52 +79,71 @@ public:
     template <NSL::Concept::isNumber Type> inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 
-	// need a way to find the latest state of the markov chain!!
-	// need logic for this here!!!
+	// no specific Markov time is given, so find the latest one
 	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
         // this list is not given in ascending order!  Really annoying!  I have to loop over them to find the most recent config. . .
-        int index = 0;
-        int currentTrajectory = std::stoi(configs[index]);
+        markovstate.markovTime = std::stoi(configs[0]);
         for (int i=1;i<configs.size();i++){
-          //if (std::stoi(configs[i]) < startConfig)
-	  //   startConfig = std::stoi(configs[i]);
-      
-          if (std::stoi(configs[i])>currentTrajectory) {
-	    currentTrajectory = std::stoi(configs[i]);
-	    //endConfig = currentTrajectory;
-	    //cfg = configs[i];
-	    index = i;
+          if (std::stoi(configs[i])>markovstate.markovTime) {
+	    markovstate.markovTime = std::stoi(configs[i]);
           }
         }
 
-	std::cout << "currentTrajectory = " << currentTrajectory << std::endl;
-	return 0;
+	this -> read(markovstate, node, markovstate.markovTime);
+
+        return 0;
+    }
+
+    template <NSL::Concept::isNumber Type> inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node, const int markovTime){
+        std::string baseNode;
+
+        markovstate.markovTime = markovTime;
 	
 	if (node.back() == '/') { // define the node
 	   baseNode = node + std::to_string(markovstate.markovTime);
 	} else {
 	   baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	}
-	
-    	this -> read(markovstate.configuration, baseNode); // read in the configuration
 
-	// read in the actionValue
-	DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
-	dataset.read(markovstate.actionValue);
+	std::cout << "# Loading in "+baseNode << std::endl;
 
-	// read in the acceptanceProbability
-	dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
-	dataset.read(markovstate.acceptanceProbability);
+        if constexpr (NSL::is_complex<Type>()) {
+           std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
+	   
+    	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
-	// read in the markovTime
-	dataset = h5f_.getDataSet(baseNode+"/markovTime");
-	dataset.read(markovstate.markovTime);
+	   // read in the actionValue
+	   DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   dataset.read(temp);
+	   markovstate.actionValue = temp;
 
-	// read in the weights (eg logdetJ, etc. . .)
-	for (auto & [key,field] : markovstate.weights) {
-	    dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
-	    dataset.read(field);
-	}
+	   // read in the acceptanceProbability
+	   dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
+	   dataset.read(markovstate.acceptanceProbability);
+
+	   // read in the weights (eg logdetJ, etc. . .)
+	   for (auto & [key,field] : markovstate.weights) {
+	       dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
+	       dataset.read(temp);
+	       field = temp;
+	   }
+	} else {
+    	   this -> read(markovstate.configuration, baseNode); // read in the configuration
+
+	   // read in the actionValue
+	   DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   dataset.read(markovstate.actionValue);
+
+	   // read in the acceptanceProbability
+	   dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
+	   dataset.read(markovstate.acceptanceProbability);
+
+	   // read in the weights (eg logdetJ, etc. . .)
+	   for (auto & [key,field] : markovstate.weights) {
+	       dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
+	       dataset.read(field);
+	   }	
+        }
 	
         return 0;
     }
