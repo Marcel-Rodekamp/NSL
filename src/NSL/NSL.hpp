@@ -11,6 +11,7 @@
 #include "typePromotion.hpp"
 #include "types.hpp"
 #include "complex.hpp"
+#include "logger.hpp"
 
 // NSL
 #include "Tensor.hpp"
