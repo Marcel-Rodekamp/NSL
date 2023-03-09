@@ -74,6 +74,7 @@ class HMC{
             double runningAcceptance = 1.;
 
             // generate Nconf-1 configurations
+            auto mc_time = NSL::Logger::start_profile("HMC");
             for(NSL::size_t n = 1; n < Nconf; ++n){
                 auto tmp = MC[n-1];
                 
@@ -89,16 +90,11 @@ class HMC{
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    std::cout << "HMC: "
-                              << n 
-                              << "/"
-                              << Nconf 
-                              << "; Running Acceptance Rate: " 
-                              << runningAcceptance*100/n
-                              << "% \n";
-
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100/n);
+                    NSL::Logger::elapsed_profile(mc_time);
                 }
             }
+            NSL::Logger::stop_profile(mc_time);
 
             // return the Markov Chain
             return MC;
@@ -164,13 +160,17 @@ class HMC{
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
 
-        // compute the Hamiltonian p^2 + S
-        Type proposal_H = proposal_S;
+        // compute the Hamiltonian H = p^2 + S
+        // Starting point of the trajectory
         Type starting_H = state.actionValue;
+        for( const auto& [key,field]: momentum){
+            starting_H += 0.5*(field * field).sum();
+        }
+        
+        // End point of the trajectory i.e. proposal
+        Type proposal_H = proposal_S;
         for( const auto& [key,field]: proposal_momentum){
-            Type psq = 0.5*(field * field).sum();
-            proposal_H += psq;
-            starting_H += psq;
+            proposal_H += 0.5*(field * field).sum();
         }
 
         // We always assume real part of the action, i.e. automatic reweighting

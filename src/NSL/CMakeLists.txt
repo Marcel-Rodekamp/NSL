@@ -1,9 +1,3 @@
 # relative include to the src/
 target_include_directories(NSL PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
-# add the tensor class
-add_subdirectory(Tensor/)
-add_subdirectory(LinAlg/)
-add_subdirectory(FermionMatrix/)
-add_subdirectory(Lattice/)
-add_subdirectory(Action/)
+target_link_libraries(NSL spdlog::spdlog)
