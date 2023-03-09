@@ -1,14 +1,11 @@
 #include <chrono>
-
-#include "Configuration/Configuration.tpp"
-#include "MCMC.hpp"
-#include "MarkovChain/markovState.tpp"
 #include "NSL.hpp"
-#include "complex.hpp"
 
+int main(int argc, char* argv[]){
 
-int main(){
+    NSL::Logger::init_logger(argc, argv);
 
+    auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
     typedef double Type;
 
@@ -44,8 +41,8 @@ int main(){
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx); 
 
-    std::cout   << "Setting up a Hubbard-Gauge action with beta=" << beta
-                << ", Nt=" << Nt << ", U=" << U << " on a ring with " << Nx << " sites." << std::endl;
+    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", beta, Nt, U, Nx);
+
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
         /*beta=*/  beta,
@@ -65,8 +62,8 @@ int main(){
     };
     config["phi"].rand();
 
-    std::cout       << "Setting up a leapfrog integrator with trajectory length " << trajectoryLength
-                    << " and " << numberMDsteps << " MD steps." << std::endl;
+    NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);
+
     // Initialize the integrator
     NSL::Integrator::Leapfrog leapfrog( 
         /*action*/S,  
@@ -76,6 +73,7 @@ int main(){
 
     // Initialize the HMC
     NSL::MCMC::HMC hmc(leapfrog, S);
+    NSL::Logger::stop_profile(init_time);
 
     // Burn In
     // We can pass just a config to the generate function a MarkovState is 
@@ -85,10 +83,11 @@ int main(){
     // where the LastState will return only the last generated state and does 
     // not keep the rest in memory while the AllStates (see production for use)
     // will store all states according to the saveFrequency.
-    std::cout << "Thermalizing " << NburnIn << " steps..." << std::endl;
-    auto burnInStartTime = std::chrono::steady_clock::now();
+
+    auto therm_time =  NSL::Logger::start_profile("Thermalization");
+    NSL::Logger::info("Thermalizing {} steps...", NburnIn);
     NSL::MCMC::MarkovState<Type> start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, NburnIn);
-    auto burnInEndTime = std::chrono::steady_clock::now();
+    NSL::Logger::stop_profile(therm_time);
 
     // Generate Markov Chain
     // Here we should store the entire chain (i.e. every saveFreq element)
@@ -96,15 +95,12 @@ int main(){
     // which is returned is of length Nconf.
     // 
     // Note: This also has a overload for providing a configuration only.
-    std::cout << "Generating   " << Nconf << " steps, saving every " << saveFreq << "..." << std::endl;
-    auto productionStartTime = std::chrono::steady_clock::now();
+    auto gen_time =  NSL::Logger::start_profile("Generation");
+    NSL::Logger::info("Generating {} steps, saving every {}...", Nconf, saveFreq);
     std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
-    auto productionEndTime = std::chrono::steady_clock::now();
+    NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
-    std::cout << "Acceptance Rate: " << NSL::MCMC::getAcceptenceRate(markovChain) * 100 << "%" << std::endl;
-    std::cout << "Burn In took   : " << std::chrono::duration_cast<std::chrono::nanoseconds>(burnInEndTime - burnInStartTime).count() * 1e-9 << " s" << std::endl;
-    std::cout << "Production took: " << std::chrono::duration_cast<std::chrono::nanoseconds>(productionEndTime - productionStartTime).count() * 1e-9 << " s" << std::endl;
-
+    NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptenceRate(markovChain) * 100);
     return EXIT_SUCCESS;
 }

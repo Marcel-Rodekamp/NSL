@@ -40,3 +40,6 @@ build
 
 # vim swap files
 *.swp
+
+# Log files
+*.log

@@ -74,6 +74,7 @@ class HMC{
             double runningAcceptence = 1.;
 
             // generate Nconf-1 configurations
+            auto mc_time = NSL::Logger::start_profile("HMC");
             for(NSL::size_t n = 1; n < Nconf; ++n){
                 auto tmp = MC[n-1];
                 
@@ -89,15 +90,11 @@ class HMC{
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    std::cout << "HMC: "
-                              << n 
-                              << "/"
-                              << Nconf 
-                              << "; Running Acceptence Rate: " 
-                              << runningAcceptence*100/n
-                              << "% \n";
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptence*100/n);
+                    NSL::Logger::elapsed_profile(mc_time);
                 }
             }
+            NSL::Logger::stop_profile(mc_time);
 
             // return the Markov Chain
             return MC;
