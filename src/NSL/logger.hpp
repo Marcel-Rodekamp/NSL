@@ -42,7 +42,7 @@ namespace NSL::Logger {
                 case 'l':
                     log_level = std::string(optarg);
                     if(!levels.contains(log_level)) {   
-                        std::cerr << "Improper usage of --log-level (-l) flag. Expected one of:\n";
+                        std::cerr << "Improper usage of -l flag. Expected one of:\n";
                         std::cerr << "- debug (prints debug information)\n";
                         std::cerr << "- info  (prints regular run information) [DEFAULT]\n";
                         std::cerr << "- warn  (prints warnings and errors only)\n";
@@ -54,14 +54,14 @@ namespace NSL::Logger {
                     break;
                 case '?':
                     if (optopt == 'l'){   
-                        std::cerr << "Improper usage of --log-level (-l) flag. Expected one of:\n";
+                        std::cerr << "Improper usage of -l flag. Expected one of:\n";
                         std::cerr << "- debug (prints debug information)\n";
                         std::cerr << "- info  (prints regular run information) [DEFAULT]\n";
                         std::cerr << "- warn  (prints warnings and errors only)\n";
                         std::cerr << "- error (prints errors only)\n";
                     }
                     else if (optopt == 'o'){   
-                        std::cerr << "Improper usage of --log-file (-o) flag. Expected output log filename:\n";
+                        std::cerr << "Improper usage of -o flag. Expected output log filename:\n";
                     }
                     else isprint (optopt);
                     exit(1);
