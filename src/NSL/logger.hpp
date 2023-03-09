@@ -83,6 +83,7 @@ namespace NSL::Logger {
 
         auto logger = std::make_shared<spdlog::logger>("NSL_logger", begin(sinks), end(sinks));
         logger->set_pattern("[%D %T] [%l] %v");
+        logger->flush_on(spdlog::level::debug);
 
         spdlog::register_logger(logger);
         spdlog::set_default_logger(logger);
@@ -90,6 +91,7 @@ namespace NSL::Logger {
         if(do_profile){
             auto profile_logger = spdlog::basic_logger_st("NSL_profiler", "NSL_profile.log", true);
             profile_logger->set_pattern("[%D %T] %v");
+            profile_logger->flush_on(spdlog::level::debug);
         }
     }
 
