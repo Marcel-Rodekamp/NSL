@@ -58,6 +58,11 @@ class FermionMatrix {
     **/
     virtual Type logDetM() = 0;
 
+    /*!
+     * \returns the gradient of log of determinant of M
+     **/
+    virtual Type gradLogDetM() = 0;
+
     // constructors
     /*  There is no default constructor. */
     FermionMatrix() = delete;
