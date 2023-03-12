@@ -39,6 +39,11 @@ inline NSL::Tensor<Type> operator*(const Type & value, const NSL::Tensor<Type> &
     return torch::Tensor(tensor) * value;
 }
 
+template<NSL::Concept::isNumber Type>
+inline NSL::Tensor<Type> operator-(const NSL::Tensor<Type> & tensor) {
+    return -torch::Tensor(tensor);
+}
+
 } // namespace NSL
 
 #endif // NSL_TENSOR_IMPL_OPERATOR_MULTIPLICATION_TPP

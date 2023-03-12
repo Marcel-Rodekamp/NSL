@@ -141,8 +141,13 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     }
     
     return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage);
-
 } 
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
+    //ToDo: implement
+    return this->phiExp_;
+}
 
 } // namespace FermionMatrix
 

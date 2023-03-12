@@ -7,7 +7,7 @@ int main(int argc, char* argv[]){
 
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
-    typedef double Type;
+    typedef NSL::complex<double> Type;
 
     // Typically you want to read these in or provide as an argument to such 
     // a code but for this example we just specify them here
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx); 
 
-    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", beta, Nt, U, Nx);
+    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", NSL::real(beta), Nt, NSL::real(U), Nx);
 
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
@@ -49,11 +49,18 @@ int main(int argc, char* argv[]){
         /*Nt = */  Nt,    
         /*U =  */  U
     );
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>>::Parameters paramsHFM(
+        /*beta=*/  beta,
+        /*Nt = */  Nt,    
+        /*lattice=*/lattice
+    );
+
+    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermi(paramsHFM);
 
     // Initialize the action
-    NSL::Action::Action S{
-        NSL::Action::HubbardGaugeAction<Type>(params)
-    };
+    NSL::Action::Action S = S_gauge + S_fermi;
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here

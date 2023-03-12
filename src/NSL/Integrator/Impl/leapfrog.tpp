@@ -8,7 +8,8 @@
 namespace NSL::Integrator {
 
 
-template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+//template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+template<typename ... ActionTermTypes>
 class Leapfrog: Integrator<ActionTermTypes...> {
     public:
     //! Constructor of the leapfrog 
