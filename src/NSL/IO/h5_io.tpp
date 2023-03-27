@@ -151,6 +151,8 @@ public:
     
 	std::string DIM("shape");
     	std::vector<NSL::size_t> shape = tensor.shape();
+	std::string FORMAT("type");
+	std::string typeID = typeid(Type).name();
     
 	if constexpr (NSL::is_complex<Type>()) {
       	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
@@ -161,6 +163,10 @@ public:
 	   // now write out the dimension of the tensor as an attribute
       	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
       	   dim.write(shape);
+
+	   // write out the type
+	   Attribute form = dataset.createAttribute<std::string>(FORMAT,DataSpace::From(typeID));
+	   form.write(typeID);
     	} else {
       	   std::vector<Type> phi(tensor.data(), tensor.data()+tensor.numel());
 
@@ -170,6 +176,10 @@ public:
       	   // now write out the dimension of the tensor as an attribute
       	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
       	   dim.write(shape);
+
+	   	   // write out the type
+	   Attribute form = dataset.createAttribute<std::string>(FORMAT,DataSpace::From(typeID));
+	   form.write(typeID);
     	}
     
 	return 0; 
@@ -189,7 +199,10 @@ public:
     }
 
     template <NSL::Concept::isNumber Type> inline int read(NSL::Tensor<Type> &tensor,const std::string node){
-    
+
+      std::string typeID = typeid(Type).name();
+      std::string h5type;
+
       if(h5f_.exist(node)){ // check if the node exists
         DataSet dataset = h5f_.getDataSet(node);
 	
@@ -199,6 +212,13 @@ public:
             std::cout << "attribute: " << attr << std::endl;
         }
 	*/
+
+	// first make sure the types match
+	Attribute format = dataset.getAttribute("type");
+	format.read(h5type);
+	if(h5type != typeID) {
+	  NSL:Logger::warn("Tensor types don't match!  Desire "+typeID+", but loading in "+h5type);
+	}
 	
       	// first read the attributes to get the shape of the tensor
 	std::vector<NSL::size_t> shape;
