@@ -87,7 +87,7 @@ public:
 	    markovstate.markovTime = std::stoi(configs[i]);
           }
         }
-
+	NSL::Logger::info("Searching for most recent trajectory . . . found "+node+"/{}", markovstate.markovTime);
 	this -> read(markovstate, node, markovstate.markovTime);
 
         return 0;
@@ -104,7 +104,7 @@ public:
 	   baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	}
 
-	std::cout << "# Loading in "+baseNode << std::endl;
+	NSL::Logger::info("Loading in "+baseNode);
 
         if constexpr (NSL::is_complex<Type>()) {
            std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
@@ -235,7 +235,7 @@ public:
         return 0;
       } else {
         // node does not exist
-        std::cout << "# Error! Node " + node + " doesn't exist!" << std::endl;
+	NSL::Logger::error("Error! Node " +node+" doesn't exist!"); 
         return 1;
       }
 
