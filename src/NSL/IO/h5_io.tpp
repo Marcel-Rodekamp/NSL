@@ -87,7 +87,7 @@ public:
 	    markovstate.markovTime = std::stoi(configs[i]);
           }
         }
-	NSL::Logger::info("Searching for most recent trajectory . . . found "+node+"/{}", markovstate.markovTime);
+	NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
 	this -> read(markovstate, node, markovstate.markovTime);
 
         return 0;
@@ -104,7 +104,7 @@ public:
 	   baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	}
 
-	NSL::Logger::info("Loading in "+baseNode);
+	NSL::Logger::info("Loading in {}",baseNode);
 
         if constexpr (NSL::is_complex<Type>()) {
            std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
@@ -198,9 +198,10 @@ public:
 	return 0; 
     }
 
-    template <NSL::Concept::isNumber Type> inline int read(NSL::Tensor<Type> &tensor,const std::string node){
+    template <NSL::Concept::isNumber Type> 
+    inline int read(NSL::Tensor<Type> &tensor,const std::string node){
 
-      std::string typeID = typeid(Type).name();
+      auto typeID = typeid(Type).name();
       std::string h5type;
 
       if(h5f_.exist(node)){ // check if the node exists
@@ -217,7 +218,7 @@ public:
 	Attribute format = dataset.getAttribute("type");
 	format.read(h5type);
 	if(h5type != typeID) {
-	  NSL:Logger::warn("Tensor types don't match!  Desire "+typeID+", but loading in "+h5type);
+	  NSL:Logger::warn("Tensor types don't match!  Desire {}, but loading in {}", typeID,h5type);
 	}
 	
       	// first read the attributes to get the shape of the tensor
@@ -255,7 +256,7 @@ public:
         return 0;
       } else {
         // node does not exist
-	NSL::Logger::error("Error! Node " +node+" doesn't exist!"); 
+	NSL::Logger::error("Error! Node {} doesn't exist!", node); 
         return 1;
       }
 
