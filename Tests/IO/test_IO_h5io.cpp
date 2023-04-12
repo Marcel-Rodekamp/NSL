@@ -1,9 +1,6 @@
 #include "../test.hpp"
-//#include <highfive/H5Attribute.hpp>
 #include <highfive/H5File.hpp>
 #include <iostream>
-
-using namespace HighFive;
 
 template<typename Type>
 void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx);
@@ -28,7 +25,7 @@ void test_h5io(const NSL::size_t & Nt, const NSL::size_t & Nx){
   std::string FILE_NAME("./test_IO.h5");
   std::string DATASET_NAME("configurations/"+std::to_string(0)+"/"+typeid(Type).name()+"/phi");
 
-  NSL::H5IO h5(FILE_NAME, File::Truncate);
+  NSL::H5IO h5(FILE_NAME, NSL::File::Truncate);
   
   // create a random tensor array
   auto pout = NSL::Tensor<Type>(Nt, Nx).rand();

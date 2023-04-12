@@ -7,15 +7,15 @@
 #include "highfive/H5File.hpp"
 #include "MCMC.hpp"
 
-using namespace HighFive;
-
 namespace NSL {
+
+using HighFive::File;
 
 class H5IO {
 public:
   H5IO(std::string h5file) :
     h5file_(h5file),
-    h5f_(h5file, File::ReadWrite | File::OpenOrCreate )
+    h5f_(h5file, NSL::File::ReadWrite | NSL::File::OpenOrCreate )
     {}
     
     H5IO(std::string h5file, auto FileHandle) :
@@ -35,40 +35,40 @@ public:
 
 	if constexpr (NSL::is_complex<Type>()) {
 	   // write out the actionValue
-	   DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
+	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
 	   dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue));
 
 	   // write out the acceptanceProbability
-	   dataset = h5f_.createDataSet<double>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
+	   dataset = h5f_.createDataSet<double>(baseNode+"/acceptanceProbability",HighFive::DataSpace::From(markovstate.acceptanceProbability));
 	   dataset.write(markovstate.acceptanceProbability);
 
 	   // write out the weights (eg logdetJ, etc. . .)
 	   for (auto [key,field] : markovstate.weights) {
-	       dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/weights/"+key,DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field)));
+	       dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/weights/"+key,HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field)));
 	       dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field));
 	   }
 	   
 	   // write out the markovTime
-	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",HighFive::DataSpace::From(markovstate.markovTime));
 	   dataset.write(markovstate.markovTime);
 
 	 } else {
 	   // write out the actionValue
-	   DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",DataSpace::From(markovstate.actionValue));
+	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",HighFive::DataSpace::From(markovstate.actionValue));
 	   dataset.write(markovstate.actionValue);
 
 	   // write out the acceptanceProbability
-	   dataset = h5f_.createDataSet<Type>(baseNode+"/acceptanceProbability",DataSpace::From(markovstate.acceptanceProbability));
+	   dataset = h5f_.createDataSet<Type>(baseNode+"/acceptanceProbability",HighFive::DataSpace::From(markovstate.acceptanceProbability));
 	   dataset.write(markovstate.acceptanceProbability);
 
 	   // write out the weights (eg logdetJ, etc. . .)
 	   for (auto [key,field] : markovstate.weights) {
-	       dataset = h5f_.createDataSet<Type>(baseNode+"/weights/"+key,DataSpace::From(field));
+	       dataset = h5f_.createDataSet<Type>(baseNode+"/weights/"+key,HighFive::DataSpace::From(field));
 	       dataset.write(field);
 	   }
 
 	   // write out the markovTime
-	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",DataSpace::From(markovstate.markovTime));
+	   dataset = h5f_.createDataSet<int>(baseNode+"/markovTime",HighFive::DataSpace::From(markovstate.markovTime));
 	   dataset.write(markovstate.markovTime);
 	}
 
@@ -112,7 +112,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
 	   dataset.read(temp);
 	   markovstate.actionValue = temp;
 
@@ -130,7 +130,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
 	   dataset.read(markovstate.actionValue);
 
 	   // read in the acceptanceProbability
@@ -157,28 +157,28 @@ public:
 	if constexpr (NSL::is_complex<Type>()) {
       	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
 
-      	   DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(node,  DataSpace::From(phi));
+      	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(node,  HighFive::DataSpace::From(phi));
       	   dataset.write(phi);
       
 	   // now write out the dimension of the tensor as an attribute
-      	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
+      	   HighFive::Attribute dim = dataset.createAttribute<int>(DIM,HighFive::DataSpace::From(shape));
       	   dim.write(shape);
 
 	   // write out the type
-	   Attribute form = dataset.createAttribute<std::string>(FORMAT,DataSpace::From(typeID));
+	   HighFive::Attribute form = dataset.createAttribute<std::string>(FORMAT,HighFive::DataSpace::From(typeID));
 	   form.write(typeID);
     	} else {
       	   std::vector<Type> phi(tensor.data(), tensor.data()+tensor.numel());
 
-      	   DataSet dataset = h5f_.createDataSet<Type>(node,  DataSpace::From(phi));
+      	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(node,  HighFive::DataSpace::From(phi));
       	   dataset.write(phi);
 
       	   // now write out the dimension of the tensor as an attribute
-      	   Attribute dim = dataset.createAttribute<int>(DIM,DataSpace::From(shape));
+      	   HighFive::Attribute dim = dataset.createAttribute<int>(DIM,HighFive::DataSpace::From(shape));
       	   dim.write(shape);
 
 	   	   // write out the type
-	   Attribute form = dataset.createAttribute<std::string>(FORMAT,DataSpace::From(typeID));
+	   HighFive::Attribute form = dataset.createAttribute<std::string>(FORMAT,HighFive::DataSpace::From(typeID));
 	   form.write(typeID);
     	}
     
@@ -205,7 +205,7 @@ public:
       std::string h5type;
 
       if(h5f_.exist(node)){ // check if the node exists
-        DataSet dataset = h5f_.getDataSet(node);
+        HighFive::DataSet dataset = h5f_.getDataSet(node);
 	
 	/* can use the following to list all attributes
       	std::vector<std::string> all_attributes_keys = dataset.listAttributeNames();
@@ -215,7 +215,7 @@ public:
 	*/
 
 	// first make sure the types match
-	Attribute format = dataset.getAttribute("type");
+	HighFive::Attribute format = dataset.getAttribute("type");
 	format.read(h5type);
 	if(h5type != typeID) {
 	  NSL:Logger::warn("Tensor types don't match!  Desire {}, but loading in {}", typeID,h5type);
@@ -223,7 +223,7 @@ public:
 	
       	// first read the attributes to get the shape of the tensor
 	std::vector<NSL::size_t> shape;
-	Attribute dim = dataset.getAttribute("shape");
+	HighFive::Attribute dim = dataset.getAttribute("shape");
 	dim.read(shape);
 	int numElems = 1;
 

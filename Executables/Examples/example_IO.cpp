@@ -2,7 +2,7 @@
 
 int main(){
 
-  NSL::H5IO io("example_io.h5", File::Truncate); // constructor
+  NSL::H5IO io("example_io.h5", NSL::File::Truncate); // constructor
 
   NSL::Tensor<NSL::complex<double>> pout(2,3,4); // define tensor to write out
   pout.rand(); // assign random values
