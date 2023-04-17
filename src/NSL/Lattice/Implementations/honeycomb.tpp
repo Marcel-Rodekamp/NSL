@@ -51,7 +51,7 @@ template<typename Type>
 double NSL::Lattice::Honeycomb<Type>::distance_squared(const NSL::Tensor<double> &x, const NSL::Tensor<double> &y){
 
     NSL::Tensor<double> L1 = self->L[0] * self->a[0];
-    NSL::Tensor<double> L2 = self->L[0] * self->a[0];
+    NSL::Tensor<double> L2 = self->L[1] * self->a[1];
 
     // The farthest things can be (with periodic boundary conditions) is much less than
     NSL::Tensor<double> vector = L1+L2;
@@ -84,8 +84,8 @@ void NSL::Lattice::Honeycomb<Type>::init_(const std::vector<std::size_t> &L,
         for(int L2 = 0; L2 < L[1]; ++L2){
             i = L1 + L[0]*L2;
             // Now alternate over the A/B structure
-            this->sites_(2*i+0) = NSL::LinAlg::mat_mul(this->a, L) + this->r/2;
-            this->sites_(2*i+1) = NSL::LinAlg::mat_mul(this->a, L) - this->r/2;
+            this->sites_(2*i+0) = NSL::LinAlg::mat_mul(L, this->a) + this->r/2;
+            this->sites_(2*i+1) = NSL::LinAlg::mat_mul(L, this->a) - this->r/2;
         }
     }
 
