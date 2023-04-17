@@ -38,15 +38,12 @@ class Honeycomb: public NSL::Lattice::SpatialLattice<Type> {
         std::vector<std::size_t> L;
         std::size_t unit_cells;
 
-        //! Coordinates
-        NSL::Tensor<Type> coordinates_;
         Type kappa;
 
     private:
         static inline double distance_squared(const NSL::Tensor<double> &x, const NSL::Tensor<double> &y);
         static inline std::size_t unit_cells_(const std::vector<std::size_t> &L);
         static inline std::size_t n_to_sites_(const std::vector<std::size_t> &n);
-        static NSL::Tensor<int> integer_coordinates_(const std::vector<std::size_t> &n);
         void init_(const std::vector<std::size_t> &n,
                    const std::vector<Type> &kappa,
                    const std::vector<double> spacings);
