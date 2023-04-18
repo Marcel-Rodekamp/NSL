@@ -146,6 +146,20 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
     //ToDo: implement
+
+    NSL::Tensor<Type> prod(Nt,Nx,Nx);
+    NSL::Tensor<Type> A = NSL::Matrix::Identity<Type>(Nx);
+    NSL::Tensor<Type> invAp1 = NSL::Matrix::Identity<Type>(Nx);
+    
+    prod = NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2) * this->Lat.exp_hopping_matrix(this-> -1*delta_);  // !! check !!
+
+    //Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
+    for(int t = 0;  t < Nt; t++){
+        A.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
+    }
+    
+    invAp1 = NSL::LinAlg::inv(NSL::Matrix::Identity<Type>(Nx) + A);
+
     return this->phiExp_;
 }
 
