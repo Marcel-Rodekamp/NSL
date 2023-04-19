@@ -42,3 +42,5 @@ add_NSL_test(test_identity Matrix/test_identity.cpp)
 add_NSL_test(test_configuration Configuration/test_configuration.cpp)
 add_NSL_test(test_typePromotion Helpers/test_typePromotion.cpp)
 add_NSL_test(test_leapfrog Integrator/test_leapfrog.cpp)
+
+add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
