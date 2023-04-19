@@ -101,6 +101,7 @@ int main(int argc, char* argv[]){
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
-    NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptenceRate(markovChain) * 100);
+    NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
+
     return EXIT_SUCCESS;
 }
