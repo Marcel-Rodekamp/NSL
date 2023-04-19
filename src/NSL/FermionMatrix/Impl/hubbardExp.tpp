@@ -58,6 +58,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
       *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} B_i     [exp(δ^* K)]_{xy}  ψ_{iy}
       *                                                         |- * -> |--- matrix multiply ---|
       **/
+
+    //!ToDo: why do we conjugate delta?  
     NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(NSL::LinAlg::conj(delta_)),
         NSL::LinAlg::transpose(psi)
@@ -179,7 +181,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       * (Note:  there is no sum over x)
       **/
 
-    for (int t=0; t < Nt; t++) {
+
+    // first doe t=Nt-1 case
+    pi = NSL::LinAlg::mat_mul(ANt,invAp1F);
+    for (int i; i < Nx; i++) {
+    	pi_dot(Nt-1,i) =  II * pi(i,i); 	    
+    }
+    for (int t=0; t < Nt-1; t++) {
     	invAp1F.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
 	ANt = NSL::LinAlg::mat_mul(prod2(t,NSL::Slice(),NSL::Slice()), ANt); // F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1}
 	pi = NSL::LinAlg::mat_mul(ANt,invAp1F);

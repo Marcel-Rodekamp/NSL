@@ -138,7 +138,7 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     // hole contribution
     auto Mh = HFM(-phi);
-    dS[this->configKey_]+= Mh.gradLogDetM();
+    dS[this->configKey_]-= Mh.gradLogDetM();
 
     return dS;
 }
