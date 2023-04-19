@@ -146,21 +146,49 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
     //ToDo: implement
+    const int Nt = this->phi_.shape(0);
+    const int Nx = this->phi_.shape(1);
 
     NSL::Tensor<Type> prod(Nt,Nx,Nx);
-    NSL::Tensor<Type> A = NSL::Matrix::Identity<Type>(Nx);
-    NSL::Tensor<Type> invAp1 = NSL::Matrix::Identity<Type>(Nx);
-    
-    prod = NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2) * this->Lat.exp_hopping_matrix(this-> -1*delta_);  // !! check !!
+    NSL::Tensor<Type> prod2(Nt,Nx,Nx);
+    NSL::Tensor<Type> A = NSL::Matrix::Identity<Type>(Nx);  // this is called the sausage, but I don't like this name
+    NSL::Tensor<Type> invAp1F = NSL::Matrix::Identity<Type>(Nx);
+    NSL::Tensor<Type> pi_dot(Nt,Nx);
 
-    //Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
+    prod = NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),-1).expand(Nx).transpose(1,2) * this->Lat.exp_hopping_matrix(-1 * this->delta_);  // !! check !!
+    prod2 = this->Lat.exp_hopping_matrix(this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+
+    // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
     for(int t = 0;  t < Nt; t++){
-        A.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
+        A.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));   // this gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
     }
     
-    invAp1 = NSL::LinAlg::inv(NSL::Matrix::Identity<Type>(Nx) + A);
+    invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(Nx) + A);  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
 
-    return this->phiExp_;
+    NSL::Tensor<Type> ANt = A;
+    NSL::Tensor<Type> pi  = NSL::Matrix::Identity<Type>(Nx);
+    NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
+
+    /**
+      * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
+      * This is equal to Tr((1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} ) * i
+      * Under the trace we can move the terms cyclicly (is that a real word?)
+      *                = Tr( δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} ) * i
+      *                = [ F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1}) ]_{x,x} * i
+      *
+      * (Note:  there is no sum over x)
+      **/
+
+    for (int t=0; t < Nt; t++) {
+    	invAp1F.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+	ANt = NSL::LinAlg::mat_mul(prod2(t,NSL::Slice(),NSL::Slice()), ANt); // F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1}
+	pi = NSL::LinAlg::mat_mul(ANt,invAp1F);
+    	for (int i; i < Nx; i++) {
+	    pi_dot(t,i) =  II * pi(i,i); 	    
+	}
+    }	
+
+    return pi_dot;
 }
 
 } // namespace FermionMatrix

@@ -13,7 +13,7 @@
 #include "LinAlg/mat_mul.tpp"
 #include "LinAlg/mat_vec.tpp"
 #include "LinAlg/shift.tpp"
-#include "LinAlg/inv.tpp"
+#include "LinAlg/mat_inv.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp
