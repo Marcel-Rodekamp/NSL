@@ -5,11 +5,20 @@
 
 namespace NSL::LinAlg {
 
-template <typename Type> 
-Type mat_inv(const NSL::Tensor<Type> & t){
-    //! \todo: if t is not a matrix we would have a stack of determinants: Handle this case.
+//! matrix^-1
+//template<NSL::Concept::isNumber MatrixType>
+//NSL::Tensor<NSL::CommonTypeOf<MatrixType>> mat_inv(
+//        const NSL::Tensor<MatrixType> & M ){
+//    return torch::inverse(
+//        NSL::Tensor<NSL::CommonTypeOf<MatrixType>>(M)
+//    );
+//}
+
+
+template <NSL::Concept::isNumber Type>
+NSL::Tensor<Type> mat_inv(const NSL::Tensor<Type> & t){
     //! \todo: add inv as a Tensor member
-    return torch::inverse( t ).template item<Type>(); 
+    return torch::inverse( t ); 
 }
 
 } // namespace NSL::LinAlg

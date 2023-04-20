@@ -164,7 +164,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     for(int t = 0;  t < Nt; t++){
         A.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));   // this gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
     }
-    
+
     invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(Nx) + A);  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
 
     NSL::Tensor<Type> ANt = A;
@@ -182,19 +182,19 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       **/
 
 
-    // first doe t=Nt-1 case
+    // first do t=Nt-1 case
     pi = NSL::LinAlg::mat_mul(ANt,invAp1F);
-    for (int i; i < Nx; i++) {
+    for (int i = 0; i < Nx; i++) {
     	pi_dot(Nt-1,i) =  II * pi(i,i); 	    
     }
     for (int t=0; t < Nt-1; t++) {
     	invAp1F.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
 	ANt = NSL::LinAlg::mat_mul(prod2(t,NSL::Slice(),NSL::Slice()), ANt); // F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1}
 	pi = NSL::LinAlg::mat_mul(ANt,invAp1F);
-    	for (int i; i < Nx; i++) {
+    	for (int i= 0; i < Nx; i++) {
 	    pi_dot(t,i) =  II * pi(i,i); 	    
 	}
-    }	
+    }
 
     return pi_dot;
 }
