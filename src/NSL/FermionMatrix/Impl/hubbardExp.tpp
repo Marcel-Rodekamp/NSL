@@ -157,7 +157,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     NSL::Tensor<Type> invAp1F = NSL::Matrix::Identity<Type>(Nx);
     NSL::Tensor<Type> pi_dot(Nt,Nx);
 
-    prod = NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),-1).expand(Nx).transpose(1,2) * this->Lat.exp_hopping_matrix(-1 * this->delta_);  // !! check !!
+    prod =  NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),-1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * this->delta_);  // !! check !!
     prod2 = this->Lat.exp_hopping_matrix(this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
     // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
@@ -166,6 +166,42 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     }
 
     invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(Nx) + A);  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+
+    /*
+    NSL::Tensor<Type> ident = NSL::Matrix::Identity<Type>(Nx);
+    ident = NSL::LinAlg::mat_mul(invAp1F,NSL::Matrix::Identity<Type>(Nx) + A);
+
+    for (int j=0; j<Nx; j++){
+    	for(int i=0;i<Nx;i++){
+		std::cout << ident(i,j).real() << " " << ident(i,j).imag() << "\t";
+		}
+	std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    std::cout << "exp(-k)*exp(k)" << std::endl;
+    ident = NSL::LinAlg::mat_mul(this->Lat.exp_hopping_matrix(-1 * this->delta_),this->Lat.exp_hopping_matrix(this->delta_));
+    for (int j=0; j<Nx; j++){
+    	for(int i=0;i<Nx;i++){
+		std::cout << ident(i,j).real() << " " << ident(i,j).imag() << "\t";
+		}
+	std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    for (int t=0; t<Nt;t++){
+    	std::cout << "t = " << t << std::endl;
+    	ident = NSL::LinAlg::mat_mul(prod2(t,NSL::Slice(),NSL::Slice()),prod(t,NSL::Slice(),NSL::Slice()));
+    	for (int j=0; j<Nx; j++){
+    	    for(int i=0;i<Nx;i++){
+		std::cout << ident(i,j).real() << " " << ident(i,j).imag() << "\t";
+            }
+	    std::cout << std::endl;
+    	}
+    }
+
+    exit(0);
+    */
 
     NSL::Tensor<Type> ANt = A;
     NSL::Tensor<Type> pi  = NSL::Matrix::Identity<Type>(Nx);

@@ -26,11 +26,11 @@ void test_force(){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1.;
+    Type beta = 10.;
     //    On-Site Coupling
-    Type U    = 2.0;
+    Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt =4;
+    NSL::size_t Nt =64;
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
@@ -65,17 +65,39 @@ void test_force(){
         {"phi", NSL::Tensor<Type>(Nt,Nx)}
     };
     config["phi"].rand();
+    config["phi"].imag() = 0; // use purely real fields
 
+    //    std::cout << config["phi"].real() << std::endl;
+    //    std::cout << std::endl;
+    //    std::cout << config["phi"].imag() << std::endl;
+    
   // Compute the action
     std::cout << "Actions -> eval (Configurations)" << std::endl;
     std::cout << S(config) << std::endl;
   // or use (the operator() just calls this function)
   //std::cout << S.eval(config) << std::endl;
+    std::cout << std::endl;
 
   // Compute the force
     std::cout << "Actions -> force" << std::endl;
-    std::cout << S.force(config) << std::endl;
+    std::cout << S.force(config)["phi"].real() << std::endl;
+    std::cout << std::endl;
+    std::cout << S.force(config)["phi"].imag() << std::endl;
 
+    REQUIRE( (config["phi"].imag() == S.force(config)["phi"].imag() ).all() );  // the force should all real (when chemical potential is zero) 
+    
+    std::cout << std::endl;
+    NSL::Configuration<Type> configE{
+        {"phi", NSL::Tensor<Type>(Nt,Nx)}
+    };
+    Type epsilon = .0001;
+    for (int t=0; t< Nt; t++)
+      for (int i=0;i<Nx;i++) {
+	configE = config;
+	configE["phi"](t,i) += epsilon;
+	std::cout << (S(configE)-S(config))/epsilon << "\t" << S.grad(config)["phi"](t,i) << std::endl;
+      }
+    
   // Compute the gradient dS/dPhi
   //  std::cout << "Actions -> grad" << std::endl;
   //  std::cout << S.grad(config) << std::endl;
