@@ -4,6 +4,7 @@
 #include "Integrator/integrator.tpp"
 #include "MarkovChain/markovState.tpp"
 #include "Tensor/Factory/like.tpp"
+#include "IO/h5_io.tpp"
 #include "LinAlg.hpp"
 #include "complex.hpp"
 #include "concepts.hpp"
@@ -18,10 +19,11 @@ template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> Integrato
 class HMC{
     public:
 
-    HMC(const IntegratorType& integrator, const ActionType& action):
+    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file):
         r_(1),
         integrator_(integrator),
-        action_(action)
+        action_(action),
+	h5_(h5file)
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -204,6 +206,8 @@ class HMC{
 
     IntegratorType integrator_;
     ActionType action_;
+
+    NSL::H5IO h5_;
 
 }; // HMC
 

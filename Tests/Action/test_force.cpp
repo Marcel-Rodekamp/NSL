@@ -54,10 +54,10 @@ void test_force(){
     );
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermi(paramsHFM);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(paramsHFM);
 
     // Initialize the action
-    NSL::Action::Action S = S_gauge + S_fermi;
+    NSL::Action::Action S = S_gauge + S_fermion;
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here

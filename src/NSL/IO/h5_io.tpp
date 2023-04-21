@@ -23,6 +23,8 @@ public:
     h5f_(h5file, FileHandle)  //| File::Truncate)
     {}
 
+    H5IO() = default;
+
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 	if (node.back() == '/') { // define the node
