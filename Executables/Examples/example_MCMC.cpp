@@ -18,7 +18,7 @@ int main(int argc, char* argv[]){
     //    On-Site Coupling
     Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt = 16;
+    NSL::size_t Nt = 32;
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 3;
+    NSL::size_t numberMDsteps = 2;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
