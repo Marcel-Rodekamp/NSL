@@ -4,7 +4,8 @@
 int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
-
+    std::string H5NAME("./ensemble.h5");  // name of h5 file to store configurations, measurements, etc. . .
+    
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
     typedef NSL::complex<double> Type;
@@ -13,11 +14,11 @@ int main(int argc, char* argv[]){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1;
+    Type beta = 10.0;
     //    On-Site Coupling
-    Type U    = 1;
+    Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt = 4;
+    NSL::size_t Nt = 16;
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
@@ -25,13 +26,13 @@ int main(int argc, char* argv[]){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 10;
+    NSL::size_t numberMDsteps = 3;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
     NSL::size_t NburnIn = 100;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 10000;
+    NSL::size_t Nconf = 200;
     //     Number of configurations not used for measurements in between each stored configuration
     NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:
@@ -57,17 +58,19 @@ int main(int argc, char* argv[]){
     );
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermi(paramsHFM);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(paramsHFM);
 
     // Initialize the action
-    NSL::Action::Action S = S_gauge + S_fermi;
+    NSL::Action::Action S = S_gauge + S_fermion;
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here
     NSL::Configuration<Type> config{
         {"phi", NSL::Tensor<Type>(Nt,Nx)}
     };
-    config["phi"].rand();
+    config["phi"].randn();
+    config["phi"].imag() = 0;
+
 
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);
 
@@ -79,7 +82,7 @@ int main(int argc, char* argv[]){
     );
 
     // Initialize the HMC
-    NSL::MCMC::HMC hmc(leapfrog, S);
+    NSL::MCMC::HMC hmc(leapfrog, S, H5NAME);
     NSL::Logger::stop_profile(init_time);
 
     // Burn In

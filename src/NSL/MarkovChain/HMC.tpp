@@ -93,6 +93,7 @@ class HMC{
                 }
 
                 MC[n] = this->generate_(tmp);
+		h5_.write(MC[n],"markovstate");
 
                 runningAcceptance += static_cast<double>(MC[n].accepted);
 
@@ -159,6 +160,7 @@ class HMC{
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
             p.randn();
+	    p.imag()=0;
             momentum[key] = p; 
         }
         
