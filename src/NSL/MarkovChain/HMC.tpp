@@ -4,10 +4,10 @@
 #include "Integrator/integrator.tpp"
 #include "MarkovChain/markovState.tpp"
 #include "Tensor/Factory/like.tpp"
-#include "IO/h5_io.tpp"
 #include "LinAlg.hpp"
 #include "complex.hpp"
 #include "concepts.hpp"
+#include "IO.hpp"
 
 namespace NSL::MCMC{
 
@@ -24,6 +24,12 @@ class HMC{
         integrator_(integrator),
         action_(action),
 	h5_(h5file)
+    {}
+
+    HMC(const IntegratorType& integrator, const ActionType& action):
+        r_(1),
+        integrator_(integrator),
+        action_(action)
     {}
 
     //! Generate a single Markov Chain element from the input state 

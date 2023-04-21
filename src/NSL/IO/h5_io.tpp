@@ -1,11 +1,12 @@
 #ifndef NSL_IO_H5_IO_TPP
 #define NSL_IO_H5_IO_TPP
+
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include <iostream>
 #include <vector>
 #include "highfive/H5File.hpp"
-#include "MCMC.hpp"
+#include "MarkovChain/markovState.tpp"
 
 namespace NSL {
 
@@ -23,7 +24,10 @@ public:
     h5f_(h5file, FileHandle)  //| File::Truncate)
     {}
 
-    H5IO() = default;
+    H5IO() : 
+        h5file_("data.h5"),
+        h5f_("data.h5", NSL::File::ReadWrite)
+    {}
 
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
