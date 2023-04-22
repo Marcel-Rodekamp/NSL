@@ -4,7 +4,7 @@
 int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
-    std::string H5NAME("./ensemble.h5");  // name of h5 file to store configurations, measurements, etc. . .
+    std::string H5NAME("./Nx8Nt64U3B10_ring.h5");  // name of h5 file to store configurations, measurements, etc. . .
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
@@ -18,21 +18,21 @@ int main(int argc, char* argv[]){
     //    On-Site Coupling
     Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt = 32;
+    NSL::size_t Nt = 64;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  2;
+    NSL::size_t Nx =  8;
 
     // Leapfrog Parameters
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 2;
+    NSL::size_t numberMDsteps = 6;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 100;
+    NSL::size_t NburnIn = 500;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 200;
+    NSL::size_t Nconf = 1000;
     //     Number of configurations not used for measurements in between each stored configuration
     NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:

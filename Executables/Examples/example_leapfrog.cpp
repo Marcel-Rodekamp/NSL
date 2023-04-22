@@ -6,7 +6,6 @@
 int main(){
     
     typedef NSL::complex<double> cd;
-    //    NSL::H5IO h5("/Users/tomluu/Research/git/NSL/myTests/data_Nt16.h5");
 	
     NSL::size_t Nx =  8;
     NSL::size_t Nt =  32;
@@ -16,29 +15,7 @@ int main(){
 
     phi.imag() = 0;
     pi.imag() = 0;
-
-
-    //  std::vector<std::complex<double>> pphi(Nx*Nt);
-    //    std::vector<std::complex<double>> ppi(Nx*Nt);
-    //    std::vector<std::complex<double>> H1(20);
-
-    //    HighFive::File h5f("/Users/tomluu/Research/git/NSL/myTests/data_Nt32.h5", HighFive::File::ReadWrite | HighFive::File::OpenOrCreate );
-    //    HighFive::DataSet dataset = h5f.getDataSet("phi");
-    //    dataset.read(pphi);
-    //    dataset = h5f.getDataSet("pi");
-    //    dataset.read(ppi);
-    //    dataset = h5f.getDataSet("run/H1");
-    //    dataset.read(H1);
-
-    /*
-    for (int t=0; t<Nt; t++)
-      for (int i=0; i<Nx; i++)
-	{
-	  phi(t,i) = pphi[t*Nx+i];
-	  pi(t,i) = ppi[t*Nx+i];
-	}       
-    */
-    
+   
     // define configuration
     NSL::Configuration<cd> config{
 		{"phi",phi}, 
@@ -74,35 +51,20 @@ int main(){
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
-    //    std::cout << std::setprecision(15) << Hi << std::endl;
-    // exit(0);
-
-    //    int index = 0;
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
-    // define integrator
-    NSL::Integrator::Leapfrog LF(
+      // define integrator
+      NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
         /*trajectoryLength=*/ 1,
         /*numberSteps=*/ Nmd,
         /*backward*/ false // optional
-    );
+      );
 
-    // integrate eom
-    auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
-
-    /*
-    std::cout << config["phi"] << std::endl;
-    std::cout << momentum["phi"] << std::endl;
-
-    std::cout << config_proposal["phi"] << std::endl;
-    std::cout << momentum_proposal["phi"] << std::endl;
-
-    std::cout << std::endl;
-    */
-
+      // integrate eom
+      auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
  
-    Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-    std::cout << Nmd << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << std::endl;
+      Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
+      std::cout << Nmd << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << std::endl;
     }
 
     return EXIT_SUCCESS;
