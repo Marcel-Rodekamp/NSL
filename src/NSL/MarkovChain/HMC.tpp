@@ -27,6 +27,14 @@ class HMC{
 	baseNode(node)
     {}
 
+    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file):
+        r_(1),
+        integrator_(integrator),
+        action_(action),
+	h5_(h5file),
+	baseNode("")
+    {}
+
     HMC(const IntegratorType& integrator, const ActionType& action):
         r_(1),
         integrator_(integrator),
