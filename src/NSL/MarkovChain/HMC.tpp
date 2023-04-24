@@ -19,27 +19,11 @@ template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> Integrato
 class HMC{
     public:
 
-    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file, std::string node):
+    HMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5): 
         r_(1),
         integrator_(integrator),
         action_(action),
-	h5_(h5file),
-	baseNode(node)
-    {}
-
-    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file):
-        r_(1),
-        integrator_(integrator),
-        action_(action),
-	h5_(h5file),
-	baseNode("")
-    {}
-
-    HMC(const IntegratorType& integrator, const ActionType& action):
-        r_(1),
-        integrator_(integrator),
-        action_(action),
-	baseNode("")
+	h5_(h5)
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -71,7 +55,7 @@ class HMC{
      * */
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
-    generate(const NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t saveFrequency = 1){
+    generate(const NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t saveFrequency = 1, std::string baseNode = "markovChain"){
         // ensure that saveFrequency is at least 1. 
         if (saveFrequency <= 0) {
             saveFrequency = 1;
@@ -158,9 +142,6 @@ class HMC{
         );
         return this->generate_<Type>(initialState);
     }
-
-    std::string baseNode;
-
 
     protected:
 

@@ -5,7 +5,8 @@ int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
     std::string H5NAME("./Nx8Nt64U3B10_ring.h5");  // name of h5 file to store configurations, measurements, etc. . .
-    std::string NODE("markovChain");  // name of h5 file to store configurations, measurements, etc. . .
+    std::string NODE("ensemble1");  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
@@ -31,9 +32,9 @@ int main(int argc, char* argv[]){
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 100;
+    NSL::size_t NburnIn = 10;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 200;
+    NSL::size_t Nconf = 20;
     //     Number of configurations not used for measurements in between each stored configuration
     NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:
@@ -83,7 +84,7 @@ int main(int argc, char* argv[]){
     );
 
     // Initialize the HMC
-    NSL::MCMC::HMC hmc(leapfrog, S, H5NAME, NODE);
+    NSL::MCMC::HMC hmc(leapfrog, S, h5);
     NSL::Logger::stop_profile(init_time);
 
     // Burn In
@@ -108,7 +109,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", Nconf, saveFreq);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq, NODE);
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
