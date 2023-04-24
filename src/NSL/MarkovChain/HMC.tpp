@@ -19,17 +19,19 @@ template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> Integrato
 class HMC{
     public:
 
-    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file):
+    HMC(const IntegratorType& integrator, const ActionType& action, std::string h5file, std::string node):
         r_(1),
         integrator_(integrator),
         action_(action),
-	h5_(h5file)
+	h5_(h5file),
+	baseNode(node)
     {}
 
     HMC(const IntegratorType& integrator, const ActionType& action):
         r_(1),
         integrator_(integrator),
-        action_(action)
+        action_(action),
+	baseNode("")
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -93,7 +95,7 @@ class HMC{
                 }
 
                 MC[n] = this->generate_(tmp);
-		h5_.write(MC[n],"markovstate");
+		h5_.write(MC[n],baseNode);
 
                 runningAcceptance += static_cast<double>(MC[n].accepted);
 
@@ -148,6 +150,8 @@ class HMC{
         );
         return this->generate_<Type>(initialState);
     }
+
+    std::string baseNode;
 
 
     protected:

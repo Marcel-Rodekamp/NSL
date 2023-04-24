@@ -20,8 +20,6 @@ COMPLEX_NSL_TEST_CASE( "Action: tests force routine and compares to finite diffe
 template<typename Type>
 void test_force(){
 
-  //  typedef NSL::complex<double> Type;
-
     // Typically you want to read these in or provide as an argument to such 
     // a code but for this example we just specify them here
     // System Parameters
@@ -30,7 +28,7 @@ void test_force(){
     //    On-Site Coupling
     Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt =64;
+    NSL::size_t Nt =8;
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
@@ -64,12 +62,8 @@ void test_force(){
     NSL::Configuration<Type> config{
         {"phi", NSL::Tensor<Type>(Nt,Nx)}
     };
-    config["phi"].rand();
+    config["phi"].randn();
     config["phi"].imag() = 0; // use purely real fields
-
-    //    std::cout << config["phi"].real() << std::endl;
-    //    std::cout << std::endl;
-    //    std::cout << config["phi"].imag() << std::endl;
     
   // Compute the action
     std::cout << "Actions -> eval (Configurations)" << std::endl;
@@ -78,11 +72,16 @@ void test_force(){
   //std::cout << S.eval(config) << std::endl;
     std::cout << std::endl;
 
-  // Compute the force
-    std::cout << "Actions -> force" << std::endl;
-    std::cout << S.force(config)["phi"].real() << std::endl;
-    std::cout << std::endl;
-    std::cout << S.force(config)["phi"].imag() << std::endl;
+  // This is how one computes the force
+  //  std::cout << "Actions -> force" << std::endl;
+  //  std::cout << S.force(config)["phi"].real() << std::endl;
+  //  std::cout << std::endl;
+
+    NSL::Configuration<Type> gradS{
+        {"phi", NSL::Tensor<Type>(Nt,Nx)}
+    };
+    // This is how one computes the grad of the action
+    gradS = S.grad(config);
 
     REQUIRE( (config["phi"].imag() == S.force(config)["phi"].imag() ).all() );  // the force should all real (when chemical potential is zero) 
     
@@ -90,19 +89,15 @@ void test_force(){
     NSL::Configuration<Type> configE{
         {"phi", NSL::Tensor<Type>(Nt,Nx)}
     };
-    Type epsilon = .0001;
+    Type epsilon = .001;
     for (int t=0; t< Nt; t++)
       for (int i=0;i<Nx;i++) {
 	configE = config;
 	configE["phi"](t,i) += epsilon;
-	std::cout << (S(configE)-S(config))/epsilon << "\t" << S.grad(config)["phi"](t,i) << std::endl;
+	REQUIRE( NSL::LinAlg::abs((S(configE)-S(config))/NSL::LinAlg::abs(epsilon) - gradS["phi"](t,i)) <= NSL::LinAlg::abs(epsilon) );
+	//  Note! this test will ALWAYS fail for complex<float>.  The logDetM routine is too imprecise in this case when calculating the finite differencing!
       }
     
-  // Compute the gradient dS/dPhi
-  //  std::cout << "Actions -> grad" << std::endl;
-  //  std::cout << S.grad(config) << std::endl;
-	
-  //  REQUIRE( (pin == pout).all() );
 }
 
 
