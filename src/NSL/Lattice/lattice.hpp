@@ -89,7 +89,7 @@ class SpatialLattice {
         const std::string & name() { return name_; };
 
         //! Returns the eigenenergies and unitary matrix (ie eigenvectors) of the hopping matrix.
-        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_lattice();
+        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_lattice(Type delta=1.);
 
         bool bipartite();
 
