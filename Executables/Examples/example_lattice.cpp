@@ -18,17 +18,18 @@ int main(int argc, char* argv[]){
 
     std::cout << lattice.hopping_matrix(1.0) << std::endl;
     std::cout << std::endl;
-    auto [e, u]  = lattice.eigh_lattice(); //NSL::LinAlg::eigh(lattice.hopping_matrix(1.0));
+    auto [e, u]  = lattice.eigh_hopping(1.0); // this routine returns the eigenenergies and eigenvectors of the hopping matrix
 
     // e gives the list of eigenvalues
     // if e[i] gives the ith eigenvalue, then u[i,:] is the corresponding eigenvector
 
-    // now apply u kappa u^T to diagonalize the matrix    
+    // now apply u kappa u^T to diagonalize the matrix
+    //                                                  u                                kappa                                 u^T
     std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(u,NSL::LinAlg::mat_mul(lattice.hopping_matrix(1.0),NSL::LinAlg::transpose(u)))) << std::endl;
 
     std::cout << std::endl;
     
-    // now compare with the originally determined eigenvalues ee
+    // now compare with the originally determined eigenvalues e
     std::cout << e << std::endl;
 
     

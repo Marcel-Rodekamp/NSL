@@ -58,7 +58,7 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
 }
 
 template <typename Type>
-std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::eigh_lattice(Type delta){
+std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::eigh_hopping(Type delta){
     if(!this->ee_.defined()) {
        std::tie(this->ee_, this->ev_) = NSL::LinAlg::eigh(this->hopping_matrix(delta));
        this->ev_.transpose(); // in place transposition
