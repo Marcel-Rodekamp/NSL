@@ -1,11 +1,12 @@
 #ifndef NSL_IO_H5_IO_TPP
 #define NSL_IO_H5_IO_TPP
+
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include <iostream>
 #include <vector>
 #include "highfive/H5File.hpp"
-#include "MCMC.hpp"
+#include "MarkovChain/markovState.tpp"
 
 namespace NSL {
 
@@ -23,6 +24,11 @@ public:
     h5f_(h5file, FileHandle)  //| File::Truncate)
     {}
 
+    H5IO() : 
+        h5file_("data.h5"),
+        h5f_("data.h5", NSL::File::ReadWrite)
+    {}
+
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 	if (node.back() == '/') { // define the node
@@ -36,6 +42,7 @@ public:
 	if constexpr (NSL::is_complex<Type>()) {
 	   // write out the actionValue
 	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
+
 	   dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue));
 
 	   // write out the acceptanceProbability
@@ -45,6 +52,7 @@ public:
 	   // write out the weights (eg logdetJ, etc. . .)
 	   for (auto [key,field] : markovstate.weights) {
 	       dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/weights/"+key,HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field)));
+
 	       dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field));
 	   }
 	   
@@ -147,13 +155,15 @@ public:
         return 0;
     }
 
-    template <NSL::Concept::isNumber Type> inline int write(const NSL::Tensor<Type> &tensor, const std::string node){
+    template <NSL::Concept::isNumber Type> inline int write(NSL::Tensor<Type> &tensor, const std::string node){
     
 	std::string DIM("shape");
     	std::vector<NSL::size_t> shape = tensor.shape();
 	std::string FORMAT("type");
 	std::string typeID = typeid(Type).name();
-    
+
+    tensor.to(/*inplace*/false,/*device*/NSL::CPU(),/*non_blocking*/true) ; 
+
 	if constexpr (NSL::is_complex<Type>()) {
       	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
 

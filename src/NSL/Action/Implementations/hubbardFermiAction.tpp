@@ -130,6 +130,7 @@ template<
     NSL::Concept::isNumber TensorType
 >
 Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::grad(const Tensor<TensorType>& phi){
+
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
 
     // particle contribution
@@ -138,7 +139,7 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     // hole contribution
     auto Mh = HFM(-phi);
-    dS[this->configKey_]+= Mh.gradLogDetM();
+    dS[this->configKey_]-= Mh.gradLogDetM();
 
     return dS;
 }
