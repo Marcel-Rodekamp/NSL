@@ -5,6 +5,7 @@
 #include "LinAlg/abs.tpp"
 #include "LinAlg/adjoint.tpp"
 #include "LinAlg/conj.tpp"
+#include "LinAlg/diag.tpp"
 #include "LinAlg/det.tpp"
 #include "LinAlg/transpose.tpp"
 #include "LinAlg/exp.tpp"

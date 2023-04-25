@@ -8,6 +8,7 @@
 #include "complex.hpp"
 #include "concepts.hpp"
 #include "IO.hpp"
+#include "logger.hpp"
 
 namespace NSL::MCMC{
 
@@ -56,6 +57,7 @@ class HMC{
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
     generate(const NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t saveFrequency = 1, std::string baseNode = "markovChain"){
+
         // ensure that saveFrequency is at least 1. 
         if (saveFrequency <= 0) {
             saveFrequency = 1;
@@ -87,13 +89,13 @@ class HMC{
                 }
 
                 MC[n] = this->generate_(tmp);
-		h5_.write(MC[n],baseNode);
+		        h5_.write(MC[n],baseNode);
 
                 runningAcceptance += static_cast<double>(MC[n].accepted);
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100/n);
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./n);
                     NSL::Logger::elapsed_profile(mc_time);
                 }
             }
@@ -102,6 +104,7 @@ class HMC{
             // return the Markov Chain
             return MC;
         } else {
+
             // for Chain::LastState we only need a new state that becomes overwritten over and over again.
             NSL::MCMC::MarkovState<Type> newState = state;
 
@@ -127,7 +130,6 @@ class HMC{
             /*Markov Time                          */ 1 ,
             /*accepted                             */ true
         );
-
         return this->generate<chain,Type>(initialState, Nconf, saveFrequency);
     }
 
@@ -148,18 +150,19 @@ class HMC{
     //! Implementation of the HMC
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
+
         // sample momentum 
         NSL::Configuration<Type> momentum;
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
             p.randn();
-	    p.imag()=0;
+	        p.imag()=0;
             momentum[key] = p; 
         }
-        
+
         // use integrator to generate proposal 
         auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
-        
+
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
 
@@ -181,7 +184,8 @@ class HMC{
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
         // accept reject 
-        if ( r_.rand()[0] <= acceptanceProb ){
+        if ( true ){//r_.rand()[0] <= acceptanceProb ){
+
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 proposal_S,

@@ -48,9 +48,21 @@ class Device {
         ) 
     {}
 
+    Device static fromTorch(const torch::TensorOptions & dev){
+        return Device(&dev);
+    }
+
     torch::TensorOptions device() {
         return dev_;
     }
+    const torch::TensorOptions device() const {
+        return dev_;
+    }
+
+    protected:
+    Device(const torch::TensorOptions * dev):
+        dev_(*dev)
+    {}
     
     private:
     //! This is an enum for the different devices

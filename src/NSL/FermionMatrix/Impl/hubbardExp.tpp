@@ -2,8 +2,10 @@
 #define NSL_FERMION_MATRIX_HUBBARD_EXP_TPP
 
 #include "Lattice/lattice.hpp"
+#include "device.tpp"
 #include "hubbardExp.hpp"
 #include "../../Matrix.hpp"
+#include "sliceObj.tpp"
 
 namespace NSL::FermionMatrix {
 
@@ -131,9 +133,10 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::Spat
 Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1); 
+    NSL::Device device = this->phi_.device();
 
-    NSL::Tensor<Type> prod(Nt,Nx,Nx);
-    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(Nx);
+    NSL::Tensor<Type> prod(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(device,Nx);
     
     prod = this->Lat.exp_hopping_matrix(this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
@@ -142,7 +145,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
         sausage.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
     }
     
-    return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(Nx) + sausage);
+    return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(device,Nx) + sausage);
 } 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -150,15 +153,17 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     //ToDo: implement
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
+    const NSL::Device device = this->phi_.device();
 
-    NSL::Tensor<Type> Fk(Nt,Nx,Nx);
-    NSL::Tensor<Type> FkFkFk(Nt,Nx,Nx);
-    NSL::Tensor<Type> invAp1F = NSL::Matrix::Identity<Type>(Nx);
-    NSL::Tensor<Type> pi_dot(Nt,Nx);
+    NSL::Tensor<Type> Fk(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> FkFkFk(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> invAp1F = NSL::Matrix::Identity<Type>(device,Nx);
+    NSL::Tensor<Type> pi_dot(device,Nt,Nx);
 
     // Fk(t) = exp(-i phi_{x,t-1})*exp(-k)
     Fk =  NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * this->delta_);
-    
+
+
     // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
     // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
     // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
@@ -167,9 +172,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 	FkFkFk(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(Fk(t,NSL::Slice(),NSL::Slice()),FkFkFk(t+1,NSL::Slice(),NSL::Slice()));
     }
 
-    invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(Nx) + FkFkFk(0,NSL::Slice(),NSL::Slice()));  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-
-    NSL::Tensor<Type> pi  = NSL::Matrix::Identity<Type>(Nx);
+    invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(device,Nx) + FkFkFk(0,NSL::Slice(),NSL::Slice()));  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+                                                                                                                   //
+    NSL::Tensor<Type> pi  = NSL::Matrix::Identity<Type>(device,Nx);
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
     /**
@@ -184,20 +189,17 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       * (Note:  there is no sum over x)
       **/
 
-
     // first do t=Nt-1 case
     pi = NSL::LinAlg::mat_mul(FkFkFk(0,NSL::Slice(),NSL::Slice()),invAp1F);
-    for (int i = 0; i < Nx; i++) {
-    	pi_dot(Nt-1,i) =  II * pi(i,i); 	    
-    }
+    
+    pi_dot(Nt-1,NSL::Slice()) =  II * NSL::LinAlg::diag(pi);
 
     // now do the other timeslices
     for (int t=0; t < Nt-1; t++) {
     	invAp1F.mat_mul(Fk(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
-	pi = NSL::LinAlg::mat_mul(FkFkFk(t+1,NSL::Slice(),NSL::Slice()),invAp1F);
-    	for (int i= 0; i < Nx; i++) {
-	    pi_dot(t,i) =  II * pi(i,i); 	    
-	}
+	    pi = NSL::LinAlg::mat_mul(FkFkFk(t+1,NSL::Slice(),NSL::Slice()),invAp1F);
+    	
+        pi_dot(t,NSL::Slice()) =  II * NSL::LinAlg::diag(pi);
     }
 
     return pi_dot;
