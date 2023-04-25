@@ -162,7 +162,7 @@ public:
 	std::string FORMAT("type");
 	std::string typeID = typeid(Type).name();
 
-    tensor.to(/*inplace*/false,/*device*/NSL::CPU(),/*non_blocking*/true) ; 
+    tensor.to(/*inplace*/false,/*device*/NSL::CPU(),/*non_blocking*/false) ; 
 
 	if constexpr (NSL::is_complex<Type>()) {
       	   std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(tensor.data(), tensor.data()+tensor.numel());
