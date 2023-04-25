@@ -75,7 +75,7 @@ class HMC{
             // Put the initial configuration in the 0th element
             MC[0] = state;
 
-            double runningAcceptance = 1.;
+            double runningAcceptance = 0.;
 
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
@@ -184,7 +184,7 @@ class HMC{
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
         // accept reject 
-        if ( true ){//r_.rand()[0] <= acceptanceProb ){
+        if ( r_.rand()[0] <= acceptanceProb ){
 
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
