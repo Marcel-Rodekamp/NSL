@@ -88,6 +88,9 @@ class SpatialLattice {
         //! A string that describes the lattice.
         const std::string & name() { return name_; };
 
+        //! Returns the eigenenergies and unitary matrix (ie eigenvectors) of the hopping matrix.
+        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_lattice();
+
         bool bipartite();
 
         //! Copy the (initialized) lattice on the device
@@ -122,6 +125,11 @@ class SpatialLattice {
         bool bipartite_is_initialized_ = false;
         // Maybe the right thing is to have wrapper that can hold
         // a value or be Uninitialized
+
+        //! holds eigenenergies of the hopping matrix
+        NSL::Tensor<Type> ee_;
+        //! holds eigenvectors of the hopping matrix
+        NSL::Tensor<Type> ev_;
 
         //! Transform the hopping matrix into the adjacency matrix.
         /*!
