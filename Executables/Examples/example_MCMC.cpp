@@ -6,10 +6,10 @@ int main(int argc, char* argv[]){
     NSL::Logger::init_logger(argc, argv);
 
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
-    auto device = NSL::GPU();
+    auto device = NSL::CPU();
 
-    std::string H5NAME("./Nx8Nt64U3B10_ring.h5");  // name of h5 file to store configurations, measurements, etc. . .
-    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
+    std::string H5NAME("./ensembles.h5");  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME);// NSL::File::Truncate);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
 
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]){
     //    On-Site Coupling
     Type U    = 3.0;
     //    Number of time slices
-    NSL::size_t Nt = 4;
+    NSL::size_t Nt = 32;
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
@@ -32,15 +32,15 @@ int main(int argc, char* argv[]){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 3;
+    NSL::size_t numberMDsteps = 2;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 20;
+    NSL::size_t NburnIn = 500;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 20;
+    NSL::size_t Nconf = 500;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 2;
+    NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", Nconf, saveFreq);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq, "2site/markovChain");
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
