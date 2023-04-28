@@ -16,37 +16,40 @@ class Honeycomb: public NSL::Lattice::SpatialLattice<Type> {
          *
          **/
         explicit Honeycomb(
-                const std::vector<std::size_t L,
-                const Type &kappas = 1.);
+                const std::vector<int> L,
+                const Type &kappa = 1.);
+
+        const NSL::Tensor<int> L = NSL::Tensor<int>(2);
+        const int unit_cells;
 
     protected:
         //! Coordinate space lattice vectors
-        NSL::Tensor<double> a = {
-            {1.5, +0.8660254037844386}, // √(3) / 2 {√3, +1}
-            {1.5, -0.8660254037844386}  // √(3) / 2 {√3, -1}
-        };
+        //  √(3) / 2 {
+        //      {√3, +1}
+        //      {√3, -1}
+        //      }
+        NSL::Tensor<double> a = NSL::Tensor<double>(2,2);
+        
         // Separation between sites in the unit cell.
-        NSL::Tensor<double> r = {
-            1., 0.
-        };
+        // {1., 0.}
+        NSL::Tensor<double> r = NSL::Tensor<double>(2);
+        
         //! Reciprocal space lattice vectors
-        NSL::Tensor<double> b = {
-            {2.094395102393195, 3.627598728468436}, // 2π/√3 {1/√3, +1}
-            {2.094395102393195, -3.627598728468436} // 2π/√3 {1/√3, -1}
-        };
-
-        std::vector<std::size_t> L;
-        std::size_t unit_cells;
+        //  2π/√3 {
+        //      {1/√3, +1}
+        //      {1/√3, -1}
+        //      }
+        NSL::Tensor<double> b = NSL::Tensor<double>(2,2);
 
         Type kappa;
 
     private:
-        static inline double distance_squared(const NSL::Tensor<double> &x, const NSL::Tensor<double> &y);
-        static inline std::size_t unit_cells_(const std::vector<std::size_t> &L);
-        static inline std::size_t n_to_sites_(const std::vector<std::size_t> &n);
-        void init_(const std::vector<std::size_t> &n,
-                   const std::vector<Type> &kappa,
-                   const std::vector<double> spacings);
+        double distance_squared(const NSL::Tensor<double> &x, const NSL::Tensor<double> &y);
+        inline int unit_cells_(const std::vector<int> &L);
+        inline int L_to_sites_(const std::vector<int> &L);
+        void init_();
 };
+
+} // namespace NSL::Lattice
 
 #endif // NSL_LATTICE_HONEYCOMB_HPP
