@@ -33,6 +33,7 @@ add_NSL_test(test_bipartite Lattice/test_bipartite.cpp)
 add_NSL_test(test_complete Lattice/test_complete.cpp)
 add_NSL_test(test_ring Lattice/test_ring.cpp)
 add_NSL_test(test_square Lattice/test_square.cpp)
+add_NSL_test(test_honeycomb Lattice/test_honeycomb.cpp)
 
 add_NSL_test(test_FermionMatrix_hermitian FermionMatrix/test_FermionMatrix_hermitian.cpp)
 add_NSL_test(test_fermionMatrixHubbardExp FermionMatrix/test_fermionMatrixHubbardExp.cpp)
