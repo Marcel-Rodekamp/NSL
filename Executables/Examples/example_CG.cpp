@@ -25,7 +25,7 @@ int main(int argc, char ** argv){
     NSL::Tensor<NSL::complex<double>> phi(device, Nt,Nx); phi.rand();
     NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
  
-    NSL::Logger::info("Running CG to compute MM†.");
+    NSL::Logger::info("Running CG to compute MM†@x = b.");
 
     NSL::LinAlg::CG<NSL::complex<double>> cg(M,NSL::FermionMatrix::MMdagger);
 
