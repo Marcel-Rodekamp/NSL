@@ -18,6 +18,10 @@
 #include "Tensor/Impl/realImag.tpp"
 #include "Tensor/Impl/expand.tpp"
 #include "Tensor/Impl/shift.tpp"
+#include "Tensor/Impl/device.tpp"
+#include "Tensor/Impl/flatten.tpp"
+#include "Tensor/Impl/reshape.tpp"
+#include "Tensor/Impl/resize.tpp"
 
 // Arithmetic
 #include "Tensor/Impl/operatorAdditionEqual.tpp"
@@ -64,7 +68,11 @@ class Tensor:
     public NSL::TensorImpl::TensorReductions<Type>,
     public NSL::TensorImpl::TensorExpand<Type>,
     public NSL::TensorImpl::TensorShift<Type>,
-    public NSL::TensorImpl::TensorMatmul<Type>
+    public NSL::TensorImpl::TensorMatmul<Type>,
+    public NSL::TensorImpl::TensorDevice<Type>,
+    public NSL::TensorImpl::TensorFlatten<Type>,
+    public NSL::TensorImpl::TensorResize<Type>,
+    public NSL::TensorImpl::TensorReshape<Type>
 {
     public:
 
@@ -125,6 +133,24 @@ class Tensor:
         }
         return *this;
     }
+
+  template <typename OtherType>
+  NSL::Tensor<Type> & operator=(const std::vector<OtherType> & other){
+    for (NSL::size_t i=0;i<other.size();i++)
+      { this->data_.index_put_({i},static_cast <Type> (other[i])); }
+
+    return *this;
+  }
+
+  
+  NSL::Tensor<Type> & operator=(const std::vector<Type> & other){
+    //    this->data_ = torch::from_blob((void*) other.data(), {other.size()});
+    for (NSL::size_t i=0;i<other.size();i++)
+      { this->data_.index_put_({i},other[i]); }
+    
+    return *this;
+  }
+  
 
     /* This is the interface class users should be using.
      * All the different implementations are found in the files in Impl/ .

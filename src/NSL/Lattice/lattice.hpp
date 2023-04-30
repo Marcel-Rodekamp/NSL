@@ -15,7 +15,9 @@
 #include "../complex.hpp"
 #include "../map.hpp"
 #include "../Tensor.hpp"
-#include "../LinAlg.hpp"
+#include "../LinAlg/abs.tpp"
+#include "../LinAlg/mat_exp.tpp"
+#include "device.tpp"
 
 namespace NSL::Lattice {
 
@@ -40,6 +42,7 @@ class SpatialLattice {
          *  \param name  a string which describes this lattice.
          *  \param hops  a sparse or dense matrix of hopping amplitudes.
          *  \param sites a vector of sites; the indices match those in `hops`.
+         *  \param device specifies which device (CPU/GPU) should be used for the Tensor data
          **/
         SpatialLattice(const std::string & name, const NSL::Tensor<Type> & hops, const NSL::Tensor<double> & sites);
 
@@ -86,6 +89,21 @@ class SpatialLattice {
         const std::string & name() { return name_; };
 
         bool bipartite();
+
+        //! Copy the (initialized) lattice on the device
+        /*! 
+         * Contrary to the `NSL::Tensor::to` method this method is in place
+         *
+         * */
+        void to(const NSL::Device & device){
+            this->hops_.to(true,device);
+            this->adj_.to(true,device);
+            this->sites_.to(true,device);
+
+            for(auto & [delta,expKappa]: this->exp_hopping_matrix_){
+                 expKappa.to(true,device);
+            }
+        }
 
     protected:
         //! A descriptive string for quick human identification of the lattice.
