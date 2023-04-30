@@ -6,6 +6,9 @@
 #include "complex.hpp"
 #include "sliceObj.tpp"
 
+// forward declare
+
+
 namespace NSL::Concept{
 
 //! Ensuring Types of a parameter pack agree
@@ -93,6 +96,46 @@ concept isIndexer = requires(T t) {
  * */
 template<typename Derived,typename Base>
 concept isDerived = std::is_base_of_v<Base,Derived>;
+} // namespace NSL::Concept
+  
+// foward declare tensor 
+namespace NSL {template<NSL::Concept::isNumber Type> class Tensor;}
+
+namespace NSL::Concept {
+// Hide this from the user
+namespace {
+template<typename T>
+struct is_tensor: public std::true_type {};
+template<NSL::Concept::isNumber T>
+struct is_tensor<NSL::Tensor<T>>: public std::false_type {};
+}
+
+//! Concept to check if a type is a NSL::Tensor type
+template<typename T>
+concept isTensor = is_tensor<T>::value;
+
+template <typename Derived, template <typename...> class Base>
+struct isTemplateDerivedHelper {
+    // We extract the template arguments of Derived 
+    // which need to match the template argument of Base (assumption) 
+    // Then compare the child structure of Base using the concept 'isDerived' 
+    template <template<typename ...> class Derived_, typename... Args_>
+        requires(isDerived<Derived_<Args_...>,Base<Args_...> >)
+    constexpr static std::true_type checkConversionToBase(const Derived_<Args_...>*);
+    
+    // If it is just not a base class we return false
+    constexpr static std::false_type checkConversionToBase(...);
+
+    constexpr static bool value = decltype(
+        isTemplateDerivedHelper<Derived,Base>::checkConversionToBase(std::declval<Derived*>())
+    )::value;
+
+};
+
+//! Concept to check that a class is derived from a base class if the Base
+//! and derived class are templated
+template <typename Derived, template <typename...> class BaseClass>
+concept isTemplateDerived = isTemplateDerivedHelper<Derived,BaseClass>::value;
 
 } // namespace NSL::Concept 
 

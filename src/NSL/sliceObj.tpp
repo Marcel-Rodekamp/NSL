@@ -41,7 +41,7 @@ class Slice {
         }
 
         t_ = std::make_tuple(start_,stop_,step_);
-    };
+    }
 
     Slice() : Slice(None,None,None) {}
 
