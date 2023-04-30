@@ -49,6 +49,7 @@ include(cmake/ARM64.cmake)
 #include(cmake/gpu.cmake)
 include(cmake/torch.cmake)
 include(cmake/catch2.cmake)
+include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 
 add_subdirectory(src/NSL)
