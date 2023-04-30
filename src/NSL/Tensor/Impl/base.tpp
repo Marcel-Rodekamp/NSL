@@ -57,6 +57,13 @@ class TensorBase {
         //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
     }
 
+    //! copy constructor given an std::vector
+    explicit TensorBase( NSL::Device dev, const std::vector<Type> &phi) :
+    	     data_(torch::from_blob(static_cast <void*> (phi.data()), {phi.size()}))
+    {
+	//std::cout << "I did something!" << std::endl;
+    }
+
     //! copy constructor
     /*!
      * Copy the data from other into this new instance. 
@@ -149,7 +156,7 @@ class TensorBase {
     //! explicitly convert a polymorphism to this class by performing a shallow copy
     /*!
      * This is a convenience function such that other Impl classes can return
-     * a NSL::Tensor<Type>. Nothing happens to the underlaying data and it 
+     * a NSL::Tensor<Type>. Nothing happens to the underlying data and it 
      * contains the same address.
      *  \todo: Does the compile optimize this away?
      *  \todo: Is this publicly available in NSL::Tensor?

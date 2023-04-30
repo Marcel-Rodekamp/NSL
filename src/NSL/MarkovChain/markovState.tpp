@@ -18,7 +18,7 @@ class MarkovState{
     MarkovState(
         NSL::Configuration<Type> config,
         const Type & actionValue,
-        const NSL::RealTypeOf<Type> & acceptenceProbability,
+        const NSL::RealTypeOf<Type> & acceptanceProbability,
         NSL::size_t markovTime,
         bool accepted,
         WeightType ... weights
@@ -26,7 +26,7 @@ class MarkovState{
         configuration(config),
         actionValue(actionValue),
         weights({weights...}),
-        acceptenceProbability(acceptenceProbability),
+        acceptanceProbability(acceptanceProbability),
         markovTime(markovTime),
         accepted(accepted)
     {}
@@ -35,13 +35,13 @@ class MarkovState{
     MarkovState(
         NSL::Configuration<Type> config,
         const Type & actionValue,
-        const NSL::RealTypeOf<Type> & acceptenceProbability,
+        const NSL::RealTypeOf<Type> & acceptanceProbability,
         WeightType ... weights
     ): 
         configuration(config),
         actionValue(actionValue),
         weights({weights...}),
-        acceptenceProbability(acceptenceProbability),
+        acceptanceProbability(acceptanceProbability),
         markovTime(1),
         accepted(1)
     {}
@@ -64,7 +64,7 @@ class MarkovState{
     std::map<std::string, Type> weights;
 
     //! Store the probability with which it was accepted
-    NSL::RealTypeOf<Type> acceptenceProbability;
+    NSL::RealTypeOf<Type> acceptanceProbability;
 
     // ToDo:
     //! Store the RNG State
@@ -85,14 +85,14 @@ class MarkovState{
 };
 
 template<NSL::Concept::isNumber Type>
-NSL::RealTypeOf<Type> getAcceptenceRate(const std::vector<NSL::MCMC::MarkovState<Type>>& MC){
-    NSL::RealTypeOf<Type> acceptenceRate = 0;
+NSL::RealTypeOf<Type> getAcceptanceRate(const std::vector<NSL::MCMC::MarkovState<Type>>& MC){
+    NSL::RealTypeOf<Type> acceptanceRate = 0;
 
     for(const auto& state: MC){
-        acceptenceRate += static_cast<NSL::RealTypeOf<Type>>( state.accepted );
+        acceptanceRate += static_cast<NSL::RealTypeOf<Type>>( state.accepted );
     }
 
-    return acceptenceRate/MC.size();
+    return acceptanceRate/MC.size();
 }
 
 }
