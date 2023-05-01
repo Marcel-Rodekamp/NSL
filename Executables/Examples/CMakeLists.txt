@@ -10,3 +10,6 @@ target_link_libraries(example_MCMC NSL)
 add_executable(example_leapfrog example_leapfrog.cpp)
 target_link_libraries(example_leapfrog NSL)
 
+add_executable(example_honeycomb example_honeycomb.cpp)
+target_link_libraries(example_honeycomb NSL)
+
