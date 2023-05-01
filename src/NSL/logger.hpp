@@ -83,6 +83,7 @@ namespace NSL::Logger {
 
         auto logger = std::make_shared<spdlog::logger>("NSL_logger", begin(sinks), end(sinks));
         logger->set_pattern("[%D %T] [%l] %v");
+        logger->set_level(spdlog::level::debug);
         logger->flush_on(spdlog::level::debug);
 
         spdlog::register_logger(logger);

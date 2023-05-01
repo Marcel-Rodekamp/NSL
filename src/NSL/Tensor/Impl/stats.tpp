@@ -59,6 +59,10 @@ class TensorStats:
         return out;
     }
 
+    bool defined(){
+     return this->data_.defined();
+     }
+
 };
 
 } // namespace NSL::TensorImpl
