@@ -50,9 +50,8 @@ void test_honeycomb_spectrum_limits(const NSL::Tensor<T> & eigenvalues, const do
 
     INFO("Limit = " << limit);
     
+    auto not_too_small = (-limit <= eigenvalues);
     auto not_too_big   = (eigenvalues <= +limit);
-    //auto not_too_small = (-limit <= eigenvalues); // See https://github.com/Marcel-Rodekamp/NSL/issues/133
-    auto not_too_small = (eigenvalues >= -limit);
 
     INFO("Eigenvalues <= +3" << not_too_big);
     REQUIRE( not_too_big.all() );
