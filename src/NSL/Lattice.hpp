@@ -5,5 +5,6 @@
 #include "Lattice/Implementations/ring.tpp"
 #include "Lattice/Implementations/square.tpp"
 #include "Lattice/Implementations/complete.tpp"
+#include "Lattice/Implementations/honeycomb.tpp"
 
 #endif
