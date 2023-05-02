@@ -17,6 +17,7 @@
 #include "../Tensor.hpp"
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
+#include "../LinAlg/inner_product.tpp"
 #include "device.tpp"
 
 namespace NSL::Lattice {
