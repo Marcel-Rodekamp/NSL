@@ -6,8 +6,8 @@ int main(int argc, char* argv[]){
     NSL::Logger::init_logger(argc, argv);
 
     // this routine requires an already generated ensemble, generated, for example, from example_MCMC
-    std::string H5NAME("./ensembles.h5");  // name of h5 file with configurations
-    std::string NODE("2site/markovChain");
+    std::string H5NAME("./1site_ring.v2.h5");  // name of h5 file with configurations
+    std::string NODE("U2B4Nt32/markovChain");
     NSL::H5IO h5(H5NAME);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
@@ -17,13 +17,13 @@ int main(int argc, char* argv[]){
     // if using an ensemble generated from example_MCMC, make sure tha the parameters below are the same
     
     // Number of ions (spatial sites)
-    NSL::size_t Nx =  2;
+    NSL::size_t Nx = 1;
 
     // Number of time slices
     NSL::size_t Nt = 32;
 
     // inverse temperature
-    Type beta = 10.0;
+    Type beta = 4.0;
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]){
     NSL::MCMC::MarkovState<Type> markovstate;
     markovstate.configuration = config;
 
-    for (int cfg = 510; cfg<=5490; cfg+=10) {
+    for (int cfg = 1010; cfg<=200990; cfg+=10) {
       h5.read(markovstate,NODE,cfg);
 
       // initialize fermion matrix with this field
