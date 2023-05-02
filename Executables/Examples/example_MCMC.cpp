@@ -5,17 +5,24 @@ int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
 
+    // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
+    auto device = NSL::GPU();
+
+    std::string H5NAME("./Nx8Nt64U3B10_ring.h5");  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
+    
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
+
     // Define the parameters of your system (you can also read these in...)
-    typedef double Type;
+    typedef NSL::complex<double> Type;
 
     // Typically you want to read these in or provide as an argument to such 
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1;
+    Type beta = 10.0;
     //    On-Site Coupling
-    Type U    = 1;
+    Type U    = 3.0;
     //    Number of time slices
     NSL::size_t Nt = 4;
     //    Number of ions (spatial sites)
@@ -25,23 +32,26 @@ int main(int argc, char* argv[]){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 10;
+    NSL::size_t numberMDsteps = 3;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 100;
+    NSL::size_t NburnIn = 20;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 10000;
+    NSL::size_t Nconf = 20;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 10;
+    NSL::size_t saveFreq = 2;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Ring<Type> lattice(Nx); 
+    NSL::Lattice::Ring<Type> lattice(Nx);
 
-    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", beta, Nt, U, Nx);
+    // Put the lattice on the device. (copy to GPU)
+    lattice.to(device);
+
+    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", NSL::real(beta), Nt, NSL::real(U), Nx);
 
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
@@ -49,18 +59,27 @@ int main(int argc, char* argv[]){
         /*Nt = */  Nt,    
         /*U =  */  U
     );
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>>::Parameters paramsHFM(
+        /*beta=*/  beta,
+        /*Nt = */  Nt,    
+        /*lattice=*/lattice
+    );
+
+    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(paramsHFM);
 
     // Initialize the action
-    NSL::Action::Action S{
-        NSL::Action::HubbardGaugeAction<Type>(params)
-    };
+    NSL::Action::Action S = S_gauge + S_fermion;
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here
     NSL::Configuration<Type> config{
-        {"phi", NSL::Tensor<Type>(Nt,Nx)}
+        {"phi", NSL::Tensor<Type>(device,Nt,Nx)}
     };
-    config["phi"].rand();
+    config["phi"].randn();
+    config["phi"].imag() = 0;
+
 
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);
 
@@ -72,7 +91,7 @@ int main(int argc, char* argv[]){
     );
 
     // Initialize the HMC
-    NSL::MCMC::HMC hmc(leapfrog, S);
+    NSL::MCMC::HMC hmc(leapfrog, S, h5);
     NSL::Logger::stop_profile(init_time);
 
     // Burn In

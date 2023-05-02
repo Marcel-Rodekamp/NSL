@@ -50,9 +50,22 @@ class Device {
         repr_(deviceIdentifier)
     {}
 
+    Device static fromTorch(const torch::TensorOptions & dev){
+        return Device(&dev);
+    }
+
     torch::TensorOptions device() {
         return dev_;
     }
+    
+    const torch::TensorOptions device() const {
+        return dev_;
+    }
+
+    protected:
+    Device(const torch::TensorOptions * dev):
+        dev_(*dev)
+    {}
 
     friend std::ostream & operator<<(std::ostream &os, const Device & dev) {
         os << dev.repr_;

@@ -5,6 +5,7 @@
 #include "LinAlg/abs.tpp"
 #include "LinAlg/adjoint.tpp"
 #include "LinAlg/conj.tpp"
+#include "LinAlg/diag.tpp"
 #include "LinAlg/det.tpp"
 #include "LinAlg/transpose.tpp"
 #include "LinAlg/exp.tpp"
@@ -13,6 +14,8 @@
 #include "LinAlg/mat_mul.tpp"
 #include "LinAlg/mat_vec.tpp"
 #include "LinAlg/shift.tpp"
+#include "LinAlg/mat_inv.tpp"
+#include "LinAlg/eigh.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp

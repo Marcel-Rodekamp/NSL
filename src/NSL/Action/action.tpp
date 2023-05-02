@@ -64,7 +64,11 @@ class BaseAction{
  * It contains multiple actions and sums up their outputs.
  **/
 
-template<NSL::Concept::isTemplateDerived<BaseAction> ... SingleActions>
+// isTemplateDerived requires the same template structure as the base class
+// this can not be satisfied in general. We might want to think harder here
+// in the future
+//template<NSL::Concept::isTemplateDerived<BaseAction> ... SingleActions>
+template<typename ... SingleActions>
 class Action {	
 public:
 	Action(SingleActions ... psummands_) : 
