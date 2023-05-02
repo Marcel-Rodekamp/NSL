@@ -37,7 +37,8 @@ class Device {
         dev_(torch::TensorOptions().device(
                 (deviceIdentifier == "GPU") ? torch::kCUDA : torch::kCPU
             )
-        ) 
+        ),
+        repr_(deviceIdentifier)
     {}
 
     Device(std::string deviceIdentifier, const NSL::size_t ID) :
@@ -45,7 +46,8 @@ class Device {
                 (deviceIdentifier == "GPU") ? torch::kCUDA : torch::kCPU,
                 ID
             )
-        ) 
+        ), 
+        repr_(deviceIdentifier)
     {}
 
     Device static fromTorch(const torch::TensorOptions & dev){
@@ -55,6 +57,7 @@ class Device {
     torch::TensorOptions device() {
         return dev_;
     }
+    
     const torch::TensorOptions device() const {
         return dev_;
     }
@@ -63,6 +66,15 @@ class Device {
     Device(const torch::TensorOptions * dev):
         dev_(*dev)
     {}
+
+    friend std::ostream & operator<<(std::ostream &os, const Device & dev) {
+        os << dev.repr_;
+        return os;
+    }
+
+    const std::string repr(){
+        return repr_;  
+    }
     
     private:
     //! This is an enum for the different devices
@@ -77,6 +89,8 @@ class Device {
     // we store this information immutable. A new Device object is needed to be created
     //const c10::Device device;
     const torch::TensorOptions dev_;
+
+    const std::string repr_;
 
    //! ToDo: Figure out how we can access different cpus etc.
 };
