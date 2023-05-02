@@ -2,7 +2,6 @@
 #define NSL_MATRIX_IDENTITY_HPP
 
 #include "../Tensor.hpp"
-#include <ATen/core/ATen_fwd.h>
 #include <torch/torch.h>
 
 namespace NSL::Matrix {
