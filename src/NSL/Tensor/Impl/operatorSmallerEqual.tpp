@@ -18,7 +18,7 @@ inline NSL::Tensor<bool> operator<=(const NSL::Tensor<TensorType> & tensor, cons
 template<NSL::Concept::isNumber ValueType,typename TensorType>
 inline NSL::Tensor<bool> operator<=(const ValueType & value, const NSL::Tensor<TensorType> & tensor) {
     // calls above
-    return tensor <= value;
+    return tensor >= value;
 }
 
 } // namespace NSL
