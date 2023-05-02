@@ -5,5 +5,6 @@
 
 // implementations
 #include "Action/Implementations/hubbardGaugeAction.tpp"
+#include "Action/Implementations/hubbardFermiAction.tpp"
 
 #endif //NSL_ACTION_HPP

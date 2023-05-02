@@ -81,6 +81,11 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     **/
     Type logDetM() override;
 
+    /*!
+     * \returns the gradient of log of determinant of M
+     **/
+    NSL::Tensor<Type> gradLogDetM() override;
+
     protected:
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;

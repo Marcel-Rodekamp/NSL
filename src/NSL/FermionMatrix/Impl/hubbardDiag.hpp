@@ -81,6 +81,8 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
     **/
     Type logDetM() override;
 
+    NSL::Tensor<Type> gradLogDetM() override { return phi_;}
+
     protected:
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;

@@ -8,7 +8,8 @@
 namespace NSL::Integrator {
 
 
-template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+//template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+template<typename ... ActionTermTypes>
 class Leapfrog: Integrator<ActionTermTypes...> {
     public:
     //! Constructor of the leapfrog 
@@ -34,7 +35,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
     std::tuple<NSL::Configuration<TensorType>, NSL::Configuration<TensorType> > operator()(
         const NSL::Configuration<TensorType> & q_, const NSL::Configuration<TensorType> & p_
     ){
-
+        
         // deep copy to generate a new configuration
         NSL::Configuration<TensorType> q (q_,true);
         NSL::Configuration<TensorType> p (p_,true);
@@ -44,7 +45,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         // a bunch of full steps
         q += static_cast<TensorType>(stepSize_) * p;
-        
+
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
             p += static_cast<TensorType>(stepSize_) * this->action_.force(q);
             q += static_cast<TensorType>(stepSize_) * p;

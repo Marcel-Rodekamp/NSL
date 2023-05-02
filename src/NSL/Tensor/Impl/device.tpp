@@ -2,6 +2,7 @@
 #define NSL_TENSOR_IMPL_DEVICE_TPP
 
 #include "base.tpp"
+#include "device.tpp"
 
 namespace NSL::TensorImpl{
 
@@ -40,6 +41,13 @@ class TensorDevice:
      * */
     void to(bool inplace, NSL::Device device, bool non_blocking = false){
         this->data_ = this->data_.to(device.device().device(),non_blocking);
+    }
+
+    //! Get device information from the Tensor
+    const NSL::Device device(){
+        return NSL::Device::fromTorch(
+            this->data_.device()
+        );
     }
 
 };

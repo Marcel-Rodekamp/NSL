@@ -8,7 +8,6 @@ int main(int argc, char* argv[]){
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
     auto device = NSL::GPU();
 
-    
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
 
     // Define the parameters of your system (you can also read these in...)
@@ -88,7 +87,6 @@ int main(int argc, char* argv[]){
     config["phi"].randn();
     config["phi"].imag() = 0;
     config["phi"] *= params.Utilde;
-
 
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);
 
