@@ -4,10 +4,6 @@
 int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
-
-    //    std::string H5NAME("./ensembles.h5");  // name of h5 file with configurations
-    //    std::string NODE("1site/markovChain");
-    //    NSL::H5IO h5(H5NAME);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)

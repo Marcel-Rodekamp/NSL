@@ -1,3 +1,13 @@
+
+add_executable(example_TensorBasics example_tensor_basics.cpp)
+target_link_libraries(example_TensorBasics NSL)
+
+add_executable(example_GPU_Tensor example_GPU_Tensor.cpp)
+target_link_libraries(example_GPU_Tensor NSL)
+
+add_executable(example_Tensor_datalocality example_Tensor_datalocality.cpp)
+target_link_libraries(example_Tensor_datalocality NSL)
+
 add_executable(example_action example_action.cpp)
 target_link_libraries(example_action NSL)
 
@@ -10,6 +20,12 @@ target_link_libraries(example_MCMC NSL)
 add_executable(example_leapfrog example_leapfrog.cpp)
 target_link_libraries(example_leapfrog NSL)
 
+add_executable(example_honeycomb example_honeycomb.cpp)
+target_link_libraries(example_honeycomb NSL)
+
+add_executable(example_CG example_CG.cpp)
+target_link_libraries(example_CG NSL)
+
 add_executable(example_IO example_IO.cpp)
 target_link_libraries(example_IO NSL)
 
@@ -18,3 +34,4 @@ target_link_libraries(example_lattice NSL)
 
 add_executable(example_correlators example_correlators.cpp)
 target_link_libraries(example_correlators NSL)
+

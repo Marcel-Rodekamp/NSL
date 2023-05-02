@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
     //     Number of configurations to be computed on which we will measure
     NSL::size_t Nconf = 500;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 10;
+    NSL::size_t saveFreq = 2;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
