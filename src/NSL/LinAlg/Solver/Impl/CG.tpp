@@ -7,11 +7,14 @@
 #include "../../../LinAlg/complex.tpp"
 #include "../../../Tensor/Factory/like.tpp"
 #include "complex.hpp"
+#include "logger.hpp"
+#include "IO/to_string.tpp"
 
 namespace NSL::LinAlg{
 template<NSL::Concept::isNumber Type >
 NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     // This algorithm can be found e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
+    //
 
     // initialize the solution vector x_ which after convergence 
     // stores the approximate result x = M^{-1} @ b.
@@ -37,7 +40,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
-        //std::cout << "Reached precision " << rsqr_curr << " after 0'ths step" << std::endl;
+        NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,0);
         return x_;
     }
 
@@ -70,8 +73,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
-
-            //std::cout << std::setprecision(5) << "CG converged with precision " << rsqr_curr << "<" << errSq_ << " after " << count << " steps" << std::endl;
+            NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,count);
             return x_;
         }
 
@@ -86,24 +88,11 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // now prepare the previous residual square for the next iteration
         rsqr_prev = rsqr_curr;
 
-        // comment int for debug purpose
-        //! ToDo If compiled in debug mode compile this report for production this report is not interesting.
-        //std::cout << "CG Iteration: " << count << "/" << maxIter_
-        //          << " | α = " << NSL::to_string(alpha)
-        //          << " | ε² = " << rsqr_curr //<< ">" << errSq_  
-        //          << " | β = " << beta 
-        //          << std::endl;
-
+        // On debug level we print the solver status every step
+        NSL::Logger::debug("CG Iteration: {}/{} | α = {} | ε² = {} |  β = {}", count, maxIter_, NSL::to_string(alpha), rsqr_curr, beta);
     } // for(counter)
 
-    // If the CG did not succeed in the given iterations, raise a runtime
-    // error which can be caught or terminates the program.
-    throw std::runtime_error(
-        "Error CG did not converge within "
-        +std::to_string(maxIter_)
-        +" iterations! |r|^2 = "
-        + std::to_string(rsqr_prev)
-    );
+    NSL::Logger::error("Error CG did not converge within {} iterations! |r|^2 = {}", maxIter_, rsqr_prev);
 
     // this should never be reached but put it just in case something goes wrong.
     return x_;
