@@ -21,7 +21,7 @@ int main(int argc, char* argv[]){
     //    On-Site Coupling
     Type U    = 2.0;
     //    Number of time slices
-    NSL::size_t Nt = 32;
+    NSL::size_t Nt = 22;
     //    Number of ions (spatial sites)
     NSL::size_t L1 = 9;
     NSL::size_t L2 = 9;

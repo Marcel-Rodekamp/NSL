@@ -14,6 +14,18 @@ target_link_libraries(example_action NSL)
 add_executable(example_MCMC example_MCMC.cpp)
 target_link_libraries(example_MCMC NSL)
 
+add_executable(example_MCMC_L6_MD22 example_MCMC_L6_MD22.cpp)
+target_link_libraries(example_MCMC_L6_MD22 NSL)
+
+add_executable(example_MCMC_L6_MD30 example_MCMC_L6_MD30.cpp)
+target_link_libraries(example_MCMC_L6_MD30 NSL)
+
+add_executable(example_MCMC_L9_MD22 example_MCMC_L9_MD22.cpp)
+target_link_libraries(example_MCMC_L9_MD22 NSL)
+
+add_executable(example_MCMC_L9_MD30 example_MCMC_L9_MD30.cpp)
+target_link_libraries(example_MCMC_L9_MD30 NSL)
+
 #add_executable(example_GPU_Tensor example_GPU_Tensor.cpp)
 #target_link_libraries(example_GPU_Tensor NSL)
 
