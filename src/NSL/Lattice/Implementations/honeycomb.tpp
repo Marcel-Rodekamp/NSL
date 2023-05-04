@@ -11,6 +11,7 @@
 #include <cmath>
 
 #include "honeycomb.hpp"
+#include "LinAlg/inner_product.tpp"
 
 // We describe the honeycomb lattice by a pair of integers L1, and L2,
 // which we group into a single std::vector<int>.
