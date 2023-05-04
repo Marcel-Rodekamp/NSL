@@ -1,6 +1,6 @@
 ml Stages/2022 GCCcore/.11.2.0 PyTorch/1.11-CUDA-11.5 h5py Boost CMake
 
-BASE=/p/home/jusers/pederiva2/jureca/nsl-profiling/NSL
+BASE=$(pwd)
 declare -A COMPILER_FLAGS
 COMPILER_FLAGS=(["top-level"]="" ["mc-step"]="-DPROFILE_LEVEL_MC_STEP" ["integrator"]="-DPROFILE_LEVEL_MC_STEP -DPROFILE_LEVEL_INTEGRATOR" ["action"]="-DPROFILE_LEVEL_MC_STEP -DPROFILE_LEVEL_INTEGRATOR -DPROFILE_LEVEL_ACTION")
 

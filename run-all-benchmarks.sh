@@ -8,7 +8,7 @@
 
 ml Stages/2022 GCCcore/.11.2.0 PyTorch/1.11-CUDA-11.5 h5py Boost CMake
 
-BASE=/p/home/jusers/pederiva2/jureca/nsl-profiling/NSL
+BASE=$(pwd)
 
 for LEVEL in "top-level" "mc-step" "integrator" "action"
 do
