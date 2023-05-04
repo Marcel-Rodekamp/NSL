@@ -101,12 +101,24 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
     Type logDetMpMh = 0;
 
     // particle contribution
+#ifdef PROFILE_LEVEL_ACTION
+    auto part_time = NSL::Logger::start_profile("Eval particle");
+#endif
     auto Mp = this->HFM(phi);
     logDetMpMh+= Mp.logDetM();
+#ifdef PROFILE_LEVEL_ACTION
+    NSL::Logger::stop_profile(part_time);
+#endif
 
     // hole contribution
+#ifdef PROFILE_LEVEL_ACTION
+    auto hole_time = NSL::Logger::start_profile("Eval hole");
+#endif
     auto Mh = this->HFM(-phi);
     logDetMpMh+= Mh.logDetM();
+#ifdef PROFILE_LEVEL_ACTION
+    NSL::Logger::stop_profile(hole_time);
+#endif
 
     // The Fermi action has an additional - sign
     return -logDetMpMh;
@@ -134,12 +146,24 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
 
     // particle contribution
+#ifdef PROFILE_LEVEL_ACTION
+    auto part_time = NSL::Logger::start_profile("Grad particle");
+#endif
     auto Mp = HFM(phi);
     dS[this->configKey_]+= Mp.gradLogDetM();
+#ifdef PROFILE_LEVEL_ACTION
+    NSL::Logger::stop_profile(part_time);
+#endif
 
     // hole contribution
+#ifdef PROFILE_LEVEL_ACTION
+    auto hole_time = NSL::Logger::start_profile("Grad hole");
+#endif
     auto Mh = HFM(-phi);
     dS[this->configKey_]-= Mh.gradLogDetM();
+#ifdef PROFILE_LEVEL_ACTION
+    NSL::Logger::stop_profile(hole_time);
+#endif
 
     return dS;
 }

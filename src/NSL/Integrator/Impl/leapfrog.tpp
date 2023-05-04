@@ -35,7 +35,9 @@ class Leapfrog: Integrator<ActionTermTypes...> {
     std::tuple<NSL::Configuration<TensorType>, NSL::Configuration<TensorType> > operator()(
         const NSL::Configuration<TensorType> & q_, const NSL::Configuration<TensorType> & p_
     ){
-        
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        auto first_time = NSL::Logger::start_profile("First Step");
+#endif
         // deep copy to generate a new configuration
         NSL::Configuration<TensorType> q (q_,true);
         NSL::Configuration<TensorType> p (p_,true);
@@ -45,15 +47,29 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         // a bunch of full steps
         q += static_cast<TensorType>(stepSize_) * p;
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        NSL::Logger::stop_profile(first_time);
+#endif
 
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        auto loop_time = NSL::Logger::start_profile("Step Loops");
+#endif
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
             p += static_cast<TensorType>(stepSize_) * this->action_.force(q);
             q += static_cast<TensorType>(stepSize_) * p;
         }
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        NSL::Logger::stop_profile(loop_time);
+#endif
 
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        auto last_time = NSL::Logger::start_profile("Last Step");
+#endif
         // final half step
         p += static_cast<TensorType>(0.5*stepSize_) * this->action_.force(q);
-
+#ifdef PROFILE_LEVEL_INTEGRATOR
+        NSL::Logger::stop_profile(last_time);
+#endif
         return {q,p};
     }
 

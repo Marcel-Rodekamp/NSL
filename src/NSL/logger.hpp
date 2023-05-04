@@ -126,13 +126,13 @@ namespace NSL::Logger {
 
     inline void elapsed_profile(const std::pair<spdlog::stopwatch, std::string>& sw){
         if(do_profile){
-            spdlog::get("NSL_profiler")->warn("Time since start of {}: {:.3} s", sw.second, sw.first);
+            spdlog::get("NSL_profiler")->warn("Time since start of {}: {:2.10} s", sw.second, sw.first);
         }
     }
 
     inline void stop_profile(const std::pair<spdlog::stopwatch, std::string>& sw){
         if(do_profile){
-            spdlog::get("NSL_profiler")->warn("Total time spent in {}: {:.3} s", sw.second, sw.first);
+            spdlog::get("NSL_profiler")->warn("Total time spent in {}: {:2.10} s", sw.second, sw.first);
         }
     }
 

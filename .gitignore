@@ -43,3 +43,7 @@ build
 
 # Log files
 *.log
+
+# VSCode folders
+.cache/
+.vscode/

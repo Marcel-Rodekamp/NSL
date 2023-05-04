@@ -6,9 +6,9 @@ int main(int argc, char* argv[]){
     NSL::Logger::init_logger(argc, argv);
 
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
-    auto device = NSL::GPU();
-
+    auto total_time =  NSL::Logger::start_profile("Program Start");
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
+    auto device = NSL::GPU();
 
     // Define the parameters of your system (you can also read these in...)
     typedef NSL::complex<double> Type;
@@ -27,6 +27,7 @@ int main(int argc, char* argv[]){
     NSL::size_t L2 = 9;
     std::vector<int> L = {L1,L2};
 
+    
     // Leapfrog Parameters
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
@@ -128,6 +129,7 @@ int main(int argc, char* argv[]){
 
     // Print some final statistics
     NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
+    NSL::Logger::stop_profile(total_time);
 
     return EXIT_SUCCESS;
 }

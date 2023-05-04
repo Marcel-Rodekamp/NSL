@@ -152,6 +152,9 @@ class HMC{
     NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
 
         // sample momentum 
+#ifdef PROFILE_LEVEL_MC_STEP
+        auto mom_time = NSL::Logger::start_profile("Generating Momemta");
+#endif
         NSL::Configuration<Type> momentum;
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
@@ -159,15 +162,33 @@ class HMC{
 	        p.imag()=0;
             momentum[key] = p; 
         }
+#ifdef PROFILE_LEVEL_MC_STEP
+        NSL::Logger::stop_profile(mom_time);
+#endif
 
         // use integrator to generate proposal 
+#ifdef PROFILE_LEVEL_MC_STEP
+        auto md_time = NSL::Logger::start_profile("MD Integration");
+#endif
         auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+#ifdef PROFILE_LEVEL_MC_STEP
+        NSL::Logger::stop_profile(md_time);
+#endif
 
         // compute the Action
+#ifdef PROFILE_LEVEL_MC_STEP
+        auto action_time = NSL::Logger::start_profile("Action");
+#endif
         Type proposal_S = this->action_(proposal_config);
+#ifdef PROFILE_LEVEL_MC_STEP
+        NSL::Logger::stop_profile(action_time);
+#endif
 
         // compute the Hamiltonian H = p^2 + S
         // Starting point of the trajectory
+#ifdef PROFILE_LEVEL_MC_STEP
+        auto diff_time = NSL::Logger::start_profile("Action Diff");
+#endif        
         Type starting_H = state.actionValue;
         for( const auto& [key,field]: momentum){
             starting_H += 0.5*(field * field).sum();
@@ -178,7 +199,9 @@ class HMC{
         for( const auto& [key,field]: proposal_momentum){
             proposal_H += 0.5*(field * field).sum();
         }
-
+#ifdef PROFILE_LEVEL_MC_STEP
+        NSL::Logger::stop_profile(diff_time);
+#endif
         // We always assume real part of the action, i.e. automatic reweighting
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
