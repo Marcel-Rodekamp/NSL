@@ -17,12 +17,6 @@ target_link_libraries(example_MCMC NSL)
 add_executable(example_MCMC_L6_MD22 example_MCMC_L6_MD22.cpp)
 target_link_libraries(example_MCMC_L6_MD22 NSL)
 
-add_executable(example_MCMC_L6_MD30 example_MCMC_L6_MD30.cpp)
-target_link_libraries(example_MCMC_L6_MD30 NSL)
-
-add_executable(example_MCMC_L9_MD22 example_MCMC_L9_MD22.cpp)
-target_link_libraries(example_MCMC_L9_MD22 NSL)
-
 add_executable(example_MCMC_L9_MD30 example_MCMC_L9_MD30.cpp)
 target_link_libraries(example_MCMC_L9_MD30 NSL)
 
