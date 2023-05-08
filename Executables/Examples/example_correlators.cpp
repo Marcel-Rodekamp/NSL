@@ -7,8 +7,8 @@ int main(int argc, char* argv[]){
     NSL::Logger::init_logger(argc, argv);
 
     // this routine requires an already generated ensemble, generated, for example, from example_MCMC
-    std::string H5NAME("./Honeycomb_Nt32_L16_L26_U2.000000+0.000000i_B1.000000+0.000000i.h5");  // name of h5 file with configurations
-    std::string BASENODE(""); //BASENODE("1site/U10B6Nt40");
+    std::string H5NAME("./ensembles.h5");  // name of h5 file with configurations
+    std::string BASENODE("1site/U10B6Nt40");
     NSL::H5IO h5(H5NAME);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
