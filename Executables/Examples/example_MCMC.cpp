@@ -1,5 +1,6 @@
 #include <chrono>
 #include "NSL.hpp"
+#include "highfive/H5File.hpp"
 
 int main(int argc, char* argv[]){
 
@@ -9,6 +10,7 @@ int main(int argc, char* argv[]){
     auto device = NSL::CPU();
 
     std::string H5NAME("./ensembles.h5");  // name of h5 file to store configurations, measurements, etc. . .
+    std::string BASENODE("1site/U10B6Nt40");
     NSL::H5IO h5(H5NAME);// NSL::File::Truncate);
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
@@ -20,33 +22,76 @@ int main(int argc, char* argv[]){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 10.0;
+    Type beta = 6.0;
     //    On-Site Coupling
-    Type U    = 3.0;
+    Type U    = 10.0;
     //    Number of time slices
-    NSL::size_t Nt = 32;
+    NSL::size_t Nt = 40;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  2;
+    NSL::size_t Nx =  1;
+
+    // total spatial dimension
+    NSL::size_t dim = Nx;
 
     // Leapfrog Parameters
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 2;
+    NSL::size_t numberMDsteps = 4;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 500;
+    NSL::size_t NburnIn = 1000;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 500;
+    NSL::size_t Nconf = 20000;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 2;
+    NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx);
+
+    // write out the physical and run parameters for this system
+    HighFive::File h5file = h5.getFile();
+
+    // lattice name
+    HighFive::DataSet dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/lattice",HighFive::DataSpace::From(lattice.name()));
+    dataset.write(lattice.name());
+
+    // U
+    dataset = h5file.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(BASENODE+"/Meta/params/U", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (U)));
+    dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (U));
+        
+    // beta
+    dataset = h5file.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(BASENODE+"/Meta/params/beta",HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (beta)));
+    dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (beta));
+
+    // Nt
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/Nt",HighFive::DataSpace::From(Nt));
+    dataset.write(Nt);
+
+    // dim
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/spatialDim",HighFive::DataSpace::From(dim));
+    dataset.write(dim);
+
+    // Nmd
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/nMD",HighFive::DataSpace::From(numberMDsteps));
+    dataset.write(numberMDsteps);
+
+    // saveFreq
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/saveFreq",HighFive::DataSpace::From(saveFreq));
+    dataset.write(saveFreq);
+
+    // trajectory length
+    dataset = h5file.createDataSet<NSL::RealTypeOf<Type>>(BASENODE+"/Meta/params/trajLength",HighFive::DataSpace::From(trajectoryLength));
+    dataset.write(trajectoryLength);
+
+    // action type
+    std::string action = "hubbardExp";
+    dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
+    dataset.write(action);
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(device);
@@ -80,6 +125,7 @@ int main(int argc, char* argv[]){
     config["phi"].randn();
     config["phi"].imag() = 0;
 
+    config["phi"] *= params.Utilde;
 
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);
 
@@ -116,7 +162,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", Nconf, saveFreq);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq, "2site/markovChain");
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq, BASENODE+"/markovChain");
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics

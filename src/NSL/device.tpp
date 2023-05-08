@@ -63,17 +63,17 @@ class Device {
 
     protected:
     Device(const torch::TensorOptions * dev):
-        dev_(*dev)
+            dev_(*dev)
     {}
     
-    const torch::TensorOptions device() const {
-        return dev_;
-    }
+//    const torch::TensorOptions device() const {
+ //       return dev_;
+ //   }
 
-    protected:
-    Device(const torch::TensorOptions * dev):
-        dev_(*dev)
-    {}
+//    protected:
+//    Device(const torch::TensorOptions * dev):
+//        dev_(*dev)
+//    {}
 
     friend std::ostream & operator<<(std::ostream &os, const Device & dev) {
         os << dev.repr_;
