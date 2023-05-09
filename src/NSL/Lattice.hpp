@@ -6,5 +6,6 @@
 #include "Lattice/Implementations/square.tpp"
 #include "Lattice/Implementations/complete.tpp"
 #include "Lattice/Implementations/honeycomb.tpp"
+#include "Lattice/Implementations/generic.tpp"
 
 #endif
