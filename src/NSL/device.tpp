@@ -57,7 +57,6 @@ class Device {
     torch::TensorOptions device() {
         return dev_;
     }
-    
     const torch::TensorOptions device() const {
         return dev_;
     }

@@ -31,3 +31,7 @@ target_link_libraries(example_IO NSL)
 
 add_executable(example_lattice example_lattice.cpp)
 target_link_libraries(example_lattice NSL)
+
+add_executable(example_correlators example_correlators.cpp)
+target_link_libraries(example_correlators NSL)
+
