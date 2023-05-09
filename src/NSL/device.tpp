@@ -66,15 +66,6 @@ class Device {
             dev_(*dev)
     {}
     
-//    const torch::TensorOptions device() const {
- //       return dev_;
- //   }
-
-//    protected:
-//    Device(const torch::TensorOptions * dev):
-//        dev_(*dev)
-//    {}
-
     friend std::ostream & operator<<(std::ostream &os, const Device & dev) {
         os << dev.repr_;
         return os;
@@ -83,6 +74,11 @@ class Device {
     const std::string repr(){
         return repr_;  
     }
+
+    protected:
+    Device(const torch::TensorOptions * dev):
+        dev_(*dev)
+    {}
     
     private:
     //! This is an enum for the different devices

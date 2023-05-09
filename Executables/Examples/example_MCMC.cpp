@@ -22,22 +22,21 @@ int main(int argc, char* argv[]){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 6.0;
+    Type beta = 1.0;
     //    On-Site Coupling
-    Type U    = 10.0;
+    Type U    = 2.0;
     //    Number of time slices
-    NSL::size_t Nt = 40;
+    NSL::size_t Nt = 32;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  1;
-
-    // total spatial dimension
-    NSL::size_t dim = Nx;
+    NSL::size_t L1 = 9;
+    NSL::size_t L2 = 9;
+    std::vector<int> L = {L1,L2};
 
     // Leapfrog Parameters
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 4;
+    NSL::size_t numberMDsteps = 30;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
@@ -51,7 +50,7 @@ int main(int argc, char* argv[]){
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Ring<Type> lattice(Nx);
+    NSL::Lattice::Honeycomb<Type> lattice(L);
 
     // write out the physical and run parameters for this system
     HighFive::File h5file = h5.getFile();
@@ -96,7 +95,15 @@ int main(int argc, char* argv[]){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(device);
 
-    NSL::Logger::info("Setting up a Hubbard-Gauge action with beta={}, Nt={}, U={}, on a ring with {} sites.", NSL::real(beta), Nt, NSL::real(U), Nx);
+    // get number of ions
+    NSL::size_t Nx = lattice.sites();
+
+    std::string H5NAME(
+        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
+    );  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
+
+    NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.", NSL::real(beta), Nt, NSL::real(U), lattice.name());
 
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
@@ -124,7 +131,6 @@ int main(int argc, char* argv[]){
     };
     config["phi"].randn();
     config["phi"].imag() = 0;
-
     config["phi"] *= params.Utilde;
 
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, numberMDsteps);

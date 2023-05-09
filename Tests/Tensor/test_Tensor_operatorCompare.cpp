@@ -68,20 +68,25 @@ void comparison(SizeTypes ... sizes){
     // create tensors
     NSL::Tensor<Type> A(sizes...);
     NSL::Tensor<Type> B(sizes...);
+    NSL::Tensor<Type> C(sizes...);
     NSL::Tensor<bool> res(sizes...);
 
     if constexpr(std::is_same<Type,bool>::value){
         A.randint(1);
         B.randint(1);
+        C.randint(1);
     } else if constexpr(std::is_integral<Type>::value){
         A.randint(numElements);
         B.randint(numElements);
+        C.randint(numElements);
     } else {
         A.rand();
         B.rand();
+        C.rand();
     }
 
     A[0] = B[0];
+
 
     auto checkPtr = [](NSL::Tensor<Type> Al, NSL::Tensor<Type> Bl, NSL::Tensor<Type> resl){
         REQUIRE(Al.data() != Bl.data());
@@ -143,6 +148,60 @@ void comparison(SizeTypes ... sizes){
         for(NSL::size_t i = 0; i < numElements; ++i){
             REQUIRE(res[i] == (A[i]<=B[i]) );
         }
+
+
+        Type compareValue = B[0];
+
+        res = (C==compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]==compareValue) );
+        }
+        res = (C!=compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]!=compareValue) );
+        }
+        res = (C>compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]>compareValue) );
+        }
+        res = (C<compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]<compareValue) );
+        }
+        res = (C>=compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]>=compareValue) );
+        }
+        res = (C<=compareValue);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]<=compareValue) );
+        }
+
+        res = (compareValue==C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]==compareValue) );
+        }
+        res = (compareValue!=C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (C[i]!=compareValue) );
+        }
+        res = (compareValue<C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (compareValue<C[i]) );
+        }
+        res = (compareValue>C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (compareValue>C[i]) );
+        }
+        res = (compareValue<=C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (compareValue<=C[i]) );
+        }
+        res = (compareValue>=C);
+        for(NSL::size_t i = 0; i < numElements; ++i){
+            REQUIRE(res[i] == (compareValue>=C[i]) );
+        }
+
     }
 
 }
