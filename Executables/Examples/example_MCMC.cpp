@@ -9,10 +9,6 @@ int main(int argc, char* argv[]){
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
     auto device = NSL::CPU();
 
-    std::string H5NAME("./ensembles.h5");  // name of h5 file to store configurations, measurements, etc. . .
-    std::string BASENODE("1site/U10B6Nt40");
-    NSL::H5IO h5(H5NAME);// NSL::File::Truncate);
-    
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
 
     // Define the parameters of your system (you can also read these in...)
@@ -31,6 +27,14 @@ int main(int argc, char* argv[]){
     NSL::size_t L1 = 9;
     NSL::size_t L2 = 9;
     std::vector<int> L = {L1,L2};
+
+    std::string H5NAME(
+        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
+    );  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
+    std::string BASENODE(
+        fmt::format("Hex")
+    );
 
     // Leapfrog Parameters
     //      Trajectory Length
@@ -51,6 +55,10 @@ int main(int argc, char* argv[]){
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Honeycomb<Type> lattice(L);
+    NSL::size_t dim = lattice.sites();
+
+    // Put the lattice on the device. (copy to GPU)
+    lattice.to(device);
 
     // write out the physical and run parameters for this system
     HighFive::File h5file = h5.getFile();
@@ -92,16 +100,8 @@ int main(int argc, char* argv[]){
     dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
     dataset.write(action);
 
-    // Put the lattice on the device. (copy to GPU)
-    lattice.to(device);
-
     // get number of ions
     NSL::size_t Nx = lattice.sites();
-
-    std::string H5NAME(
-        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
-    );  // name of h5 file to store configurations, measurements, etc. . .
-    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
 
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.", NSL::real(beta), Nt, NSL::real(U), lattice.name());
 
