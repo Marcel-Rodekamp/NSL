@@ -29,6 +29,33 @@ public:
         h5f_("data.h5", NSL::File::ReadWrite)
     {}
 
+    HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
+        return h5f_;
+    }
+
+    std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
+
+    	NSL::size_t minCfg = 10000000000;
+	NSL::size_t maxCfg = -1;
+	NSL::size_t temp;
+
+	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
+        // this list is not given in ascending order!  Really annoying!  I have to loop over them to find the most recent config. . .
+        minCfg = std::stoi(configs[0]);
+	maxCfg = minCfg;
+        for (int i=1;i<configs.size();i++){
+	  temp = std::stoi(configs[i]);
+          if (temp>maxCfg) {
+	    maxCfg = temp;
+          }
+	  if(temp<minCfg) {
+	    minCfg = temp;
+	  }
+        }
+
+        return {minCfg, maxCfg};
+    }
+
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 	if (node.back() == '/') { // define the node

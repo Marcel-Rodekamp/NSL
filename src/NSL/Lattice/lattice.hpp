@@ -17,6 +17,7 @@
 #include "../Tensor.hpp"
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
+#include "../LinAlg/inner_product.tpp"
 #include "device.tpp"
 
 namespace NSL::Lattice {
@@ -88,6 +89,9 @@ class SpatialLattice {
         //! A string that describes the lattice.
         const std::string & name() { return name_; };
 
+        //! Returns the eigenenergies and unitary matrix (ie eigenvectors) of the hopping matrix.
+        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_hopping(Type delta=1.);
+
         bool bipartite();
 
         //! Copy the (initialized) lattice on the device
@@ -122,6 +126,11 @@ class SpatialLattice {
         bool bipartite_is_initialized_ = false;
         // Maybe the right thing is to have wrapper that can hold
         // a value or be Uninitialized
+
+        //! holds eigenenergies of the hopping matrix
+        NSL::Tensor<Type> ee_;
+        //! holds eigenvectors of the hopping matrix
+        NSL::Tensor<Type> ev_;
 
         //! Transform the hopping matrix into the adjacency matrix.
         /*!

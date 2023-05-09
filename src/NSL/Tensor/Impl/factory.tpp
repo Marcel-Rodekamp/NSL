@@ -29,7 +29,7 @@ class TensorFactories:
     * \todo Generalize for different distributions
     */
     NSL::Tensor<Type> randn(){
-        this->data_.normal_();
+        this->data_.normal_(0.0,1.414213562373095048801689);
         return NSL::Tensor<Type>(this);
     }
 

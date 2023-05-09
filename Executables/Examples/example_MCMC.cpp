@@ -1,12 +1,13 @@
 #include <chrono>
 #include "NSL.hpp"
+#include "highfive/H5File.hpp"
 
 int main(int argc, char* argv[]){
 
     NSL::Logger::init_logger(argc, argv);
 
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
-    auto device = NSL::GPU();
+    auto device = NSL::CPU();
 
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
 
@@ -27,6 +28,14 @@ int main(int argc, char* argv[]){
     NSL::size_t L2 = 9;
     std::vector<int> L = {L1,L2};
 
+    std::string H5NAME(
+        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
+    );  // name of h5 file to store configurations, measurements, etc. . .
+    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
+    std::string BASENODE(
+        fmt::format("Hex")
+    );
+
     // Leapfrog Parameters
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
@@ -37,26 +46,62 @@ int main(int argc, char* argv[]){
     //     Number of Burn In configurations to thermalize the chain
     NSL::size_t NburnIn = 1000;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 1000;
+    NSL::size_t Nconf = 20000;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 1;
+    NSL::size_t saveFreq = 10;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Honeycomb<Type> lattice(L);
+    NSL::size_t dim = lattice.sites();
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(device);
 
+    // write out the physical and run parameters for this system
+    HighFive::File h5file = h5.getFile();
+
+    // lattice name
+    HighFive::DataSet dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/lattice",HighFive::DataSpace::From(lattice.name()));
+    dataset.write(lattice.name());
+
+    // U
+    dataset = h5file.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(BASENODE+"/Meta/params/U", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (U)));
+    dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (U));
+        
+    // beta
+    dataset = h5file.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(BASENODE+"/Meta/params/beta",HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (beta)));
+    dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (beta));
+
+    // Nt
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/Nt",HighFive::DataSpace::From(Nt));
+    dataset.write(Nt);
+
+    // dim
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/spatialDim",HighFive::DataSpace::From(dim));
+    dataset.write(dim);
+
+    // Nmd
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/nMD",HighFive::DataSpace::From(numberMDsteps));
+    dataset.write(numberMDsteps);
+
+    // saveFreq
+    dataset = h5file.createDataSet<NSL::size_t>(BASENODE+"/Meta/params/saveFreq",HighFive::DataSpace::From(saveFreq));
+    dataset.write(saveFreq);
+
+    // trajectory length
+    dataset = h5file.createDataSet<NSL::RealTypeOf<Type>>(BASENODE+"/Meta/params/trajLength",HighFive::DataSpace::From(trajectoryLength));
+    dataset.write(trajectoryLength);
+
+    // action type
+    std::string action = "hubbardExp";
+    dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
+    dataset.write(action);
+
     // get number of ions
     NSL::size_t Nx = lattice.sites();
-
-    std::string H5NAME(
-        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
-    );  // name of h5 file to store configurations, measurements, etc. . .
-    NSL::H5IO h5(H5NAME, NSL::File::Truncate);
 
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.", NSL::real(beta), Nt, NSL::real(U), lattice.name());
 
@@ -123,7 +168,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", Nconf, saveFreq);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq);
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, Nconf, saveFreq, BASENODE+"/markovChain");
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
