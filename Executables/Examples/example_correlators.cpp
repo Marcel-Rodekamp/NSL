@@ -10,11 +10,11 @@ int main(int argc, char* argv[]){
     system = YAML::LoadFile(argv[1]);
 
     std::string H5NAME(
-       fmt::format("./"+system["h5file"].as<std::string>())
+       fmt::format("./{}",system["h5file"].as<std::string>())
     );  // name of h5 file to store configurations, measurements, etc. . .
     NSL::H5IO h5(H5NAME);
     std::string BASENODE(
-       fmt::format(system["name"].as<std::string>())
+       fmt::format("{}",system["name"].as<std::string>())
     );
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
