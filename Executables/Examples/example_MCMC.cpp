@@ -45,9 +45,9 @@ int main(int argc, char* argv[]){
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 1200;
+    NSL::size_t NburnIn = 1000;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 2000;
+    NSL::size_t Nconf = 500;
     //     Number of configurations not used for measurements in between each stored configuration
     NSL::size_t saveFreq = system["checkpointing"].as<int>();
     // The total number of configurations is given by the product:

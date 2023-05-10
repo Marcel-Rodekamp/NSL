@@ -107,7 +107,7 @@ int main(int argc, char* argv[]){
       corr.imag()=0;
 
       // in this case, we will loop over all possible time sources to increase statistics
-      for (tsource=0;tsource<Nt;tsource++){
+      for (tsource=0;tsource<Nt;tsource += Nt){
 	for(int ni=0;ni<dim;ni++){
 	  b.real()=0;
 	  b.imag()=0;
@@ -120,9 +120,9 @@ int main(int argc, char* argv[]){
 	  for (int nj=ni;nj<ni+1;nj++){
 	    for (int t=0;t<Nt; t++){
 	      if (t+tsource < Nt) {
-		corr(t,nj,ni) += NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource,NSL::Slice()))/Nt;
+		corr(t,nj,ni) += NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource,NSL::Slice())); ///Nt;
 	      } else { // anti-periodic boundary conditions
-		corr(t,nj,ni) -= NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource-Nt,NSL::Slice()))/Nt;
+		corr(t,nj,ni) -= NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource-Nt,NSL::Slice())); ///Nt;
 	      }
 	    }
 	  }
