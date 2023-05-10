@@ -6,6 +6,7 @@
 #include "Tensor/Factory/like.tpp"
 #include "concepts.hpp"
 #include "FermionMatrix/fermionMatrix.hpp"
+#include "LinAlg.hpp"
 
 namespace NSL::Action {
 
@@ -79,7 +80,9 @@ class HubbardFermionAction :
     using BaseAction<Type,TensorType>::force;
 
 	Configuration<TensorType> force(const Tensor<TensorType>& phi);
+	Configuration<TensorType> force(const Tensor<TensorType>& phi, const Tensor<TensorType>& xi);
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
+	Configuration<TensorType> grad(const Tensor<TensorType>& phi, const Tensor<TensorType>& xi);
 	Type eval(const Tensor<TensorType>& phi);
 
     protected:
@@ -129,6 +132,17 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
     NSL::Concept::isNumber TensorType
 >
+Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::force(const Tensor<TensorType>& phi, const Tensor<TensorType>& xi){
+    // The force has an explicit minus sign from the gradient
+    return (-1)*this->grad(phi, xi);
+}
+
+template<
+    NSL::Concept::isNumber Type, 
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
+    NSL::Concept::isNumber TensorType
+>
 Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::grad(const Tensor<TensorType>& phi){
 
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
@@ -140,6 +154,39 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
     // hole contribution
     auto Mh = HFM(-phi);
     dS[this->configKey_]-= Mh.gradLogDetM();
+
+    return dS;
+}
+
+template<
+    NSL::Concept::isNumber Type, 
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
+    NSL::Concept::isNumber TensorType
+>
+Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::grad(const Tensor<TensorType>& phi, const Tensor<TensorType>& xi){
+
+    NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
+
+    // particle matrix
+    auto Mp = HFM(phi);
+    // hole matrix
+    auto Mh = HFM(-phi);
+
+	// pseudofermion
+    auto eta = Mp.M(xi);
+
+	// solve M M^dagger x = eta for x
+	NSL::LinAlg::CG<NSL::complex<double>> invMMd(Mp, NSL::FermionMatrix::MMdagger);
+	// auto x = invMMd(eta);
+	// // y = M^dagger x
+	// auto y = Mp.Mdagger(x);
+
+	// // calculate y^dagger dM^dagger/dPhi x -> dMdPhi(y, Mh, x)
+	// dS[this->configKey_]+= Mh.dMdPhi(y, x);
+
+	// // calculate x^dagger dM/dPhi y -> dMdPhi(x, Mp, y)
+    // dS[this->configKey_]+= Mp.dMdPhi(x, y);
 
     return dS;
 }
