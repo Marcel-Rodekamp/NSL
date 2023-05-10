@@ -63,6 +63,13 @@ class FermionMatrix {
      **/
     virtual NSL::Tensor<Type> gradLogDetM() = 0;
 
+    /*!
+    *  \returns derivative of M with respect to phi.
+    **/
+    virtual NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+		throw std::logic_error("Function not implemented");
+	}
+
     // constructors
     /*  There is no default constructor. */
     FermionMatrix() = delete;

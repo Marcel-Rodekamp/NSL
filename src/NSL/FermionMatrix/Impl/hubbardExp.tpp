@@ -205,6 +205,32 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     return pi_dot;
 }
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+	// We want to compute 
+    //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
+    // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
+    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    //        |---shift---> |---mat mul---> |--- element-wise mul ---|
+	NSL::Tensor<Type> leftX = left;
+	leftX.shift(1,0);
+	// and apply B
+    leftX(0,NSL::Slice()) *= -1;//???
+
+    NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
+    // The needed matrix multiplication is on the spatial index.
+        this->Lat.exp_hopping_matrix(delta_).transpose(),
+    // To get correct broadcasting we transpose the element-wise multiplication
+    // so that each column is Nx big.
+        leftX.transpose()
+    ).transpose();
+    // and then transpose back.
+
+    sum *= NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,-1) * (this->phiExp_ * right);
+
+    return sum;
+}
+
 } // namespace FermionMatrix
 
 #endif //NSL_FERMION_MATRIX_HUBBARD_EXP_TPP

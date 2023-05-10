@@ -86,6 +86,11 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
      **/
     NSL::Tensor<Type> gradLogDetM() override;
 
+	/*!
+    *  \returns derivative of M with respect to phi.
+    **/
+    NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right) override;
+
     protected:
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;
