@@ -84,7 +84,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     /*!
      * \returns the gradient of log of determinant of M
      **/
-    NSL::Tensor<Type> gradLogDetM(std::vector<at::cuda::CUDAGraph> & graphs);
+    NSL::Tensor<Type> gradLogDetM();
 
     protected:
     //! The configuration phi (N_t x N_x)

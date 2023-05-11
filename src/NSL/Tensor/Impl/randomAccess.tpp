@@ -6,6 +6,9 @@
 #include "../../paramPack.hpp"
 #include <type_traits>
 
+#ifdef NSL_USE_THRUST_KERNELS
+#include <thrust/device_ptr.h>
+#endif
 
 namespace NSL::TensorImpl {
 
@@ -181,6 +184,27 @@ class TensorRandomAccess:
     const Type * data() const {
         return this->data_.template data_ptr<Type>();
     }
+
+#ifdef NSL_USE_THRUST_KERNELS
+    //! thrust pointer to begin of data (const)
+    /*!
+     * retrieve the start pointer of the tesor on the device to be used in thrust
+     * calls
+     * */
+    thrust::device_ptr data_begin() const {
+        return thrust::device_pointer_cast(this->data_.template data_ptr<Type>());
+    }
+
+
+    //! thrust pointer to begin of data (const)
+    /*!
+     * retrieve the end pointer of the tesor on the device to be used in thrust
+     * calls
+     * */
+    thrust::device_ptr data_begin() const {
+        return this->data_begin() + this->numel();
+    }
+#endif
 
 };
 

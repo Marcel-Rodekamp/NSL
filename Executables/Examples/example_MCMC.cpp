@@ -24,8 +24,8 @@ int main(int argc, char* argv[]){
     //    Number of time slices
     NSL::size_t Nt = 32;
     //    Number of ions (spatial sites)
-    NSL::size_t L1 = 9;
-    NSL::size_t L2 = 9;
+    NSL::size_t L1 = 6;
+    NSL::size_t L2 = 6;
     std::vector<int> L = {L1,L2};
 
     std::string H5NAME(
@@ -40,15 +40,15 @@ int main(int argc, char* argv[]){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 30;
+    NSL::size_t numberMDsteps = 22;
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 1000;
+    NSL::size_t NburnIn = 10;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 20000;
+    NSL::size_t Nconf = 200;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 10;
+    NSL::size_t saveFreq = 1;
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 

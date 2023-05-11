@@ -13,7 +13,6 @@
 #include "../Tensor.hpp"
 #include "../Matrix.hpp"
 #include <type_traits>
-#include <ATen/cuda/CUDAGraph.h>
 
 namespace NSL::FermionMatrix{
 
@@ -63,9 +62,6 @@ class FermionMatrix {
      * \returns the gradient of log of determinant of M
      **/
     NSL::Tensor<Type> gradLogDetM();
-
-    //! This is an optimized version of the gradient of log of determinant of M
-    NSL::Tensor<Type> gradLogDetM(std::vector<at::cuda::CUDAGraph> & graphs);
 
     // constructors
     /*  There is no default constructor. */

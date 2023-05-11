@@ -28,11 +28,12 @@ set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -Wall -pedantic ${CMAKE_CXX_FLAGS_DEBUG_INIT}
 set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -Wno-narrowing" )
 set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
 
+option(NSL_USE_THRUST_KERNELS "Build the custom GPU kernels using thrust" OFF)
+option(NSL_USE_CUDA_KERNELS "Build the custom GPU kernels using thrust" OFF)
 
 # Create main library to include in C++
 add_library(NSL SHARED src/NSL)
 set_target_properties(NSL PROPERTIES LINKER_LANGUAGE CXX)
-
 
 # add module path; libraries should be
 if(APPLE)
@@ -52,6 +53,8 @@ include(cmake/catch2.cmake)
 include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 include(cmake/yamlcpp.cmake)
+
+configure_file(src/NSL/NSL_config.in.hpp src/NSL_config.hpp @ONLY)
 
 add_subdirectory(src/NSL)
 
