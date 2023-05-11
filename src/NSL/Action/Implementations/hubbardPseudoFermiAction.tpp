@@ -40,8 +40,8 @@ class HubbardPseudoFermionAction:
      * */
     class Parameters { 
         public:
-		// inverse temperature
-	    const Type beta;
+	// inverse temperature
+	const Type beta;
 
         // time slices
         const NSL::size_t Nt;
@@ -62,7 +62,9 @@ class HubbardPseudoFermionAction:
             "phi"
         ),
         params_(params),
-		xi(Tensor<TensorType>(params.Nt, params.lattice.sites()))
+		xi(Tensor<TensorType>(params.Nt, params.lattice.sites())),
+		xf(Tensor<TensorType>(params.Nt, params.lattice.sites())),
+		eta(Tensor<TensorType>(params.Nt, params.lattice.sites()))
     {}
 
 	HubbardPseudoFermionAction(const Parameters & params, const std::string & fieldName) : 
@@ -70,7 +72,9 @@ class HubbardPseudoFermionAction:
             fieldName
         ),
         params_(params),
-		xi(Tensor<TensorType>(params.Nt, params.lattice.sites()))
+		xi(Tensor<TensorType>(params.Nt, params.lattice.sites())),
+		xf(Tensor<TensorType>(params.Nt, params.lattice.sites())),
+		eta(Tensor<TensorType>(params.Nt, params.lattice.sites()))
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -78,16 +82,16 @@ class HubbardPseudoFermionAction:
     // We don't understand why this is not automatically done, probably due 
     // to BaseAction being an abstract base class
 	using BaseAction<Type,TensorType>::eval;
-    using BaseAction<Type,TensorType>::grad;
-    using BaseAction<Type,TensorType>::force;
+    	using BaseAction<Type,TensorType>::grad;
+    	using BaseAction<Type,TensorType>::force;
 
 	Configuration<TensorType> force(const Tensor<TensorType>& phi);
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
 
-	void update();
+	void generate_eta(const Tensor<TensorType>& phi);
 
-	Tensor<TensorType> xi;
+	Tensor<TensorType> xi,eta,xf;
     protected:
     Parameters params_;
 
@@ -103,8 +107,16 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
     NSL::Concept::isNumber TensorType
 >
-void HubbardPseudoFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::update(){
-	xi.randn(1./std::sqrt(2));
+void HubbardPseudoFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::generate_eta(const Tensor<TensorType>& phi){
+	xi.randn(0.7071067811865475244008444); // 1./std::sqrt(2);
+
+        // particle matrix			       
+        auto Mp = HFM(phi);
+
+        // pseudofermion
+    	eta = Mp.M(xi);
+
+	xf = xi;
 }
 
 template<
@@ -114,11 +126,10 @@ template<
     NSL::Concept::isNumber TensorType
 >
 Type HubbardPseudoFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(const Tensor<TensorType>& phi){
-    Type XX = 0;
-
-    // auto eta = Mp.M(xi);
+    Type XX = xf.abs().sum();
 
     // The Fermi action has an additional - sign
+    
     return XX;
 }
 	
@@ -149,20 +160,18 @@ Configuration<TensorType> HubbardPseudoFermionAction<Type,LatticeType,FermionMat
     // hole matrix
     // auto Mh = HFM(-phi);
 
-	// pseudofermion
-    auto eta = Mp.M(xi);
+   
+    // solve M M^dagger x = eta for x
+    NSL::LinAlg::CG<NSL::complex<double>> invMMd(Mp, NSL::FermionMatrix::MMdagger);
+    auto x = invMMd(eta); // = Mdag^-1 M^-1 eta
+    // y = Mdag x = M^-1 eta
+    xf = Mp.Mdagger(x); // I set this to xf
 
-	// solve M M^dagger x = eta for x
-	NSL::LinAlg::CG<NSL::complex<double>> invMMd(Mp, NSL::FermionMatrix::MMdagger);
-	auto x = invMMd(eta);
-	// // y = M^dagger x
-	auto y = Mp.Mdagger(x);
+    // calculate y^dagger dM^dagger/dPhi x -> dMdPhi(NSL::LinAlg::conj(xf), Mh, x)
+    dS[this->configKey_] -= 2*Mp.dMdPhi(NSL::LinAlg::conj(x), xf).real();
 
-	// // calculate y^dagger dM^dagger/dPhi x -> dMdPhi(y, Mh, x)
-    dS[this->configKey_]-= Mp.dMdPhi(x, y);
-
-	// // calculate x^dagger dM/dPhi y -> dMdPhi(x, Mp, y)
-	dS[this->configKey_]-= Mp.dMdPhi(x, y).conj();
+    // calculate x^dagger dM/dPhi y -> dMdPhi(x, Mp, y)
+    // dS[this->configKey_] += Mp.dMdPhi(x, xf).conj();
 
     return dS;
 }

@@ -205,21 +205,23 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     return pi_dot;
 }
 
+/*
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
-	// We want to compute 
+    // We want to compute 
     //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
     // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
     //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
     //        |---shift---> |---mat mul---> |--- element-wise mul ---|
-	NSL::Tensor<Type> leftX = left;
-	leftX.shift(1,0);
-	// and apply B
+
+    NSL::Tensor<Type> leftX = left;
+    leftX.shift(1,0);
+    // and apply B
     // leftX(0,NSL::Slice()) *= -1;//???
 
     NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
     // The needed matrix multiplication is on the spatial index.
-        this->Lat.exp_hopping_matrix(delta_).transpose(),
+        this->Lat.exp_hopping_matrix(delta_), // no transpose needed, since this matrix is symmetric already (and .transpose() does an in-place transposition!)
     // To get correct broadcasting we transpose the element-wise multiplication
     // so that each column is Nx big.
         leftX.transpose()
@@ -227,8 +229,46 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const
     // and then transpose back.
 
     sum *= NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,-1) * (this->phiExp_ * right);
-	sum(0, NSL::Slice()) *= -1;
+    sum(0, NSL::Slice()) *= -1;
     return sum;
+}
+*/
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+    // We want to compute 
+    //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
+    // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
+    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    //        |---shift---> |---mat mul---> |--- element-wise mul ---|
+
+    const int Nt = this->phi_.shape(0);
+    const int Nx = this->phi_.shape(1);
+    const NSL::Device device = this->phi_.device();
+
+    NSL::Tensor<Type> Fk(device,Nt,Nx,Nx);
+
+    Fk = this->Lat.exp_hopping_matrix(this->delta_)* this->phiExp_.expand(Nx).transpose(1,2);
+    Fk(Nt-1, NSL::Slice(),NSL::Slice()) *= -1;  // apply anti-periodic BCs
+
+    NSL::Tensor<Type> leftX = left;
+    leftX.shift(-1,0);
+
+/*
+    // without shift, I would do it this way
+    
+    for (int t=0;t<Nt-2;t++) {
+        leftX(t,NSL::Slice()) = NSL::LinAlg::mat_mul(NSL::LinAlg::transpose(Fk(t,NSL::Slice(),NSL::Slice())),left(t+1,NSL::Slice()));
+    }
+    leftX(Nt-1,NSL::Slice()) = NSL::LinAlg::mat_mul(NSL::LinAlg::transpose(Fk(Nt-1,NSL::Slice(),NSL::Slice())),left(0,NSL::Slice()));
+*/
+
+
+    for (int t=0;t<Nt;t++) {
+       leftX(t,NSL::Slice()) = NSL::LinAlg::mat_mul(NSL::LinAlg::transpose(Fk(t,NSL::Slice(),NSL::Slice())),leftX(t,NSL::Slice()));
+    }
+
+    return NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,-1)* (leftX * right);
 }
 
 } // namespace FermionMatrix

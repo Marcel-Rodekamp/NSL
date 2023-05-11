@@ -50,7 +50,7 @@ int main(){
 	// for(unsigned int i=0; i<200;i++){
     // 	S_Pfermion.update();
 	// }
-	S_Pfermion.update();
+	S_Pfermion.generate_eta(config["phi"]);
 	// std::cout << S_Pfermion.xi.imag() << std::endl;
 	// std::cout << S_Pfermion.xi.imag() << std::endl;
 	NSL::Action::Action S = S_gauge + S_Pfermion;
@@ -58,12 +58,13 @@ int main(){
     cd Hi, Hf;
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
-int Nmd = 5;
+    std::cout << "First!  " << S(config)-(phi*phi).sum()/2/params.Utilde << std::endl;
+    int Nmd = 100;
     // for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
-        /*trajectoryLength=*/ 0.1,
+        /*trajectoryLength=*/ 1,
         /*numberSteps=*/ Nmd,
         /*backward*/ false // optional
       );

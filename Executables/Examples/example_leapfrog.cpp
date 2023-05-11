@@ -11,11 +11,13 @@ int main(){
     NSL::size_t Nt =  32;
     NSL::Tensor<cd> phi(Nt,Nx); phi.randn(); 
     NSL::Tensor<cd> pi(Nt,Nx); pi.randn();
+    
     NSL::Lattice::Ring<cd> lattice(Nx); 
 
     phi.imag() = 0;
     pi.imag() = 0;
-   
+
+    
     // define configuration
     NSL::Configuration<cd> config{
 		{"phi",phi}, 
@@ -23,7 +25,7 @@ int main(){
 
     cd beta = 10.0;
     cd U = 3.0;
-    NSL::Action::HubbardFermionAction<cd,decltype(lattice),
+    NSL::Action::HubbardPseudoFermionAction<cd,decltype(lattice),
         NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>>::Parameters paramsHFM(
         /*beta=*/  beta,
         /*Nt = */  Nt,    
@@ -43,15 +45,21 @@ int main(){
     );
 
     NSL::Action::HubbardGaugeAction<cd> S_gauge(params);
-    NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(paramsHFM);
+    NSL::Action::HubbardPseudoFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_Pfermion(paramsHFM);
     // define the action
-    NSL::Action::Action S = S_gauge + S_fermion;
+
+
+    
+    S_Pfermion.generate_eta(config["phi"]);
+
+    
+    NSL::Action::Action S = S_gauge + S_Pfermion;
 
     cd Hi, Hf;
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
-    for (int Nmd = 10; Nmd < 210; Nmd += 10){
+    for (int Nmd = 60; Nmd < 320; Nmd += 20){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
