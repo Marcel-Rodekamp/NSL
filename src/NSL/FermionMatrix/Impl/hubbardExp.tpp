@@ -215,7 +215,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const
 	NSL::Tensor<Type> leftX = left;
 	leftX.shift(1,0);
 	// and apply B
-    leftX(0,NSL::Slice()) *= -1;//???
+    // leftX(0,NSL::Slice()) *= -1;//???
 
     NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
     // The needed matrix multiplication is on the spatial index.
@@ -227,7 +227,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const
     // and then transpose back.
 
     sum *= NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,-1) * (this->phiExp_ * right);
-
+	sum(0, NSL::Slice()) *= -1;
     return sum;
 }
 
