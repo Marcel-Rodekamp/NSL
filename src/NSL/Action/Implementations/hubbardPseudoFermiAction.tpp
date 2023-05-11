@@ -126,11 +126,9 @@ template<
     NSL::Concept::isNumber TensorType
 >
 Type HubbardPseudoFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(const Tensor<TensorType>& phi){
-    Type XX = xf.abs().sum();
-
     // The Fermi action has an additional - sign
     
-    return XX;
+    return xf.abs().sum();
 }
 	
 template<
@@ -170,12 +168,10 @@ Configuration<TensorType> HubbardPseudoFermionAction<Type,LatticeType,FermionMat
     // calculate y^dagger dM^dagger/dPhi x -> dMdPhi(NSL::LinAlg::conj(xf), Mh, x)
     dS[this->configKey_] -= 2*Mp.dMdPhi(NSL::LinAlg::conj(x), xf).real();
 
-    // calculate x^dagger dM/dPhi y -> dMdPhi(x, Mp, y)
-    // dS[this->configKey_] += Mp.dMdPhi(x, xf).conj();
 
     return dS;
 }
 
 } // namespace NSL::Action
 
-#endif // NSL_HUBBARD_PSUEDO_FERMION_ACTION_TPP
+#endif // NSL_HUBBARD_PSEUDO_FERMION_ACTION_TPP
