@@ -31,3 +31,6 @@ target_link_libraries(example_IO NSL)
 
 add_executable(example_lattice example_lattice.cpp)
 target_link_libraries(example_lattice NSL)
+
+add_executable(example_PseudoFermions example_PseudoFermions.cpp)
+target_link_libraries(example_PseudoFermions NSL)
