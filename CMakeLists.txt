@@ -54,7 +54,8 @@ include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 include(cmake/yamlcpp.cmake)
 
-configure_file(src/NSL/NSL_config.in.hpp src/NSL_config.hpp @ONLY)
+configure_file(src/NSL/NSL_config.in.hpp NSL_config.hpp @ONLY)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(src/NSL)
 

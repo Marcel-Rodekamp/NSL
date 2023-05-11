@@ -1,2 +1,2 @@
-#cmakedefine01 NSL_USE_THRUST_KERNELS
-#cmakedefine01 NSL_USE_CUDA_KERNELS
+#cmakedefine NSL_USE_THRUST_KERNELS
+#cmakedefine NSL_USE_CUDA_KERNELS

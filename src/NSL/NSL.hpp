@@ -1,6 +1,9 @@
 #ifndef NSL_HPP
 #define NSL_HPP
 
+// CMakeDefines
+#include "NSL_config.hpp"
+
 // backend
 #include "torch/torch.h"
 
