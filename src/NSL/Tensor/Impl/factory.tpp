@@ -28,8 +28,8 @@ class TensorFactories:
     * Fills the Tensor with pseudo-random numbers from the normal[mean = 0, variance = 1] distribution
     * \todo Generalize for different distributions
     */
-    NSL::Tensor<Type> randn(){
-        this->data_.normal_();
+    NSL::Tensor<Type> randn(double std=1.){
+        this->data_.normal_(0.0, std*1.414213562373095048801689);
         return NSL::Tensor<Type>(this);
     }
 
