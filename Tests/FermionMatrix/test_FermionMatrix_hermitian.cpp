@@ -56,8 +56,9 @@ void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & L
 	NSL::Tensor<Type> phi(nt, nx);
     phi.rand();
 	//generate random fermion matrix for given lattice
-	NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
-    
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
+
     INFO("lattice: "+latticeName+" nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
 
 	// First we construct the identity matrix.
@@ -94,7 +95,8 @@ void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & L
 	NSL::Tensor<Type> phi(nt, nx);
     phi.rand();
 	//generate random fermion matrix for given lattice
-	NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     
     INFO("lattice: "+latticeName+" nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
 

@@ -66,8 +66,7 @@ class FermionMatrix {
     // constructors
     /*  There is no default constructor. */
     FermionMatrix() = delete;
-    FermionMatrix(FermionMatrix<Type,LatticeType> &) = delete;
-    FermionMatrix(FermionMatrix<Type,LatticeType> &&) = delete;
+
     /*! 
     *  \param lat  an object of Lattice type (Ring, square, etc.).
     **/

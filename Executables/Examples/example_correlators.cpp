@@ -60,10 +60,11 @@ int main(int argc, char* argv[]){
     auto [minCfg, maxCfg] = h5.getMinMaxConfigs(BASENODE+"/markovChain");
     
     //now let's make a fermion (exp) matrix
-    NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)> Mni(lattice, config["phi"], beta );
+    NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)> M(lattice, Nt, beta );
+    M.populate(config["phi"], NSL::Hubbard::Species::Particle);
 
     // let's set up the CG
-    NSL::LinAlg::CG<Type> invMMdni(Mni, NSL::FermionMatrix::MMdagger);
+    NSL::LinAlg::CG<Type> invMMdni(M, NSL::FermionMatrix::MMdagger);
 
     // and allocate the solution vector
     NSL::Tensor<Type> b(Nt,dim);
@@ -76,7 +77,7 @@ int main(int argc, char* argv[]){
        b(tsource,NSL::Slice()) = u(ni,NSL::Slice());
     
        auto invMMdb = invMMdni(b);
-       auto invMb = Mni.Mdagger(invMMdb);
+       auto invMb = M.Mdagger(invMMdb);
 
        for (int nj=ni;nj<ni+1;nj++){
 	 for (int t=0;t<Nt;t++){
@@ -96,8 +97,8 @@ int main(int argc, char* argv[]){
     for (int cfg = minCfg; cfg<=maxCfg; cfg+=saveFreq) {
       h5.read(markovstate,BASENODE+"/markovChain",cfg);
 
-      // initialize fermion matrix with this field
-      NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)> M(lattice, markovstate.configuration["phi"], beta );
+      // populate fermion matrix with this field
+      M.populate(markovstate.configuration["phi"], NSL::Hubbard::Species::Particle);
 
       // and also initialize the CG with this fermion matrix
       NSL::LinAlg::CG<Type> invMMd(M, NSL::FermionMatrix::MMdagger);
