@@ -48,8 +48,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FermionMatrix<Type,LatticeType>(lat),
         species(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
-        sgn_kappa( +1 ),
         mu_( mu ),
+        sgn_kappa_( +1 ),
         phi_( lat.device(), Nt, lat.sites() ),
         phiExp_( lat.device(), Nt, lat.sites() ),
         phiExpInv_( lat.device(), Nt, lat.sites() ),
@@ -140,6 +140,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! delta = beta/N_t
     Type delta_;
 
+    Type mu_;
+
     // Sign of exp( +/- kappa), is assigned in populate
     Type sgn_kappa_;
 
@@ -156,7 +158,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
 
-    private:
     /*!
      * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by
      *

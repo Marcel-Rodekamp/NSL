@@ -10,7 +10,7 @@ int main(int argc, char* argv[]){
     system = YAML::LoadFile(argv[1]);
 
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
-    auto device = NSL::CPU();
+    auto device = NSL::GPU();
 
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
 
@@ -45,9 +45,9 @@ int main(int argc, char* argv[]){
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
-    NSL::size_t NburnIn = 1000;
+    NSL::size_t NburnIn = 10;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 500;
+    NSL::size_t Nconf = 10;
     //     Number of configurations not used for measurements in between each stored configuration
     NSL::size_t saveFreq = system["checkpointing"].as<int>();
     // The total number of configurations is given by the product:

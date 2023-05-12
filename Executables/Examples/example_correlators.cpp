@@ -4,9 +4,9 @@
 #include <yaml-cpp/yaml.h>
 
 int main(int argc, char* argv[]){
-    YAML::Node system;
     NSL::Logger::init_logger(argc, argv);
 
+    YAML::Node system;
     system = YAML::LoadFile(argv[1]);
 
     std::string H5NAME(

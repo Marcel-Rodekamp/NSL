@@ -146,7 +146,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
 	   dataset.read(temp);
 	   markovstate.actionValue = temp;
 
@@ -164,7 +164,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
 	   dataset.read(markovstate.actionValue);
 
 	   // read in the acceptanceProbability
