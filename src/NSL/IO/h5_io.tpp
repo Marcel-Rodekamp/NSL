@@ -42,13 +42,12 @@ public:
 	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
         // this list is not given in ascending order!  Really annoying!  I have to loop over them to find the most recent config. . .
         minCfg = std::stoi(configs[0]);
-	maxCfg = minCfg;
         for (int i=1;i<configs.size();i++){
 	  temp = std::stoi(configs[i]);
           if (temp>maxCfg) {
 	    maxCfg = temp;
           }
-	  if(temp<minCfg) {
+	  if(temp<minCfg && temp>0) {
 	    minCfg = temp;
 	  }
         }
@@ -68,7 +67,7 @@ public:
 
 	if constexpr (NSL::is_complex<Type>()) {
 	   // write out the actionValue
-	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
+	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actVal", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
 
 	   dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue));
 
@@ -89,7 +88,7 @@ public:
 
 	 } else {
 	   // write out the actionValue
-	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",HighFive::DataSpace::From(markovstate.actionValue));
+	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actVal",HighFive::DataSpace::From(markovstate.actionValue));
 	   dataset.write(markovstate.actionValue);
 
 	   // write out the acceptanceProbability
