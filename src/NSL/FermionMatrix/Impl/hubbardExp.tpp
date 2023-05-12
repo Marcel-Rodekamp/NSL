@@ -61,7 +61,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
       *                                                         |- * -> |--- matrix multiply ---|
       **/
 
-    //!ToDo: why do we conjugate delta?  
     NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(sgn_kappa_*NSL::LinAlg::conj(delta_)),
         NSL::LinAlg::transpose(psi)
@@ -157,7 +156,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
-    // Fk(t) = exp(-i phi_{x,t-1})*exp(-k)
+    // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
     Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * sgn_kappa_* this->delta_);
 
     // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
