@@ -85,10 +85,6 @@ class HubbardFermionAction :
     protected:
     Parameters params_;
 
-    //! This is used for optimizing force calls. Most likely you will not 
-    //! need to touch this.
-    std::vector<at::cuda::CUDAGraph> CUDAgraphs_;
-
     FermionMatrixType constexpr inline HFM(const NSL::Tensor<Type> & phi) {
         return FermionMatrixType(params_.lattice, phi, params_.beta);
     }
@@ -139,11 +135,11 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     // particle contribution
     auto Mp = HFM(phi);
-    dS[this->configKey_]+= Mp.gradLogDetM(this->CUDAgraphs_);
+    dS[this->configKey_]+= Mp.gradLogDetM();
 
     // hole contribution
     auto Mh = HFM(-phi);
-    dS[this->configKey_]-= Mh.gradLogDetM(this->CUDAgraphs_);
+    dS[this->configKey_]-= Mh.gradLogDetM();
 
     return dS;
 }

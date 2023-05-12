@@ -7,8 +7,6 @@
 #include "../../Matrix.hpp"
 #include "sliceObj.tpp"
 
-#include <c10/cuda/CUDAStream.h>
-#include <ATen/cuda/CUDAGraph.h>
 namespace NSL::FermionMatrix {
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -151,51 +149,33 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 } 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
-NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(std::vector<at::cuda::CUDAGraph> & graphs){
-    
-    auto stream = c10::cuda::getStreamFromPool();
-    c10::cuda::setCurrentCUDAStream(stream);
-
-    bool graphsCaptured = false;
-    if (graphs.size() == 2){
-        graphsCaptured = true;    
-    } else {
-        graphs.push_back( at::cuda::CUDAGraph() );
-        graphs.push_back( at::cuda::CUDAGraph() );
-    }
-
-
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
+    //ToDo: implement
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
     const NSL::Device device = this->phi_.device();
 
-    const NSL::Tensor<Type> ID = NSL::Matrix::Identity<Type>(device,Nx);
-    NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
-
     NSL::Tensor<Type> Fk(device,Nt,Nx,Nx);
     NSL::Tensor<Type> FkFkFk(device,Nt,Nx,Nx);
-    NSL::Tensor<Type> invAp1F = ID;
+    NSL::Tensor<Type> invAp1F = NSL::Matrix::Identity<Type>(device,Nx);
     NSL::Tensor<Type> pi_dot(device,Nt,Nx);
-    NSL::Tensor<Type> pi  = ID;
 
     // Fk(t) = exp(-i phi_{x,t-1})*exp(-k)
-    Fk = NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * this->delta_);
+    Fk =  NSL::LinAlg::shift(NSL::LinAlg::conj(this->phiExp_),+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * this->delta_);
 
-    if(!graphsCaptured){
-        graphs[0].capture_begin();
-        // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
-        // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
-        // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-        FkFkFk(Nt-1,NSL::Slice(),NSL::Slice()) = Fk(Nt-1,NSL::Slice(),NSL::Slice());  // initialize FkFkFk
-        for(int t = Nt-2;  t >=0; t--){
-	        FkFkFk(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(Fk(t,NSL::Slice(),NSL::Slice()),FkFkFk(t+1,NSL::Slice(),NSL::Slice()));
-        }
-        graphs[0].capture_end();
+
+    // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
+    // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
+    // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    FkFkFk(Nt-1,NSL::Slice(),NSL::Slice()) = Fk(Nt-1,NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    for(int t = Nt-2;  t >=0; t--){
+	FkFkFk(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(Fk(t,NSL::Slice(),NSL::Slice()),FkFkFk(t+1,NSL::Slice(),NSL::Slice()));
     }
-    graphs[0].replay();
 
-    invAp1F = NSL::LinAlg::mat_inv(ID + FkFkFk(0,NSL::Slice(),NSL::Slice()));  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    invAp1F = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(device,Nx) + FkFkFk(0,NSL::Slice(),NSL::Slice()));  // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
                                                                                                                    //
+    NSL::Tensor<Type> pi  = NSL::Matrix::Identity<Type>(device,Nx);
+    NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
@@ -211,22 +191,16 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     // first do t=Nt-1 case
     pi = NSL::LinAlg::mat_mul(FkFkFk(0,NSL::Slice(),NSL::Slice()),invAp1F);
-
+    
     pi_dot(Nt-1,NSL::Slice()) =  II * NSL::LinAlg::diag(pi);
 
-
-    if(!graphsCaptured){
-        graphs[1].capture_begin();
-        // now do the other timeslices
-        for (int t=0; t < Nt-1; t++) {
-        	invAp1F.mat_mul(Fk(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
-	        pi = NSL::LinAlg::mat_mul(FkFkFk(t+1,NSL::Slice(),NSL::Slice()),invAp1F);
-        	
-            pi_dot(t,NSL::Slice()) =  II * NSL::LinAlg::diag(pi);
-        }
-        graphs[1].capture_end();
+    // now do the other timeslices
+    for (int t=0; t < Nt-1; t++) {
+    	invAp1F.mat_mul(Fk(t,NSL::Slice(),NSL::Slice()));                 // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+	    pi = NSL::LinAlg::mat_mul(FkFkFk(t+1,NSL::Slice(),NSL::Slice()),invAp1F);
+    	
+        pi_dot(t,NSL::Slice()) =  II * NSL::LinAlg::diag(pi);
     }
-    graphs[1].replay();
 
     return pi_dot;
 }
