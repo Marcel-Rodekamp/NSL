@@ -145,7 +145,6 @@ class SpatialLattice {
          **/
         void compute_adjacency();
 
-    private:
         // A generic method, in case no short-cut is available
         void compute_bipartite();
     }; // SpatialLattice

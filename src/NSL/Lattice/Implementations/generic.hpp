@@ -20,35 +20,13 @@ class Generic: public NSL::Lattice::SpatialLattice<Type> {
                 const YAML::Node system,
                 const Type &kappa = 1.);
 
-  //        const NSL::Tensor<int> L = NSL::Tensor<int>(2);
-  //        const int unit_cells;
-
     protected:
-        //! Coordinate space lattice vectors
-        //  √(3) / 2 {
-        //      {√3, +1}
-        //      {√3, -1}
-        //      }
-        NSL::Tensor<double> a = NSL::Tensor<double>(2,2);
-        
-        // Separation between sites in the unit cell.
-        // {1., 0.}
-        NSL::Tensor<double> r = NSL::Tensor<double>(2);
-        
-        //! Reciprocal space lattice vectors
-        //  2π/√3 {
-        //      {1/√3, +1}
-        //      {1/√3, -1}
-        //      }
-        NSL::Tensor<double> b = NSL::Tensor<double>(2,2);
-
         Type kappa;
-
     private:
 
-  //  inline int unit_cells_(const std::vector<int> &L);
-  inline int get_number_of_sites_(const YAML::Node &system);
-  void init_(const YAML::Node &system);
+        //  inline int unit_cells_(const std::vector<int> &L);
+        inline int get_number_of_sites_(const YAML::Node &system);
+        void init_(const YAML::Node &system);
 };
 
 } // namespace NSL::Lattice

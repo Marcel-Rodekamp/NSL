@@ -76,6 +76,10 @@ NSL::Lattice::Generic<Type>::Generic(
 {
 
     this->init_(system);
+    // We need to precompute this as the function is not set up for GPU.
+    // In case the lattice is moved to the GPU we better have this called already ones
+    // It will not be called a second time then.
+    this->compute_bipartite();
 }
 
 } // namespace NSL::Lattice
