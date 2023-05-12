@@ -67,7 +67,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
 
         // and the resulting error square
         // err = (r{i+1},r{i+1})
-        rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) ) ;
+        rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
 
         // check for convergence agains the errSq_ determined by the 
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
