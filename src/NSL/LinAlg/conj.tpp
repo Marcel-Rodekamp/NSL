@@ -23,7 +23,7 @@ inline Type conj(const Type &value){
     }
 }
 
-template <typename Type> 
+template <NSL::Concept::isNumber Type> 
 inline NSL::Tensor<Type> conj(const NSL::Tensor<Type> & t){
     return NSL::Tensor<Type>(t,true).conj();
 }
