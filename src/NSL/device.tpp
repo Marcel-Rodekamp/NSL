@@ -50,6 +50,14 @@ class Device {
         repr_(deviceIdentifier)
     {}
 
+    bool operator==(const NSL::Device & other){
+        return other.repr_ == this->repr_;
+    }
+
+    bool operator!=(const NSL::Device & other){
+        return other.repr_ == this->repr_;
+    }
+
     Device static fromTorch(const torch::TensorOptions & dev){
         return Device(&dev);
     }
