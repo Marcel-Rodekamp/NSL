@@ -1,68 +1,41 @@
 #include <chrono>
 #include "NSL.hpp"
 #include "highfive/H5File.hpp"
+#include <yaml-cpp/yaml.h>
 
 int main(int argc, char* argv[]){
-
+    YAML::Node system;
     NSL::Logger::init_logger(argc, argv);
 
-    // this routine requires an already generated ensemble, generated, for example, from example_MCMC
-    std::string H5NAME("./ensembles.h5");  // name of h5 file with configurations
-    std::string BASENODE("1site/U10B6Nt40");
+    system = YAML::LoadFile(argv[1]);
+
+    std::string H5NAME(
+       fmt::format("./{}",system["h5file"].as<std::string>())
+    );  // name of h5 file to store configurations, measurements, etc. . .
     NSL::H5IO h5(H5NAME);
+    std::string BASENODE(
+       fmt::format("{}",system["name"].as<std::string>())
+    );
     
     auto init_time =  NSL::Logger::start_profile("Program Initialization");
     // Define the parameters of your system (you can also read these in...)
     typedef NSL::complex<double> Type;
 
-    // if using an ensemble generated from example_MCMC, make sure tha the parameters below are the same
+    //    Inverse temperature 
+    Type beta = system["beta"].as<double>();
+    
+    //    On-Site Coupling
+    Type U    = system["U"].as<double>();
 
-    /*
-    // Number of ions (spatial sites)
-    NSL::size_t Nx = 6;
-    NSL::size_t Ny = 6;
+    //    Number of time slices
+    NSL::size_t Nt = system["nt"].as<int>();
 
-    NSL::size_t dim = Nx*Ny*2;
-
-    // Number of time slices
-    NSL::size_t Nt = 32;
-
-    // inverse temperature
-    Type beta = 1.0;
-
-    // Define the lattice geometry of interest
+    NSL::size_t saveFreq = system["checkpointing"].as<int>();
+    
     // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Honeycomb<Type> lattice({Nx,Ny});
-    */
-    
-    NSL::size_t dim,Nt,saveFreq;
-    Type beta;
-    
-    // load parameters from h5 file
-    HighFive::File h5file = h5.getFile();
+    NSL::Lattice::Generic<Type> lattice(system);
+    NSL::size_t dim = lattice.sites();
 
-    std::complex<NSL::RealTypeOf<Type>> temp;
-    // beta
-    HighFive::DataSet dataset = h5file.getDataSet(BASENODE+"/Meta/params/beta");
-    dataset.read(temp);
-    beta = temp;
-
-    // Nt
-    dataset = h5file.getDataSet(BASENODE+"/Meta/params/Nt");
-    dataset.read(Nt);
-
-    // dim
-    dataset = h5file.getDataSet(BASENODE+"/Meta/params/spatialDim");
-    dataset.read(dim);
-
-    // saveFreq
-    dataset = h5file.getDataSet(BASENODE+"/Meta/params/saveFreq");
-    dataset.read(saveFreq);
-    
-    // one day we will be able to get information about the exact lattice from the h5 file, but for now we do an explicit declaration
-    NSL::Lattice::Ring<Type> lattice(dim);
-    
-    
     //    std::cout << lattice.hopping_matrix(1.0) << std::endl;
     //    std::cout << std::endl;
     auto [e, u]  = lattice.eigh_hopping(1.0); // this routine returns the eigenenergies and eigenvectors of the hopping matrix
@@ -134,7 +107,7 @@ int main(int argc, char* argv[]){
       corr.imag()=0;
 
       // in this case, we will loop over all possible time sources to increase statistics
-      for (tsource=0;tsource<Nt;tsource++){
+      for (tsource=0;tsource<Nt;tsource += Nt){
 	for(int ni=0;ni<dim;ni++){
 	  b.real()=0;
 	  b.imag()=0;
@@ -147,9 +120,9 @@ int main(int argc, char* argv[]){
 	  for (int nj=ni;nj<ni+1;nj++){
 	    for (int t=0;t<Nt; t++){
 	      if (t+tsource < Nt) {
-		corr(t,nj,ni) += NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource,NSL::Slice()))/Nt;
+		corr(t,nj,ni) += NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource,NSL::Slice())); ///Nt;
 	      } else { // anti-periodic boundary conditions
-		corr(t,nj,ni) -= NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource-Nt,NSL::Slice()))/Nt;
+		corr(t,nj,ni) -= NSL::LinAlg::inner_product(u(nj,NSL::Slice()), invMb(t+tsource-Nt,NSL::Slice())); ///Nt;
 	      }
 	    }
 	  }
@@ -158,6 +131,7 @@ int main(int argc, char* argv[]){
 
       h5.write(corr,BASENODE+"/markovChain/"+std::to_string(cfg)+"/correlators/single/particle");
     }
+    std::cout << "Min/Max configs are " << minCfg << "/" << maxCfg << std::endl;
     
     return EXIT_SUCCESS;
 }

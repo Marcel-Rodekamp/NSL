@@ -1,5 +1,6 @@
 #include <chrono>
 #include "NSL.hpp"
+#include <yaml-cpp/yaml.h>
 
 int main(int argc, char* argv[]){
 

@@ -1,10 +1,13 @@
 #include <chrono>
 #include "NSL.hpp"
 #include "highfive/H5File.hpp"
+#include <yaml-cpp/yaml.h>
 
 int main(int argc, char* argv[]){
-
+    YAML::Node system;
     NSL::Logger::init_logger(argc, argv);
+
+    system = YAML::LoadFile(argv[1]);
 
     // Define the device to run on NSL::GPU(ID=0) or NSL::CPU(ID=0)
     auto device = NSL::CPU();
@@ -18,43 +21,41 @@ int main(int argc, char* argv[]){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1.0;
+    Type beta = system["beta"].as<double>();
+    
     //    On-Site Coupling
-    Type U    = 2.0;
-    //    Number of time slices
-    NSL::size_t Nt = 32;
-    //    Number of ions (spatial sites)
-    NSL::size_t L1 = 9;
-    NSL::size_t L2 = 9;
-    std::vector<int> L = {L1,L2};
+    Type U    = system["U"].as<double>();
 
+    //    Number of time slices
+    NSL::size_t Nt = system["nt"].as<int>();
+    
     std::string H5NAME(
-        fmt::format("./Honeycomb_Nt{}_L1{}_L2{}_U{}_B{}.h5", Nt, L1, L2, NSL::to_string(U), NSL::to_string(beta))
+       fmt::format("./{}",system["h5file"].as<std::string>())
     );  // name of h5 file to store configurations, measurements, etc. . .
     NSL::H5IO h5(H5NAME, NSL::File::Truncate);
     std::string BASENODE(
-        fmt::format("Hex")
+       fmt::format("{}",system["name"].as<std::string>())
     );
 
     // Leapfrog Parameters
     //      Trajectory Length
-    NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
+    NSL::RealTypeOf<Type> trajectoryLength = system["trajectory length"].as<double>(); // We ensure that this is a real number in case Type is complex
     //      Number of Molecular Dynamics steps
-    NSL::size_t numberMDsteps = 30;
+    NSL::size_t numberMDsteps = system["MD steps"].as<int>();
     
     // Markov Change Parameters 
     //     Number of Burn In configurations to thermalize the chain
     NSL::size_t NburnIn = 1000;
     //     Number of configurations to be computed on which we will measure
-    NSL::size_t Nconf = 20000;
+    NSL::size_t Nconf = 500;
     //     Number of configurations not used for measurements in between each stored configuration
-    NSL::size_t saveFreq = 10;
+    NSL::size_t saveFreq = system["checkpointing"].as<int>();
     // The total number of configurations is given by the product:
     // Nconf_total = Nconf * saveFreq
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Honeycomb<Type> lattice(L);
+    NSL::Lattice::Generic<Type> lattice(system);
     NSL::size_t dim = lattice.sites();
 
     // Put the lattice on the device. (copy to GPU)
