@@ -109,6 +109,11 @@ class SpatialLattice {
             }
         }
 
+        //! Get the device where the lattice is stored
+        NSL::Device device(){
+            return this->hops_.device();
+        }
+
     protected:
         //! A descriptive string for quick human identification of the lattice.
         const std::string name_;
