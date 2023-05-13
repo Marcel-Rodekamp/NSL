@@ -30,7 +30,6 @@ NSL::CommonTypeOf<LeftType,RightType> inner_product(
 template<NSL::Concept::isNumber Type>
 Type inner_product(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b ){
     return (NSL::LinAlg::conj(a)*b).sum();
-
 }
 
 } // namespace NSL::LinAlg

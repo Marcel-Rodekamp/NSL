@@ -32,8 +32,9 @@ class TensorComplexConj:
             // every value from the conjugated view into it's own memory
             // space, let's hope the compiler is smart enough to optimize it.
              
-            this->data_.copy_(this->data_.conj());
-            
+            this->data_ = torch::resolve_conj(
+                torch::conj(this->data_)
+            );
         }// else{
          // do nothing
          // }
