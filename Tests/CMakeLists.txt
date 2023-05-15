@@ -18,6 +18,8 @@ add_NSL_test(test_Tensor_slice Tensor/test_Tensor_slice.cpp)
 add_NSL_test(test_Tensor_stats Tensor/test_Tensor_stats.cpp)
 add_NSL_test(test_Tensor_torchConversion Tensor/test_Tensor_torchConversion.cpp)
 add_NSL_test(test_Tensor_trig Tensor/test_Tensor_trig.cpp)
+add_NSL_test(test_Tensor_rnd Tensor/test_Tensor_rnd.cpp)
+
 
 add_NSL_test(test_LinAlg_adjoint LinAlg/test_LinAlg_adjoint.cpp)
 add_NSL_test(test_LinAlg_conj LinAlg/test_LinAlg_conj.cpp)
