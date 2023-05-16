@@ -13,6 +13,7 @@
 #include "LinAlg/mat_exp.tpp"
 #include "LinAlg/mat_mul.tpp"
 #include "LinAlg/mat_vec.tpp"
+#include "LinAlg/minMax.tpp"
 #include "LinAlg/shift.tpp"
 #include "LinAlg/mat_inv.tpp"
 #include "LinAlg/eigh.tpp"
