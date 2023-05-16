@@ -44,7 +44,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & mu = 0.0, const Type & beta = 1.0 ):
+    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
         species(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
@@ -71,29 +71,29 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phi_ = phi;
 
         // determine the signs for exp(+/- kappa) exp(+/- i phi)
-        int sgn;
+        int sgn = +1;
         if (this->species == NSL::Hubbard::Species::Particle) {
             sgn = +1;
             this->sgn_kappa_ = +1;
-        } else {
+        } else { // species == NSL::Hubbard::Species::Hole
             sgn = -1;
 
             // On bipartite lattices exp(-kappa) -> exp(kappa)
             // else we need a - sign for holes
-            if(!this->Lat.bipartite()){
-                this->sgn_kappa_ = -1;
-            } else {
+            if(this->Lat.bipartite()){
                 this->sgn_kappa_ = +1;
+            } else {
+                this->sgn_kappa_ = -1;
             }
         }
 
         // calculate exp(+/- i phi)
-        phiExp_ = NSL::LinAlg::exp(
-            sgn*NSL::complex<NSL::RealTypeOf<Type>>{0,1} * phi_ + sgn*mu_
+        this->phiExp_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>{0,sgn} * phi + sgn*mu_
         );
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        phiExpInv_ = NSL::LinAlg::exp(
-            sgn*NSL::complex<NSL::RealTypeOf<Type>>{0,-1} * phi_ - sgn*mu_
+        this->phiExpInv_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>{0,-sgn} * phi - sgn*mu_
         );
     }
 
