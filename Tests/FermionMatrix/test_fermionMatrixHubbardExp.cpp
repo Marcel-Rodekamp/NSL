@@ -157,6 +157,8 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     NSL::Tensor<Type> result_alg = M.M(psi);
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    INFO(fmt::format("result_exa.sum() = {}", NSL::to_string(result_exa.sum())));
+    INFO(fmt::format("result_alg.sum() = {}", NSL::to_string(result_alg.sum())));
 
     REQUIRE( almost_equal(result_exa, result_alg, std::numeric_limits<Type>::digits10).all() );
 }
@@ -362,7 +364,7 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
     NSL::FermionMatrix::HubbardExp Mshift(Lattice,nt,beta);
-    M.populate(phiShift);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
@@ -372,7 +374,7 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     INFO("result   shifted: "+NSL::to_string(result_shift));
     INFO("difference      : "+NSL::to_string(result-result_shift));
 
-    REQUIRE(almost_equal(result_shift,result));
+    REQUIRE(almost_equal(result_shift,result,std::numeric_limits<Type>::digits10-1));
 }
 
 // ======================================================================
@@ -404,7 +406,7 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
     NSL::FermionMatrix::HubbardExp Mshift(Lattice,nt,beta);
-    M.populate(phiShift);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();

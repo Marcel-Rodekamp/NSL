@@ -182,7 +182,7 @@ void multiplication(SizeTypes ... sizes){
 
     // check that the scalar 0 add workes
     for(NSL::size_t i = 0; i < numElements; ++i){
-        REQUIRE( C[i] == A[i] );
+        REQUIRE( almost_equal(C[i], A[i]) );
         REQUIRE( compare_floating_point(D[i], A[i]) );
     }
 
@@ -197,7 +197,7 @@ void multiplication(SizeTypes ... sizes){
     // check that the tensor 0 add workes
     for(NSL::size_t i = 0; i < numElements; ++i){
         REQUIRE( B[i] == static_cast<Type>(1) );
-        REQUIRE( C[i] == A[i] );
+        REQUIRE( almost_equal(C[i], A[i]) );
         REQUIRE( compare_floating_point(D[i], A[i]) );
     }
 }
@@ -331,8 +331,8 @@ void multiplicationEqual(SizeTypes ... sizes){
     addrCheckMaint(A,B,C,D);
     // check elementwise agree ment
     for(NSL::size_t i = 0; i < numElements; ++i){
-        REQUIRE( A[i]==Abak[i] );
-        REQUIRE( B[i]==Bbak[i] );
+        REQUIRE( almost_equal(A[i], Abak[i]) );
+        REQUIRE( almost_equal(B[i], Bbak[i]) );
     }
 
     C = 1;

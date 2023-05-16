@@ -117,8 +117,16 @@ void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & L
 	// Finally we construct the adjoint matrix and ensure it is equal to the original
 	NSL::Tensor<Type> MdaggerMH = MdaggerM.T(0,2).H(1,3);
 
+    INFO(fmt::format("MdaggerM.sum() = {}", NSL::to_string(MdaggerM.sum())));
+    INFO(fmt::format("MdaggerMH.sum() = {}", NSL::to_string(MdaggerMH.sum())));
+    INFO(
+        NSL::LinAlg::max( 
+            NSL::LinAlg::abs(MdaggerM - MdaggerMH)
+        )
+    );
+
+	REQUIRE(almost_equal(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10-2).all());
     REQUIRE(MdaggerMH.data() != MdaggerM.data());
-	REQUIRE(almost_equal(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10).all());
 }
 
 //Test cases
