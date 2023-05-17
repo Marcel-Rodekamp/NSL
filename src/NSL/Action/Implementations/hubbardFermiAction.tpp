@@ -43,6 +43,9 @@ class HubbardFermionAction :
         // inverse temperature
 	    const Type beta;
 
+        // chemical potential
+        const Type mu;
+
         // time slices
         const NSL::size_t Nt;
 
@@ -50,7 +53,11 @@ class HubbardFermionAction :
         LatticeType & lattice;
 
         Parameters(const Type & beta, const NSL::size_t & Nt, LatticeType & lattice):
-            beta(beta), Nt(Nt), lattice(lattice), delta(beta/Nt) 
+            beta(beta), mu(0), Nt(Nt), lattice(lattice), delta(beta/Nt) 
+        {}
+
+        Parameters(const Type & beta, const Type & mu, const NSL::size_t & Nt, LatticeType & lattice):
+            beta(beta), mu(mu), Nt(Nt), lattice(lattice), delta(beta/Nt) 
         {}
 
         // lattice spacing
@@ -62,7 +69,7 @@ class HubbardFermionAction :
             "phi"
         ),
         params_(params),
-        hfm_(params.lattice, params.Nt, params.beta)
+        hfm_(params.lattice, params.Nt, params.beta, params.mu)
     {}
 
 	HubbardFermionAction(const Parameters & params, const std::string & fieldName) : 
@@ -70,7 +77,7 @@ class HubbardFermionAction :
             fieldName
         ),
         params_(params),
-        hfm_(params.lattice, params.Nt, params.beta)
+        hfm_(params.lattice, params.Nt, params.beta, params.mu)
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 
