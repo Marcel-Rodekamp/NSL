@@ -23,7 +23,8 @@ NUMERIC_NSL_TEST_CASE("LinAlg: inner_product 2D", "[LinAlg,inner_product]"){
     INFO(fmt::format("Size: {}", size1));
     INFO(fmt::format("Size: {}", size2));
 
-    // define 2 tensors with ones everywhere
+    // define 2 tensors with ones/twos everywhere such that we can 
+    // predetermine the results of the inner product
     NSL::Tensor<TestType> a(size1,size2); a = 1; 
     NSL::Tensor<TestType> b(size1,size2); b = 2;
 
@@ -37,14 +38,12 @@ NUMERIC_NSL_TEST_CASE("LinAlg: inner_product 2D", "[LinAlg,inner_product]"){
 
 
 FLOAT_NSL_TEST_CASE("LinAlg: inner_product random", "[LinAlg,inner_product]"){
-    //const NSL::size_t size1 = GENERATE(1,100,200,500,1000);
-    //const NSL::size_t size2 = GENERATE(1,100,200,500,1000);
-    const NSL::size_t size1 = GENERATE(1);
-    const NSL::size_t size2 = GENERATE(1);
+    const NSL::size_t size1 = GENERATE(1,100,200);
+    const NSL::size_t size2 = GENERATE(1,100,200);
     INFO(fmt::format("Size: {}", size1));
     INFO(fmt::format("Size: {}", size2));
 
-    // define 2 tensors with ones everywhere
+    // define 2 tensors randomly filled for checkup
     NSL::Tensor<TestType> a(size1,size2); a.rand(); 
     NSL::Tensor<TestType> b(size1,size2); b.rand();
 
@@ -67,9 +66,11 @@ FLOAT_NSL_TEST_CASE("LinAlg: inner_product random", "[LinAlg,inner_product]"){
     }
 
     TestType res = NSL::LinAlg::inner_product(a,b);
-    REQUIRE(almost_equal(res,ab));
+    INFO(fmt::format("(a,b) = {} == {}; diff = {}",NSL::to_string(res), NSL::to_string(ab), NSL::to_string(NSL::LinAlg::abs(res-ab))));
+    REQUIRE(almost_equal(res,ab,std::numeric_limits<TestType>::digits10-1));
     res = NSL::LinAlg::inner_product(a,a);
-    REQUIRE( almost_equal(res,aa) );
+    INFO(fmt::format("(a,a) = {} == {}; diff = {}",NSL::to_string(res), NSL::to_string(aa), NSL::to_string(NSL::LinAlg::abs(res-aa))));
+    REQUIRE( almost_equal(res,aa,std::numeric_limits<TestType>::digits10-1) );
     REQUIRE(NSL::real(res)>=0);
-    REQUIRE( almost_equal(NSL::imag(res), NSL::RealTypeOf<TestType>(0.)) );
+    REQUIRE( almost_equal(NSL::imag(res), NSL::RealTypeOf<TestType>(0.),std::numeric_limits<TestType>::digits10-1) );
 }
