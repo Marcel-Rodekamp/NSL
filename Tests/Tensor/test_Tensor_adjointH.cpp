@@ -79,6 +79,8 @@ void test_adjoint(SizeTypes ... Ns){
             // .T creates a copy of A
             NSL::Tensor<Type> B = A.T(d1,d2).conj();
             
+            // This adjoint mutates A by definition hence the checks 
+            // that A == C and A == B
             NSL::Tensor<Type> C = A.adjoint(d1,d2);
 
 			// check that data agrees
