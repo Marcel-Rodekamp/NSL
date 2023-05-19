@@ -64,7 +64,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         species_(species),
         delta_( beta/Nt ),
         mu_( mu ),
-        sgn_( +1 ),
+        sgn_( (species == NSL::Hubbard::Particle) ? +1:-1 ),
         phi_( lat.device(), Nt, lat.sites() ),
         phiExp_( lat.device(), Nt, lat.sites() ),
         phiExpInv_( lat.device(), Nt, lat.sites() ),
