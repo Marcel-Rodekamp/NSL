@@ -76,16 +76,19 @@ void test_adjoint(SizeTypes ... Ns){
     for(NSL::size_t d1 = 0; d1 < sizeof...(Ns); ++d1){
         for(NSL::size_t d2 = 0; d2 < sizeof...(Ns); ++d2){
 			// in this case A and B change every iteration
-            B.transpose(d1,d2).conj();
+            // .T creates a copy of A
+            NSL::Tensor<Type> B = A.T(d1,d2).conj();
             
+            // This adjoint mutates A by definition hence the checks 
+            // that A == C and A == B
             NSL::Tensor<Type> C = A.adjoint(d1,d2);
 
 			// check that data agrees
             REQUIRE((B == C).all());
-			// check that the correct tensors share/ not share their data
-            REQUIRE( A.data() == addr_bak );
-            REQUIRE( C.data() == addr_bak );
-            REQUIRE( B.data() != addr_bak );
+            REQUIRE((A == C).all());
+            REQUIRE((A == B).all());
+            // We can't ensure that the address of C,B compares to addr_bak
+            // as .adjoint changes on the memory of A.
 
         }
     }
@@ -106,8 +109,7 @@ void test_H(SizeTypes ... Ns){
     for(NSL::size_t d1 = 0; d1 < sizeof...(Ns); ++d1){
         for(NSL::size_t d2 = 0; d2 < sizeof...(Ns); ++d2){
 			// in this case A stays constant, so B has to be copied every iteration
-    		NSL::Tensor<Type> B(A,true);
-            B.transpose(d1,d2).conj();
+    		NSL::Tensor<Type> B = A.T(d1,d2).conj();
             
             NSL::Tensor<Type> C = A.H(d1,d2);
 

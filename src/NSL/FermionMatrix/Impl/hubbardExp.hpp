@@ -44,12 +44,27 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & mu = 0.0, const Type & beta = 1.0 ):
+    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
-        species(NSL::Hubbard::Species::Particle),
+        species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
-        mu_( mu ),
-        sgn_kappa_( +1 ),
+        mu_( (beta/Nt)*mu ),
+        sgn_( +1 ),
+        phi_( lat.device(), Nt, lat.sites() ),
+        phiExp_( lat.device(), Nt, lat.sites() ),
+        phiExpInv_( lat.device(), Nt, lat.sites() ),
+        Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
+        FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        pi_dot_(lat.device(), Nt, lat.sites())
+    {}
+
+    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+        FermionMatrix<Type,LatticeType>(lat),
+        species_(species),
+        delta_( beta/Nt ),
+        mu_( (beta/Nt)*mu ),
+        sgn_( (species == NSL::Hubbard::Particle) ? +1:-1 ),
         phi_( lat.device(), Nt, lat.sites() ),
         phiExp_( lat.device(), Nt, lat.sites() ),
         phiExpInv_( lat.device(), Nt, lat.sites() ),
@@ -61,39 +76,29 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
-        this->species = species;
+        this->species_ = species;
+
+        if(this->species_ == NSL::Hubbard::Particle){
+            this->sgn_ = +1;
+        } else {
+            this->sgn_ = -1;
+        }
+
         this->populate(phi);
     }
 
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi){
         // Reassign phi
-        phi_ = phi;
-
-        // determine the signs for exp(+/- kappa) exp(+/- i phi)
-        int sgn;
-        if (this->species == NSL::Hubbard::Species::Particle) {
-            sgn = +1;
-            this->sgn_kappa_ = +1;
-        } else {
-            sgn = -1;
-
-            // On bipartite lattices exp(-kappa) -> exp(kappa)
-            // else we need a - sign for holes
-            if(!this->Lat.bipartite()){
-                this->sgn_kappa_ = -1;
-            } else {
-                this->sgn_kappa_ = +1;
-            }
-        }
+        phi_ = phi; 
 
         // calculate exp(+/- i phi)
-        phiExp_ = NSL::LinAlg::exp(
-            sgn*NSL::complex<NSL::RealTypeOf<Type>>{0,1} * phi_ + sgn*mu_
+        this->phiExp_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
         );
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        phiExpInv_ = NSL::LinAlg::exp(
-            sgn*NSL::complex<NSL::RealTypeOf<Type>>{0,-1} * phi_ - sgn*mu_
+        this->phiExpInv_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
         );
     }
 
@@ -133,17 +138,23 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
      **/
     NSL::Tensor<Type> gradLogDetM() override;
 
-    //! Species of the fermion matrix
-    NSL::Hubbard::Species species;
+    //! Query the current species of the fermion matrix. To change the species please use populate(phi, species).
+    NSL::Hubbard::Species species() {
+        return species_;
+    }
 
     protected:
+    //! species{Particle or Hole} of the fermion matrix
+    NSL::Hubbard::Species species_;
+
+
     //! delta = beta/N_t
     Type delta_;
 
     Type mu_;
 
     // Sign of exp( +/- kappa), is assigned in populate
-    Type sgn_kappa_;
+    int sgn_;
 
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;
