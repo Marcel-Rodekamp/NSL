@@ -10,6 +10,7 @@
  **/
 
 #include "../fermionMatrix.hpp"
+#include "../../Action/Implementations/hubbard.tpp"
 
 namespace NSL::FermionMatrix {
 
@@ -43,12 +44,63 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardDiag(LatticeType & lat,  const NSL::Tensor<Type> &phi, const Type & beta = 1.0 ):
+    HubbardDiag(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
-        phi_(phi),
-        delta_(beta/phi.shape(0)),
-        phiExp_(NSL::LinAlg::exp(phi*NSL::complex<typename NSL::RT_extractor<Type>::value_type>(0,1)))
+        species_(NSL::Hubbard::Species::Particle),
+        delta_( beta/Nt ),
+        mu_( (beta/Nt)*mu ),
+        sgn_( +1 ),
+        phi_( lat.device(), Nt, lat.sites() ),
+        phiExp_( lat.device(), Nt, lat.sites() ),
+        phiExpInv_( lat.device(), Nt, lat.sites() ),
+        Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
+        FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        pi_dot_(lat.device(), Nt, lat.sites())
     {}
+
+    HubbardDiag(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+        FermionMatrix<Type,LatticeType>(lat),
+        species_(species),
+        delta_( beta/Nt ),
+        mu_( (beta/Nt)*mu ),
+        sgn_( (species == NSL::Hubbard::Particle) ? +1:-1 ),
+        phi_( lat.device(), Nt, lat.sites() ),
+        phiExp_( lat.device(), Nt, lat.sites() ),
+        phiExpInv_( lat.device(), Nt, lat.sites() ),
+        Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
+        FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        pi_dot_(lat.device(), Nt, lat.sites())
+    {}
+
+    //! Populates the fermion matrix with a new configuration phi
+    void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
+        this->species_ = species;
+
+        if(this->species_ == NSL::Hubbard::Particle){
+            this->sgn_ = +1;
+        } else {
+            this->sgn_ = -1;
+        }
+
+        this->populate(phi);
+    }
+
+    //! Populates the fermion matrix with a new configuration phi
+    void populate(const NSL::Tensor<Type> & phi){
+        // Reassign phi
+        phi_ = phi; 
+
+        // calculate exp(+/- i phi)
+        this->phiExp_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
+        );
+        // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
+        this->phiExpInv_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
+        );
+    }
 
     //Declaration of methods methods M, M_dagger, MM_dagger and MdaggerM
 
@@ -81,15 +133,33 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
     **/
     Type logDetM() override;
 
-    NSL::Tensor<Type> gradLogDetM() override { return phi_;}
+    NSL::Tensor<Type> gradLogDetM() override;
 
     protected:
+    //! species{Particle or Hole} of the fermion matrix
+    NSL::Hubbard::Species species_;
+
+
+    //! delta = beta/N_t
+    Type delta_;
+
+    Type mu_;
+
+    // Sign of exp( +/- kappa), is assigned in populate
+    int sgn_;
+
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;
     //! Exponential of phi
     NSL::Tensor<Type> phiExp_;
-    //! delta = beta/N_t
-    Type delta_;
+    //! Inverse Exponential of phi
+    NSL::Tensor<Type> phiExpInv_;
+
+    //! Memory used for the implementation of the force
+    NSL::Tensor<Type> Fk_;
+    NSL::Tensor<Type> FkFkFk_;
+    NSL::Tensor<Type> invAp1F_;
+    NSL::Tensor<Type> pi_dot_;
 
 };
 } // namespace FermionMatrix

@@ -2,7 +2,7 @@
 #include <highfive/H5File.hpp>
 #include <iostream>
 
-template<typename Type>
+template<typename Type,template<typename Type_, typename Lattice_> class HFM >
 void test_force();
 
 // =============================================================================
@@ -10,14 +10,17 @@ void test_force();
 // =============================================================================
 
 COMPLEX_NSL_TEST_CASE( "Action: tests force routine and compares to finite differencing", "[Action,force,default]" ) {
-  test_force<TestType>();
+    INFO("Hubbard Exponential");
+    test_force<TestType,NSL::FermionMatrix::HubbardExp>();
+    INFO("Hubbard Diagonal");
+    test_force<TestType,NSL::FermionMatrix::HubbardDiag>();
 }
 
 //=======================================================================
 // Implementation Details
 //=======================================================================
 
-template<typename Type>
+template<typename Type,template<typename Type_, typename Lattice_> class HFM >
 void test_force(){
 
     // Typically you want to read these in or provide as an argument to such 
@@ -45,14 +48,14 @@ void test_force(){
         /*U =  */  U
     );
     typename NSL::Action::HubbardFermionAction<Type,decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>>::Parameters paramsHFM(
+        HFM<Type,decltype(lattice)>>::Parameters paramsHFM(
         /*beta=*/  beta,
         /*Nt = */  Nt,    
         /*lattice=*/lattice
     );
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<Type,decltype(lattice),NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(paramsHFM);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),HFM<Type,decltype(lattice)>> S_fermion(paramsHFM);
 
     // Initialize the action
     NSL::Action::Action S = S_gauge + S_fermion;

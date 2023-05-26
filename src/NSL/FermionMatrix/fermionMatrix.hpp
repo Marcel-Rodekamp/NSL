@@ -27,6 +27,10 @@ class FermionMatrix {
 
     public:
 
+    //! Used to populate configurations into the fermion matrix; 
+    //! Arguments to be determined for each implementation.
+    void populate();
+
     //Declaration of methods methods M, M_dagger, MM_dagger and MdaggerM
 
     /*!

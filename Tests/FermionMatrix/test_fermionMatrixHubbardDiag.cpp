@@ -80,13 +80,14 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: logDetM_time_shift_invariance"
         // That is,
         //      log det M = log det α M + Nx log 1/α
         // with α=100 gives reliable results (for these randomly sampled phi).
-    }
+    } else {
 
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
     NSL::Lattice::Ring<TestType> Lattice(nx);
     test_logDetM_time_shift_invariance<TestType>(nt, Lattice, 0.0625);
+    }
 
 }
 
@@ -102,13 +103,14 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: logDetM_phi_plus_two_pi", "[fe
         // That is,
         //      log det M = log det α M + Nx log 1/α
         // with α=100 gives reliable results (for these randomly sampled phi).
-    }
+    } else {
 
     const NSL::size_t nt = GENERATE(2, 4, 8, 10, 12, 14, 16);
     const NSL::size_t nx = GENERATE(2, 4, 8, 10, 12, 14, 16);
 
     NSL::Lattice::Ring<TestType> Lattice(nx);
     test_logDetM_phi_plus_two_pi<TestType>(nt, Lattice);
+    }
 
 }
 
@@ -135,7 +137,8 @@ void test_fermionMatrixHubbardDiag_M_dense(const NSL::size_t nt, LatticeType & L
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
+    M.populate(phi);
     NSL::Tensor<Type> sparse = M.M(psi);
 
     NSL::Tensor<Type> M_dense = M.M_dense(nt);
@@ -170,7 +173,8 @@ void test_fermionMatrixHubbardDiag_Mdagger(const NSL::size_t nt, LatticeType & L
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
+    M.populate(phi);
     NSL::Tensor<Type> sparse = M.Mdagger(psi);
 
     // Get a dense representation of M and construct M†
@@ -210,7 +214,8 @@ void test_fermionMatrixHubbardDiag_MMdagger(const NSL::size_t nt, LatticeType & 
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
+    M.populate(phi);
     ComplexType I={0,1};
  
     auto direct = M.MMdagger(psi);
@@ -237,7 +242,8 @@ void test_fermionMatrixHubbardDiag_MdaggerM(const NSL::size_t nt, LatticeType & 
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
+    M.populate(phi,NSL::Hubbard::Particle);
     ComplexType I={0,1};
  
     auto direct = M.MdaggerM(psi);
@@ -267,8 +273,10 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
 
     Type delta = beta/nt;
 
-    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> M     (Lattice,phi     ,beta);
-    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> Mshift(Lattice,phiShift,beta);
+    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> M     (Lattice,nt     ,beta);
+    M.populate(phi);
+    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> Mshift(Lattice,nt,beta);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
@@ -316,8 +324,10 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
     RealType two_pi = 2*std::numbers::pi_v<RealType>;
     phiShift = phi + two_pi * orbits;
 
-    NSL::FermionMatrix::HubbardDiag M     (Lattice,phi     ,beta);
-    NSL::FermionMatrix::HubbardDiag Mshift(Lattice,phiShift,beta);
+    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> M     (Lattice,nt     ,beta);
+    M.populate(phi);
+    NSL::FermionMatrix::HubbardDiag<Type,LatticeType> Mshift(Lattice,nt,beta);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
@@ -355,7 +365,8 @@ void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, co
 
     NSL::Tensor<Type> phi(nt, nx), sausage = NSL::Matrix::Identity<Type>(nx);
     Type delta = beta/nt;
-    NSL::FermionMatrix::HubbardDiag M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
+    M.populate(phi);
     
     //When phi=0, logDetM = logdet(1 + K^{t})
     for(int t=0; t<nt; t++){
