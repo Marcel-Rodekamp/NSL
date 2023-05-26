@@ -4,7 +4,8 @@ NUMERIC_NSL_TEST_CASE("LinAlg: inner_product 1D", "[LinAlg,inner_product]"){
     const NSL::size_t size = GENERATE(1,100,200,500,1000);
     INFO(fmt::format("Size: {}", size));
 
-    // define 2 tensors with ones everywhere
+    // define 2 tensors with ones/twos everywhere such that we can 
+    // predetermine the results of the inner product
     NSL::Tensor<TestType> a(size); a = 1; 
     NSL::Tensor<TestType> b(size); b = 2;
 
