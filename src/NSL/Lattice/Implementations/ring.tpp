@@ -30,9 +30,13 @@ NSL::Lattice::Ring<Type>::Ring(const std::size_t n, const Type &kappa, const dou
         this->hops_(i , i - 1) = NSL::LinAlg::conj(kappa);
     }
 
-    // Periodic boundary conditions
-    this->hops_(0, n - 1) = NSL::LinAlg::conj(kappa);
-    this->hops_(n - 1, 0) = kappa;
+    if (n>1) {
+      // Periodic boundary conditions
+      this->hops_(0, n - 1) = NSL::LinAlg::conj(kappa);
+      this->hops_(n - 1, 0) = kappa;
+    } else {  // this case is when Nx=1 (1 site ring), which has NO hopping
+      this->hops_(0, 0) = 0 * kappa;
+    }
 
     this->compute_adjacency();
 }

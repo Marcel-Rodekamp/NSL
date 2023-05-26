@@ -27,6 +27,7 @@ add_NSL_test(test_LinAlg_mat_mul LinAlg/test_LinAlg_mat_mul.cpp)
 add_NSL_test(test_LinAlg_matvec LinAlg/test_LinAlg_matvec.cpp)
 add_NSL_test(test_LinAlg_shift LinAlg/test_LinAlg_shift.cpp)
 add_NSL_test(test_LinAlg_transpose LinAlg/test_LinAlg_transpose.cpp)
+add_NSL_test(test_LinAlg_inner_product LinAlg/test_LinAlg_inner_product.cpp)
 add_NSL_test(test_CG LinAlg/Solver/test_CG.cpp)
 
 add_NSL_test(test_bipartite Lattice/test_bipartite.cpp)

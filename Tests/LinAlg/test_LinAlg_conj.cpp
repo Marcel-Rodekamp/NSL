@@ -26,6 +26,17 @@ FLOAT_NSL_TEST_CASE( "LinAlg: conj", "[LinAlg,conj]" ) {
     test_conj<TestType>(size);
 }
 
+COMPLEX_NSL_TEST_CASE( "LinAlg: conj vs exp", "[LinAlg,conj]" ) {
+    const size_type size = GENERATE(1, 100, 200, 500, 1000);
+    NSL::Tensor<TestType> t(size, size);
+    t.rand();
+
+    auto Tconj = NSL::LinAlg::conj(t);
+
+    REQUIRE(
+        (Tconj.imag() == -t.imag()).all()
+    );
+}
 /*
  * note: it'd be nice to check this for int also, but t.rand() cannot fill Tensor<int>s.
  **/

@@ -6,6 +6,7 @@
 #include "Tensor/Factory/like.tpp"
 #include "concepts.hpp"
 #include "FermionMatrix/fermionMatrix.hpp"
+#include "hubbard.tpp"
 
 namespace NSL::Action {
 
@@ -42,6 +43,9 @@ class HubbardFermionAction :
         // inverse temperature
 	    const Type beta;
 
+        // chemical potential
+        const Type mu;
+
         // time slices
         const NSL::size_t Nt;
 
@@ -49,7 +53,11 @@ class HubbardFermionAction :
         LatticeType & lattice;
 
         Parameters(const Type & beta, const NSL::size_t & Nt, LatticeType & lattice):
-            beta(beta), Nt(Nt), lattice(lattice), delta(beta/Nt) 
+            beta(beta), mu(0), Nt(Nt), lattice(lattice), delta(beta/Nt) 
+        {}
+
+        Parameters(const Type & beta, const Type & mu, const NSL::size_t & Nt, LatticeType & lattice):
+            beta(beta), mu(mu), Nt(Nt), lattice(lattice), delta(beta/Nt) 
         {}
 
         // lattice spacing
@@ -60,14 +68,16 @@ class HubbardFermionAction :
         BaseAction<Type, TensorType>(
             "phi"
         ),
-        params_(params)
+        params_(params),
+        hfm_(params.lattice, params.Nt, params.beta, params.mu)
     {}
 
 	HubbardFermionAction(const Parameters & params, const std::string & fieldName) : 
         BaseAction<Type, TensorType>(
             fieldName
         ),
-        params_(params)
+        params_(params),
+        hfm_(params.lattice, params.Nt, params.beta, params.mu)
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -85,11 +95,8 @@ class HubbardFermionAction :
     protected:
     Parameters params_;
 
-    FermionMatrixType constexpr inline HFM(const NSL::Tensor<Type> & phi) {
-        return FermionMatrixType(params_.lattice, phi, params_.beta);
-    }
-
-};
+    FermionMatrixType hfm_;
+}; // class HubbardFermiAction
 
 template<
     NSL::Concept::isNumber Type, 
@@ -101,12 +108,12 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
     Type logDetMpMh = 0;
 
     // particle contribution
-    auto Mp = this->HFM(phi);
-    logDetMpMh+= Mp.logDetM();
+    hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+    logDetMpMh+= hfm_.logDetM();
 
     // hole contribution
-    auto Mh = this->HFM(-phi);
-    logDetMpMh+= Mh.logDetM();
+    hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+    logDetMpMh+= hfm_.logDetM();
 
     // The Fermi action has an additional - sign
     return -logDetMpMh;
@@ -134,12 +141,12 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
 
     // particle contribution
-    auto Mp = HFM(phi);
-    dS[this->configKey_]+= Mp.gradLogDetM();
+    hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+    dS[this->configKey_]+= hfm_.gradLogDetM();
 
     // hole contribution
-    auto Mh = HFM(-phi);
-    dS[this->configKey_]-= Mh.gradLogDetM();
+    hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+    dS[this->configKey_]-= hfm_.gradLogDetM();
 
     return dS;
 }

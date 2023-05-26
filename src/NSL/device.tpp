@@ -50,6 +50,14 @@ class Device {
         repr_(deviceIdentifier)
     {}
 
+    bool operator==(const NSL::Device & other){
+        return other.repr_ == this->repr_;
+    }
+
+    bool operator!=(const NSL::Device & other){
+        return other.repr_ == this->repr_;
+    }
+
     Device static fromTorch(const torch::TensorOptions & dev){
         return Device(&dev);
     }
@@ -57,15 +65,9 @@ class Device {
     torch::TensorOptions device() {
         return dev_;
     }
-    
     const torch::TensorOptions device() const {
         return dev_;
     }
-
-    protected:
-    Device(const torch::TensorOptions * dev):
-        dev_(*dev)
-    {}
 
     friend std::ostream & operator<<(std::ostream &os, const Device & dev) {
         os << dev.repr_;
@@ -75,6 +77,11 @@ class Device {
     const std::string repr(){
         return repr_;  
     }
+
+    protected:
+    Device(const torch::TensorOptions * dev):
+        dev_(*dev)
+    {}
     
     private:
     //! This is an enum for the different devices

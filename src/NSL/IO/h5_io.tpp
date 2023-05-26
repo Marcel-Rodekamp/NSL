@@ -29,6 +29,32 @@ public:
         h5f_("data.h5", NSL::File::ReadWrite)
     {}
 
+    HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
+        return h5f_;
+    }
+
+    std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
+
+    	NSL::size_t minCfg = 10000000000;
+	NSL::size_t maxCfg = -1;
+	NSL::size_t temp;
+
+	auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
+        // this list is not given in ascending order!  Really annoying!  I have to loop over them to find the most recent config. . .
+        minCfg = std::stoi(configs[0]);
+        for (int i=1;i<configs.size();i++){
+	  temp = std::stoi(configs[i]);
+          if (temp>maxCfg) {
+	    maxCfg = temp;
+          }
+	  if(temp<minCfg && temp>0) {
+	    minCfg = temp;
+	  }
+        }
+
+        return {minCfg, maxCfg};
+    }
+
     template <NSL::Concept::isNumber Type> inline int write(const NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
         std::string baseNode;
 	if (node.back() == '/') { // define the node
@@ -41,7 +67,7 @@ public:
 
 	if constexpr (NSL::is_complex<Type>()) {
 	   // write out the actionValue
-	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actionValue", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
+	   HighFive::DataSet dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(baseNode+"/actVal", HighFive::DataSpace::From(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue)));
 
 	   dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (markovstate.actionValue));
 
@@ -62,7 +88,7 @@ public:
 
 	 } else {
 	   // write out the actionValue
-	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actionValue",HighFive::DataSpace::From(markovstate.actionValue));
+	   HighFive::DataSet dataset = h5f_.createDataSet<Type>(baseNode+"/actVal",HighFive::DataSpace::From(markovstate.actionValue));
 	   dataset.write(markovstate.actionValue);
 
 	   // write out the acceptanceProbability
@@ -120,7 +146,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
 	   dataset.read(temp);
 	   markovstate.actionValue = temp;
 
@@ -138,7 +164,7 @@ public:
     	   this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	   // read in the actionValue
-	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actionValue");
+	   HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
 	   dataset.read(markovstate.actionValue);
 
 	   // read in the acceptanceProbability

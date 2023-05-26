@@ -1,5 +1,6 @@
 #include <chrono>
 #include "NSL.hpp"
+#include <yaml-cpp/yaml.h>
 
 int main(int argc, char* argv[]){
 
@@ -10,31 +11,41 @@ int main(int argc, char* argv[]){
     typedef NSL::complex<double> Type;
 
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  4;
+    NSL::size_t Nx =  2;
+
+    NSL::size_t Nt = 32;
+
+    // inverse temperature
+    Type beta = 10.0;
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Ring<Type> lattice(Nx, 1.0); 
+    NSL::Lattice::Ring<Type> lattice(Nx); 
 
     std::cout << lattice.hopping_matrix(1.0) << std::endl;
     std::cout << std::endl;
-    auto [ee, ev]  = NSL::LinAlg::eigh(lattice.hopping_matrix(1.0));
+    auto [e, u]  = lattice.eigh_hopping(1.0); // this routine returns the eigenenergies and eigenvectors of the hopping matrix
 
-    // ee gives the list of eigenvalues
-    // if ee[i] gives the ith eigenvalue, then ev[:,i] is the corresponding eigenvector
+    // e gives the list of eigenvalues
+    // if e[i] gives the ith eigenvalue, then u[i,:] is the corresponding eigenvector
 
-    for (auto x: ev.shape()){
-      std::cout << x << std::endl;
-    }
-    for (int i=0; i< Nx; i++) {
-      for (int j=0; j< Nx; j++) {
-	std::cout << NSL::LinAlg::inner_product(ev(NSL::Slice(), i),ev(NSL::Slice(),j)) << " ";
-      }
-      std::cout << std::endl;
-    }
-    std::cout << NSL::LinAlg::mat_mul(ev.T(),ev) << std::endl;
+    // now apply u kappa u^T to diagonalize the matrix
+    std::cout << "# this is u^T kappa u = diag(ee)" << std::endl;
+    //                                                  u                                kappa                                 u^T
+    std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(u,NSL::LinAlg::mat_mul(lattice.hopping_matrix(1.0),NSL::LinAlg::transpose(u)))) << std::endl;
 
-    //    std::cout << ev << std::endl;
+    std::cout << std::endl;
     
+    // now compare with the originally determined eigenvalues e
+    std::cout << "# these are the calculated eigenvalues" << std::endl;
+    std::cout << e << std::endl;
+
+    std::cout << std::endl;
+    
+    // this is the exponentiated hopping matrix
+    std::cout << "# this is the exponentiated hopping matrix" << std::endl;
+    std::cout << lattice.exp_hopping_matrix(1.0) << std::endl;
+
     return EXIT_SUCCESS;
 }
+

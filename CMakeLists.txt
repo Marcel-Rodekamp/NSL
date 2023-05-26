@@ -51,6 +51,7 @@ include(cmake/torch.cmake)
 include(cmake/catch2.cmake)
 include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
+include(cmake/yamlcpp.cmake)
 
 add_subdirectory(src/NSL)
 

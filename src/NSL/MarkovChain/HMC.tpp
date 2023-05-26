@@ -156,7 +156,7 @@ class HMC{
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
             p.randn();
-	        p.imag()=0;
+	    p.imag()=0;
             momentum[key] = p; 
         }
 
@@ -166,7 +166,7 @@ class HMC{
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
 
-        // compute the Hamiltonian H = p^2 + S
+        // compute the Hamiltonian H = p^2/2 + S
         // Starting point of the trajectory
         Type starting_H = state.actionValue;
         for( const auto& [key,field]: momentum){
@@ -183,9 +183,8 @@ class HMC{
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
-        // accept reject 
-        if ( r_.rand()[0] <= acceptanceProb ){
-
+        // accept reject
+	if ( r_.rand()[0] <= acceptanceProb ){
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 proposal_S,

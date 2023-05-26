@@ -23,7 +23,8 @@ int main(int argc, char ** argv){
     NSL::Logger::info("Initializing Fermion Matrix with Nt={} and beta={}",Nt,beta.real());
 
     NSL::Tensor<NSL::complex<double>> phi(device, Nt,Nx); phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi,NSL::Hubbard::Species::Particle);
  
     NSL::Logger::info("Running CG to compute MM†@x = b.");
 
