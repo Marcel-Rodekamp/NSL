@@ -10,6 +10,8 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/stopwatch.h>
 
+#include<CLI/CLI.hpp>
+
 /*! \file logger.hpp
  *  Utilities for logging to console and files
  *
@@ -22,6 +24,8 @@ namespace NSL::Logger {
     
     static bool do_profile = false;
 
+    // this is a lagacy functions and should be deleted better use the init
+    // below to add the arguments to a proper CLI 
     inline void init_logger(int argc, char* argv[]){
         int opt;
         std::string log_level = "info";
@@ -95,7 +99,6 @@ namespace NSL::Logger {
             profile_logger->flush_on(spdlog::level::debug);
         }
     }
-
 
     template <typename... Args>
     inline void debug(fmt::format_string<Args...> fmt, Args&&... args){
