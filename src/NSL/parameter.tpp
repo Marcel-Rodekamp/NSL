@@ -156,11 +156,11 @@ class Parameter: public std::unordered_map<std::string, ParameterEntry *>{
         return *(std::unordered_map<std::string, ParameterEntry *>::operator[](key));
     }
 
-    //! Add a parameter, default constructed value
+    //! Add a parameter at key, default constructed value
     template<typename Type>
-    void addParameter(const std::string & name){
+    void addParameter(const std::string & key){
         insert( std::make_pair<const std::string &, ParameterEntry *>(
-            name,
+            key,
             new TemplatedParameterEntry<Type>(Type{})
         ));
     }
