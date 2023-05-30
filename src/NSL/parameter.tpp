@@ -6,120 +6,166 @@
     
 namespace NSL{
 
-template<typename Type> class Parameter;
+template<typename Type> class TemplatedParameterEntry;
 
-// The following structure is inspired by
-// https://github.com/Marcel-Rodekamp/ParameterFileManager
-
-class ParameterBase{
+/*!
+ * This class represents a single entry in `NSL::Parameter(std::unordered_map<std::string,ParameterEntry *>)`.
+ * It implements basic functionality to hide the data type of the parameter stored.
+ * This is achieved by Deriving from this class (see `NSL::TemplatedParameterEntry`) and 
+ * dynamic casting to the child class.
+ * This Base class is the point of access. The user should never have to
+ * handle `NSL::TemplatedParameterEntry`.
+ *
+ * \todo: Implement a way to do `ParameterEntry(myVariable)`;
+ *        such that it can be used together with `NSL::Parameter::operator[]`;
+ * */
+class ParameterEntry{
     public:
-    virtual std::string to_string() = 0;
-    virtual void fromString(const std::string &) = 0;
-    
+    ParameterEntry() = default;
+
+    //! Retrieve the stored value. Type must match the initial type otherwise runtime error is thrown.
     template<typename Type>
-    Type to(){
-        Parameter<Type> * ptr = dynamic_cast<Parameter<Type> *>(this);
+    Type & to(){
+        // get the derived TemplatedParameterEntry
+        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
+        return ptr->value_;
+    }
+
+    //! Retrieve the stored value. Type must match the initial type otherwise runtime error is thrown.
+    template<typename Type>
+    const Type & to() const {
+        // get the derived TemplatedParameterEntry
+        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
+        return ptr->value_;
+    }
+
+    //! Implicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    template<typename Type>
+    operator Type(){
+        // get the derived TemplatedParameterEntry
+        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
+        return ptr->value_;
+    }
+
+    //! Implicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    template<typename Type>
+    operator Type() const {
+        // get the derived TemplatedParameterEntry
+        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
+        return ptr->value_;
+    }
+
+    //! Assigns a value of Type. Type must match the initial type otherwise runtime error is thrown.
+    template<typename Type>
+    ParameterEntry operator=(const Type & value){
+        // get the derived TemplatedParameterEntry
+        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
+        ptr->value_ = value;
+        return *ptr;
+    }
+
+    virtual ~ParameterEntry() = default;
+
+    protected:
+    //! Retrieves the address of `NSL::TemplatedParameterEntry` the runtime polymorphism points to
+    /*!
+     * This function performs an upcast to the derived onject `template<typename Type> NSL::TemplateParameterentry`.
+     * and performs checks that the conversion worked out correctly.
+     * If dynamic_cast fails (returning a nullptr) a std::runtime_error is thrown
+     * */
+    template<typename Type>
+    NSL::TemplatedParameterEntry<Type> * upcast(){
+        // if conversion does not work ptr = nullptr or throw std::bad_cast
+        NSL::TemplatedParameterEntry<Type> * ptr = dynamic_cast<TemplatedParameterEntry<Type> *>(this);
+        
+        // check for nullptr and return or throw
         if(ptr){
-            return ptr->template to_<Type>();
+            return ptr;
         } else {
-            throw std::runtime_error("Converting ParameterBase to Parameter failed in ParameterBase::to<Type>() ...");
+            throw std::runtime_error("Converting ParameterEntry to TemplatedParameterEntry failed");
         }
     }
-
-
-    friend std::ostream& operator<<(std::ostream & os, ParameterBase * pb){
-        os << pb->to_string();
-        return os;
-    }
-
 };
 
+/*! 
+ * This class implements a wrapper around a simple data type `Type` and is
+ * implementing the back end for `NSL::ParameterEntry`.
+ * The user most likely should not need to worry about this class as the point
+ * of access is really the `NSL::ParameterEntry`
+ * */
 template<typename Type>
-class Parameter: public ParameterBase {
+class TemplatedParameterEntry: public ParameterEntry{
     public:
-    Parameter() = default;
-    Parameter(const Parameter<Type> &) = default;
-    Parameter(Parameter<Type> &&) = default;
-
-    Parameter(const Type & value):
+    //! Construct the object given a value of type Type
+    TemplatedParameterEntry(const Type & value):
+        ParameterEntry(),
         value_(value)
     {}
 
-    void fromString(const std::string & strVal) override {
-        std::stringstream ss(strVal);
-        ss >> value_;
-    }
+    //! Construct the object using a default constructor
+    TemplatedParameterEntry() = default;
 
-    std::string to_string() override {
-        return NSL::to_string(this->value_);
-    }
-
-    friend std::ostream & operator<<(std::ostream & os, const Parameter<Type> & param){
-        os << param.value_; 
-        return os;
-    }
-
-    friend ParameterBase;
+    //! Befriend ParameterEntry such that it can access everything in here
+    friend class ParameterEntry;
 
     protected:
-
-    template<typename Type_>
-    Type_ to_(){
-        return value_;
-    }
-
+    //! The stored object
     Type value_;
+
 };
 
-class ParameterList: public std::unordered_map<std::string, ParameterBase *> {
+/*!
+ * A dictionary of `ParameterEntry`s references by a std::string.
+ * This class is basically and `std::unordered_dict` with one overload 
+ * (`operator[](const std::string&)`) and one extension `addParameter`
+ * The `ParameterEntry` is a runtime polymorphism around arbitrary datatype
+ * and can be added using the addParameter class.
+ *
+ * all std::unordered_map routines, except of `operator[]`, return a pointer to `ParameterEntry`.
+ *
+ * This class is strongly inspired by an old ParameterFile Management system
+ * I implemented some years ago:
+ * https://github.com/Marcel-Rodekamp/ParameterFileManager
+ * */
+class Parameter: public std::unordered_map<std::string, ParameterEntry *>{
     public:
+    //! Dereference the Parameter dictionary by a std::string key.
+    /*!
+     * This returns a ParameterEntry object. Direct access to the stored 
+     * data is not available. Use 
+     * ```
+     * NSL::Parameter params;
+     * params.addParameter<double>("myParam")
+     *
+     * std::cout << params["myParam"].to<double>() << std::endl;
+     * ```
+     *
+     * Implicit conversion however works just fine
+     * ```
+     * NSL::Parameter params;
+     * params.addParameter<double>("myParam")
+     *
+     * double myParamCopy = params["myParam"];
+     * ```
+     * or by overwriting the value
+     * ```
+     * params["myParam"] = 2.;
+     * ```
+     * */
+    ParameterEntry & operator[](const std::string & key){
+        return *(std::unordered_map<std::string, ParameterEntry *>::operator[](key));
+    }
 
-    friend std::ostream & operator<<(std::ostream & os, const ParameterList & params){
-        for(const auto & [key,param]: params){
-            os << key << ": " << param << '\n';
-        }
-        return os;
+    //! Add a parameter, default constructed value
+    template<typename Type>
+    void addParameter(const std::string & name){
+        insert( std::make_pair<const std::string &, ParameterEntry *>(
+            name,
+            new TemplatedParameterEntry<Type>(Type{})
+        ));
     }
 };
 
-
-/*
-    // Inspired by https://gieseanw.wordpress.com/2017/05/03/a-true-heterogeneous-container-in-c/
-class ErasedContainer{
-    public:
-    ErasedContainer() = default;
-
-    template<typename Type>
-    ErasedContainer(const Type & value)
-    {
-        containerMem_<Type>[this] = value;        
-    }
-
-    template<typename Type>
-    operator Type(){
-        return containerMem_<Type>[this];
-    }
-
-    template<typename Type>
-    Type to(){
-        return containerMem_<Type>[this];
-    }
-
-    private:
-    template<typename Type>
-    static std::unordered_map<ErasedContainer *, Type> containerMem_;
-
-};
-
-template<typename Type>
-std::unordered_map<ErasedContainer *, Type> ErasedContainer::containerMem_;
-
-
-
-//! dictionary <string,any> storing any set of id,parameter value pairs
-class Parameter: public std::unordered_map<std::string,ErasedContainer>{};
-
-*/
 } //namespace NSL
 
 #endif // NSL_PARAMETER
