@@ -24,7 +24,7 @@
 #include "Action.hpp"
 #include "Integrator.hpp"
 #include "MCMC.hpp"
-#include "commandLineInterface.tpp"
+#include "commandLineInterface.hpp"
 #include "parameter.tpp"
 
 #endif
