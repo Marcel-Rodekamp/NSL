@@ -8,7 +8,17 @@ namespace NSL {
 
 namespace Logger {
     //! This function adds the required arguments to the provided CLI
-    //! for initialization use one of the `NSL::init(...)` methods
+    /*! 
+     * This functions adds the logging facility to the command line interface.
+     * After parsing the command line arguments the logger can be initialized
+     * using 
+     * ```
+     * NSL::Logger::init(
+     *     log_level, // std::string
+     *     log_file   // std::string 
+     * );
+     * ```
+     * */
     inline void add_logger(CLI::App & app, std::string & log_level, std::string & log_file){
         log_level = "info";
         log_file = "";
@@ -30,44 +40,23 @@ namespace Logger {
             "Provide a file to put the logging to"
         );
     }
-
-    //! init the logger, must be called after log_level, log_file are parsed
-    inline void init(std::string log_level, std::string log_file){
-        std::map<std::string, spdlog::level::level_enum> levels = {
-            {"debug", spdlog::level::debug},
-            {"info", spdlog::level::info},
-            {"warn", spdlog::level::warn},
-            {"error", spdlog::level::err},
-        };
-
-        std::vector<spdlog::sink_ptr> sinks;
-        if(log_file != ""){
-            auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file, true);
-            file_sink->set_level(levels["debug"]);
-            sinks.push_back(file_sink);
-        }
-
-        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        console_sink->set_level(levels[log_level]);
-        sinks.push_back(console_sink);
-
-        auto logger = std::make_shared<spdlog::logger>("NSL_logger", begin(sinks), end(sinks));
-        logger->set_pattern("[%D %T] [%l] %v");
-        logger->set_level(spdlog::level::debug);
-        logger->flush_on(spdlog::level::debug);
-
-        spdlog::register_logger(logger);
-        spdlog::set_default_logger(logger);
-
-        if(do_profile){
-            auto profile_logger = spdlog::basic_logger_st("NSL_profiler", "NSL_profile.log", true);
-            profile_logger->set_pattern("[%D %T] %v");
-            profile_logger->flush_on(spdlog::level::debug);
-        }
-    }
 } //namespace Logger
 
 //! Initialize the logger and a `NSL::Parameter`
+/*!
+ * \param argc, number of command line arguments
+ * \param argv, command line argument
+ * \param options, array of strings used as arguments e.g. file -> command line argument --file.
+ *        Must match the order of template arguments 
+ * \param helpMessages, array of strings used to display messages if executable is invoked with --help or -h 
+ * \param CLIName, name of the executable printed in the help message.
+ *
+ * This initialization takes the options and puts it into a CLI. Then the 
+ * command line is parsed for the provided options and results are put into 
+ * an `NSL::Parameter` class. 
+ * Further, the logger is initialized. The available command line options
+ * can be found at `NSL::Logger::init`
+ * */
 template<typename ... Types>
 NSL::Parameter init(
     int argc, char ** argv, 
@@ -124,6 +113,20 @@ NSL::Parameter init(
 }
 
 //! Initialize the logger and a `NSL::Parameter`
+/*!
+ * \param argc, number of command line arguments
+ * \param argv, command line argument
+ * \param options, array of strings used as arguments e.g. file -> command line argument --file.
+ *        Must match the order of template arguments 
+ * \param CLIName, name of the executable printed in the help message.
+ *
+ * This initialization takes the options and puts it into a CLI. Then the 
+ * command line is parsed for the provided options and results are put into 
+ * an `NSL::Parameter` class. This overload ignores the help messages and 
+ * puts empty strings instead.
+ * Further, the logger is initialized. The available command line options
+ * can be found at `NSL::Logger::init`
+ * */
 template<typename ... Types>
 NSL::Parameter init(
     int argc, char ** argv, 
@@ -133,7 +136,15 @@ NSL::Parameter init(
     return NSL::init<Types...>( argc,argv,options,std::array<std::string,sizeof...(Types)>(),CLIName );
 }
 
-//! Initialize the logger
+//! Initialize the logger 
+/*!
+ * \param argc, number of command line arguments
+ * \param argv, command line argument
+ * \param CLIName, name of the executable printed in the help message.
+ *
+ * The logger is initialized. The available command line options
+ * can be found at `NSL::Logger::init`
+ * */
 void init(int argc, char ** argv, std::string CLIName = "NSL"){
     CLI::App app{CLIName};
 

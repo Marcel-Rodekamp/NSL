@@ -9,11 +9,10 @@
  * */
 
 void printMyParams(std::string file, int runParamA, double runParamB, NSL::complex<double> runParamC){
-    std::cout << "\nprinting from function" << std::endl;
-    std::cout << "working with parameter file: " << file << std::endl;
-    std::cout << "using run parameter A: " << runParamA << std::endl;
-    std::cout << "using run parameter B: " << runParamB << std::endl;
-    std::cout << "using run parameter C: " << runParamC << std::endl;
+    NSL::Logger::info("printMyParams: working with parameter file: {}", file);
+    NSL::Logger::info("printMyParams: using run parameter A: {}", runParamA);
+    NSL::Logger::info("printMyParams: using run parameter B: {}", runParamB);
+    NSL::Logger::info("printMyParams: using run parameter C: {}", NSL::to_string(runParamC));
 }
 
 int main(int argc, char ** argv){
@@ -42,14 +41,13 @@ int main(int argc, char ** argv){
     // NSL::init(argc,argv); // returns void
     // This initializes the logger only
     // for a more sophisticated ansatz with more freedom, please refer to 
-    // the command at the end of this file showing in more detail what one 
-    // can do
+    // the command at the end of this file showing more detail.
 
     // We can print the results using the NSL::ParameterEntry.to<Type>() method
-    std::cout << "working with parameter file: " << params["file"].to<std::string>() << std::endl;
-    std::cout << "using run parameter A: " << params["runParamA"].to<int>() << std::endl;
-    std::cout << "using run parameter B: " << params["runParamB"].to<double>() << std::endl;
-    std::cout << "using run parameter C: " << params["runParamC"].to<NSL::complex<double>>() << std::endl;
+    NSL::Logger::info("working with parameter file: {}", params["file"].to<std::string>());
+    NSL::Logger::info("using run parameter A: {}", params["runParamA"].to<int>());
+    NSL::Logger::info("using run parameter B: {}", params["runParamB"].to<double>());
+    NSL::Logger::info("using run parameter C: {}", NSL::to_string(params["runParamC"].to<NSL::complex<double>>()));
 
     // this fails at runtime as runParamB should be of type double
     //std::cout << "using run parameter B: " << params["runParamB"].to<int>() << std::endl;
@@ -66,39 +64,63 @@ int main(int argc, char ** argv){
 }
 
 
-/*
-// Add a parameter to store a file name 
-params.addParameter<std::string>("file");
-// Add another parameter to store an integer value
-params.addParameter<int>("runParamA");
-// Add another parameter to store a double value
-params.addParameter<double>("runParamB");
-// Add another parameter to store a complex double value
-params.addParameter<NSL::complex<double>>("runParamC");
-// Note we can extend this class in a similar way at any point
-
-// Declare the CLI object
-CLI::App app{"Example CLI"};
-
-// Add the different command line argument options
-// the templates specify what type to store the result in (`NSL::ParameterEntry`)
-// and what data type this corresponds to (std::string,int,double,...)
-// The first argument represents the option (see https://github.com/CLIUtils/CLI11 for more info)
-// The second argument specifies in which parameter entry the result should be stored
-// The third argument is used to print the help message accessible with -h or --help
-// Add an option to query for a file
-app.add_option<NSL::ParameterEntry,std::string>("-f, --file",  params["file"], "Provide a parameter file");
-// Add an option to query for runParamA
-app.add_option<NSL::ParameterEntry,int>("-A, --runParamA", params["runParamA"], "Specify a run parameter A");
-// Add an option to query for runParamB
-app.add_option<NSL::ParameterEntry,double>("-B, --runParamB", params["runParamB"], "Specify a run parameter B");
-// Add an option to query for runParamB
-app.add_option<NSL::ParameterEntry,NSL::complex<double>>("-C, --runParamC", params["runParamC"], "Specify a run parameter C");
-
-// parse the command line arguments 
-try {
-    app.parse(argc,argv);
-} catch (const CLI::ParseError &e) {
-    return app.exit(e);
-}
+/* This example uses a more flexible directly from the implementation of 
+ * the CLI: https://github.com/CLIUtils/CLI11
+ *
+ * // Generate the parameter class
+ * NSL::Parameter params;
+ *
+ * // Add a parameter to store a file name 
+ * params.addParameter<std::string>("file");
+ * // Add another parameter to store an integer value
+ * params.addParameter<int>("runParamA");
+ * // Add another parameter to store a double value
+ * params.addParameter<double>("runParamB");
+ * // Add another parameter to store a complex double value
+ * params.addParameter<NSL::complex<double>>("runParamC");
+ * // Note we can extend this class in a similar way at any point
+ * // Or even change the parameters using e.g.
+ * // params["runParamA"] = 3;
+ * 
+ * // Declare the CLI object
+ * CLI::App app{"Example CLI"};
+ *
+ * // Add the logger arguments to the CLI
+ * // this add options to app and initializes log_level, log_file
+ * std::string log_level;
+ * std::string log_file;
+ * NSL::Logger::add_logger(app, log_level, log_file);
+ * // alternatively use:
+ * // params.addParameter<std::string>("log level");
+ * // params.addParameter<std::string>("log file");
+ * // NSL::Logger::add_logger(app, params["log level"], params["log file"]);
+ *  
+ * // Add the different command line argument options
+ * // the templates specify what type to store the result in (`NSL::ParameterEntry`)
+ * // and what data type this corresponds to (std::string,int,double,...)
+ * // The first argument represents the option (see  for more info)
+ * // The second argument specifies in which parameter entry the result should be stored
+ * // The third argument is used to print the help message accessible with -h or --help
+ * // Add an option to query for a file
+ * app.add_option<NSL::ParameterEntry,std::string>("-f, --file",  params["file"], "Provide a parameter file");
+ * // Add an option to query for runParamA
+ * app.add_option<NSL::ParameterEntry,int>("-A, --runParamA", params["runParamA"], "Specify a run parameter A");
+ * // Add an option to query for runParamB
+ * app.add_option<NSL::ParameterEntry,double>("-B, --runParamB", params["runParamB"], "Specify a run parameter B");
+ * // Add an option to query for runParamB
+ * app.add_option<NSL::ParameterEntry,NSL::complex<double>>("-C, --runParamC", params["runParamC"], "Specify a run parameter C");
+ * 
+ * // parse the command line arguments 
+ * try {
+ *     app.parse(argc,argv);
+ * } catch (const CLI::ParseError &e) {
+ *     exit(app.exit(e));
+ * }
+ *
+ * // After parsing the logger needs to be initialized with the found parameters:
+ * NSL::Logger::init(log_level, log_file);
+ * // again for the alternative with params
+ * // NSL::Logger::init(params["log level"], params["log file"]);
+ *
+ * // Now everything is set up and we can proceed with the program
 */
