@@ -64,6 +64,12 @@ class ParameterEntry{
         return *ptr;
     }
 
+    //! Convert the stored value into a string and return it
+    //! If initial type is not convertible, error is thrown
+    virtual std::string repr(){
+        return this->repr();
+    };
+
     virtual ~ParameterEntry() = default;
 
     protected:
@@ -105,6 +111,10 @@ class TemplatedParameterEntry: public ParameterEntry{
     //! Construct the object using a default constructor
     TemplatedParameterEntry() = default;
 
+    std::string repr() override {
+        return NSL::to_string(value_);
+    }
+    
     //! Befriend ParameterEntry such that it can access everything in here
     friend class ParameterEntry;
 
@@ -162,6 +172,15 @@ class Parameter: public std::unordered_map<std::string, ParameterEntry *>{
         insert( std::make_pair<const std::string &, ParameterEntry *>(
             key,
             new TemplatedParameterEntry<Type>(Type{})
+        ));
+    }
+
+    //! Add a parameter at `key` with value `value`
+    template<typename Type>
+    void addParameter(const std::string & key, const Type & value){
+        insert( std::make_pair<const std::string &, ParameterEntry *>(
+            key,
+            new TemplatedParameterEntry<Type>(value)
         ));
     }
 };

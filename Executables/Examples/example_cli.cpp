@@ -1,71 +1,82 @@
 #include "NSL.hpp"
 
-/*
- * This example shows a default use case of the cli following the used library:
- * https://github.com/CLIUtils/CLI11
- *
- * Or directly look for a simple example:
- * https://github.com/CLIUtils/CLI11/blob/main/examples/simple.cpp
- * */
-
-void printMyParams(std::string file, int runParamA, double runParamB, NSL::complex<double> runParamC){
-    NSL::Logger::info("printMyParams: working with parameter file: {}", file);
-    NSL::Logger::info("printMyParams: using run parameter A: {}", runParamA);
-    NSL::Logger::info("printMyParams: using run parameter B: {}", runParamB);
-    NSL::Logger::info("printMyParams: using run parameter C: {}", NSL::to_string(runParamC));
-}
-
 int main(int argc, char ** argv){
-    // This is a very compact form to initialize the NSL::Logger as well as
-    // a parameter class from the command line.
-    // Basically, the command line is parsed for the parameters in the first
-    // initializer list, i.e. it is looking for 
-    // --file STR
-    // --runParamA INT
-    // --runParamB DOUBLE
-    // --runParamC COMPLEX
-    // the data types are provided with the template parameters matching 
-    // the order of the parameter strings. 
-    // The second initializer list provides a set of help messages that 
-    // are displayed using --help or -h. If omitted messages will be empty.
-    // The last argument (optional) provides a name to the executable which
-    // is printed for the help message
-    NSL::Parameter params = NSL::init<std::string, int, double, NSL::complex<double>>(
-        argc,argv,
-        {"file","runParamA","runParamB","runParamC"},
-        {"Provide a parameter file", "Specify a run parameter A",
-         "Specify a run parameter B", "Specify a run parameter C, format: '(real,imag)'"},
-        "Example CLI"
+    // define the general type for convinence
+    typedef NSL::complex<double> Type;
+
+    // This line parses the command line options 
+    // -f, --file A parameter file
+    // --GPU      A flag to to set the device
+    // The results are stored in the NSL::Parameter object and can be accessed
+    // with the keys "file" and "device" respectively.
+    // Furthermore, the logger is initialized and the command line is
+    // parsed for the logging options. For more information refer to
+    // NSL::Logger::init and NSL::Logger::add_logger
+    // For a more sophisticated CLI refer to the documentation at the end
+    // of this file
+    NSL::Parameter params = NSL::init(argc,argv,"Example CLI");
+
+    // We can read in the parameter file and put the read data into the 
+    // params object, notice this uses the example_param.yml file
+    // For personal files, this code needs to be adjusted accordingly
+    YAML::Node yml = YAML::LoadFile(params["file"]);
+
+    // convert the data from example_param.yml and put it into the params
+    // The name of the physical system
+    params.addParameter<std::string>(
+        "name", yml["system"]["name"].as<std::string>()
     );
-    // if no parameters have to be passed the minimal initialization should be
-    // NSL::init(argc,argv); // returns void
-    // This initializes the logger only
-    // for a more sophisticated ansatz with more freedom, please refer to 
-    // the command at the end of this file showing more detail.
+    // The inverse temperature 
+    params.addParameter<Type>(
+        "beta", yml["system"]["beta"].as<double>()
+    );
+    // The number of time slices
+    params.addParameter<NSL::size_t>(
+        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
+    );
+    // The on-site interaction
+    params.addParameter<Type>(
+        "U", yml["system"]["U"].as<double>()
+    );
+    // The HMC save frequency
+    params.addParameter<NSL::size_t>(
+        "save frequency", yml["HMC"]["save frequency"].as<NSL::size_t>()
+    );
+    // The thermalization length
+    params.addParameter<NSL::size_t>(
+        "Ntherm", yml["HMC"]["Ntherm"].as<NSL::size_t>()
+    );
+    // The number of configurations
+    params.addParameter<NSL::size_t>(
+        "Nconf", yml["HMC"]["Nconf"].as<NSL::size_t>()
+    );
+    // The trajectory length
+    params.addParameter<double>(
+        "trajectory length", yml["Leapfrog"]["trajectory length"].as<double>()
+    );
+    // The number of molecular dynamic steps
+    params.addParameter<NSL::size_t>(
+        "Nmd", yml["Leapfrog"]["Nmd"].as<NSL::size_t>()
+    );
+    // The h5 file name to store the simulation results
+    params.addParameter<std::string>(
+        "h5file", yml["fileIO"]["h5file"].as<std::string>()
+    );
 
-    // We can print the results using the NSL::ParameterEntry.to<Type>() method
-    NSL::Logger::info("working with parameter file: {}", params["file"].to<std::string>());
-    NSL::Logger::info("using run parameter A: {}", params["runParamA"].to<int>());
-    NSL::Logger::info("using run parameter B: {}", params["runParamB"].to<double>());
-    NSL::Logger::info("using run parameter C: {}", NSL::to_string(params["runParamC"].to<NSL::complex<double>>()));
+    // Now we want to log the found parameters
+    // - key is a std::string name,beta,...
+    // - value is a ParameterEntry * which is a wrapper around the actual 
+    //   value of interest, we can use ParameterEntry::repr() to get a string
+    //   representation of the stored value
+    for(auto [key, value]: params){
+        NSL::Logger::info( "{}: {}", key, value->repr() );
+    }
 
-    // this fails at runtime as runParamB should be of type double
-    //std::cout << "using run parameter B: " << params["runParamB"].to<int>() << std::endl;
-
-    // Or implicitly convert the NSL::ParameterEntry to it's corresponding 
-    // Types. Notice, also here, the type must match exactly. Currently, we
-    // don't support explicit/implicit casts to other types.
-    printMyParams(params["file"], params["runParamA"], params["runParamB"], params["runParamC"]);
-    
-    // Consequently, this would fail (runParamB is not an integer)
-    //printMyParams(params["file"], params["runParamB"], params["runParamB"], params["runParamC"]);
-    
-    return EXIT_SUCCESS;
 }
-
 
 /* This example uses a more flexible directly from the implementation of 
- * the CLI: https://github.com/CLIUtils/CLI11
+ * the CLI: https://github.com/CLIUtils/CLI11 
+ * and augmented to work with NSL::Parameter objects
  *
  * // Generate the parameter class
  * NSL::Parameter params;
