@@ -99,6 +99,57 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     return params;
 }
 
+NSL::Parameter init(int argc, char ** argv, 
+        std::string log_pattern,
+        std::string profile_pattern,
+        std::string CLIName = "NSL"
+){
+    CLI::App app{CLIName};
+
+    // this add options to app and initializes log_level, log_file
+    std::string log_level;
+    std::string log_file;
+    NSL::Logger::add_logger(app, log_level, log_file);
+
+    // Define a bunch of default options 
+    NSL::Parameter params;
+    params.addParameter<std::string>("file");
+    app.add_option<NSL::ParameterEntry, std::string>("-f, --file", params["file"], 
+        "Provide a parameter file"
+    );
+
+    bool useGPU = false;
+    app.add_flag("--GPU", useGPU, "Toggle GPU usage, according to this params['device'] is NSL::GPU or NSL::CPU [DEFAULT]");
+
+    // parse the command line arguments 
+    try {
+        app.parse(argc,argv);
+    } catch (const CLI::ParseError &e) {
+        exit(app.exit(e));
+    }
+
+    // initialize the use of GPU/CPU. This is not restrictive but 
+    // params["device"] can be used for convenience.
+    if (useGPU){
+        params.addParameter<NSL::Device>("device", NSL::Device("GPU"));
+    } else {
+        params.addParameter<NSL::Device>("device", NSL::Device("CPU"));
+    }
+    
+    // after the logging has been parsed we can simply initialize the logger
+    NSL::Logger::init(log_level, log_file, log_pattern, profile_pattern);
+
+    NSL::Logger::info(
+        "Provided file: {}", std::string(params["file"])
+    );
+
+    NSL::Logger::info(
+        "Using device: {}", NSL::Device(params["device"]).repr()
+    );
+
+    return params;
+}
+
 } // namespace NSL
 
 #endif // NSL_COMMAND_LINE_INTERFACE

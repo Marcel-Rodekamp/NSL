@@ -114,7 +114,10 @@ namespace NSL::Logger {
      *  The parameter `log_file` can be used to put the log output into
      *  the specified file. If `log_file=""` output is logged to the console.
      * */
-    inline void init(std::string log_level, std::string log_file){
+    inline void init(std::string log_level, std::string log_file,
+        std::string log_pattern = "[%D %T] [%l] %v",
+        std::string profile_pattern = "[%D %T] %v"
+    ){
         std::map<std::string, spdlog::level::level_enum> levels = {
             {"debug", spdlog::level::debug},
             {"info", spdlog::level::info},
@@ -134,7 +137,7 @@ namespace NSL::Logger {
         sinks.push_back(console_sink);
 
         auto logger = std::make_shared<spdlog::logger>("NSL_logger", begin(sinks), end(sinks));
-        logger->set_pattern("[%D %T] [%l] %v");
+        logger->set_pattern(log_pattern);
         logger->set_level(spdlog::level::debug);
         logger->flush_on(spdlog::level::debug);
 
@@ -143,7 +146,7 @@ namespace NSL::Logger {
 
         if(do_profile){
             auto profile_logger = spdlog::basic_logger_st("NSL_profiler", "NSL_profile.log", true);
-            profile_logger->set_pattern("[%D %T] %v");
+            profile_logger->set_pattern(profile_pattern);
             profile_logger->flush_on(spdlog::level::debug);
         }
     }
