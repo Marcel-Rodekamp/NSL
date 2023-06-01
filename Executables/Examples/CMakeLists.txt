@@ -37,3 +37,7 @@ target_link_libraries(example_correlators NSL)
 
 add_executable(example_cli example_cli.cpp)
 target_link_libraries(example_cli NSL)
+
+# Copy the example parameter file to the binary so that one can execute the 
+# code without specifying a full path to the src folder.
+file(COPY example_param.yml DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

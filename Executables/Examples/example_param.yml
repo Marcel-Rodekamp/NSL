@@ -13,6 +13,7 @@ system:
   U: 2.
   Nt: 16
   hopping: 1.
+  nions: 20
   adjacency: 
   - [0 , 1 ]
   - [0 , 7 ]
