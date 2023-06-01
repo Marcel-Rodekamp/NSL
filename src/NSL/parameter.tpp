@@ -2,7 +2,7 @@
 #define NSL_PARAMETER
 
 #include <sstream>
-
+#include "IO/to_string.tpp"
     
 namespace NSL{
 
@@ -39,7 +39,7 @@ class ParameterEntry{
         return ptr->value_;
     }
 
-    //! Implicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    //! Explicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
     template<typename Type>
     operator Type(){
         // get the derived TemplatedParameterEntry
@@ -47,7 +47,7 @@ class ParameterEntry{
         return ptr->value_;
     }
 
-    //! Implicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    //! Explicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
     template<typename Type>
     operator Type() const {
         // get the derived TemplatedParameterEntry
@@ -112,7 +112,12 @@ class TemplatedParameterEntry: public ParameterEntry{
     TemplatedParameterEntry() = default;
 
     std::string repr() override {
-        return NSL::to_string(value_);
+        if constexpr(std::is_convertible_v<Type,std::string> || NSL::Concept::isNumber<Type>){
+            return NSL::to_string(value_);
+        } else {
+            // e.g. NSL::SpatialLattice
+            return value_.name();
+        }
     }
     
     //! Befriend ParameterEntry such that it can access everything in here
