@@ -41,21 +41,15 @@ void test_force(){
 
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a ring with {} sites.", NSL::real(beta), Nt, NSL::real(U), Nx);
 
-    // Put the action parameters into the appropriate container
-    typename NSL::Action::HubbardGaugeAction<Type>::Parameters params(
-        /*beta=*/  beta,
-        /*Nt = */  Nt,    
-        /*U =  */  U
-    );
-    typename NSL::Action::HubbardFermionAction<Type,decltype(lattice),
-        HFM<Type,decltype(lattice)>>::Parameters paramsHFM(
-        /*beta=*/  beta,
-        /*Nt = */  Nt,    
-        /*lattice=*/lattice
-    );
+    NSL::Parameter params;
+    params.addParameter<Type>("beta",beta);
+    params.addParameter<Type>("U",U);
+    params.addParameter<Type>("mu",0);
+    params.addParameter<NSL::size_t>("Nt",Nt);
+    params.addParameter<decltype(lattice)>("lattice", lattice);
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<Type,decltype(lattice),HFM<Type,decltype(lattice)>> S_fermion(paramsHFM);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),HFM<Type,decltype(lattice)>> S_fermion(params);
 
     // Initialize the action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -68,7 +62,7 @@ void test_force(){
     config["phi"].randn();
     config["phi"].imag() = 0; // use purely real fields
     
-    config["phi"] *= params.Utilde;
+    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
 
     NSL::Configuration<Type> gradS{
         {"phi", NSL::Tensor<Type>(Nt,Nx)}
