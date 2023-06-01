@@ -31,53 +31,20 @@ class HubbardFermionAction :
 {   
     public: 
 
-    //! Parameter set for the Hubbard Gauge Action
-    /*!
-     * This parameters contain 
-     * - `U` The on-site interaction
-     * - `beta` The inverse temperature
-     * - `Nt` The number of time slice (troterization)
-     * */
-    class Parameters { 
-        public:
-        // inverse temperature
-	    const Type beta;
-
-        // chemical potential
-        const Type mu;
-
-        // time slices
-        const NSL::size_t Nt;
-
-        // lattice
-        LatticeType & lattice;
-
-        Parameters(const Type & beta, const NSL::size_t & Nt, LatticeType & lattice):
-            beta(beta), mu(0), Nt(Nt), lattice(lattice), delta(beta/Nt) 
-        {}
-
-        Parameters(const Type & beta, const Type & mu, const NSL::size_t & Nt, LatticeType & lattice):
-            beta(beta), mu(mu), Nt(Nt), lattice(lattice), delta(beta/Nt) 
-        {}
-
-        // lattice spacing
-        const Type delta;
-    };
-
-	HubbardFermionAction(const Parameters & params) : 
+	HubbardFermionAction(NSL::Parameter & params) : 
         BaseAction<Type, TensorType>(
             "phi"
         ),
         params_(params),
-        hfm_(params.lattice, params.Nt, params.beta, params.mu)
+        hfm_(params)
     {}
 
-	HubbardFermionAction(const Parameters & params, const std::string & fieldName) : 
+	HubbardFermionAction(NSL::Parameter & params, const std::string & fieldName) : 
         BaseAction<Type, TensorType>(
             fieldName
         ),
         params_(params),
-        hfm_(params.lattice, params.Nt, params.beta, params.mu)
+        hfm_(params)
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -93,7 +60,7 @@ class HubbardFermionAction :
 	Type eval(const Tensor<TensorType>& phi);
 
     protected:
-    Parameters params_;
+    NSL::Parameter params_;
 
     FermionMatrixType hfm_;
 }; // class HubbardFermiAction

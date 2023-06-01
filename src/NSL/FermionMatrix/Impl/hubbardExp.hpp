@@ -74,6 +74,27 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
+
+    HubbardExp(NSL::Hubbard::Species species, NSL::Parameter & params):
+        HubbardExp(
+            species,
+            params["lattice"].to<LatticeType>(), 
+            NSL::size_t(params["Nt"]), 
+            Type(params["beta"]), 
+            Type(params["mu"])
+        )
+    {}
+
+    HubbardExp(NSL::Parameter & params):
+        HubbardExp(
+            params["lattice"].to<LatticeType>(), 
+            NSL::size_t(params["Nt"]), 
+            Type(params["beta"]), 
+            Type(params["mu"])
+        )
+    {}
+
+
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
         this->species_ = species;
@@ -151,6 +172,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! delta = beta/N_t
     Type delta_;
 
+    //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
     Type mu_;
 
     // Sign of exp( +/- kappa), is assigned in populate
