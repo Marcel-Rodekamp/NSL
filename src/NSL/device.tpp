@@ -74,6 +74,14 @@ class Device {
         return os;
     }
 
+    operator std::string(){
+        return repr_;
+    }
+
+    operator std::string() const {
+        return repr_;
+    }
+
     const std::string repr(){
         return repr_;  
     }

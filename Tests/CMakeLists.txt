@@ -48,3 +48,5 @@ add_NSL_test(test_leapfrog Integrator/test_leapfrog.cpp)
 add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
 
 add_NSL_test(test_force Action/test_force.cpp)
+
+add_NSL_test(test_parameter Parameter/test_parameter.cpp)

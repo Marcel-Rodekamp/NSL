@@ -17,6 +17,12 @@ inline std::string to_string(const Type &z){
         return std::to_string(z); 
     }
 }
+
+template<typename Type>
+inline std::string to_string(const Type & obj){
+    return obj;
+}
+
 } // namespace NSL
 
 #endif // NSL_IO_TO_STRING_TPP

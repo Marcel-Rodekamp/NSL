@@ -52,6 +52,7 @@ include(cmake/catch2.cmake)
 include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 include(cmake/yamlcpp.cmake)
+include(cmake/CLIUtils.cmake)
 
 add_subdirectory(src/NSL)
 
