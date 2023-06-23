@@ -74,6 +74,25 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
+    HubbardDiag(NSL::Hubbard::Species species, NSL::Parameter & params):
+        HubbardDiag(
+            species,
+            params["lattice"].to<LatticeType>(), 
+            NSL::size_t(params["Nt"]), 
+            Type(params["beta"]), 
+            Type(params["mu"])
+        )
+    {}
+
+    HubbardDiag(NSL::Parameter & params):
+        HubbardDiag(
+            params["lattice"].to<LatticeType>(), 
+            NSL::size_t(params["Nt"]), 
+            Type(params["beta"]), 
+            Type(params["mu"])
+        )
+    {}
+
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
         this->species_ = species;
