@@ -11,6 +11,7 @@
 
 #include "../fermionMatrix.hpp"
 #include "../../Action/Implementations/hubbard.tpp"
+#include "Tensor/Factory/like.tpp"
 
 namespace NSL::FermionMatrix {
 
@@ -74,7 +75,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
-
     HubbardExp(NSL::Hubbard::Species species, NSL::Parameter & params):
         HubbardExp(
             species,
@@ -94,6 +94,22 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         )
     {}
 
+
+    //! Populates the fermion matrix with a new configuration phi using species
+    /*!
+     * For measurements the source vector might by of shape Nt,Nx,Nx (identity matrix
+     * on each time slice) This can be prepared by putting an appropriately shaped phi
+     * i.e. of shape (Nt,Nx,1). We then need to make space for that calculation, hence
+     * expanding the internal tensors to be (tensorShape,1). 
+     * If this is desired, set reshape = True. 
+     * Otherwise you can use either this function with reshape = False (default)
+     * */
+    void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species, bool reshape){
+        if (reshape and phi_.dim() < phi.dim()) {
+            this->expandInternal_();
+        } 
+        this->populate(phi, species);
+    }
 
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
@@ -121,6 +137,22 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->phiExpInv_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
         );
+    }
+
+    //! Populates the fermion matrix with a new configuration phi
+    /*!
+     * For measurements the source vector might by of shape Nt,Nx,Nx (identity matrix
+     * on each time slice) This can be prepared by putting an appropriately shaped phi
+     * i.e. of shape (Nt,Nx,1). We then need to make space for that calculation, hence
+     * expanding the internal tensors to be (tensorShape,1). 
+     * If this is desired, set reshape = True. 
+     * Otherwise you can use either this function with reshape = False (default)
+     * */
+    void populate(const NSL::Tensor<Type> & phi, bool reshape){
+        if (reshape and phi_.dim() < phi.dim()) {
+            this->expandInternal_();
+        } 
+        this->populate(phi);
     }
 
     //Declaration of methods methods M, M_dagger, MM_dagger and MdaggerM
@@ -201,6 +233,15 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
      **/
     NSL::Tensor<Type> F_(const NSL::Tensor<Type> & psi);
 
+    void expandInternal_(){
+        phi_.expand(1);
+        phiExp_.expand(1);
+        phiExpInv_.expand(1);
+        Fk_.expand(1);
+        FkFkFk_.expand(1);
+        invAp1F_.expand(1);
+        pi_dot_.expand(1);
+    }
 };
 } // namespace FermionMatrix
 
