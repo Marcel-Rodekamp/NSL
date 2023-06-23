@@ -26,6 +26,6 @@
 #include "MCMC.hpp"
 #include "commandLineInterface.hpp"
 #include "parameter.tpp"
-#include "Mesurements.hpp"
+#include "Measurements.hpp"
 
 #endif

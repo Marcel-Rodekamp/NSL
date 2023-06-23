@@ -5,7 +5,8 @@ namespace NSL{
 
 class Measurement{
     public:
-        Measurement(NSL::H5IO & h5):
+        Measurement(NSL::Parameter params, NSL::H5IO & h5):
+            params_(params),
             h5_(h5)
         {}
 
@@ -17,6 +18,7 @@ class Measurement{
         virtual void measure() = 0;
 
     protected:
+        NSL::Parameter params_;
         NSL::H5IO & h5_;
 };
 }
