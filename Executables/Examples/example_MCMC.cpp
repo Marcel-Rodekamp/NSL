@@ -68,9 +68,20 @@ int main(int argc, char* argv[]){
         "h5file", yml["fileIO"]["h5file"].as<std::string>()
     );
     
-    // In principle we can have a chemical potential, for this example we
-    // assume it is zero
-    params.addParameter<Type>("mu");
+    // ==================================================================================
+    // These are optional parameters, if yml does not contain the node the default value
+    // will be used. 
+    // ==================================================================================
+        
+    // Chemical Potential
+    if (yml["system"]["mu"]){
+        params.addParameter<Type>(
+            "mu", yml["system"]["mu"].as<double>()
+        );
+    } else {
+        // DEFAULT: mu = 0
+        params.addParameter<Type>("mu");
+    }
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
