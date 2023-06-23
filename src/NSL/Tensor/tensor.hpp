@@ -255,4 +255,8 @@ class Tensor:
 #include "Tensor/Impl/operatorMultiplication.tpp"
 #include "Tensor/Impl/operatorDivision.tpp"
 
+// factory
+#include "Factory/like.tpp"
+#include "Factory/eye.tpp"
+
 #endif //NSL_TENSOR_HPP
