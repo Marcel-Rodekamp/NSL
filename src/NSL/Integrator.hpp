@@ -3,5 +3,6 @@
 
 #include "Integrator/integrator.tpp"
 #include "Integrator/Impl/leapfrog.tpp"
+#include "Integrator/Impl/rungeKutta4.tpp"
 
 #endif

@@ -12,6 +12,7 @@ system:
   beta: 16.0
   U: 2.
   Nt: 64
+  mu: 1.0
   hopping: 1.
   nions: 20
   adjacency: 
