@@ -1,0 +1,3 @@
+add_executable(flowForTrain_keepLast flowForTrain_keepLast.cpp)
+target_link_libraries(flowForTrain_keepLast NSL)
+
