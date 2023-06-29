@@ -11,6 +11,7 @@
 #include "typePromotion.hpp"
 #include "types.hpp"
 #include "complex.hpp"
+#include "realImag.tpp"
 #include "logger.hpp"
 
 // NSL
