@@ -15,13 +15,13 @@ class RungeKutta4: Integrator<ActionTermTypes...> {
     //! Constructor of the RungeKutta 
     /*! 
      * */
-    RungeKutta4(const NSL::Action::Action<ActionTermTypes...> & action, 
+    RungeKutta4(
+        const NSL::Action::Action<ActionTermTypes...> & action, 
         const double & maxTime,
         const NSL::size_t & numberSteps,
         bool conjugategrad = false
     ):
             Integrator<ActionTermTypes...>(action),
-            maxTime_(maxTime),
             numSteps_(numberSteps),
             conjugateGrad_(conjugategrad),
             stepSize_(static_cast<double>(maxTime)/static_cast<double>(numberSteps)) 
@@ -39,7 +39,7 @@ class RungeKutta4: Integrator<ActionTermTypes...> {
 
         for(NSL::size_t n = 0; n < numSteps_; ++n){
             // Compute k1 = f(q_n)
-            NSL::Configuration<Type> k1 =  stepSize_ * grad_(q);
+            NSL::Configuration<Type> k1 = stepSize_ * grad_(q);
 
             // Compute k2 = f( q_n + (eps/2)*k1 )
             NSL::Configuration<Type> k2 = stepSize_ * grad_( q + 0.5 * k1 );
@@ -51,15 +51,29 @@ class RungeKutta4: Integrator<ActionTermTypes...> {
             NSL::Configuration<Type> k4 = stepSize_ * grad_( q + k3 );
 
             // compute q_{n+1}
-            q += (1./6.) * ( k1 + 2*k2 + 2*k3 + k4 ); 
+            q += (1./6.) * ( k1 + 2.0*k2 + 2.0*k3 + k4 ); 
         }
 
         return q;
     }
 
+    //! Update step size.
+    /*! 
+     * Use this function with care as it does NOT update the number of steps
+     * your end point time thus changes
+     * */
+    double & stepSize(){return stepSize_;}
+
+    //! Update Number of Steps.
+    /*! 
+     * Use this function with care as it does NOT update the step size
+     * your end point time thus changes!
+     * */
+    NSL::size_t & numSteps(){return numSteps_;}
+
     protected:
         template<NSL::Concept::isNumber Type>
-        inline NSL::Configuration<Type> grad_( NSL::Configuration<Type>  q ){
+        inline NSL::Configuration<Type> grad_( NSL::Configuration<Type> q ){
             NSL::Configuration<Type> F = this->action_.grad(q);
             
             if (conjugateGrad_){
@@ -71,7 +85,6 @@ class RungeKutta4: Integrator<ActionTermTypes...> {
             return F;
         }
 
-        double maxTime_;
         NSL::size_t numSteps_;
         double stepSize_;
         bool conjugateGrad_;
