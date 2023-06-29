@@ -11,7 +11,7 @@ int main(int argc, char ** argv){
     typedef NSL::complex<double> Type;
 	
     // Initialize NSL
-    NSL::Parameter params = NSL::init(argc, argv, "Example MCMC");
+    NSL::Parameter params = NSL::init(argc, argv, "Example Runge Kutta 4");
     // an example parameter file is can be found in example_param.yml
     
     auto init_time = NSL::Logger::start_profile("Initialization");
@@ -81,13 +81,8 @@ int main(int argc, char ** argv){
     params.addParameter<decltype(lattice)>("lattice", lattice);
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<
-        Type,
-        decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-    > S_fermion(params);
 
-    NSL::Action::Action S = S_gauge; // + S_fermion;
+    NSL::Action::Action S = S_gauge; 
 
     NSL::Configuration<Type> q{{"phi",
         NSL::Tensor<Type>( params["device"].to<NSL::Device>(), 
@@ -96,31 +91,31 @@ int main(int argc, char ** argv){
         )
     }};
 
-    q["phi"].randn();
+    // initial condition: exp(tau * Uinv * Phi)|_{tau = 0} = 1
+    q["phi"] = Type({1,0.1});
 
-    NSL::RealTypeOf<Type> T = 0.1;
+    Type Uinv = 1/NSL::Hubbard::tilde<Type>(params,"U");
+
+    NSL::RealTypeOf<Type> T = 1;
 
     NSL::Logger::info("Error \t step size");
     NSL::size_t numSteps = 1;
-    //for(NSL::size_t numSteps = 10; numSteps < 210; numSteps+=10){
+    for(NSL::size_t numSteps = 10; numSteps < 210; numSteps+=10){
         NSL::Integrator::RungeKutta4 RK4(
             S, T, numSteps,  true
         );
         
         NSL::Configuration<Type> qt = RK4( q );
 
-        NSL::Tensor<Type> dq = (qt["phi"] - q["phi"])/ T;
+        NSL::Tensor<Type> dq = Uinv*NSL::LinAlg::exp( Uinv*T*q["phi"] ) ;
 
         NSL::Configuration<Type> F = S.grad(qt);
 
         auto diff = dq - F["phi"].conj();
         auto error = NSL::real(NSL::LinAlg::abs( diff )).sum();
         
-        std::cout << diff.real()  << std::endl;
-        std::cout << diff.imag()  << std::endl;
-
         NSL::Logger::info("{} \t {}", error, T/numSteps);
-    //}
+    }
 
     return EXIT_SUCCESS;
 }
