@@ -349,7 +349,28 @@ class H5IO {
         
 	        return 0; 
         } // read(config,node)
-  
+    
+        template<NSL::Concept::isNumber Type>
+        inline int write(const Type & obj, const std::string node){
+            if constexpr(NSL::is_complex<Type>()){
+                typedef NSL::RealTypeOf<Type> real;
+                typedef std::complex<real> comp;
+
+                auto dataset = h5f_.createDataSet<comp>(
+                    node,
+                    HighFive::DataSpace::From(static_cast<comp>(obj))
+                );
+                dataset.write(static_cast<comp>(obj));
+            } else {
+                auto dataset = h5f_.createDataSet<Type>(
+                    node,
+                    HighFive::DataSpace::From(obj)
+                );
+                dataset.write(obj);
+            }
+            
+            return 0;
+        }
     
     private:
         std::string h5file_;
