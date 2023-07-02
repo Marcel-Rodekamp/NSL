@@ -1,3 +1,5 @@
 add_executable(flowForTrain_keepLast flowForTrain_keepLast.cpp)
 target_link_libraries(flowForTrain_keepLast NSL)
 
+add_executable(flowForTrain_keepProbable flowForTrain_keepProbable.cpp)
+target_link_libraries(flowForTrain_keepProbable NSL)

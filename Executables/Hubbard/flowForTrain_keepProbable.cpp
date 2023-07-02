@@ -1,8 +1,5 @@
 #include "NSL.hpp"
 
-template<NSL::Concept::isNumber Type>
-bool acceptReject(NSL::Parameter params, const Type & Sprop, const Type & Sprev, const double stepSize);
-
 double decreaseStepSize(NSL::Parameter params, double stepSize, double ImSErr);
 double increaseStepSize(NSL::Parameter params, double stepSize, double ImSErr);
 bool stepSizeCheck(NSL::Parameter params, double & stepSize, double flowTime);
@@ -186,18 +183,15 @@ int main(int argc, char ** argv){
             /*conjugateGrad=*/true
         );
 
-        // initialize a vector for the actions
-        NSL::Tensor<Type> actVals(numMaxFlowStep+1);
-
         // Sample new configuration from N(mu,sigma) + ic
         // where mu ~ N(0,1)
         //    sigma ~ U( 1/2 deltaU, 1.5 deltaU )
         // on the tangent plane
-        mus(n) = NSL::Random::randn<double>();
-        sigmas(n) = NSL::Random::rand<double>( 
-            0.5 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")), 
-            1.5 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")) 
-        );
+        // mus(n) = NSL::Random::randn<double>();
+        sigmas(n) = std::sqrt(NSL::Random::rand<double>( 
+            0.9 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")), 
+            1.1 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")) 
+        ));
         // randomly sampled real part
         conf["phi"].randn(mus(n), sigmas(n));
         // shift to tangent plane
@@ -207,7 +201,15 @@ int main(int argc, char ** argv){
         phi_TP(n,NSL::Slice(),NSL::Slice()) = conf["phi"];
 
         // compute the action of the initial configuration
-        actVals(0) = S(conf);
+        Type actVal_TP = S(conf);
+
+        // draw the stopping criterion ~ U(0,1)
+        double targetS = NSL::Random::rand<double>();
+        // transform to an exponential distribution ~exp(-S)/\int_{0}^{infinity} e^{-S} dS
+        targetS = -NSL::LinAlg::log(1.-targetS);
+        // can shift this to a relevant region
+        // ~exp(-S+S_0)/\int_{S_0}^{infinity} e^{-S+S_0} dS
+        targetS+= NSL::real(actVal_TP);
 
         // define the flow time; each step will add to this variable if accepted
         double flowTime = 0;
@@ -269,7 +271,7 @@ int main(int argc, char ** argv){
             //If Im S is not precise enough, we reduce the step size 
             // by the same rule as isle did it:
             // https://github.com/evanberkowitz/isle/blob/devel/src/isle/cpp/integrator.cpp#109
-            double ImSErr = NSL::LinAlg::abs(NSL::LinAlg::exp( i*NSL::imag(actVals(0)-actVal) ) - 1.);
+            double ImSErr = NSL::LinAlg::abs(NSL::LinAlg::exp( i*NSL::imag(actVal_TP-actVal) ) - 1.);
 
             if(ImSErr > params["ImS precision"].to<double>()){
                 NSL::Logger::debug(
@@ -290,18 +292,17 @@ int main(int argc, char ** argv){
                 continue;
             }
 
-            // we can now check that the step is still relevant for our dataset
-            if(acceptReject(params,/*S_prop=*/actVal,/*S_prev=*/actVals(tIDX-1),/*stepSize*/RKstep.stepSize())){
-                // accept
+            // continue running
+            if(NSL::real(actVal) < targetS){
+                // prepare  next step
                 conf = proposal;
-                actVals(tIDX) = actVal;
 
                 // add to the flow time
                 flowTime += RKstep.stepSize();
 
                 // Log the current status
-                NSL::Logger::info("Configuration {}/{}: Accepted flow time {:>.4}(tIDX={}/{}; step size={}) after {} try(s); S = ({:>1.2e}; {:>1.2e})",
-                    n+1,params["Nconf"].to<NSL::size_t>(),flowTime,tIDX,numMaxFlowStep,stepSize, tries+1, NSL::real(actVal), NSL::imag(actVal)
+                NSL::Logger::info("Configuration {}/{}: flow time {:>.4}(tIDX={}/{}; step size={}) after {} try(s); S = ({:>1.2e}; {:>1.2e}); targetS = {}",
+                    n+1,params["Nconf"].to<NSL::size_t>(),flowTime,tIDX,numMaxFlowStep,stepSize, tries+1, NSL::real(actVal), NSL::imag(actVal), targetS
                 );
 
                 // allow to increase the step size again
@@ -310,13 +311,11 @@ int main(int argc, char ** argv){
                 // reset the tries the tries for the next flow time
                 tries = 0;
             } else {
-                // Log the current status
-                NSL::Logger::info("Configuration {}/{}: Rejected flow time {:>.4}(tIDX={}/{}; step size={}) after {} try(s); S = ({:>1.2e}; {:>1.2e})",
-                    n+1,params["Nconf"].to<NSL::size_t>(),flowTime,tIDX,numMaxFlowStep,stepSize, tries+1, NSL::real(actVal), NSL::imag(actVal)
-                );
-
+                
+                // we are done here
                 break;
             }
+
         } // while flowTime < maxFlowTime and ...
 
         // if the minimal flow time is not reached redo the trajectory
@@ -332,12 +331,15 @@ int main(int argc, char ** argv){
             --n; 
             continue;
         }
-    
+
+        // Now define which point of the trajectory is bing picked
+
         // store the results
         phi_FM(n,NSL::Slice(),NSL::Slice()) = conf["phi"];
-        flowTimes(n) = flowTime;
+        flowTimes(n) = flowTime ;
         S_FM(n) = actVal; 
-        S_TP(n) = actVals(0);
+        S_TP(n) = actVal_TP;
+
     } // for n = 0,1,...,Nconf-1
 
     // write the results to file
@@ -350,24 +352,6 @@ int main(int argc, char ** argv){
     h5.write(mus, "FlowStatistics/locations");
 
     return EXIT_SUCCESS;
-}
-
-
-template<NSL::Concept::isNumber Type>
-bool acceptReject(NSL::Parameter params, const Type & Sprop, const Type & Sprev, const double stepSize){
-    // Compute the system volume to make the weight 
-    double V = params["Nt"].to<NSL::size_t>() * params["Nx"].to<NSL::size_t>();
-
-    //evaluate the weights 
-    // w = exp( -Re(S_t - S_{t-1})/V )
-    double acceptanceProbability = NSL::LinAlg::exp( 
-        -NSL::real(Sprop-Sprev)/V
-    );
-
-    // choose to continue or stop flowing,
-    // accept with probability U(0,c) where c is the denominator 
-    // including earlier flow times
-    return NSL::Random::rand<double>(0.,1.) <= acceptanceProbability ;
 }
 
 double decreaseStepSize(NSL::Parameter params, double stepSize, double ImSErr){
