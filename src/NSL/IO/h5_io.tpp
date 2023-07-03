@@ -252,7 +252,7 @@ class H5IO {
 
             // copy back to original device in case the tensor is re used.
             tensor.to(dev);
-            
+	    h5f_.flush();  // force writing to disk!            
 	        return 0; 
         } // write(tensor,node)
 
