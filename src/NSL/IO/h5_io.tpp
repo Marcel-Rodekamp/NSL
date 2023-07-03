@@ -43,7 +43,6 @@ class H5IO {
 	        auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
             
             // this list is not given in ascending order  Really annoying!  I have to loop over them to find the most recent config. . .
-            minCfg = std::stoi(configs[0]);
             for (int i=1;i<configs.size();i++){
 	            temp = std::stoi(configs[i]);
                 if (temp>maxCfg) {
@@ -252,7 +251,7 @@ class H5IO {
 
             // copy back to original device in case the tensor is re used.
             tensor.to(dev);
-            
+	    h5f_.flush();  // force writing to disk!            
 	        return 0; 
         } // write(tensor,node)
 
