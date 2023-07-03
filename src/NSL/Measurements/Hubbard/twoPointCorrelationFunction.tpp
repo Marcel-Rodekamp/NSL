@@ -156,13 +156,17 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
     // write the non interacting correlator 
     std::string node;
-    if (species_ == NSL::Hubbard::Particle){
-        node = "/NonInteracting/correlators/single/particle";
-    } else {
-        node = "/NonInteracting/correlators/single/hole";
-    }
+    if(!this->h5_.exist(fmt::format("{}/NonInteracting/correlators/single",BASENODE))) {
+       if (species_ == NSL::Hubbard::Particle){
+          node = "/NonInteracting/correlators/single/particle";
+       } else {
+          node = "/NonInteracting/correlators/single/hole";
+       }
 
-    h5_.write(corr_,BASENODE+node);
+       h5_.write(corr_,BASENODE+node);
+    } else {
+      NSL::Logger::info("Non-interacting correlators already exist");
+    }
 
     // Interacting Correlators
     // Initialize memory for the configurations
@@ -177,6 +181,10 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<maxCfg; ++cfgID){
+        if (this->h5_.exist(fmt::format("{}/markovChain/{}/correlators/single",BASENODE,cfgID))) {
+	   NSL::Logger::info("Config #{} already has correlators, so skipping to the next config",cfgID);
+	   continue;
+	}
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
         // read configuration 

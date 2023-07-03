@@ -75,15 +75,15 @@ int main(int argc, char** argv){
     // Number of Sources for the cg
     if (yml["measurements"]["Number Time Sources"]){
         params.addParameter<NSL::size_t>(
-            "Number Time Sources", yml["measurements"]["Number Time Sources"].as<double>()
+            "Number Time Sources", yml["measurements"]["Number Time Sources"].as<NSL::size_t>()
         );
     } else {
         // DEFAULT: Number Time Sources = Nt
         params.addParameter<NSL::size_t>(
-            "Number Time Sources", params["Nt"]
+	    "Number Time Sources", params["Nt"]
         );
-    } 
-        
+    }
+
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
     // - value is a ParameterEntry * which is a wrapper around the actual 

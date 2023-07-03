@@ -348,7 +348,11 @@ class H5IO {
         
 	        return 0; 
         } // read(config,node)
-  
+
+        inline bool exist(const std::string node){
+
+	 return h5f_.exist(node);
+      }  // exist(node)
     
     private:
         std::string h5file_;
