@@ -69,7 +69,7 @@ int main(int argc, char* argv[]){
     );
 
     params.addParameter<double>(
-        "tangentPlane", yml["system"]["tangentPlane"].as<double>()
+        "offset", yml["system"]["offset"].as<double>()
     );
     
     // ==================================================================================
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]){
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    config["phi"].imag() = params["tangentPlane"].to<double>();
+    config["phi"].imag() = params["offset"].to<double>();
     
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", params["trajectory length"].repr(), params["Nmd"].repr());
 
