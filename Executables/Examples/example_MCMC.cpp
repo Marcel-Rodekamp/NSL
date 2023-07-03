@@ -147,11 +147,10 @@ int main(int argc, char* argv[]){
 
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
-    config["phi"].imag() = {0,params["tangentPlane"].to<double>()};
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-
+    config["phi"].imag() = params["tangentPlane"].to<double>();
+    
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", params["trajectory length"].repr(), params["Nmd"].repr());
-
 
     // Initialize the integrator defining the equation of motion via the 
     // real part of the force (real part of the action)
