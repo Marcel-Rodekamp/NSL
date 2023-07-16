@@ -69,6 +69,8 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
 
     bool useGPU = false;
     app.add_flag("--GPU", useGPU, "Toggle GPU usage, according to this params['device'] is NSL::GPU or NSL::CPU [DEFAULT]");
+    bool overwrite = false;
+    app.add_flag("--overwrite", overwrite, "Toogle overwrite existing data in h5 file [DEFAULT = false]");
 
     // parse the command line arguments 
     try {
@@ -84,6 +86,8 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     } else {
         params.addParameter<NSL::Device>("device", NSL::Device("CPU"));
     }
+
+    params.addParameter<bool>("overwrite", overwrite);
     
     // after the logging has been parsed we can simply initialize the logger
     NSL::Logger::init(log_level, log_file);
