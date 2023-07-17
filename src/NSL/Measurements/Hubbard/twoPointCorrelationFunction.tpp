@@ -102,7 +102,10 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
     for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].to<NSL::size_t>(); tsrc+=tsrcStep){
         for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
             // Define a point source
-            srcVec_(tsrc,x) = Type(1);            
+            // The Slice here takes out just the single fibre x. We put it 
+            // in to return a (device) Tensor from the random access. This 
+            // is a hack and should be improved for standard random access.
+            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(1);            
 
             // invert MM^dagger
             NSL::Tensor<Type> invMMdag = cg_(srcVec_);
@@ -122,7 +125,8 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
             corr_(NSL::Slice(),NSL::Slice(),x) += invM; 
 
             // reset source vector
-            srcVec_(tsrc,x) = Type(0);
+            // Slice: same as above
+            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
         } // x
     } // tsrc
 
