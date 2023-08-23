@@ -38,21 +38,28 @@ class BaseAction{
 	virtual Configuration<TensorType> grad(const Tensor<TensorType>& fields) = 0;
 	virtual ActionValueType eval(const Tensor<TensorType>& fields) = 0;
 
-	inline Configuration<TensorType> force(Configuration<TensorType> & config){
-		return Configuration<TensorType>{{configKey_, force(config[configKey_])[configKey_]}};
+	inline Configuration<TensorType> force(const Configuration<TensorType> & config){
+		return Configuration<TensorType>{{configKey_, force(config.at(configKey_))[configKey_]}};
 	}
 
-	inline Configuration<TensorType> grad(Configuration<TensorType> & config){
-		return Configuration<TensorType>({{configKey_, grad(config[configKey_])[configKey_]}});
+	inline Configuration<TensorType> grad(const Configuration<TensorType> & config){
+		return Configuration<TensorType>({{configKey_, grad(config.at(configKey_))[configKey_]}});
 	}
 
-	inline Type eval(Configuration<TensorType>& config){ 
-		return eval(config[configKey_]); 
+	inline Type eval(const Configuration<TensorType>& config){ 
+		return eval(config.at(configKey_)); 
 	}
 
 	BaseAction(const std::string & configKey) : 
         configKey_(configKey) 
     {}
+
+    bool computePseudoFermion(const NSL::Configuration<TensorType> & config) {return false;}
+    NSL::Configuration<TensorType> pseudoFermion() {
+        // return a empty dict. if we add it to the others this will not 
+        // contribute
+        return NSL::Configuration<TensorType>();
+    }
 
     protected:
     std::string configKey_;
@@ -76,7 +83,7 @@ public:
     {}
 
     template<NSL::Concept::isNumber TensorType>
-	Configuration<TensorType> force(Configuration<TensorType> & config){
+	Configuration<TensorType> force(const Configuration<TensorType> & config){
         Configuration<TensorType> sum;
         std::apply(
             [&sum, &config](auto & ... terms) {
@@ -88,7 +95,7 @@ public:
     };
 
     template<NSL::Concept::isNumber TensorType>
-	Configuration<TensorType> grad(Configuration<TensorType> & config){
+	Configuration<TensorType> grad(const Configuration<TensorType> & config){
         Configuration<TensorType> sum;
         std::apply(
             [&sum, &config](auto & ... terms) {
@@ -100,7 +107,7 @@ public:
     };
 
     template<NSL::Concept::isNumber TensorType>
-	auto eval(Configuration<TensorType> & config){
+	auto eval(const Configuration<TensorType> & config){
 
         if constexpr (sizeof...(SingleActions)!=1){
             typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
@@ -125,16 +132,47 @@ public:
             );
 
             return sum;
-
         }
-
-
     }
 
+    template<NSL::Concept::isNumber TensorType>
+    bool computePseudoFermion(const NSL::Configuration<TensorType> & config){
+        bool hasPF = false;
+        std::apply(
+            [&config,&hasPF](auto & ... terms){
+                hasPF = ( terms.computePseudoFermion(config) || ...);
+            },
+            summands_
+        );
+        return hasPF;
+    }
+
+    NSL::Configuration<CommonTypeOfPack<typename SingleActions::ActionValueType ...>> pseudoFermion() {
+        typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
+
+        NSL::Configuration<ReturnTypeProposal> pseudoFermions;
+
+        std::apply(
+            [&pseudoFermions](auto & ... terms){
+                // each pseudofermion should have its own key for it's 
+                // PF field typically pseudoFermion/{fieldName}
+                // Thus this += just adds new fields to the Configuration
+                ( (pseudoFermions += terms.pseudoFermion()) ,...);
+            },
+            summands_
+        );
+
+        return pseudoFermions;
+    };
 
     template<NSL::Concept::isNumber TensorType>
-	auto operator()(Configuration<TensorType> & config){
+	auto operator()(const Configuration<TensorType> & config){
         return this->eval(config);
+    }
+
+    template<NSL::size_t I>
+    auto & getActionTerm(){
+        return std::get<I>(summands_);
     }
 
 	private:

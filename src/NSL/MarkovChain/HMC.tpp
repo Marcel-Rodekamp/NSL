@@ -57,7 +57,6 @@ class HMC{
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
     generate(const NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t saveFrequency = 1, std::string baseNode = "markovChain"){
-
         // ensure that saveFrequency is at least 1. 
         if (saveFrequency <= 0) {
             saveFrequency = 1;
@@ -68,6 +67,8 @@ class HMC{
             logFrequency = static_cast<NSL::size_t>( 0.01*Nconf );
         }
 
+        double runningAcceptance = 0.;
+
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
@@ -76,8 +77,6 @@ class HMC{
             MC[0] = state;
 		    
             h5_.write(MC[0],fmt::format("{}/{}",baseNode,0));
-
-            double runningAcceptance = 0.;
 
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
@@ -116,8 +115,11 @@ class HMC{
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
                 newState = this->generate_(newState);
 
+                runningAcceptance += static_cast<double>(newState.accepted);
+
                 if (n % logFrequency == 0){
-                    NSL::Logger::info("HMC: {}/{}", n, Nconf);
+                    //NSL::Logger::info("HMC: {}/{}", n, Nconf);
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./n);
                 }
             }
 
@@ -156,14 +158,26 @@ class HMC{
     //! Implementation of the HMC
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
-
         // sample momentum 
         NSL::Configuration<Type> momentum;
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
             p.randn();
-	    p.imag()=0;
+	        p.imag()=0;
             momentum[key] = p; 
+        }
+
+        // update pseudo fermions (if no PF exist in the sum action this line does nothing)
+        bool hasPF = this->action_.computePseudoFermion(state.configuration);
+
+        // if pseudo fermions are used we have to recompute the action involving
+        // the new pseudo fermion field. Otherwise we can just reuse the 
+        // previously computed one.
+        Type previous_S = 0;
+        if(hasPF){
+            previous_S = this->action_(state.configuration);
+        } else {
+            previous_S = state.actionValue;
         }
 
         // use integrator to generate proposal 
@@ -174,7 +188,7 @@ class HMC{
 
         // compute the Hamiltonian H = p^2/2 + S
         // Starting point of the trajectory
-        Type starting_H = state.actionValue;
+        Type starting_H = previous_S;
         for( const auto& [key,field]: momentum){
             starting_H += 0.5*(field * field).sum();
         }
@@ -190,9 +204,10 @@ class HMC{
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
         // accept reject
-	if ( r_.rand()[0] <= acceptanceProb ){
-            return NSL::MCMC::MarkovState<Type>{
+	    if ( r_.rand()[0] <= acceptanceProb ){
+            return NSL::MCMC::MarkovState<Type> {
                 proposal_config,
+                this->action_.pseudoFermion(),
                 proposal_S,
                 acceptanceProb,
                 state.markovTime+1,
@@ -202,7 +217,8 @@ class HMC{
         } else {
             return NSL::MCMC::MarkovState<Type>(
                 state.configuration,
-                state.actionValue,
+                this->action_.pseudoFermion(),
+                previous_S,
                 state.acceptanceProbability,
                 state.markovTime+1,
                 false
