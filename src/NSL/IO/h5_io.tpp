@@ -73,6 +73,7 @@ class H5IO {
 	
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
+    	    this -> write(markovstate.pseudoFermion, baseNode+"/pseudoFermion/");
 
 	        if constexpr (NSL::is_complex<Type>()) {
 	            // write out the actionValue
@@ -104,8 +105,8 @@ class H5IO {
 
 	                dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field));
 	            }
-	   
-	            // write out the markovTime
+
+                // write out the markovTime
 	            dataset = h5f_.createDataSet<int>(
                     baseNode+"/markovTime",
                     HighFive::DataSpace::From(markovstate.markovTime)
@@ -364,10 +365,55 @@ class H5IO {
 	        return 0; 
         } // read(config,node)
 
+        template <typename Type>
+        inline int write(Type scalar, const std::string node){
+            removeData_(node);
+
+            if constexpr (NSL::is_complex<Type>()) {
+                 HighFive::DataSet dataset = this->h5f_.createDataSet<
+                     std::complex<NSL::RealTypeOf<Type>>>
+                (
+                    node,
+                    HighFive::DataSpace::From( static_cast<std::complex<NSL::RealTypeOf<Type>>>(scalar) )
+                );
+                dataset.write(static_cast<std::complex<NSL::RealTypeOf<Type>>>(scalar));               
+            } else {
+                HighFive::DataSet dataset = this->h5f_.createDataSet<Type>(
+                    node,
+                    HighFive::DataSpace::From( scalar )
+                );
+                dataset.write(scalar);
+            }
+
+            return 0;
+        }
+
+        template<NSL::Concept::isNumber Type>
+        inline int read(Type & scalar, const std::string node){
+            if(h5f_.exist(node)){ // check if the node exists
+                HighFive::DataSet dataset = h5f_.getDataSet(node);
+                if constexpr ( NSL::is_complex<Type>() ){
+                    std::complex<NSL::RealTypeOf<Type>> scalar_ = 0;
+	                dataset.read(scalar_);
+                    scalar = static_cast<Type>(scalar_);
+                } else {
+	                dataset.read(scalar);
+                }
+	        
+                return 0;
+            } else { 
+                // node does not exist
+                NSL::Logger::error("Error! Node {} doesn't exist!", node); 
+                
+                return 1;
+            }
+        } // read(Type&,std::string)
+
         inline bool exist(const std::string node){
 	        return h5f_.exist(node);
         }  // exist(node)
            
+
     private:
 
         //! Removes a group if overwrite == True and group exists
