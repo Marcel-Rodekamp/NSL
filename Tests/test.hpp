@@ -171,6 +171,11 @@ int getMatchingDigits(Type epsilon){
         );
     }
 
+    // prevent underflow
+    if (epsilon < 1e-14){
+        return 14;
+    }
+
     // compute log_10(epsilon) = -b + log_10(a) 
     // with 0 <= log_10(a) < 1 as a \in [1,10)
     // we can round down to get -b
