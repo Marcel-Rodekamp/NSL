@@ -261,5 +261,6 @@ class Tensor:
 // factory
 #include "Factory/like.tpp"
 #include "Factory/eye.tpp"
+#include "Factory/random.tpp"
 
 #endif //NSL_TENSOR_HPP
