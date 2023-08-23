@@ -39,6 +39,7 @@ add_NSL_test(test_honeycomb Lattice/test_honeycomb.cpp)
 add_NSL_test(test_FermionMatrix_hermitian FermionMatrix/test_FermionMatrix_hermitian.cpp)
 add_NSL_test(test_fermionMatrixHubbardExp FermionMatrix/test_fermionMatrixHubbardExp.cpp)
 add_NSL_test(test_fermionMatrixHubbardDiag FermionMatrix/test_fermionMatrixHubbardDiag.cpp)
+add_NSL_test(test_FermionMatrix_U1Wilson FermionMatrix/test_fermionMatrix_U1Wilson.cpp)
 
 add_NSL_test(test_identity Matrix/test_identity.cpp)
 add_NSL_test(test_configuration Configuration/test_configuration.cpp)
@@ -50,3 +51,7 @@ add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
 add_NSL_test(test_force Action/test_force.cpp)
 
 add_NSL_test(test_parameter Parameter/test_parameter.cpp)
+
+# Stand alone Executalbes to test stuff
+add_executable(test_leapfrog_convergence Integrator/test_leapfrog_convergence.cpp)
+target_link_libraries(test_leapfrog_convergence NSL)

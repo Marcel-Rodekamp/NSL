@@ -28,5 +28,6 @@
 #include "parameter.tpp"
 #include "Measurements.hpp"
 #include "U1.hpp"
+#include "Dirac/gamma.tpp"
 
 #endif

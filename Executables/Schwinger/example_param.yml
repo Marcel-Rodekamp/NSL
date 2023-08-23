@@ -1,0 +1,15 @@
+Leapfrog:
+  trajectory length: 1
+  Nmd: 6
+HMC:
+  save frequency: 1
+  Ntherm: 10000
+  Nconf: 1000
+fileIO:
+  h5file: "Nt4_Nx4_beta1_m0.h5"
+system:
+  name: ""
+  beta: 1
+  bare mass: 2
+  Nt: 1
+  Nx: 1

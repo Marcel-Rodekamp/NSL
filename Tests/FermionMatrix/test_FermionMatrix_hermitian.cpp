@@ -14,6 +14,8 @@ void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & L
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & Lattice, const std::string latticeName, const Type & beta = 2);
 
+template<NSL::Concept::isComplex Type>
+void test_FermionMatrix_U1Wilson_MMdagger_hermitian(NSL::size_t nt, NSL::size_t nx);
 
 COMPLEX_NSL_TEST_CASE( "FermionMatrix: MMdagger hermitian", "[FermionMatrix, MMdagger_hermitian]" ) {
     const NSL::size_t nt = GENERATE(2, 4, 6, 8, 10, 12, 14);
@@ -42,6 +44,13 @@ COMPLEX_NSL_TEST_CASE( "FermionMatrix: MdaggerM hermitian", "[FermionMatrix, Mda
 
     NSL::Lattice::Complete<TestType> LatticeC(nx);
     test_FermionMatrix_MdaggerM_hermitian<TestType>(nt, LatticeC, "Complete");
+}
+
+
+COMPLEX_NSL_TEST_CASE( "FermionMatrix U1 Wilson: MMdagger hermitian", "[FermionMatrix, MMdagger_hermitian]" ) {
+    const NSL::size_t nt = GENERATE(2);//, 4, 6, 8, 10, 12, 14);
+    const NSL::size_t nx = GENERATE(2);//, 4, 6, 8, 10, 12, 14);
+    test_FermionMatrix_U1Wilson_MMdagger_hermitian<TestType>(nt, nx);
 }
 
 // ======================================================================
@@ -127,6 +136,71 @@ void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & L
 
 	REQUIRE(almost_equal(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10-2).all());
     REQUIRE(MdaggerMH.data() != MdaggerM.data());
+}
+
+//Test if MMdagger is hermitian
+template<NSL::Concept::isComplex Type>
+void test_FermionMatrix_U1Wilson_MMdagger_hermitian(NSL::size_t nt, NSL::size_t nx) {
+    NSL::size_t dim = 2;
+    NSL::complex<NSL::RealTypeOf<Type>> I{0,1};
+
+    NSL::Lattice::Square<Type> lattice({nt,nx});
+    NSL::Parameter params;
+    params.addParameter<NSL::size_t>( "Nt", nt );
+    params.addParameter<NSL::size_t>( "Nx", nx );
+    params.addParameter<NSL::size_t>( "dim", dim );
+    params.addParameter<Type>( "bare mass", 2 );
+    params.addParameter<NSL::Device>( "device", NSL::CPU() );
+    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
+
+	//NSL::Tensor<Type> U = NSL::LinAlg::exp( I*NSL::randn<Type>(nt,nx,dim) );
+	NSL::Tensor<Type> U(nt,nx,dim); 
+    U = NSL::LinAlg::exp(I*NSL::randn_like(U));
+	//generate random fermion matrix for given lattice
+    NSL::FermionMatrix::U1::Wilson<Type> M(params);
+    M.populate(U);
+
+	// Then we apply MMdagger to each column to generate the full matrix.
+	NSL::Tensor<Type> psi(nt, nx, dim);
+	NSL::Tensor<Type> MMdagger(nt, nx, dim, nt, nx, dim);
+
+	for(int i = 0; i < nt; i++){
+		for(int y = 0; y < nx; y++){
+            for (NSL::size_t d = 0; d < dim; ++d){
+                psi(i,y,d) = 1;
+			    MMdagger(NSL::Slice(), NSL::Slice(), NSL::Slice(),i, y, d) = M.MMdagger(
+                    psi
+                );
+                psi(i,y,d) = 0;
+            }
+		}
+	}
+
+	// Finally we construct the adjoint matrix and ensure it is equal to the original
+	NSL::Tensor<Type> MMdaggerH = MMdagger.T(0,3).T(1,4).T(2,5).conj();
+
+
+    std::cout << MMdagger.real() << std::endl;
+    std::cout << MMdaggerH.real() << std::endl;
+    REQUIRE(MMdaggerH.data() != MMdagger.data());
+	//REQUIRE(almost_equal(MMdagger, MMdaggerH, std::numeric_limits<Type>::digits10).all());
+    for(int i = 0; i < nt; i++){
+	    for(int y = 0; y < nx; y++){
+            for (NSL::size_t d = 0; d < dim; ++d){
+                for(int j = 0; j < nt; j++){
+                	for(int z = 0; z < nx; z++){
+                        for (NSL::size_t b = 0; b < dim; ++b){
+                            INFO(fmt::format("i={},y={},d={},j={},z={},b={}",i,y,d,j,z,b));
+                            INFO(fmt::format("MMdagger(i,y,d,j,z,b) ={: 16f}+i{: 16f}",NSL::real(MMdagger(i,y,d,j,z,b)),NSL::imag(MMdagger(i,y,d,j,z,b))));
+                            INFO(fmt::format("MMdaggerH(i,y,d,j,z,b)={: 16f}+i{: 16f}",NSL::real(MMdaggerH(i,y,d,j,z,b)),NSL::imag(MMdaggerH(i,y,d,j,z,b))));
+                            REQUIRE( MMdaggerH(i,y,d,j,z,b) == NSL::LinAlg::conj(MMdagger(j,z,b,i,y,d) ));     
+                            REQUIRE( almost_equal(MMdagger(i,y,d,j,z,b), MMdaggerH(i,y,d,j,z,b)) );    
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 //Test cases

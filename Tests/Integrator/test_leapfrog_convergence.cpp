@@ -40,63 +40,73 @@ plt.show()
 
 int main(){
     // Define the parameters of your system
-    typedef double Type;
+    typedef NSL::complex<double> Type;
+
+    Type I{0,1};
 
     // Typically you want to read these in or provide as an argument to such 
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1;
+    Type beta = 1.;
     //    On-Site Coupling
-    Type U    = 1;
+    Type m    = 2.0;
     //    Number of time slices
-    NSL::size_t Nt = 2;
+    NSL::size_t Nt = 4;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  2;
+    NSL::size_t Nx = 4;
+    //    Dimension of the System
+    NSL::size_t dim = 2;
+    double trajectoryLength = 1;
 
-    // Leapfrog Parameters
-    //      Trajectory Length
-    NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
+    NSL::Parameter params;
+    params.addParameter<Type>("beta",beta);
+    params.addParameter<Type>("bare mass",m);
+    params.addParameter<NSL::size_t>("Nt",Nt);
+    params.addParameter<NSL::size_t>("Nx",Nx);
+    params.addParameter<NSL::size_t>("dim",dim);
+    params.addParameter<NSL::Device>("device",NSL::CPU());
+
+    NSL::Lattice::Square<Type> lattice({
+        params["Nt"].to<NSL::size_t>(),
+        params["Nx"].to<NSL::size_t>()
+    });
+    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
     
-    // Define the lattice geometry of interest
-    // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Ring<Type> lattice(Nx); 
+    // Initialize the action
+    NSL::Action::Action S = 
+        NSL::Action::PseudoFermionAction<
+            Type,decltype(lattice), NSL::FermionMatrix::U1::Wilson<Type>
+        >(params,"U")
+        +NSL::Action::U1::WilsonGaugeAction<Type>(params)
+    ;
 
-    //std::cout   << "Setting up a Hubbard-Gauge action with beta=" << beta
-    //           << ", Nt=" << Nt << ", U=" << U << " on a ring with " << Nx << " sites." << std::endl;
-    // Put the action parameters into the appropriate container
-    NSL::Action::HubbardGaugeAction<Type>::Parameters params(
-        /*beta=*/  beta,
-        /*Nt = */  Nt,    
-        /*U =  */  U
+    // Initialize a configuration as starting point for the MC change
+    // For CPU code put here
+    NSL::Configuration<Type> config{
+        {"U", NSL::Tensor<Type>(Nt,Nx,dim)}
+    };
+    config["U"] = NSL::LinAlg::exp(
+        I * NSL::randn<NSL::RealTypeOf<Type>>(Nt,Nx,dim)
     );
 
-    // Initialize the action
-    NSL::Action::Action S{
-        NSL::Action::HubbardGaugeAction<Type>(params)
-    };
+    S.computePseudoFermion(config);
 
-    // Initialize a configuration as starting point for the trajectory
-    NSL::Configuration<Type> config{
-        {"phi", NSL::Tensor<Type>(Nt,Nx)}
-    };
-    config["phi"].randn();
-
-    // Initialize a momentum as starting point for the trajectory
     NSL::Configuration<Type> momentum{
-        {"phi", NSL::Tensor<Type>(Nt,Nx)}
+        {"U", NSL::Tensor<Type>(Nt,Nx,dim)}
     };
-    momentum["phi"].randn();
+    momentum["U"] = NSL::randn<NSL::RealTypeOf<Type>>(Nt,Nx,dim);
 
     // calculate the energy at the starting point of trajectory
-    NSL::RealTypeOf<Type> H_old = 0.5 * (momentum["phi"]*momentum["phi"]).sum() + S(config);
+    Type H_old = 0.5 * (momentum["U"]*momentum["U"]).sum() + S(config);
 
     std::cout << "[\n";
 
     // loop over different molecular dynamics steps
     for (NSL::size_t Nmd = 1; Nmd < 100; Nmd+=10){
+
         // Initialize the integrator
-        NSL::Integrator::Leapfrog leapfrog( 
+        NSL::Integrator::U1::Leapfrog leapfrog( 
             /*action*/S,  
             /*trajectoryLength*/trajectoryLength,
             /**numberSteps*/Nmd
@@ -105,9 +115,16 @@ int main(){
         // perform a leapfrog
         auto [pconfig,pmomentum] = leapfrog(config,momentum);
 
+        /*
+        std::cout << pconfig["U"].real() << std::endl;
+        std::cout << pconfig["U"].imag() << std::endl;
+        std::cout << pmomentum["U"].real() << std::endl;
+        std::cout << pmomentum["U"].imag() << std::endl;
+        */
+
         // compute the new energy at the end of the trajectory
-        NSL::RealTypeOf<Type> H_new = 0.5 * (pmomentum["phi"]*pmomentum["phi"]).sum()
-                                    + S(pconfig);
+        Type H_new = 0.5 * (pmomentum["U"]*pmomentum["U"]).sum()
+                   + S(pconfig);
 
         // calculate the error
         NSL::RealTypeOf<Type> err = NSL::LinAlg::abs( (H_old - H_new) / H_old );
