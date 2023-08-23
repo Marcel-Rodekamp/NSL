@@ -84,7 +84,7 @@ constexpr bool is_complex(){
 
 //! If `complex<>`, returns the real part; otherwise returns the passed value.
 template<typename Type>
-typename NSL::RT_extractor<Type>::type real(const Type &value){
+NSL::RealTypeOf<Type> real(const Type &value){
     if constexpr(is_complex<Type>()) {
         // See NOTE above for std::explanation.
         return std::real(value);
@@ -96,7 +96,7 @@ typename NSL::RT_extractor<Type>::type real(const Type &value){
 
 //! If `complex<>`, returns the imaginary part; otherwise returns 0.
 template<typename Type>
-typename NSL::RT_extractor<Type>::type imag(const Type &value){
+NSL::RealTypeOf<Type> imag(const Type &value){
     if constexpr(is_complex<Type>()) {
         // See NOTE above for std::explanation.
         return std::imag(value);
