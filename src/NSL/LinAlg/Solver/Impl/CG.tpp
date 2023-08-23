@@ -16,6 +16,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     // This algorithm can be found e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
     //
 
+
     // initialize the solution vector x_ which after convergence 
     // stores the approximate result x = M^{-1} @ b.
     // Multiple initializations are possible and can enhance the convergence
@@ -25,7 +26,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
 
     // Compute the initial matrix vector product and store it in the 
     // corresponding vector t
-    t_ = this->M_(x_);
+    t_ = this->M_(b);
 
     // This initial matrix vector product defines the initial residual vector 
     r_ = b-t_;
@@ -40,7 +41,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
-        NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,0);
+            NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,0);
         return x_;
     }
 
@@ -73,7 +74,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
-            NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,count);
+            NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,count);
             return x_;
         }
 
