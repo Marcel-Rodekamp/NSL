@@ -50,6 +50,13 @@ class TensorDevice:
         );
     }
 
+    //! Get device information from the Tensor
+    const NSL::Device device() const {
+        return NSL::Device::fromTorch(
+            this->data_.device()
+        );
+    }
+
 };
 
 } // namespace NSL::TensorImpl
