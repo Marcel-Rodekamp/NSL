@@ -187,10 +187,10 @@ int main(int argc, char ** argv){
         // where mu ~ N(0,1)
         //    sigma ~ U( 1/2 deltaU, 1.5 deltaU )
         // on the tangent plane
-        // mus(n) = NSL::Random::randn<double>();
+        mus(n) = NSL::Random::randn<double>();
         sigmas(n) = std::sqrt(NSL::Random::rand<double>( 
-            0.9 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")), 
-            1.1 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")) 
+            0.5 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")), 
+            1.5 * NSL::real(NSL::Hubbard::tilde<Type>(params,"U")) 
         ));
         // randomly sampled real part
         conf["phi"].randn(mus(n), sigmas(n));
