@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include "../Tensor.hpp"
+#include "Configuration.hpp"
 
 namespace NSL::LinAlg {
 
@@ -15,6 +16,17 @@ Type exp(Type number){
 template<typename Type>
 NSL::Tensor<Type> exp(const Tensor<Type> & t) {
     return NSL::Tensor<Type>(t,true).exp();
+}
+
+template<NSL::Concept::isNumber Type>
+NSL::Configuration<Type> exp( const NSL::Configuration<Type> & t_) {
+    NSL::Configuration<Type> t(t_,true);
+
+    for(auto &[key,field]: t){
+        field = field.exp();
+    } 
+
+    return t;
 }
 
 } // namespace NSL::LinAlg
