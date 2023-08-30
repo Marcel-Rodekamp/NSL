@@ -44,10 +44,12 @@ class TensorShift:
     NSL::Tensor<Type> shift(const NSL::size_t & shift, const Type & boundary){
         this->data_ = this->data_.roll(shift,0);
 
+        NSL::size_t N = NSL::Tensor<Type>(this).shape(0);
+
         if(shift>0){
             this->data_.slice(/*dim=*/0,/*start=*/0,/*end=*/shift,/*step=*/1)*=boundary;
         } else {
-            this->data_.slice(/*dim=*/0,/*start=*/this->shape(0)-shift,/*end=*/this->shape(0),/*step=*/1)*=boundary;
+            this->data_.slice(/*dim=*/0,/*start=*/N-shift,/*end=*/N,/*step=*/1)*=boundary;
         }
 
         return NSL::Tensor<Type>(this);

@@ -2,18 +2,22 @@ Leapfrog:
   trajectory length: 1
   Nmd: 10
 HMC:
-  save frequency: 1
-  Ntherm: 1000
-  Nconf: 1000
+  save frequency: 4
+  Ntherm: 100
+  Nconf: 100
 fileIO:
   h5file: "example_perylene.h5"
+measurements:
+  Number Time Sources: 4
 system:
-  name: "Perylen"
-  beta: 3.0
-  U: 2.
-  Nt: 16
-  hopping: 1.
+  name: "Perylene"
   nions: 20
+  Nt: 16
+  beta: 2.0
+  U: 2.
+  mu: 0
+  offset: 0
+  hopping: 1.
   adjacency: 
   - [0 , 1 ]
   - [0 , 7 ]

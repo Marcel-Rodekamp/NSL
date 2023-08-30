@@ -1,16 +1,9 @@
-#include <chrono>
 #include "NSL.hpp"
-#include "highfive/H5File.hpp"
-#include <yaml-cpp/yaml.h>
 
-int main(int argc, char* argv[]){
+int main(int argc, char** argv){
     typedef NSL::complex<double> Type;
 
-    // Initialize NSL
-    NSL::Parameter params = NSL::init(argc, argv, "Example MCMC");
-    // an example parameter file is can be found in example_param.yml
-    
-    auto init_time = NSL::Logger::start_profile("Initialization");
+    NSL::Parameter params = NSL::init(argc,argv,"NSL Hubbard Correlator");
     
     // Now all parameters are stored in yml, we want to translate them 
     // into the parameter object
@@ -64,10 +57,32 @@ int main(int argc, char* argv[]){
     params.addParameter<std::string>(
         "h5file", yml["fileIO"]["h5file"].as<std::string>()
     );
-    
-    // In principle we can have a chemical potential, for this example we
-    // assume it is zero
-    params.addParameter<Type>("mu");
+
+    // ==================================================================================
+    // These are optional parameters, if yml does not contain the node the default value
+    // will be used. 
+    // ==================================================================================
+        
+    // Chemical Potential
+    if (yml["system"]["mu"]){
+        params.addParameter<Type>(
+            "mu", yml["system"]["mu"].as<double>()
+        );
+    } else {
+        // DEFAULT: mu = 0
+        params.addParameter<Type>("mu");
+    }
+    // Number of Sources for the cg
+    if (yml["measurements"]["Number Time Sources"]){
+        params.addParameter<NSL::size_t>(
+            "Number Time Sources", yml["measurements"]["Number Time Sources"].as<NSL::size_t>()
+        );
+    } else {
+        // DEFAULT: Number Time Sources = Nt
+        params.addParameter<NSL::size_t>(
+	    "Number Time Sources", params["Nt"]
+        );
+    }
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -81,7 +96,7 @@ int main(int argc, char* argv[]){
     }
 
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"].to<std::string>());
+    NSL::H5IO h5(params["h5file"].to<std::string>(), params["overwrite"].to<bool>());
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
@@ -94,128 +109,22 @@ int main(int argc, char* argv[]){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
+    // add the lattice to the parameter
     params.addParameter<decltype(lattice)>("lattice", lattice);
 
-    // this routine returns the eigenenergies and eigenvectors of the hopping matrix
-    auto [e, u]  = lattice.eigh_hopping(1.0); 
-    // we need u to do the momentum projection
+    // initialize 2 point correlation function <p^+_x p_y> 
+    NSL::Measure::Hubbard::TwoPointCorrelator<
+        Type,
+        decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<
+            Type,decltype(lattice)
+        >
+    > C2pt(params, h5, NSL::Hubbard::Particle);
 
-    // now let's try to calculate some correlators
-    NSL::Tensor<Type> corr(params["Nt"].to<NSL::size_t>(),dim,dim); // we calculate the Nx X Nx set of correlators
-    
-    // we need a container for the field phi
-    NSL::Tensor<Type> phi(params["Nt"].to<NSL::size_t>(),dim);
-    NSL::Configuration<Type> config{{"phi", phi}};
-
-    // let's first do the non-interacting case
-    // non-interacting means that all values of phi are zero:
-    config["phi"] = Type(0);
-
-    NSL::size_t tsource;
-    // get the range of configuration ids from the h5file
-    auto [minCfg, maxCfg] = h5.getMinMaxConfigs(BASENODE+"/markovChain");
-    
-    //now let's make a fermion (exp) matrix
-    NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)> M(params);
-    // and populate it with the configurations
-    M.populate(config["phi"], NSL::Hubbard::Species::Particle);
-
-    // let's set up the CG
-    NSL::LinAlg::CG<Type> invMMdni(M, NSL::FermionMatrix::MMdagger);
-
-    // allocate the solution vector
-    NSL::Tensor<Type> b(params["Nt"].to<NSL::size_t>(),dim);
-
-    // for the non-interacting case, one time source is sufficient, and we choose t=0
-    tsource=0; 
-
-    for(NSL::size_t ni = 0; ni < dim; ni++){
-        b = Type(0);
-        
-        // put a source on the tsources time slice
-        // the source is the ni's eigenvector of the hopping matrix,
-        // like a momentum projection  
-        b(tsource,NSL::Slice()) = u(ni, NSL::Slice());
-    
-        // invert MM^dagger
-        auto invMMdb = invMMdni(b);
-
-        // back multiply M^dagger to obtain M^{-1}
-        auto invMb = M.Mdagger(invMMdb);
-
-        // right multiply with the eigenvector to get the <u|M^{inv}|u> 
-        // element. (Fourier component of the correlation function)
-        for (NSL::size_t nj = ni; nj < ni+1; nj++){
-	        for (NSL::size_t t = 0; t < params["Nt"].to<NSL::size_t>(); t++){
-	            corr(t,nj,ni)=NSL::LinAlg::inner_product(u(nj,NSL::Slice()),invMb(t,NSL::Slice()));
-	        }
-        }
-    }
-
-    // now write this result out
-    h5.write(corr,BASENODE+"/markovChain/0/correlators/single/particle");
-    
-    // prepare a markov state to be read from the h5fie
-    NSL::MCMC::MarkovState<Type> markovstate;
-    markovstate.configuration = config;
-
-    NSL::Logger::info("Min/Max configs are {}/{}",minCfg,maxCfg);
-    for (NSL::size_t cfg = minCfg; cfg<=maxCfg; cfg+=NSL::size_t(params["save frequency"])) {
-        h5.read(markovstate,BASENODE+"/markovChain",cfg);
-
-        // populate fermion matrix with this field
-        M.populate(markovstate.configuration["phi"], NSL::Hubbard::Species::Particle);
-
-        // and also initialize the CG with this fermion matrix
-        NSL::LinAlg::CG<Type> invMMd(M, NSL::FermionMatrix::MMdagger);
-
-        // intialize the correlators
-        corr = Type(0);
-
-        // in this case, we will loop over all possible time sources to increase statistics
-        for(tsource = 0; tsource < params["Nt"].to<NSL::size_t>(); tsource += params["Nt"].to<NSL::size_t>()){
-	        for(NSL::size_t ni = 0; ni < dim; ni++){
-                b = Type(0);
-	            
-                // again retrieve the eigenvector 
-                // put a source on the tsources time slice
-                // the source is the ni's eigenvector of the hopping matrix,
-                // like a momentum projection
-                b(tsource,NSL::Slice()) = u(ni,NSL::Slice());
-    
-                // invert MM^dagger
-	            auto invMMdb = invMMd(b);
-	            
-                // back-multiply M^dagger to obtain M^{-1}
-                auto invMb = M.Mdagger(invMMdb);
-
-                // ToDo: This is not available for GPU calculations!
-                // right multiply with the eigenvector to get the <u|M^{inv}|u> 
-                // element. (Fourier component of the correlation function)
-	            for (NSL::size_t nj = ni; nj < ni+1; nj++){
-	                for (NSL::size_t t = 0; t < params["Nt"].to<NSL::size_t>(); t++){
-
-	                    if (t+tsource < params["Nt"].to<NSL::size_t>()) {
-		                    corr(t,nj,ni) += NSL::LinAlg::inner_product(
-                                u(nj,NSL::Slice()), 
-                                invMb(t+tsource,NSL::Slice())
-                            ); 
-	                    } else { 
-                            // anti-periodic boundary conditions
-		                    corr(t,nj,ni) -= NSL::LinAlg::inner_product(
-                                u(nj,NSL::Slice()), 
-                                invMb(t+tsource-params["Nt"].to<NSL::size_t>(), NSL::Slice())
-                            );
-	                    }
-	                } // for t
-	            } // for nj
-	        } //for ni
-        } // for tsource
-
-        // write the resutl
-        h5.write(corr,BASENODE+"/markovChain/"+std::to_string(cfg)+"/correlators/single/particle");
-    } // for cfg
-    
-    return EXIT_SUCCESS;
+    // Perform the measurement.
+    // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
+    //
+    // configurations from the data file specified under params["file"].
+    // Then 
+    C2pt.measure();
 }
-

@@ -17,7 +17,7 @@ class TensorExpand:
 
         this->data_ = this->data_.unsqueeze(-1).expand(
             torch::IntArrayRef(sizes)
-        );
+        ).clone();
 
         return NSL::Tensor<Type>(this);
     }

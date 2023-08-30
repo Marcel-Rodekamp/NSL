@@ -74,6 +74,8 @@ class HMC{
 
             // Put the initial configuration in the 0th element
             MC[0] = state;
+		    
+            h5_.write(MC[0],fmt::format("{}/{}",baseNode,0));
 
             double runningAcceptance = 0.;
 
@@ -89,7 +91,7 @@ class HMC{
                 }
 
                 MC[n] = this->generate_(tmp);
-		        h5_.write(MC[n],baseNode);
+		        h5_.write(MC[n],fmt::format("{}/{}",baseNode,n));
 
                 runningAcceptance += static_cast<double>(MC[n].accepted);
 
@@ -113,6 +115,10 @@ class HMC{
             // As none is returned we just multiply the number of configurations
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
                 newState = this->generate_(newState);
+
+                if (n % logFrequency == 0){
+                    NSL::Logger::info("HMC: {}/{}", n, Nconf);
+                }
             }
 
             // return the Markov Chain

@@ -11,6 +11,7 @@
 
 #include "../fermionMatrix.hpp"
 #include "../../Action/Implementations/hubbard.tpp"
+#include "Tensor/Factory/like.tpp"
 
 namespace NSL::FermionMatrix {
 
@@ -74,7 +75,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
-
     HubbardExp(NSL::Hubbard::Species species, NSL::Parameter & params):
         HubbardExp(
             species,
@@ -93,7 +93,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
             Type(params["mu"])
         )
     {}
-
 
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){

@@ -67,10 +67,25 @@ int main(int argc, char* argv[]){
     params.addParameter<std::string>(
         "h5file", yml["fileIO"]["h5file"].as<std::string>()
     );
+
+    params.addParameter<double>(
+        "offset", yml["system"]["offset"].as<double>()
+    );
     
-    // In principle we can have a chemical potential, for this example we
-    // assume it is zero
-    params.addParameter<Type>("mu");
+    // ==================================================================================
+    // These are optional parameters, if yml does not contain the node the default value
+    // will be used. 
+    // ==================================================================================
+        
+    // Chemical Potential
+    if (yml["system"]["mu"]){
+        params.addParameter<Type>(
+            "mu", yml["system"]["mu"].as<double>()
+        );
+    } else {
+        // DEFAULT: mu = 0
+        params.addParameter<Type>("mu");
+    }
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -132,14 +147,14 @@ int main(int argc, char* argv[]){
 
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
-    config["phi"].imag() = 0;
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-
+    config["phi"].imag() = params["offset"].to<double>();
+    
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", params["trajectory length"].repr(), params["Nmd"].repr());
 
-
-    // Initialize the integrator
-    NSL::Integrator::Leapfrog leapfrog( 
+    // Initialize the integrator defining the equation of motion via the 
+    // real part of the force (real part of the action)
+    NSL::Integrator::LeapfrogRealForce leapfrog( 
         /*action*/S,  
         /*trajectoryLength*/NSL::RealTypeOf<Type>(params["trajectory length"]),
         /**numberSteps*/NSL::size_t(params["Nmd"])

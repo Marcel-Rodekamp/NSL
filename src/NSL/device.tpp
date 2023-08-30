@@ -58,7 +58,7 @@ class Device {
         return other.repr_ == this->repr_;
     }
 
-    Device static fromTorch(const torch::TensorOptions & dev){
+    Device static fromTorch(torch::TensorOptions dev){
         return Device(&dev);
     }
 
@@ -87,8 +87,9 @@ class Device {
     }
 
     protected:
-    Device(const torch::TensorOptions * dev):
-        dev_(*dev)
+    Device(torch::TensorOptions * dev):
+        dev_(*dev),
+        repr_(dev->device().str())
     {}
     
     private:
