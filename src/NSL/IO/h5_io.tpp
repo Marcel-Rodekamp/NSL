@@ -66,11 +66,15 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
-            std::string baseNode = node;
+            std::string baseNode;
+	        if (node.back() == '/') { // define the node
+	            baseNode = node + std::to_string(markovstate.markovTime);
+        	} else {
+	            baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	        }
 
             this->removeData_(node);
 
-	
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
 
@@ -160,7 +164,8 @@ class H5IO {
 	                markovstate.markovTime = std::stoi(configs[i]);
                 }
             }
-	        NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
+	
+            NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
 	        this -> read(markovstate, node, markovstate.markovTime);
 
             return 0;
@@ -168,16 +173,22 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node, const int markovTime){
-            std::string baseNode = node;
+            std::string baseNode;
 
             markovstate.markovTime = markovTime;
-	    
+	
+	        if (node.back() == '/') { // define the node
+	           baseNode = node + std::to_string(markovstate.markovTime);
+	        } else {
+	           baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	        }
+
 	        NSL::Logger::info("Loading in {}",baseNode);
 
             if constexpr (NSL::is_complex<Type>()) {
                 std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
-	       
-        	    this->read(markovstate.configuration, baseNode); // read in the configuration
+	   
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -195,7 +206,7 @@ class H5IO {
 	                field = temp;
 	            }
 	        } else {
-        	    this -> read(markovstate.configuration, baseNode); // read in the configuration
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -211,7 +222,7 @@ class H5IO {
 	                dataset.read(field);
 	            }	
             }
-	    
+	
             return 0;
         } // read(markovState, node, markovTime)
 
