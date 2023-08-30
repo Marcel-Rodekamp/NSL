@@ -73,7 +73,7 @@ class H5IO {
 	            baseNode = node + "/" + std::to_string(markovstate.markovTime);
 	        }
 
-            this->removeData_(node);
+            this->removeData_(baseNode);
 
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
