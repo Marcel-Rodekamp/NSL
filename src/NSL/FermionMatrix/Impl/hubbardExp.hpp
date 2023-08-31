@@ -94,7 +94,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         )
     {}
 
-
     //! Populates the fermion matrix with a new configuration phi using species
     /*!
      * For measurements the source vector might by of shape Nt,Nx,Nx (identity matrix

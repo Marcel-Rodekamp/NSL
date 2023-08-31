@@ -16,7 +16,7 @@ template<
 >
 class TwoPointCorrelator: public Measurement {
     public:
-        TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string BASENODE):
+        TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
             Measurement(params, h5),
             hfm_(params),
             cg_(hfm_, NSL::FermionMatrix::MMdagger),
@@ -30,7 +30,6 @@ class TwoPointCorrelator: public Measurement {
             srcVec_(
                 params["device"].to<NSL::Device>(),
                 params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
             phi_(
@@ -38,7 +37,7 @@ class TwoPointCorrelator: public Measurement {
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
-            BASENODE(BASENODE)
+            basenode_(basenode_)
     {}
 
     TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species):
@@ -50,7 +49,6 @@ class TwoPointCorrelator: public Measurement {
         )
     {}
 
-
     //! Calculate the \f( N_t \times N_x \times N_x \f) correlators, i.e. 
     //! Propagators with averaged second time coordinate
     void measure() override;
@@ -58,16 +56,30 @@ class TwoPointCorrelator: public Measurement {
     void measure(NSL::size_t NumberTimeSources);
 
     protected:
-        FermionMatrixType hfm_;
-        NSL::LinAlg::CG<Type> cg_;
-        NSL::Hubbard::Species species_;
+    bool skip_(bool overwrite, std::string node){
+        bool exists = this->h5_.exist(fmt::format("{}{}",basenode_,node));
 
-        NSL::Tensor<Type> corr_;
-        NSL::Tensor<Type> srcVec_;
+        // if overwrite is specified always calculate the correlator
+        if (overwrite){return false;}
 
-        NSL::Tensor<Type> phi_;
+        // if correlator doesn't exist always calculate it
+        if (not exists){return false;}
 
-        std::string BASENODE;
+        // if correlator exists only recompute if overwrite is true 
+        // (this is the only remaining case)
+        return true;
+    }
+
+    FermionMatrixType hfm_;
+    NSL::LinAlg::CG<Type> cg_;
+    NSL::Hubbard::Species species_;
+
+    NSL::Tensor<Type> corr_;
+    NSL::Tensor<Type> srcVec_;
+
+    NSL::Tensor<Type> phi_;
+
+    std::string basenode_;
 };
 
 template<
@@ -77,39 +89,24 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(
-        phi_.reshape(
-            this->params_["Nt"].to<NSL::size_t>(),
-            this->params_["Nx"].to<NSL::size_t>(),
-            1
-        ), 
-        species_,
-        /*reshape=*/true
-    );
+    hfm_.populate(phi_);
 
     // Reset memory
     // - Result correlator
     corr_ = Type(0);
+    // - Source vector
+    srcVec_ = Type(0);
     
     NSL::size_t tsrcStep = this->params_["Nt"].to<NSL::size_t>()/NumberTimeSources;
 
     for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].to<NSL::size_t>(); tsrc+=tsrcStep){
-
-        //for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); x++){
-            
-            // reset source vector
-            srcVec_ = Type(0);
-            
+        for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
             // Define a point source
-            // We need to use a slice of size 1 here as this operator() returns a NSL::Tensor
-            // If we just put x, the operator() returns a reference to the data which can not
-            // be resolved on the CPU in case the tensor b is on the GPU.
-            //srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(1) ;
-            srcVec_(tsrc,NSL::Slice(),NSL::Slice()) = NSL::Matrix::Identity<Type>( 
-                this->params_["device"], 
-                this->params_["Nx"] 
-            );
-        
+            // The Slice here takes out just the single fibre x. We put it 
+            // in to return a (device) Tensor from the random access. This 
+            // is a hack and should be improved for standard random access.
+            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(1);            
+
             // invert MM^dagger
             NSL::Tensor<Type> invMMdag = cg_(srcVec_);
 
@@ -119,21 +116,24 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
             // Using a point sink allows to just copy invM as corr(t,y,x)
             // We shift the 0th axis (time-axis) if invM by tsrc and apply anti periodic 
             // boundary conditions
-            //corr_(NSL::Slice(),NSL::Slice(),x) += invM.shift( tsrc, Type(-1) );
+
             // shift t -> t - tsrc
             invM.shift( -tsrc );
             // apply anti periodic boundary
-            NSL::size_t Nt = this->params_["Nt"];
-            invM(NSL::Slice(  Nt - tsrc, Nt )) *= -1;
+            invM(NSL::Slice(this->params_["Nt"].to<NSL::size_t>()-tsrc)) *= -1;
 
             // Average over all source times
-            corr_(NSL::Slice(),NSL::Slice(),NSL::Slice()) += invM; 
-        //} // for x
+            corr_(NSL::Slice(),NSL::Slice(),x) += invM; 
+
+            // reset source vector
+            // Slice: same as above
+            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
+        } // x
     } // tsrc
 
     corr_ /= Type(NumberTimeSources);
       
-} // measure(phi,Ntsrc);
+} // measure(Ntsrc);
 
 
 template<
@@ -147,28 +147,34 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     // This is the default basenode we used so far
     // ToDo: this should go into the const
 
-    // measure the non-interacting theory
-    // U = 0 <=> phi = 0
-    phi_ = Type(0);
-    
-    // this stores the result in corr_
-    measure(1);
-
     // write the non interacting correlator 
     std::string node;
     if (species_ == NSL::Hubbard::Particle){
-        node = "/NonInteracting/correlators/single/particle";
+          node = "/NonInteracting/correlators/single/particle";
     } else {
-        node = "/NonInteracting/correlators/single/hole";
+          node = "/NonInteracting/correlators/single/hole";
     }
+    // this is a shortcut, we don't need to calculate the non-interacting 
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],node)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
+    
+        // this stores the result in corr_
+        measure(1);
 
-    h5_.write(corr_,BASENODE+node);
+        // write the calculated correlator to file
+       h5_.write(corr_,basenode_+node);
+    } else {
+        NSL::Logger::info("Non-interacting correlators already exist");
+    }
 
     // Interacting Correlators
     // Initialize memory for the configurations
 
      // get the range of configuration ids from the h5file
-    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(BASENODE+"/markovChain");
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(basenode_+"/markovChain");
     NSL::size_t saveFreq = this->params_["save frequency"];
     
     NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
@@ -176,15 +182,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     );
 
     // Determine the number of time sources:
-    for (NSL::size_t cfgID = minCfg; cfgID<maxCfg; ++cfgID){
-        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
-
-        // read configuration 
-        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",BASENODE,cfgID));
-
-        // compute the correlator. The result is stored in corr_
-        measure(this->params_["Number Time Sources"]);
-        //measure(1);
+    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
+        // this is a shortcut, we don't need to invert if we don't overwrite
+        // data
 
         if (species_ == NSL::Hubbard::Particle){
             node = fmt::format("/markovChain/{}/correlators/single/particle",cfgID);
@@ -192,8 +192,21 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
             node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
         }
 
+        if (skip_(this->params_["overwrite"],node)) {
+            NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+	        continue;
+	    } 
+
+        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
+
+        // read configuration 
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",basenode_,cfgID));
+
+        // compute the correlator. The result is stored in corr_
+        measure(this->params_["Number Time Sources"]);
+
         // write the result
-        this->h5_.write(corr_,BASENODE+node);
+        this->h5_.write(corr_,basenode_+node);
     } // for cfgID
 
 } // measure()

@@ -18,7 +18,14 @@ class H5IO {
     public:
         H5IO(std::string h5file) :
             h5file_(h5file),
-            h5f_(h5file, NSL::File::ReadWrite | NSL::File::OpenOrCreate )
+            h5f_(h5file, NSL::File::ReadWrite | NSL::File::OpenOrCreate ),
+            overwrite_(false)
+        {}
+
+        H5IO(std::string h5file, bool overwrite) :
+            h5file_(h5file),
+            h5f_(h5file, NSL::File::ReadWrite | NSL::File::OpenOrCreate ), 
+            overwrite_(overwrite)
         {}
     
         H5IO(std::string h5file, auto FileHandle) :
@@ -36,20 +43,19 @@ class H5IO {
         }
 
         std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
-    	    NSL::size_t minCfg = 10000000000;
+    	    NSL::size_t minCfg = std::numeric_limits<NSL::size_t>::infinity();
 	        NSL::size_t maxCfg = -1;
 	        NSL::size_t temp;
 
 	        auto configs = h5f_.getGroup(node).listObjectNames();  // this list all the stored configuration numbers
             
             // this list is not given in ascending order  Really annoying!  I have to loop over them to find the most recent config. . .
-            minCfg = std::stoi(configs[0]);
-            for (int i=1;i<configs.size();i++){
+            for (int i=0;i<configs.size();i++){
 	            temp = std::stoi(configs[i]);
                 if (temp>maxCfg) {
 	                maxCfg = temp;
                 }
-	            if(temp<minCfg && temp>0) {
+	            if(temp<minCfg) {
 	                minCfg = temp;
 	            }
             }
@@ -59,8 +65,15 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
-            std::string baseNode = node;
-	
+            std::string baseNode;
+	        if (node.back() == '/') { // define the node
+	            baseNode = node + std::to_string(markovstate.markovTime);
+        	} else {
+	            baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	        }
+
+            this->removeData_(baseNode);
+
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
 
@@ -150,7 +163,8 @@ class H5IO {
 	                markovstate.markovTime = std::stoi(configs[i]);
                 }
             }
-	        NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
+	
+            NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
 	        this -> read(markovstate, node, markovstate.markovTime);
 
             return 0;
@@ -158,16 +172,22 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node, const int markovTime){
-            std::string baseNode = node;
+            std::string baseNode;
 
             markovstate.markovTime = markovTime;
-	    
+	
+	        if (node.back() == '/') { // define the node
+	           baseNode = node + std::to_string(markovstate.markovTime);
+	        } else {
+	           baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	        }
+
 	        NSL::Logger::info("Loading in {}",baseNode);
 
             if constexpr (NSL::is_complex<Type>()) {
                 std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
-	       
-        	    this->read(markovstate.configuration, baseNode); // read in the configuration
+	   
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -185,7 +205,7 @@ class H5IO {
 	                field = temp;
 	            }
 	        } else {
-        	    this -> read(markovstate.configuration, baseNode); // read in the configuration
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -201,7 +221,6 @@ class H5IO {
 	                dataset.read(field);
 	            }	
             }
-	    
             return 0;
         } // read(markovState, node, markovTime)
 
@@ -215,6 +234,8 @@ class H5IO {
             NSL::Device dev = tensor_in.device();
 
             NSL::Tensor<Type> tensor = tensor_in.to(NSL::CPU()); 
+
+            this->removeData_(node);
 
 	        if constexpr (NSL::is_complex<Type>()) {
                 std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(
@@ -252,12 +273,16 @@ class H5IO {
 
             // copy back to original device in case the tensor is re used.
             tensor.to(dev);
-            
-	        return 0; 
+
+	        h5f_.flush();  // force writing to disk!            
+	        
+            return 0; 
         } // write(tensor,node)
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::Configuration<Type> &config, const std::string node){
+            this->removeData_(node);
+
 	        for (auto [key,field] : config) {
 	            if (node.back() == '/'){
 	                this -> write(field, node+key);
@@ -372,10 +397,26 @@ class H5IO {
             return 0;
         }
     
+        inline bool exist(const std::string node){
+	        return h5f_.exist(node);
+        }  // exist(node)
+           
     private:
+        //! Removes a group if overwrite == True and group exists
+        void removeData_(std::string node){
+            bool exist = this->exist(node);
+            // remove the group if it exists; once the file is closed
+            // automatic repacking is applied
+            if (overwrite_ and exist){
+                NSL::Logger::debug("Unlinking Dataset (overwrite={}; node exists={}): {}",overwrite_,exist,node);
+                h5f_.unlink(node);
+            }
+        }
+
+
         std::string h5file_;
         File h5f_;
-    
+        bool overwrite_;
 }; // class H5IO
 
 } // namespace NSL
