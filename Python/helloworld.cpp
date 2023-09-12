@@ -48,7 +48,7 @@ double lattice(NSL::size_t Nx =  2, NSL::size_t Nt = 32) {
 }
 
 
-PYBIND11_MODULE(PyNSL, m) {
+PYBIND11_MODULE(PyNSLtest, m) {
     m.def("hello", &hello, "Hello world function for testing purposes.");
     m.def("lattice", &lattice, "Nx"_a=2, "Nt"_a=32, "Example function with inputs and output");
 }
