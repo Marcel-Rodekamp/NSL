@@ -7,8 +7,50 @@ using namespace pybind11::literals;
 using namespace NSL::Lattice;
 
 namespace NSL::Python {
+    template <typename Type>
+    void bindSpatialLattice(py::module &m, std::string class_name){
+        py::class_<SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const std::string &, const NSL::Tensor<Type> &, const NSL::Tensor<double> &>())
+            .def("__call__", &SpatialLattice<Type>::operator())
+            .def("coordinates", &SpatialLattice<Type>::coordinates)
+            .def("sites", &SpatialLattice<Type>::sites)
+            .def("name", &SpatialLattice<Type>::name)
+            .def("adjacency_matrix", &SpatialLattice<Type>::adjacency_matrix)
+            .def("hopping_matrix", &SpatialLattice<Type>::hopping_matrix, "delta"_a = 1.)
+            .def("exp_hopping_matrix", &SpatialLattice<Type>::exp_hopping_matrix, "delta"_a = 1.)
+            .def("eigh_hopping", &SpatialLattice<Type>::eigh_hopping, "delta"_a = 1.)
+            .def("bipartite", &SpatialLattice<Type>::bipartite)
+            .def("to", &SpatialLattice<Type>::to)
+            .def("device", &SpatialLattice<Type>::device);
+    }
+
+    template <typename Type>
+    void bindComplete(py::module &m, std::string class_name){
+        py::class_<Complete<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const std::size_t, const Type &, const double &>(), "n"_a, "kappa"_a = 1., "radius"_a = 1.)
+            .def("bipartite", &Complete<Type>::bipartite);
+    }
+
+    template <typename Type>
+    void bindTriangle(py::module &m, std::string class_name){
+        py::class_<Triangle<Type>, Complete<Type>>(m, class_name.c_str())
+            .def(py::init<const Type &, const double &>(), "kappa"_a = 1., "radius"_a = 1.)
+            .def("bipartite", &Triangle<Type>::bipartite);
+    }
+
+    template <typename Type>
+    void bindTetrahedon(py::module &m, std::string class_name){
+        py::class_<Tetrahedron<Type>, Complete<Type>>(m, class_name.c_str())
+            .def(py::init<const Type &, const double &>(), "kappa"_a = 1., "edge"_a = 1.)
+            .def("bipartite", &Tetrahedron<Type>::bipartite);
+    }
+
     void bindLattice(py::module &m) {
-        // py::class_<SpatialLattice>(m, "Lattice")
-        //     .def()
+        // ToDo: Templating
+        // ToDo: Documentation
+        bindSpatialLattice<float>(m, "SpatialLattice");
+        bindComplete<float>(m, "Complete");
+        bindTriangle<float>(m, "Triangle");
+        bindTetrahedon<float>(m, "Tetrahedron");
     }
 }
