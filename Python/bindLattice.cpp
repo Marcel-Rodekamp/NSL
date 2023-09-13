@@ -45,12 +45,54 @@ namespace NSL::Python {
             .def("bipartite", &Tetrahedron<Type>::bipartite);
     }
 
+    template <typename Type>
+    void bindGeneric(py::module &m, std::string class_name){
+        py::class_<Generic<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const YAML::Node &, const Type &>());
+    }
+
+    template <typename Type>
+    void bindHoneycomb(py::module &m, std::string class_name){
+        py::class_<Honeycomb<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const std::vector<int>, const Type &>());
+    }
+
+    template <typename Type>
+    void bindRing(py::module &m, std::string class_name){
+        py::class_<Ring<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const std::size_t, const Type &, const double &>());
+    }
+
+    template <typename Type>
+    void bindSquare(py::module &m, std::string class_name){
+        py::class_<Square<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+            .def(py::init<const std::vector<std::size_t>, const std::vector<Type> &, const std::vector<double>>())
+            .def(py::init<const std::vector<std::size_t>, const std::vector<Type> &, const double>())
+            .def(py::init<const std::vector<std::size_t>, const Type &, const double>())
+            .def(py::init<const std::vector<std::size_t>, const Type &, const std::vector<double>>());
+    }
+
+    template <typename Type>
+    void bindCube3D(py::module &m, std::string class_name){
+        py::class_<Cube3D<Type>, Square<Type>>(m, class_name.c_str())
+            .def(py::init<std::size_t, const Type &, const double &>());
+    }
+
+
+
     void bindLattice(py::module &m) {
         // ToDo: Templating
         // ToDo: Documentation
-        bindSpatialLattice<float>(m, "SpatialLattice");
-        bindComplete<float>(m, "Complete");
-        bindTriangle<float>(m, "Triangle");
-        bindTetrahedon<float>(m, "Tetrahedron");
+        py::module m_lattice = m.def_submodule("Lattice");
+        
+        bindSpatialLattice<float>(m_lattice, "SpatialLattice");
+        bindComplete<float>(m_lattice, "Complete");
+        bindTriangle<float>(m_lattice, "Triangle");
+        bindTetrahedon<float>(m_lattice, "Tetrahedron");
+        bindGeneric<float>(m_lattice, "Generic");
+        bindHoneycomb<float>(m_lattice, "Honeycomb");
+        bindRing<float>(m_lattice, "Ring");
+        bindSquare<float>(m_lattice, "Square");
+        bindCube3D<float>(m_lattice, "Cube3D");
     }
 }
