@@ -58,6 +58,14 @@ class Device {
         return other.repr_ == this->repr_;
     }
 
+    bool operator==(const NSL::Device & other) const {
+        return other.repr_ == this->repr_;
+    }
+
+    bool operator!=(const NSL::Device & other) const {
+        return other.repr_ == this->repr_;
+    }
+
     Device static fromTorch(torch::TensorOptions dev){
         return Device(&dev);
     }
@@ -83,6 +91,10 @@ class Device {
     }
 
     const std::string repr(){
+        return repr_;  
+    }
+
+    const std::string repr() const {
         return repr_;  
     }
 

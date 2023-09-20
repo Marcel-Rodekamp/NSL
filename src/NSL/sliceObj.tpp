@@ -10,11 +10,16 @@
 
 namespace NSL {
 
+class Indexer {
+    //! Indexer need at least a conversion to TensorIndex for use in NSL::Tensor
+    virtual operator torch::indexing::TensorIndex () const = 0;
+};
+
 //! Single Index Indexer
 /*!
  * Implicit conversion from a single element
  * */
-class Slice {
+class Slice: public Indexer {
     public:
 
     template<typename StartType = none_t, typename StopType = none_t, typename StepType = none_t>
@@ -58,6 +63,10 @@ class Slice {
         return torch::indexing::Slice(std::get<0>(t_),std::get<1>(t_),std::get<2>(t_));
     }
 
+    operator torch::indexing::TensorIndex () const override {
+        return torch::indexing::Slice(std::get<0>(t_),std::get<1>(t_),std::get<2>(t_));
+    }
+
     private:
 
     //! Variable to hold the start, step and stop parameters:
@@ -67,6 +76,37 @@ class Slice {
      * t_[3] = step
      */
      std::tuple<NSL::size_t,NSL::size_t,NSL::size_t> t_;
+};
+
+//! This indexer is the same as the torch/numpy ... indexing
+class Ellipsis : public Indexer {
+    public:
+
+    Ellipsis() = default;
+
+    operator auto () const {
+        return torch::indexing::Ellipsis;
+    }
+
+    operator torch::indexing::TensorIndex () const override {
+        return torch::indexing::Ellipsis;
+    }
+};
+
+//! Open a new dimension at inserted place
+class NewDim: public Indexer {
+    public:
+
+    NewDim() = default;
+
+    operator auto() const {
+        return torch::indexing::None;
+    }
+
+    operator torch::indexing::TensorIndex () const override {
+        return torch::indexing::None;
+    }
+
 
 };
 
