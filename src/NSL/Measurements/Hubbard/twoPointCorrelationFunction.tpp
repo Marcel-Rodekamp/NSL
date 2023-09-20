@@ -29,6 +29,7 @@ class TwoPointCorrelator: public Measurement {
             ),
             srcVec_(
                 params["device"].to<NSL::Device>(),
+                params["Nx"].to<NSL::size_t>(),
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
@@ -96,16 +97,18 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
     corr_ = Type(0);
     // - Source vector
     srcVec_ = Type(0);
+
+    NSL::size_t Nx = this->params_["Nx"].to<NSL::size_t>();
     
     NSL::size_t tsrcStep = this->params_["Nt"].to<NSL::size_t>()/NumberTimeSources;
 
     for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].to<NSL::size_t>(); tsrc+=tsrcStep){
-        for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
+        //for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
             // Define a point source
             // The Slice here takes out just the single fibre x. We put it 
             // in to return a (device) Tensor from the random access. This 
             // is a hack and should be improved for standard random access.
-            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(1);            
+            srcVec_.index_fill(1, NSL::Range(Nx) ,tsrc, NSL::Range(Nx));
 
             // invert MM^dagger
             NSL::Tensor<Type> invMMdag = cg_(srcVec_);
@@ -117,17 +120,16 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
             // We shift the 0th axis (time-axis) if invM by tsrc and apply anti periodic 
             // boundary conditions
             // shift t -> t - tsrc
-            invM.shift( -tsrc );
-            // apply anti periodic boundary
-            invM(NSL::Slice(this->params_["Nt"].to<NSL::size_t>()-tsrc)) *= -1;
+            invM.shift( -tsrc, -2, -1 );
 
             // Average over all source times
-            corr_(NSL::Slice(),NSL::Slice(),x) += invM; 
+            corr_ += invM.transpose(0,1).transpose(1,2); 
 
             // reset source vector
             // Slice: same as above
-            srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
-        } // x
+            //srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
+            srcVec_(NSL::Range(Nx) ,tsrc, NSL::Range(Nx)) = Type(0);
+        //} // x
     } // tsrc
 
     corr_ /= Type(NumberTimeSources);
