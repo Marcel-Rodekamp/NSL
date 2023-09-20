@@ -68,9 +68,9 @@ class H5IO {
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
             std::string baseNode;
 	        if (node.back() == '/') { // define the node
-	            baseNode = node + std::to_string(markovstate.markovTime);
+	            baseNode = node;// + std::to_string(markovstate.markovTime);
         	} else {
-	            baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	            baseNode = node + "/";// + std::to_string(markovstate.markovTime);
 	        }
 
             this->removeData_(baseNode);
