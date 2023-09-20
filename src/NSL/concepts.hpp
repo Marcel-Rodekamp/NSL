@@ -82,22 +82,25 @@ concept isFloatingPoint = requires(T t) {
     requires isComplex<T> || std::is_floating_point_v<T>;
 };
 
-//! Concept to check for integers or `NSL::Slice`
-/*!
- * */
-template<typename T>
-concept isIndexer = requires(T t) {
-    requires isIntegral<T> || std::is_same<T,NSL::Slice>::value;
-};
-
 //! Concept to check that `D` is derived from `B`
 /*!
  * All kind of inheritances (public,protected,private) is allowed.
  * */
 template<typename Derived,typename Base>
 concept isDerived = std::is_base_of_v<Base,Derived>;
+
+//! Concept to check for integers or `NSL::Slice`
+/*!
+ * */
+template<typename T>
+concept isIndexer = requires(T t) {
+    requires isIntegral<T> || isDerived<T,NSL::Indexer>;
+};
+
 } // namespace NSL::Concept
-  
+
+
+
 // foward declare tensor 
 namespace NSL {template<NSL::Concept::isNumber Type> class Tensor;}
 

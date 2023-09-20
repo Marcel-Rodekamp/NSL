@@ -49,6 +49,12 @@ struct packContains{
     static constexpr bool value = (std::is_same<T, Ts>::value || ...);
 };
 
+//! Check if a type of Base is contained in parameter pack
+template<typename T, typename ...Ts>
+struct packContainsDerived{
+    static constexpr bool value = (std::is_base_of_v<T,Ts> || ...);
+};
+
 //! Check if a type is contained in parameter pack
 template<typename T, typename ...Ts>
 struct packContainsConvertible{
