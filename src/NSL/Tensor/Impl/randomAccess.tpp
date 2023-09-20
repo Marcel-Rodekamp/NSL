@@ -111,6 +111,18 @@ class TensorRandomAccess:
         return this->data_.template data_ptr<Type>();
     }
 
+    template<NSL::Concept::isIndexer ... IndexTypes>
+        requires(NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
+    NSL::Tensor<Type> index_fill(const Type & value, IndexTypes ... indices){
+        this->data_.index_put_( 
+                std::initializer_list<torch::indexing::TensorIndex>{
+                    torch::indexing::TensorIndex(indices)...
+                },
+                value
+        );
+        return *this;
+    }
+
 };
 
 } // namespace NSL::TensorImpl
