@@ -30,7 +30,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL
     // [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
     // What remains is to shift it
     // and apply B
-    Fpsi.shift(/*shift*/1,/*dim*/-2,/*boundary*/-1);
+    Fpsi.shift(/*shift*/1,/*dim*/-2,/*boundary*/Type(-1));
 
     return Fpsi;
 }
@@ -69,7 +69,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
       *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t,i-1} expKpsi_{ix}
       *                          |- element-wise * -->|------- shift ------|
       **/
-    BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/-1);
+    BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
 
     return psi - ( NSL::LinAlg::conj(this->phiExp_) * BexpKpsi);
 }
