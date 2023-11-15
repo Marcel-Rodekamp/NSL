@@ -90,7 +90,7 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_);
+    hfm_.populate(phi_,species_);
 
     // Reset memory
     // - Result correlator
