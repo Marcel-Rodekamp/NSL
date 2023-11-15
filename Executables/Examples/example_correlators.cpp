@@ -119,12 +119,28 @@ int main(int argc, char** argv){
         NSL::FermionMatrix::HubbardExp<
             Type,decltype(lattice)
         >
-    > C2pt(params, h5, NSL::Hubbard::Particle);
+    > C2pt_sp(params, h5, NSL::Hubbard::Particle);
 
     // Perform the measurement.
     // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
     //
     // configurations from the data file specified under params["file"].
     // Then 
-    C2pt.measure();
+    C2pt_sp.measure();
+
+    // initialize 2 point correlation function <h^+_x h_y> 
+    NSL::Measure::Hubbard::TwoPointCorrelator<
+        Type,
+        decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<
+            Type,decltype(lattice)
+        >
+    > C2pt_sh(params, h5, NSL::Hubbard::Hole);
+
+    // Perform the measurement.
+    // 1. Calculate <h^+_x h_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
+    //
+    // configurations from the data file specified under params["file"].
+    // Then 
+    C2pt_sh.measure();
 }
