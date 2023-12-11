@@ -22,5 +22,6 @@
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp
 #include "LinAlg/Solver/Impl/CG.tpp" 
+#include "LinAlg/Solver/Impl/BiCGStab.tpp"
 
 #endif
