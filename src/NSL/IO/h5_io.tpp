@@ -30,12 +30,14 @@ class H5IO {
     
         H5IO(std::string h5file, auto FileHandle) :
             h5file_(h5file),
-            h5f_(h5file, FileHandle)  //| File::Truncate)
+            h5f_(h5file, FileHandle),  //| File::Truncate)
+            overwrite_(false)
         {}
 
         H5IO() : 
             h5file_("data.h5"),
-            h5f_("data.h5", NSL::File::ReadWrite)
+            h5f_("data.h5", NSL::File::ReadWrite),
+            overwrite_(false)
         {}
 
         HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
@@ -379,6 +381,10 @@ class H5IO {
 	        return h5f_.exist(node);
         }  // exist(node)
            
+        inline bool overwrite(){
+            return overwrite_;
+        } // overwrite()
+
     private:
 
         //! Removes a group if overwrite == True and group exists
