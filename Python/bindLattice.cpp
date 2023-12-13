@@ -12,6 +12,7 @@ namespace NSL::Python {
         py::class_<SpatialLattice<Type>>(m, class_name.c_str())
             .def(py::init<const std::string &, const NSL::Tensor<Type> &, const NSL::Tensor<double> &>())
             .def("__call__", &SpatialLattice<Type>::operator())
+            .def("__repr__", &SpatialLattice<Type>::name)
             .def("coordinates", &SpatialLattice<Type>::coordinates)
             .def("sites", &SpatialLattice<Type>::sites)
             .def("name", &SpatialLattice<Type>::name)
@@ -20,7 +21,10 @@ namespace NSL::Python {
             .def("exp_hopping_matrix", &SpatialLattice<Type>::exp_hopping_matrix, "delta"_a = 1.)
             .def("eigh_hopping", &SpatialLattice<Type>::eigh_hopping, "delta"_a = 1.)
             .def("bipartite", &SpatialLattice<Type>::bipartite)
-            .def("to", &SpatialLattice<Type>::to)
+            .def("to", [](SpatialLattice<Type>& self, const std::string& device_identifier, const NSL::size_t ID) {     //TODO bind NSL::Device for better style
+                NSL::Device device = NSL::Device(device_identifier, ID);
+                self.to(device);
+            }, "device"_a, "ID"_a = 0)
             .def("device", &SpatialLattice<Type>::device);
     }
 
@@ -48,7 +52,7 @@ namespace NSL::Python {
     template <typename Type>
     void bindGeneric(py::module &m, std::string class_name){
         py::class_<Generic<Type>, SpatialLattice<Type>>(m, class_name.c_str())
-            .def(py::init<const YAML::Node &, const Type &>());
+            .def(py::init<const YAML::Node &, const Type &>(), "system"_a, "kappa"_a = 1.);
     }
 
     template <typename Type>
@@ -96,3 +100,27 @@ namespace NSL::Python {
         bindCube3D<float>(m_lattice, "Cube3D");
     }
 }
+
+namespace pybind11 {
+    namespace detail {
+        template <>
+        struct type_caster<YAML::Node> {
+        public:
+            PYBIND11_TYPE_CASTER(YAML::Node, _("YAML::Node"));
+
+            // Conversion from Python to C++
+            bool load(handle src, bool) {
+                std::string yaml_path = src.cast<std::string>();
+                value = YAML::LoadFile(yaml_path);
+                return true;
+            }
+
+            // Conversion from C++ to Python
+            static handle cast(const YAML::Node& src, return_value_policy /* policy */, handle /* parent */) {
+                std::stringstream ss;
+                ss << src;
+                return py::str(ss.str()).release();
+            }
+        };
+    }  // namespace detail
+}  // namespace pybind11
