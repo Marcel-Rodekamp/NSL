@@ -29,6 +29,9 @@ namespace NSL::Python {
                     addParameter<NSL::complex<double>>(key, value.cast<NSL::complex<double>>());
                 } else if (py::isinstance<py::module>(value)) {
                     throw std::invalid_argument("Not implemented yet");
+                } else if (py::isinstance<SpatialLattice<float>>(value)) {
+                    addParameter<SpatialLattice<float>>(key, value.cast<SpatialLattice<float>>());
+                    std::cout << "SpatialLattice" << std::endl;
                 } else {
                     py::str type_str = py::str(value.get_type().attr("__name__"));
                     std::string type_name = type_str.operator std::string();
