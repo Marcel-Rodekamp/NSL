@@ -24,7 +24,7 @@ namespace NSL::Python {
             .def("to", [](SpatialLattice<Type>& self, const std::string& device_identifier, const NSL::size_t ID) {     //TODO bind NSL::Device for better style
                 NSL::Device device = NSL::Device(device_identifier, ID);
                 self.to(device);
-            }, "device"_a, "ID"_a = 0)
+            }, "device"_a = "CPU", "ID"_a = 0)
             .def("device", &SpatialLattice<Type>::device);
     }
 
