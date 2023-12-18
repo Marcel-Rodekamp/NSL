@@ -10,4 +10,4 @@ target_link_libraries(PyNSL PRIVATE ${TORCH_LIBRARIES} ${TORCH_PYTHON_LIBRARY} N
 target_compile_options(PyNSL PUBLIC ${TORCH_CXX_FLAGS})
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/example_MCMC.py ${CMAKE_CURRENT_BINARY_DIR}/example_MCMC.py)
-file(COPY example_perylene.h5 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# file(COPY example_perylene.h5 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
