@@ -5,60 +5,92 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-using namespace NSL;
+enum class PyType {
+    INT,
+    FLOAT,
+    STR,
+    COMPLEX,
+    MODULE,
+    SPATIAL_LATTICE,
+    UNKNOWN
+};
 
-namespace NSL::Python {
-    class PyParameter : public Parameter {
-    private:
-        py::dict dictionary_;
-    
+PyType get_pytype(py::handle& pyvalue) {
+    if (py::isinstance<py::int_>(pyvalue)) {
+        return PyType::INT;
+    } else if (py::isinstance<py::float_>(pyvalue)) {
+        return PyType::FLOAT;
+    } else if (py::isinstance<py::str>(pyvalue)) {
+        return PyType::STR;
+    } else if (py::type::of(pyvalue).is(py::module::import("builtins").attr("complex"))) {
+        return PyType::COMPLEX;
+    } else if (py::isinstance<py::module>(pyvalue)) {
+        return PyType::MODULE;
+    } else if (py::isinstance<SpatialLattice<float>>(pyvalue)) {
+        return PyType::SPATIAL_LATTICE;
+    } else {
+        return PyType::UNKNOWN;
+    }
+}
+
+namespace pybind11 {
+namespace detail {
+
+    // Empty Pybind11 type caster for converting Python dictionary to NSL::Parameter object
+    template <>
+    struct type_caster<NSL::Parameter> {
     public:
-        using Parameter::Parameter;
+        PYBIND11_TYPE_CASTER(NSL::Parameter, _("NSL::Parameter"));
 
-        PyParameter(py::dict dictionary)  : dictionary_(dictionary) {
-            for (std::pair<py::handle, py::handle> item : dictionary){
-                std::string key = item.first.cast<std::string>();
-                py::handle value = item.second;
-                if (py::isinstance<py::int_>(value)) {
-                    addParameter<int>(key, value.cast<int>());
-                } else if (py::isinstance<py::float_>(value)) {
-                    addParameter<double>(key, value.cast<double>());
-                } else if (py::isinstance<py::str>(value)) {
-                    addParameter<std::string>(key, value.cast<std::string>());
-                } else if (py::type::of(value).is(py::module::import("builtins").attr("complex"))) {
-                    addParameter<NSL::complex<double>>(key, value.cast<NSL::complex<double>>());
-                } else if (py::isinstance<py::module>(value)) {
-                    throw std::invalid_argument("Not implemented yet");
-                } else if (py::isinstance<SpatialLattice<float>>(value)) {
-                    addParameter<SpatialLattice<float>>(key, value.cast<SpatialLattice<float>>());
-                    std::cout << "SpatialLattice" << std::endl;
-                } else {
-                    py::str type_str = py::str(value.get_type().attr("__name__"));
-                    std::string type_name = type_str.operator std::string();
-                    throw std::invalid_argument("Unsupported type: " + type_name);
+        // Conversion from Python to C++
+        bool load(handle src, bool) {
+            if (py::isinstance<py::dict>(src)) {
+                py::dict src_dict = src.cast<py::dict>();
+                NSL::Parameter param;
+                for (std::pair<py::handle, py::handle> item : src_dict){
+                    std::string key = item.first.cast<std::string>();
+                    py::handle pyvalue = item.second;
+
+                    switch(get_pytype(pyvalue)) {
+                        case PyType::INT:
+                            param.addParameter<NSL::size_t>(key, pyvalue.cast<int>());
+                            break;
+                        case PyType::FLOAT:
+                            param.addParameter<float>(key, pyvalue.cast<double>());
+                            break;
+                        case PyType::STR:
+                            param.addParameter<std::string>(key, pyvalue.cast<std::string>());
+                            break;
+                        case PyType::COMPLEX:
+                            param.addParameter<NSL::complex<double>>(key, pyvalue.cast<NSL::complex<double>>());
+                            break;
+                        case PyType::MODULE:
+                            throw std::invalid_argument("Not implemented yet");
+                            break;
+                        case PyType::SPATIAL_LATTICE:
+                            param.addParameter<SpatialLattice<float>>(key, pyvalue.cast<SpatialLattice<float>>());
+                            break;
+                        case PyType::UNKNOWN:
+                            py::str type_str = py::str(pyvalue.get_type().attr("__name__"));
+                            std::string type_name = type_str.operator std::string();
+                            throw std::invalid_argument("Unsupported type: " + type_name);
+                            break;
+                    }
                 }
+                value = param;
+                return true;
+            } else {
+                return false;
             }
+
         }
 
-        py::object getDictionary() {
-            return dictionary_;
-        }
-
-        void setDictionary(py::dict dictionary) {
-            dictionary_ = dictionary;
-            *this = PyParameter(dictionary_);
-        }
-
-        void updateMap(){
-            *this = PyParameter(dictionary_);
+        // Conversion from C++ to Python
+        static handle cast(const NSL::Parameter& src, return_value_policy, handle) {
+            // Implement conversion logic here
+            return py::cast(src).release();
         }
     };
 
-    void bindParameter(py::module &m) {
-        py::class_<PyParameter>(m, "Parameter")
-            .def(py::init<>())
-            .def(py::init<py::dict>())
-            .def_property("p", &PyParameter::getDictionary, &PyParameter::setDictionary)
-            .def("updateMap", &PyParameter::updateMap);
-    }
-}
+} // namespace detail
+} // namespace pybind11

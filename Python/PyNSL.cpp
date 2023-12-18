@@ -9,6 +9,5 @@ namespace NSL::Python {
     PYBIND11_MODULE(PyNSL, m) {
         bindLattice(m);
         bindTensor(m);
-        bindParameter(m);
     }
 }
