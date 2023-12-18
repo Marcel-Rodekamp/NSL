@@ -66,7 +66,9 @@ def main():
 
     print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}, on a {str(params['lattice'])} lattice.")
 
-    # nsl_params = nsl.Parameter(params)
+    action = nsl.Action.HubbardGaugeAction(params)
+    print("Action object created from py::dict.")
+    print(action.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
 
 def write_meta(params, basenode):
     basenode["/Meta/lattice"] = str(params["lattice"].name)
