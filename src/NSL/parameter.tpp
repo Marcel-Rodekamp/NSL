@@ -3,193 +3,203 @@
 
 #include <sstream>
 #include "IO/to_string.tpp"
+#include "Lattice.hpp"
+#include "Lattice/Implementations/square.hpp"
     
+#include<iostream>
+#include<complex>
+#include<variant>
+#include<unordered_map>
+#include<concepts>
+#include<typeinfo>
+#include<type_traits>
+#include <cxxabi.h> 
+
 namespace NSL{
 
-template<typename Type> class TemplatedParameterEntry;
+std::string demangle(const char * tis){
+    int status;
+    char * buf = abi::__cxa_demangle(tis, nullptr, nullptr, &status);
+    std::string out(buf);
+    std::free(buf);
+    return out;
 
-/*!
- * This class represents a single entry in `NSL::Parameter(std::unordered_map<std::string,ParameterEntry *>)`.
- * It implements basic functionality to hide the data type of the parameter stored.
- * This is achieved by Deriving from this class (see `NSL::TemplatedParameterEntry`) and 
- * dynamic casting to the child class.
- * This Base class is the point of access. The user should never have to
- * handle `NSL::TemplatedParameterEntry`.
+}
+
+//! Implementation of an Entry object for arbitrary types
+/*! 
+ * This implementation is basically a std::variant with some syntactic sugar around
+ * Usage:
  *
- * \todo: Implement a way to do `ParameterEntry(myVariable)`;
- *        such that it can be used together with `NSL::Parameter::operator[]`;
+ * ```
+ * #include "NSL.hpp"
+ * 
+ * // declare test function 
+ * template<typename Type> f(Type myVal); 
+ *
+ * int main(){
+ *     // initialize a dictionary containing parameters
+ *     Parameter p;
+ *
+ *     // put some parameters
+ *     p["p1"] = 2;
+ *     p["p2"] = float(2.);
+ *
+ *     // complex<float> is not an allowed type (see definition of Entry), thus this line throws a compile time error
+ *     // p["p3"] = std::complex<float>(2.);
+ * 
+ *     // printing is possible from the Entry type
+ *     std::cout << p["p1"] << std::endl;
+ * 
+ *     // we can decompose the Entry into a complex, here the int entry is casted to complex<double>
+ *     f<std::complex<double>>(p["p1"]);
+ * 
+ *     return EXIT_SUCCESS;
+ * }
+ *
+ * // This function accepts any argument, requiring that operator<< extists 
+ * // If given an Entry object, the corresponding functions from there can be called.
+ * // we can further decompose it into a desired type by calling this
+ * // `f<DesiredType>(entryArgument)`
+ * // where the `entryArgument` is decomposed into DesiredType 
+ * template<typename Type>
+ * void f(Type myVal){
+ *     std::cout << "f<Type=" << demangle(typeid(Type).name()) << ">(myVal=" << myVal << ")" << std::endl;
+ * }
+ * ```
  * */
-class ParameterEntry{
-    public:
-    ParameterEntry() = default;
+template<typename ... Types>
+struct EntryImpl{
+    EntryImpl() = default;
 
-    //! Retrieve the stored value. Type must match the initial type otherwise runtime error is thrown.
+    //! (Copy-) construct the entry with a given type
     template<typename Type>
-    Type & to(){
-        // get the derived TemplatedParameterEntry
-        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
-        return ptr->value_;
+    EntryImpl(const Type & entry) : entry(entry) {}
+
+    //! Move construct the entry with a given type
+    template<typename Type>
+    EntryImpl(Type && entry) : entry(std::move(entry)) {}
+
+    //! Assignment operator allows to copy the contents of one EntryImpl into this
+    EntryImpl<Types...> & operator=(const EntryImpl<Types...> & e){
+        entry = e.entry;
+        return *this;
     }
 
-    //! Retrieve the stored value. Type must match the initial type otherwise runtime error is thrown.
+    //! Assignment operator allows to assign things of type Type into this class
     template<typename Type>
-    const Type & to() const {
-        // get the derived TemplatedParameterEntry
-        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
-        return ptr->value_;
+    EntryImpl<Types...> & operator=(const Type & e){
+        entry = e;
+        return *this;
     }
 
-    //! Explicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    //! This operator decomposes the entry into a given type potentially casting it
     template<typename Type>
     operator Type(){
-        // get the derived TemplatedParameterEntry
-        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
-        return ptr->value_;
+        // we can std::visit to decompose the std::variant into its contained object (C++17)
+        // returning a static_cast<Type> version of the contained object allows to 
+        // decompose the object into any (castable) type
+        // If type cast is not possible (e.g. NSL::Device -> NSL::complex) and tried, a
+        // runtime error is thrown. 
+        return std::visit(
+            [](auto & e){
+                if constexpr (std::is_convertible_v<Type,decltype(e)>){
+                    return static_cast<Type>(e);
+                } else if constexpr (std::is_constructible_v<Type,decltype(e)>){
+                    return Type(e);
+                } else {
+                    throw std::runtime_error(
+                        "Entry: Can not convert type(e)="
+                        +demangle(typeid(e).name()) 
+                        +" to Type="+demangle(typeid(Type).name()) 
+                    );
+                    return Type();
+                }
+            },
+            entry
+        );
     }
 
-    //! Explicitly convert to Type. Type must match the initial type otherwise runtime error is thrown.
+    //! This legacy function decomposes the entry into a given type potentially casting it
     template<typename Type>
-    operator Type() const {
-        // get the derived TemplatedParameterEntry
-        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
-        return ptr->value_;
+    Type to(){
+        // As we don't want to code the same thing twice, we just call the operator Type() function
+        return Type(*this);
     }
 
-    //! Assigns a value of Type. Type must match the initial type otherwise runtime error is thrown.
-    template<typename Type>
-    ParameterEntry operator=(const Type & value){
-        // get the derived TemplatedParameterEntry
-        TemplatedParameterEntry<Type> * ptr = upcast<Type>();
-        ptr->value_ = value;
-        return *ptr;
+    //! Convert the Type of the contained object into a string
+    std::string getTypeName() const {
+        return std::visit(
+            [](auto & e){return demangle(typeid(e).name());},
+            entry
+        );
     }
 
-    //! Convert the stored value into a string and return it
-    //! If initial type is not convertible, error is thrown
-    virtual std::string repr(){
-        return this->repr();
-    };
-
-    virtual ~ParameterEntry() = default;
-
-    protected:
-    //! Retrieves the address of `NSL::TemplatedParameterEntry` the runtime polymorphism points to
-    /*!
-     * This function performs an upcast to the derived onject `template<typename Type> NSL::TemplateParameterentry`.
-     * and performs checks that the conversion worked out correctly.
-     * If dynamic_cast fails (returning a nullptr) a std::runtime_error is thrown
-     * */
-    template<typename Type>
-    NSL::TemplatedParameterEntry<Type> * upcast(){
-        // if conversion does not work ptr = nullptr or throw std::bad_cast
-        NSL::TemplatedParameterEntry<Type> * ptr = dynamic_cast<TemplatedParameterEntry<Type> *>(this);
-        
-        // check for nullptr and return or throw
-        if(ptr){
-            return ptr;
-        } else {
-            throw std::runtime_error("Converting ParameterEntry to TemplatedParameterEntry failed");
-        }
+    //! Prepare a string representation of the Entry
+    std::string repr() const {
+        std::stringstream ss;
+        ss << *this;
+        return ss.str();
     }
+
+    //! Provide a streaming operator using std::visit
+    friend std::ostream & operator<< (std::ostream & os, EntryImpl<Types...> e){
+        std::visit(
+            [&os,&e](auto & arg){os << "Entry(" << arg << ", type=" << demangle(typeid(arg).name()) << ")";},
+            e.entry
+        );
+
+        return os;
+    }
+
+    // Store the held element in a std::variant
+    // The std::variant is the heart of this implementation, basically that is what the EntryImpl boils down to
+    std::variant<Types...> entry;
 };
 
-/*! 
- * This class implements a wrapper around a simple data type `Type` and is
- * implementing the back end for `NSL::ParameterEntry`.
- * The user most likely should not need to worry about this class as the point
- * of access is really the `NSL::ParameterEntry`
- * */
-template<typename Type>
-class TemplatedParameterEntry: public ParameterEntry{
-    public:
-    //! Construct the object given a value of type Type
-    TemplatedParameterEntry(const Type & value):
-        ParameterEntry(),
-        value_(value)
-    {}
-
-    //! Construct the object using a default constructor
-    TemplatedParameterEntry() = default;
-
-    std::string repr() override {
-        if constexpr(std::is_convertible_v<Type,std::string> || NSL::Concept::isNumber<Type>){
-            return NSL::to_string(value_);
-        } else {
-            // e.g. NSL::SpatialLattice
-            return value_.name();
-        }
-    }
-    
-    //! Befriend ParameterEntry such that it can access everything in here
-    friend class ParameterEntry;
-
-    protected:
-    //! The stored object
-    Type value_;
-
-};
-
+//! Put all allowed types for entry
 /*!
- * A dictionary of `ParameterEntry`s references by a std::string.
- * This class is basically and `std::unordered_dict` with one overload 
- * (`operator[](const std::string&)`) and one extension `addParameter`
- * The `ParameterEntry` is a runtime polymorphism around arbitrary datatype
- * and can be added using the addParameter class.
+ * Allowed types are:
  *
- * all std::unordered_map routines, except of `operator[]`, return a pointer to `ParameterEntry`.
+ * * Basic Types:
+ *      * bool,int, float, double, std::string
+ * * NSL Types:
+ *      * NSL::Device
+ *      * NSL::size_t
+ *      * NSL::complex<float> 
+ *      * NSL::complex<double>
  *
- * This class is strongly inspired by an old ParameterFile Management system
- * I implemented some years ago:
- * https://github.com/Marcel-Rodekamp/ParameterFileManager
  * */
-class Parameter: public std::unordered_map<std::string, ParameterEntry *>{
-    public:
-    //! Dereference the Parameter dictionary by a std::string key.
-    /*!
-     * This returns a ParameterEntry object. Direct access to the stored 
-     * data is not available. Use 
-     * ```
-     * NSL::Parameter params;
-     * params.addParameter<double>("myParam")
-     *
-     * std::cout << params["myParam"].to<double>() << std::endl;
-     * ```
-     *
-     * Implicit conversion however works just fine
-     * ```
-     * NSL::Parameter params;
-     * params.addParameter<double>("myParam")
-     *
-     * double myParamCopy = params["myParam"];
-     * ```
-     * or by overwriting the value
-     * ```
-     * params["myParam"] = 2.;
-     * ```
-     * */
-    ParameterEntry & operator[](const std::string & key){
-        return *(std::unordered_map<std::string, ParameterEntry *>::operator[](key));
-    }
+typedef EntryImpl<
+    // Basic Types 
+    bool,
+    int,NSL::size_t,
+    float,double,
+    NSL::complex<float>,NSL::complex<double>,
+    std::string,
 
-    //! Add a parameter at key, default constructed value
-    template<typename Type>
-    void addParameter(const std::string & key){
-        insert( std::make_pair<const std::string &, ParameterEntry *>(
-            key,
-            new TemplatedParameterEntry<Type>(Type{})
-        ));
-    }
+    // NSL Types
+    NSL::Device
+> Entry ;
 
-    //! Add a parameter at `key` with value `value`
-    template<typename Type>
-    void addParameter(const std::string & key, const Type & value){
-        insert( std::make_pair<const std::string &, ParameterEntry *>(
-            key,
-            new TemplatedParameterEntry<Type>(value)
-        ));
-    }
-};
+//! A Parameter is a dictionary with trace <string,Entry> where Entry can be any type allowed in the definition Entry
+using Parameter = std::unordered_map<std::string, Entry>;
 
 } //namespace NSL
+  
+
+//! Provide a formatter for a Entry object based on the implementation of the streaming operator therein.
+template <>
+struct fmt::formatter<NSL::Entry>: fmt::formatter<std::string> {
+    auto format(NSL::Entry e, format_context& ctx) const {
+        // convert the Entry into a stringstream
+        std::stringstream ss; ss << e;
+
+        // use the standard string formatter to parse the provided string 
+        return formatter<std::string>::format(
+            fmt::format("{}", ss.str()), ctx
+        );
+    }
+};
 
 #endif // NSL_PARAMETER
