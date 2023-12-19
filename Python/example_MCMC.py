@@ -65,7 +65,10 @@ def main():
     Nx = lattice.sites()
 
     print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}, on a {str(params['lattice'])} lattice.")
-
+    hga = nsl.Action.HubbardGaugeAction(params)
+    print(hga.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
+    hfa = nsl.Action.HubbardFermionAction(params)
+    print(hfa.eval())
     action = nsl.Action.HubbardGaugeAction(params)
     print("Action object created from py::dict.")
     print(action.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
