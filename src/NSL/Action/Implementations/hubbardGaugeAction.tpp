@@ -23,17 +23,13 @@ class HubbardGaugeAction :
     public: 
 
 	HubbardGaugeAction(NSL::Parameter & params) : 
-        BaseAction<Type, TensorType>(
-            "phi"
-        ),
+        BaseAction<Type, TensorType>("phi"),
         params_(params),
         Utilde_(NSL::Hubbard::tilde<Type>(params,"U"))
     {}
 
 	HubbardGaugeAction(NSL::Parameter & params,const std::string & fieldName) : 
-        BaseAction<Type, TensorType>(
-            fieldName
-        ),
+        BaseAction<Type, TensorType>(fieldName),
         params_(params),
         Utilde_(NSL::Hubbard::tilde<Type>(params,"U")) 
     {}

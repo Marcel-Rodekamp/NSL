@@ -74,19 +74,19 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
-    HubbardDiag(NSL::Hubbard::Species species, NSL::Parameter & params):
+    HubbardDiag(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
         HubbardDiag(
             species,
-            params["lattice"].to<LatticeType>(), 
+            lat, 
             NSL::size_t(params["Nt"]), 
             Type(params["beta"]), 
             Type(params["mu"])
         )
     {}
 
-    HubbardDiag(NSL::Parameter & params):
+    HubbardDiag(LatticeType & lat, NSL::Parameter & params):
         HubbardDiag(
-            params["lattice"].to<LatticeType>(), 
+            lat, 
             NSL::size_t(params["Nt"]), 
             Type(params["beta"]), 
             Type(params["mu"])

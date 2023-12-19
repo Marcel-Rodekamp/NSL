@@ -31,20 +31,14 @@ class HubbardFermionAction :
 {   
     public: 
 
-	HubbardFermionAction(NSL::Parameter & params) : 
-        BaseAction<Type, TensorType>(
-            "phi"
-        ),
+	HubbardFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) : 
+        BaseAction<Type, TensorType>(fieldName),
         params_(params),
-        hfm_(params)
+        hfm_(lattice,params)
     {}
 
-	HubbardFermionAction(NSL::Parameter & params, const std::string & fieldName) : 
-        BaseAction<Type, TensorType>(
-            fieldName
-        ),
-        params_(params),
-        hfm_(params)
+	HubbardFermionAction(LatticeType & lattice, NSL::Parameter & params): 
+	    HubbardFermionAction<Type,LatticeType,FermionMatrixType>(lattice,params,"phi")
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 

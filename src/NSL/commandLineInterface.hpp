@@ -62,8 +62,7 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
 
     // Define a bunch of default options 
     NSL::Parameter params;
-    params.addParameter<std::string>("file");
-    app.add_option<NSL::ParameterEntry, std::string>("-f, --file", params["file"], 
+    app.add_option<NSL::Entry, std::string>("-f, --file", params["file"], 
         "Provide a parameter file"
     );
 
@@ -82,12 +81,12 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     // initialize the use of GPU/CPU. This is not restrictive but 
     // params["device"] can be used for convenience.
     if (useGPU){
-        params.addParameter<NSL::Device>("device", NSL::Device("GPU"));
+        params["device"] = NSL::Device("GPU");
     } else {
-        params.addParameter<NSL::Device>("device", NSL::Device("CPU"));
+        params["device"] = NSL::Device("CPU");
     }
 
-    params.addParameter<bool>("overwrite", overwrite);
+    params["overwrite"] = overwrite;
     
     // after the logging has been parsed we can simply initialize the logger
     NSL::Logger::init(log_level, log_file);
@@ -117,8 +116,7 @@ NSL::Parameter init(int argc, char ** argv,
 
     // Define a bunch of default options 
     NSL::Parameter params;
-    params.addParameter<std::string>("file");
-    app.add_option<NSL::ParameterEntry, std::string>("-f, --file", params["file"], 
+    app.add_option("-f, --file", params["file"], 
         "Provide a parameter file"
     );
 
@@ -135,9 +133,9 @@ NSL::Parameter init(int argc, char ** argv,
     // initialize the use of GPU/CPU. This is not restrictive but 
     // params["device"] can be used for convenience.
     if (useGPU){
-        params.addParameter<NSL::Device>("device", NSL::Device("GPU"));
+        params["device"] = NSL::Device("GPU");
     } else {
-        params.addParameter<NSL::Device>("device", NSL::Device("CPU"));
+        params["device"] = NSL::Device("CPU");
     }
     
     // after the logging has been parsed we can simply initialize the logger
