@@ -23,7 +23,6 @@ std::string demangle(const char * tis){
     std::string out(buf);
     std::free(buf);
     return out;
-
 }
 
 //! Implementation of an Entry object for arbitrary types
@@ -86,7 +85,7 @@ struct EntryImpl{
         return *this;
     }
 
-    //! Assignment operator allows to assign things of type Type into this class
+    //! Assignment operator allows to assign content of type Type to this class
     template<typename Type>
     EntryImpl<Types...> & operator=(const Type & e){
         entry = e;

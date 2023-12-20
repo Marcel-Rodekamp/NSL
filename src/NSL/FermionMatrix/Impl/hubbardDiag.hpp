@@ -75,22 +75,11 @@ class HubbardDiag : public FermionMatrix<Type,LatticeType> {
     {}
 
     HubbardDiag(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
-        HubbardDiag(
-            species,
-            lat, 
-            NSL::size_t(params["Nt"]), 
-            Type(params["beta"]), 
-            Type(params["mu"])
-        )
+        HubbardDiag(species,lat, params["Nt"], params["beta"], params["mu"])
     {}
 
     HubbardDiag(LatticeType & lat, NSL::Parameter & params):
-        HubbardDiag(
-            lat, 
-            NSL::size_t(params["Nt"]), 
-            Type(params["beta"]), 
-            Type(params["mu"])
-        )
+        HubbardDiag(lat, params["Nt"], params["beta"], params["mu"])
     {}
 
     //! Populates the fermion matrix with a new configuration phi
