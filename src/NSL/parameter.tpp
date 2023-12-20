@@ -2,6 +2,7 @@
 #define NSL_PARAMETER
 
 #include <sstream>
+#include "logger.hpp"
 #include "IO/to_string.tpp"
 #include "Lattice.hpp"
 #include "Lattice/Implementations/square.hpp"
@@ -13,7 +14,7 @@
 #include<concepts>
 #include<typeinfo>
 #include<type_traits>
-#include <cxxabi.h> 
+#include<cxxabi.h> 
 
 namespace NSL{
 
