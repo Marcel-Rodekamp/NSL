@@ -172,7 +172,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
     // Interacting Correlators
     // Initialize memory for the configurations
-
      // get the range of configuration ids from the h5file
     auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
     NSL::size_t saveFreq = this->params_["save frequency"];

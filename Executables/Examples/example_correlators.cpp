@@ -69,12 +69,11 @@ int main(int argc, char** argv){
     }
 
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"].to<std::string>(), params["overwrite"].to<bool>());
+    NSL::H5IO h5(params["h5file"], params["overwrite"]);
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
-    std::string BASENODE(fmt::format("{}",params["name"].repr()));
-
+    std::string BASENODE(fmt::format("{}",std::string(params["name"])));
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
 

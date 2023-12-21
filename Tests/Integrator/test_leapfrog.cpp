@@ -15,9 +15,9 @@ void energyPreservation(Action & action, std::pair<NSL::size_t,NSL::size_t> fiel
 FLOAT_NSL_TEST_CASE("Leapfrog Reversibility", "[Integrator,Leapfrog]"){
     for(NSL::size_t Nt = 1; Nt < 12; Nt*=2){
         NSL::Parameter params;
-        params.addParameter<TestType>("beta",1);
-        params.addParameter<TestType>("U",1);
-        params.addParameter<NSL::size_t>("Nt",Nt);
+        params["beta"] = 1.;
+        params["U"] = 1.;
+        params["Nt"] = Nt;
 
 	    NSL::Action::Action S = NSL::Action::HubbardGaugeAction<TestType>(params);
 
@@ -34,9 +34,9 @@ FLOAT_NSL_TEST_CASE("Leapfrog Reversibility", "[Integrator,Leapfrog]"){
 FLOAT_NSL_TEST_CASE("Leapfrog Energy Preservation", "[Integrator,Leapfrog]"){
     for(NSL::size_t Nt = 1; Nt < 12; Nt*=2){
         NSL::Parameter params;
-        params.addParameter<TestType>("beta",1);
-        params.addParameter<TestType>("U",1);
-        params.addParameter<NSL::size_t>("Nt",Nt);
+        params["beta"] = 1.;
+        params["U"] = 1.;
+        params["Nt"] = Nt;
 
 	    NSL::Action::Action S = NSL::Action::HubbardGaugeAction<TestType>(params);
 

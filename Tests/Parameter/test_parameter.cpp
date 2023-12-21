@@ -2,8 +2,8 @@
 
 NSL_TEST_CASE("Parameter", "[Parameter]"){
     NSL::Parameter params;
-    params.addParameter<TestType>("myParam1");
-    params.addParameter<std::string>("myParam2");
+    params["myParam1"] = TestType{};
+    params["myParam2"] = std::string{};
 
     // Params can be converted to its correct Type 
     REQUIRE(params["myParam1"].to<TestType>() == TestType{});

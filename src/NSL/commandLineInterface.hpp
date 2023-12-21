@@ -77,7 +77,6 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     } catch (const CLI::ParseError &e) {
         exit(app.exit(e));
     }
-
     // initialize the use of GPU/CPU. This is not restrictive but 
     // params["device"] can be used for convenience.
     if (useGPU){
@@ -96,7 +95,7 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     );
 
     NSL::Logger::info(
-        "Using device: {}", NSL::Device(params["device"]).repr()
+        "Using device: {}", std::string(params["device"])
     );
 
     return params;
@@ -146,7 +145,7 @@ NSL::Parameter init(int argc, char ** argv,
     );
 
     NSL::Logger::info(
-        "Using device: {}", NSL::Device(params["device"]).repr()
+        "Using device: {}", std::string(params["device"])
     );
 
     return params;
