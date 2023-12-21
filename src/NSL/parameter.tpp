@@ -107,6 +107,8 @@ struct EntryImpl{
                     return static_cast<Type>(e);
                 } else if constexpr (std::is_constructible_v<Type,decltype(e)>){
                     return Type(e);
+                } else if constexpr (std::is_same_v<Type, std::string> && std::is_same_v<decltype(e), bool&>) {
+                    return Type(e ? "true" : "false");
                 } else {
                     throw std::runtime_error(
                         "Entry: Can not convert type(e)="
@@ -135,11 +137,19 @@ struct EntryImpl{
         );
     }
 
-    //! Prepare a string representation of the Entry
+    //! Prepare a string representation of the Entry object
     std::string repr() const {
         std::stringstream ss;
         ss << *this;
         return ss.str();
+    }
+
+    //! Prepare a string representation of the stored value
+    std::string reprValue() const {
+        return std::visit(
+            [](auto & e){return NSL::to_string(e);},
+            entry
+        );
     }
 
     //! Provide a streaming operator using std::visit
