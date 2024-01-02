@@ -16,9 +16,9 @@ template<
 >
 class TwoPointCorrelator: public Measurement {
     public:
-        TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
+        TwoPointCorrelator(LatticeType & lattice, NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
             Measurement(params, h5),
-            hfm_(params),
+            hfm_(lattice, params),
             cg_(hfm_, NSL::FermionMatrix::MMdagger),
             species_(species),
             corr_(
@@ -41,12 +41,13 @@ class TwoPointCorrelator: public Measurement {
             basenode_(basenode_)
     {}
 
-    TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species):
+    TwoPointCorrelator(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5, NSL::Hubbard::Species species):
         TwoPointCorrelator(
-            params, 
+            lattice,
+            params,
             h5, 
             species,
-            fmt::format("{}",params["name"].repr())
+            params["name"]
         )
     {}
 
@@ -58,7 +59,7 @@ class TwoPointCorrelator: public Measurement {
 
     protected:
     bool skip_(bool overwrite, std::string node){
-        bool exists = this->h5_.exist(fmt::format("{}{}",basenode_,node));
+        bool exists = this->h5_.exist(fmt::format("{}{}",std::string(basenode_),node));
 
         // if overwrite is specified always calculate the correlator
         if (overwrite){return false;}
@@ -166,16 +167,15 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         measure(1);
 
         // write the calculated correlator to file
-       h5_.write(corr_,basenode_+node);
+       h5_.write(corr_,std::string(basenode_)+node);
     } else {
         NSL::Logger::info("Non-interacting correlators already exist");
     }
 
     // Interacting Correlators
     // Initialize memory for the configurations
-
      // get the range of configuration ids from the h5file
-    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(basenode_+"/markovChain");
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
     NSL::size_t saveFreq = this->params_["save frequency"];
     
     NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
@@ -200,13 +200,13 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
         // read configuration 
-        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",basenode_,cfgID));
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
         // compute the correlator. The result is stored in corr_
         measure(this->params_["Number Time Sources"]);
 
         // write the result
-        this->h5_.write(corr_,basenode_+node);
+        this->h5_.write(corr_,std::string(basenode_)+node);
     } // for cfgID
 
 } // measure()

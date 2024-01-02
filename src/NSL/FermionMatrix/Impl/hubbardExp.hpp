@@ -75,23 +75,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
-    HubbardExp(NSL::Hubbard::Species species, NSL::Parameter & params):
-        HubbardExp(
-            species,
-            params["lattice"].to<LatticeType>(), 
-            NSL::size_t(params["Nt"]), 
-            Type(params["beta"]), 
-            Type(params["mu"])
-        )
+    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
+        HubbardExp(species,lat, params["Nt"], params["beta"], params["mu"])
     {}
 
-    HubbardExp(NSL::Parameter & params):
-        HubbardExp(
-            params["lattice"].to<LatticeType>(), 
-            NSL::size_t(params["Nt"]), 
-            Type(params["beta"]), 
-            Type(params["mu"])
-        )
+    HubbardExp(LatticeType & lat, NSL::Parameter & params):
+        HubbardExp(lat, params["Nt"], params["beta"], params["mu"])
     {}
 
     //! Populates the fermion matrix with a new configuration phi
