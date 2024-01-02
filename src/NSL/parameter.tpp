@@ -71,7 +71,9 @@ class ParameterEntry{
     };
 
     virtual ~ParameterEntry() = default;
-
+    virtual std::string type(){
+        return "Undefined";
+    }
     protected:
     //! Retrieves the address of `NSL::TemplatedParameterEntry` the runtime polymorphism points to
     /*!
@@ -88,6 +90,7 @@ class ParameterEntry{
         if(ptr){
             return ptr;
         } else {
+            std::cout << "upcast from: " << this->type() << " to: " << typeid(Type).name() << "was attempted" << std::endl;
             throw std::runtime_error("Converting ParameterEntry to TemplatedParameterEntry failed");
         }
     }
@@ -118,6 +121,10 @@ class TemplatedParameterEntry: public ParameterEntry{
             // e.g. NSL::SpatialLattice
             return value_.name();
         }
+    }
+
+    std::string type(){
+        return typeid(value_).name();
     }
     
     //! Befriend ParameterEntry such that it can access everything in here
