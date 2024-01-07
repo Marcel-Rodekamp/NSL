@@ -363,6 +363,37 @@ class H5IO {
 
             // I assume that once phi is 'off the stack', its destructor will be called and its memory released
         } // read(NSL::Tensor, std::string)
+          
+          
+        template <NSL::Concept::isNumber Type> 
+        inline int read(Type & obj,const std::string node){
+            auto typeID = typeid(Type).name();
+            std::string h5type;
+
+            if(h5f_.exist(node)){ // check if the node exists
+                HighFive::DataSet dataset = h5f_.getDataSet(node);
+	        
+	            // now get the data
+	            if constexpr (NSL::is_complex<Type>()) {
+                    std::complex<NSL::RealTypeOf<Type>> tmp; 
+	                dataset.read(tmp);
+
+                    obj = static_cast<Type>(tmp);
+	            } else {
+	                dataset.read(obj);
+	            }
+
+                return 0;
+            } else { 
+                // node does not exist
+                NSL::Logger::error("Error! Node {} doesn't exist!", node); 
+                
+                return 1;
+            }
+
+            // I assume that once phi is 'off the stack', its destructor will be called and its memory released
+        } // read(Type, std::string)
+
 
         template <NSL::Concept::isNumber Type> 
         inline int read(NSL::Configuration<Type> &config, const std::string node){

@@ -45,37 +45,39 @@ namespace detail {
         // Conversion from Python to C++
         bool load(handle src, bool) {
             if (py::isinstance<py::dict>(src)) {
+
                 py::dict src_dict = src.cast<py::dict>();
+                
                 NSL::Parameter param;
+
                 for (std::pair<py::handle, py::handle> item : src_dict){
                     std::string key = item.first.cast<std::string>();
                     py::handle pyvalue = item.second;
 
                     switch(get_pytype(pyvalue)) {
                         case PyType::INT:
-                            param.addParameter<NSL::size_t>(key, pyvalue.cast<int>());
+                            param[key] = pyvalue.cast<NSL::size_t>();
                             break;
                         case PyType::FLOAT:
-                            param.addParameter<float>(key, pyvalue.cast<double>());
+                            param[key] = pyvalue.cast<double>();
                             break;
                         case PyType::STR:
-                            param.addParameter<std::string>(key, pyvalue.cast<std::string>());
+                            param[key] = pyvalue.cast<std::string>();
                             break;
                         case PyType::COMPLEX:
-                            param.addParameter<NSL::complex<double>>(key, pyvalue.cast<NSL::complex<double>>());
+                            param[key] = pyvalue.cast<NSL::complex<double>>();
                             break;
                         case PyType::MODULE:
                             throw std::invalid_argument("Not implemented yet");
                             break;
-                        case PyType::SPATIAL_LATTICE:
-                            param.addParameter<SpatialLattice<float>>(key, pyvalue.cast<SpatialLattice<float>>());
-                            break;
-                        case PyType::UNKNOWN:
+                        //case PyType::UNKNOWN:
+                        default:
                             py::str type_str = py::str(pyvalue.get_type().attr("__name__"));
                             std::string type_name = type_str.operator std::string();
                             throw std::invalid_argument("Unsupported type: " + type_name);
                             break;
                     }
+                    
                 }
                 value = param;
                 return true;

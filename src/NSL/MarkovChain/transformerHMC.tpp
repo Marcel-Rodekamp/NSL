@@ -1,33 +1,35 @@
-#ifndef NSL_HMC_TPP
-#define NSL_HMC_TPP
+#ifndef NSL_TRANSFORMER_HMC_TPP
+#define NSL_TRANSFORMER_HMC_TPP
 
 #include "Integrator/integrator.tpp"
 #include "MarkovChain/markovState.tpp"
 #include "Tensor/Factory/like.tpp"
+#include "Transformer/transformer.hpp"
+#include "HMC.tpp"
 #include "LinAlg.hpp"
 #include "complex.hpp"
 #include "concepts.hpp"
 #include "IO.hpp"
 #include "logger.hpp"
+#include <stdexcept>
 
 namespace NSL::MCMC{
 
-enum Chain{ AllStates, LastState };
-
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
-          NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType
+          NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType,
+          typename TransformerType
 >
-class HMC{
+class TransformerHMC{
     public:
-
-    HMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5): 
+    TransformerHMC(const IntegratorType& integrator, const ActionType& action, TransformerType & transformer, NSL::H5IO & h5 ): 
         r_(1),
         integrator_(integrator),
         action_(action),
-	    h5_(h5)
+	    h5_(h5),
+        transformer_(transformer)
     {}
 
-    //! Generate a single Markov Chain element from the input state 
+  //! Generate a single Markov Chain element from the input state 
     /*!
      * This implementation calls the Hybrid/Hamilton Monte Carlo (HMC) algorithm.
      * */
@@ -166,12 +168,12 @@ class HMC{
         return this->generate_<Type>(initialState);
     }
 
-    protected:
 
+
+    protected:
     //! Implementation of the HMC
     template<NSL::Concept::isNumber Type>
-    NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
-
+    NSL::MCMC::MarkovState<Type> generate_(NSL::MCMC::MarkovState<Type> state) {
         // sample momentum 
         NSL::Configuration<Type> momentum;
         for(auto & [key,field]: state.configuration){
@@ -181,22 +183,28 @@ class HMC{
             momentum[key] = p; 
         }
 
-        // use integrator to generate proposal 
-        auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+        // transform the configuration to the original configuration space, we won't use 
+        // the logDetJ (ldj) here.
+        auto [origSpaceConfig, ldj] = transformer_.inverse(state.configuration);
 
-        // compute the Action
+        // use integrator to generate proposal
+        auto [proposal_config_,proposal_momentum] = this->integrator_(origSpaceConfig,momentum);
+
+        // apply the transformer
+        auto [proposal_config,logDetJ] = transformer_.forward(proposal_config_);
+
         Type proposal_S = this->action_(proposal_config);
 
         // compute the Hamiltonian H = p^2/2 + S
         // Starting point of the trajectory
-        Type starting_H = state.actionValue;
+        Type starting_H = state.actionValue + state.weights["logDetJ"];
+
         for( const auto& [key,field]: momentum){
             starting_H += 0.5*(field * field).sum();
         }
-
         
         // End point of the trajectory i.e. proposal
-        Type proposal_H = proposal_S;
+        Type proposal_H = proposal_S + logDetJ;
         for( const auto& [key,field]: proposal_momentum){
             proposal_H += 0.5*(field * field).sum();
         }
@@ -205,16 +213,15 @@ class HMC{
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
-
         // accept reject
-	    if ( r_.rand()[0] <= acceptanceProb ){
+	    if ( this->r_.rand()[0] <= acceptanceProb ){
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 proposal_S,
                 acceptanceProb,
                 state.markovTime+1,
-                true
-                /*For this algorithm there are no weights to be added*/
+                true,
+                std::pair<std::string,Type>("logDetJ",logDetJ)
             };
         } else {
             return NSL::MCMC::MarkovState<Type>(
@@ -222,12 +229,13 @@ class HMC{
                 state.actionValue,
                 state.acceptanceProbability,
                 state.markovTime+1,
-                false
+                false,
+                std::pair<std::string,Type>("logDetJ",state.weights["logDetJ"])
             );
         }
     }
 
-    protected:
+    private:
     //! ToDo: We need to implement a proper RNG class!
     NSL::Tensor<double> r_;
 
@@ -236,7 +244,9 @@ class HMC{
 
     NSL::H5IO h5_;
 
-}; // HMC
+    TransformerType transformer_;
+}; // TransformerHMC
+
 
 } // namespace NSL::MCMC
 

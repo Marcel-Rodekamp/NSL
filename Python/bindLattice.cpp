@@ -55,11 +55,11 @@ namespace NSL::Python {
             .def(py::init<const YAML::Node &, const Type &>(), "system"_a, "kappa"_a = 1.);
     }
 
-    template <typename Type>
-    void bindHoneycomb(py::module &m, std::string class_name){
-        py::class_<Honeycomb<Type>, SpatialLattice<Type>>(m, class_name.c_str())
-            .def(py::init<const std::vector<int>, const Type &>());
-    }
+    //template <typename Type>
+    //void bindHoneycomb(py::module &m, std::string class_name){
+    //    py::class_<Honeycomb<Type>, SpatialLattice<Type>>(m, class_name.c_str())
+    //        .def(py::init<const std::vector<int>, const Type &>());
+    //}
 
     template <typename Type>
     void bindRing(py::module &m, std::string class_name){
@@ -89,15 +89,15 @@ namespace NSL::Python {
         // ToDo: Documentation
         py::module m_lattice = m.def_submodule("Lattice");
         
-        bindSpatialLattice<float>(m_lattice, "SpatialLattice");
-        bindComplete<float>(m_lattice, "Complete");
-        bindTriangle<float>(m_lattice, "Triangle");
-        bindTetrahedon<float>(m_lattice, "Tetrahedron");
-        bindGeneric<float>(m_lattice, "Generic");
-        bindHoneycomb<float>(m_lattice, "Honeycomb");
-        bindRing<float>(m_lattice, "Ring");
-        bindSquare<float>(m_lattice, "Square");
-        bindCube3D<float>(m_lattice, "Cube3D");
+        bindSpatialLattice<NSL::complex<double>>(m_lattice, "SpatialLattice");
+        //bindComplete<float>(m_lattice, "Complete");
+        //bindTriangle<float>(m_lattice, "Triangle");
+        //bindTetrahedon<float>(m_lattice, "Tetrahedron");
+        bindGeneric<NSL::complex<double>>(m_lattice, "Generic");
+        //bindHoneycomb<float>(m_lattice, "Honeycomb");
+        //bindRing<float>(m_lattice, "Ring");
+        //bindSquare<float>(m_lattice, "Square");
+        //bindCube3D<float>(m_lattice, "Cube3D");
     }
 }
 

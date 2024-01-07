@@ -1,0 +1,5 @@
+add_executable(transformerHMC transformerHMC.cpp)
+target_link_libraries(transformerHMC NSL)
+
+add_executable(trainTransformer trainTransformer.cpp)
+target_link_libraries(trainTransformer NSL)

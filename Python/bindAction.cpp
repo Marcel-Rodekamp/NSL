@@ -1,4 +1,8 @@
-#include "../src/NSL/Action/action.tpp"
+#include "../src/NSL/Action.hpp"
+#include "../src/NSL/Lattice.hpp"
+#include "../src/NSL/FermionMatrix.hpp"
+#include "../src/NSL/concepts.hpp"
+#include "Action/action.tpp"
 #include <torch/torch.h>
 #include <torch/extension.h> 
 
@@ -9,103 +13,79 @@ using namespace pybind11::literals;
 // using namespace NSL::Action;         // when I use this namespace I get a huge error message from torch
 
 namespace NSL::Python {
-    template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
+    template <Concept::isNumber Type, Concept::isNumber TensorType>
     void bindBaseAction(py::module &m, std::string class_name){
-        py::class_<NSL::Action::BaseAction<Type, TensorType>, std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>>>(m, class_name.c_str())
-            .def("eval", py::overload_cast<const Tensor<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::eval))
-            .def("eval", py::overload_cast<Configuration<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::eval))
-            .def("grad", py::overload_cast<const Tensor<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::grad))
-            .def("grad", py::overload_cast<Configuration<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::grad))
-            .def("force", py::overload_cast<const Tensor<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::force))
-            .def("force", py::overload_cast<Configuration<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::force));
+        py::class_<Action::BaseAction<Type, TensorType>, std::shared_ptr<Action::BaseAction<Type, TensorType>>>(m, class_name.c_str())
+            .def("eval", py::overload_cast<const Tensor<TensorType>&>(&Action::BaseAction<Type, TensorType>::eval))
+            .def("eval", py::overload_cast<Configuration<TensorType>&>(&Action::BaseAction<Type, TensorType>::eval))
+
+            .def("grad", py::overload_cast<const Tensor<TensorType>&>(&Action::BaseAction<Type, TensorType>::grad))
+            .def("grad", py::overload_cast<Configuration<TensorType>&>(&Action::BaseAction<Type, TensorType>::grad))
+            
+            .def("force", py::overload_cast<const Tensor<TensorType>&>(&Action::BaseAction<Type, TensorType>::force))
+            .def("force", py::overload_cast<Configuration<TensorType>&>(&Action::BaseAction<Type, TensorType>::force))
+
+            ;
     }
 
-    // template <template <typename...> class ActionType, NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    // void bindActionImplementation(py::module &m, std::string class_name){
-    //     using TensorT = Tensor<TensorType>;
-    //     py::class_<ActionType, NSL::Action::BaseAction<Type, TensorType>>(m, class_name.c_str())
-    //         .def(py::init<NSL::Parameter &>())
-    //         .def(py::init<NSL::Parameter &, const std::string &>());
-    //         // .def("eval", py::overload_cast<const TensorT&>(&ActionType::eval))
-    //         // .def("grad", py::overload_cast<const TensorT&>(&ActionType::grad))
-    //         // .def("force", py::overload_cast<const TensorT&>(&ActionType::force));
-    // }
-
-    // template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    // void bindHubbardGaugeAction(py::module &m, std::string class_name){
-    //     NSL::Action::HubbardGaugeAction<Type, TensorType> act(NSL::Parameter());
-    // }
-    // template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    // void bindHubbardFermionAction(py::module &m, std::string class_name){
-    //     using LatticeType = NSL::Lattice::SpatialLattice<Type>;
-    //     using FermionMatrixType = NSL::FermionMatrix::HubbardExp<Type, LatticeType>;
-    //     NSL::Action::HubbardFermionAction<Type, LatticeType, FermionMatrixType, TensorType> act(NSL::Parameter());
-    //     // using TensorT = Tensor<float>;
-    //     // py::class_<NSL::Action::HubbardFermionAction<float, float>>(m, class_name.c_str())
-    //     //     .def(py::init<NSL::Parameter &>())
-    //     //     .def(py::init<NSL::Parameter &, const std::string &>());
-    //         // .def("eval", py::overload_cast<const TensorT&>(&ActionType::eval))
-    //         // .def("grad", py::overload_cast<const TensorT&>(&ActionType::grad))
-    //         // .def("force", py::overload_cast<const TensorT&>(&ActionType::force));
-    // }
-
-    // Base class
-    class Base {
-    public:
-        virtual ~Base() = default;
-        virtual void foo() = 0;
-    };
-
-    // Derived class template
-    template <typename T>
-    class Derived : public Base {
-    public:
-        void foo() override {
-            std::cout << typeid(T).name() << std::endl;
-        }
-    };
-
-    // Factory function
-    std::shared_ptr<Base> createDerived(int type) {
-        if (type == 1) {
-            return std::make_shared<Derived<int>>();
-        } else if (type == 2) {
-            return std::make_shared<Derived<float>>();
-        }
-        // Add more cases as needed...
-        return nullptr;
+    std::shared_ptr<Action::BaseAction<complex<double>, complex<double>>> createHubbardGaugeAction(Parameter & params) {
+        return std::make_shared<Action::HubbardGaugeAction<complex<double>, complex<double>>>(params);
     }
 
-    std::shared_ptr<NSL::Action::BaseAction<float, float>> createHubbardGaugeAction(NSL::Parameter & params) {
-        return std::make_shared<NSL::Action::HubbardGaugeAction<float, float>>(params);
+    std::shared_ptr<Action::BaseAction<complex<double>, complex<double>>> createHubbardFermionAction( 
+        Lattice::Generic<complex<double>> &lattice, Parameter & params
+    ) {
+        using LatticeType = Lattice::Generic<complex<double>>;
+        using FermionMatrixType = FermionMatrix::HubbardExp<complex<double>, LatticeType>;
+
+        return std::make_shared<
+            Action::HubbardFermionAction<
+                complex<double>, 
+                LatticeType, 
+                FermionMatrixType
+            >
+        >(lattice,params);
     }
 
-    std::shared_ptr<NSL::Action::BaseAction<complex<double>, complex<double>>> createHubbardFermionAction(NSL::Parameter & params) {
-        using LatticeType = NSL::Lattice::SpatialLattice<complex<double>>;
-        using FermionMatrixType = NSL::FermionMatrix::HubbardExp<complex<double>, LatticeType>;
-        return std::make_shared<NSL::Action::HubbardFermionAction<complex<double>, LatticeType, FermionMatrixType, complex<double>>>(params);
+    template<typename Type, class SingleAction1, class SingleAction2>
+    void bindActionContainer(py::module &m, std::string class_name){
+
+        py::class_<Action::Action<SingleAction1,SingleAction2>, std::shared_ptr<Action::Action<SingleAction1,SingleAction2>>>(m, class_name.c_str())
+            .def(py::init( 
+                [] (NSL::Action::BaseAction<Type,Type> * a1, NSL::Action::BaseAction<Type,Type> * a2) {
+                     return std::make_shared<Action::Action<SingleAction1,SingleAction2>> ( 
+                        *dynamic_cast<SingleAction1*>(a1),
+                        *dynamic_cast<SingleAction2*>(a2)
+                    );
+                })
+            )
+            .def("eval", py::overload_cast<Configuration<Type>&>(&Action::Action<SingleAction1,SingleAction2>::template eval<Type>))
+            .def("__call__", py::overload_cast<Configuration<Type>&>(&Action::Action<SingleAction1,SingleAction2>::template eval<Type>))
+            .def("grad", py::overload_cast<Configuration<Type>&>(&Action::Action<SingleAction1,SingleAction2>::template grad<Type>))
+            .def("force",py::overload_cast<Configuration<Type>&>(&Action::Action<SingleAction1,SingleAction2>::template force<Type>))
+            // todo bind all the + operators...
+            ;
     }
 
     void bindAction(py::module &m) {
-        // ToDo: Templating
-        // ToDo: Documentation
         py::module m_action = m.def_submodule("Action");
         
         bindBaseAction<complex<double>, complex<double>>(m_action, "BaseAction_cc");
         bindBaseAction<float, float>(m_action, "BaseAction_ff");
         bindBaseAction<double, double>(m_action, "BaseAction_dd");
-        // bindHubbardFermionAction<float, float>(m_action, "HubbardFermionAction");
-        // bindActionImplementation<NSL::Action::HubbardGaugeAction, float, float>(m_action, "HubbardGaugeAction");
-        // using LatticeType = NSL::Lattice::SpatialLattice<float>;
-        // using FermionMatrixType = NSL::FermionMatrix::FermionMatrix<float, LatticeType>;
-        // bindActionImplementation<NSL::Action::HubbardFermionAction, float, float>(m_action, "HubbardGaugeAction");
-        py::class_<Base, std::shared_ptr<Base>>(m_action, "Base")
-            .def("foo", &Base::foo);
 
-        m_action.def("createDerived", &createDerived);
         m_action.def("HubbardGaugeAction", &createHubbardGaugeAction);
         m_action.def("HubbardFermionAction", &createHubbardFermionAction);
         // Set default aliases
         m_action.attr("BaseAction") = m_action.attr("BaseAction_cc");
+
+        bindActionContainer<complex<double>,
+            Action::HubbardGaugeAction<complex<double>, complex<double>>,
+            Action::HubbardFermionAction<
+                complex<double>, 
+                Lattice::Generic<complex<double>>, 
+                FermionMatrix::HubbardExp<complex<double>, Lattice::Generic<complex<double>>>
+            >
+        >(m_action, "HubbardAction_EXP_GEN");
     }
 }

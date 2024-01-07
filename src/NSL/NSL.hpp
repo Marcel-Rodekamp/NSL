@@ -27,5 +27,6 @@
 #include "commandLineInterface.hpp"
 #include "parameter.tpp"
 #include "Measurements.hpp"
+#include "transformer.hpp"
 
 #endif

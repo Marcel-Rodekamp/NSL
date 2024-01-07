@@ -12,7 +12,9 @@ import numpy as np
 
 def main():
 
-    with open('/home/physics/PhD/Projects/NSL/Executables/Examples/example_param.yml', 'r') as f:
+    filename = 'twoSite.yml'
+
+    with open(filename, 'r') as f:
         yml = yaml.safe_load(f)
 
     params = {
@@ -31,7 +33,7 @@ def main():
         'h5file': str(yml['fileIO']['h5file']),
     }
 
-    params['device'] = "GPU" if torch.cuda.is_available() else "CPU"
+    params['device'] = "CPU" #"GPU" if torch.cuda.is_available() else "CPU"
 
     #TODO Logger
     for key, value in params.items():
@@ -50,31 +52,36 @@ def main():
     # # print(adjacency)
     # lattice = nsl.Lattice.SpatialLattice(params['name'], adjacency, positions)
     
-    lattice = nsl.Lattice.Generic('/home/physics/PhD/Projects/NSL/Executables/Examples/example_param.yml')
+    lattice = nsl.Lattice.Generic(filename)
     dim = lattice.sites()
 
     lattice.to(params["device"])
 
-    params['lattice'] = lattice
-
     with h5.File(params['h5file'], 'w') as h5f:
         basenode = h5f.create_group(params['name'])
-        write_meta(params, basenode)
+        write_meta(lattice,params,basenode)
      
 
     Nx = lattice.sites()
+    config = nsl.Configuration()
+    config["phi"] = torch.ones((params['Nt'], Nx), dtype=torch.cdouble)
 
-    print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}, on a {str(params['lattice'])} lattice.")
+    print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}, on a {str(lattice)} lattice.")
+
     hga = nsl.Action.HubbardGaugeAction(params)
-    print(hga.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
-    hfa = nsl.Action.HubbardFermionAction(params)
-    print(hfa.eval())
-    action = nsl.Action.HubbardGaugeAction(params)
-    print("Action object created from py::dict.")
-    print(action.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
+    print(hga.eval(config))
 
-def write_meta(params, basenode):
-    basenode["/Meta/lattice"] = str(params["lattice"].name)
+    hfa = nsl.Action.HubbardFermionAction(lattice,params)
+    print(hfa.eval(config))
+
+    action = nsl.Action.HubbardAction_EXP_GEN(hga,hfa)
+
+    print(action(config))
+    print(action.force(config))
+    
+
+def write_meta(lattice, params, basenode):
+    basenode["/Meta/lattice"] = str(lattice.name)
 
     basenode["/Meta/params/U"] = complex(params["U"])
 
@@ -82,7 +89,7 @@ def write_meta(params, basenode):
 
     basenode["/Meta/params/Nt"] = np.uint64(params["Nt"])
 
-    basenode["/Meta/params/spatialDim"] = np.uint64(params["lattice"].sites())
+    basenode["/Meta/params/spatialDim"] = np.uint64(lattice.sites())
 
     basenode["/Meta/params/nMD"] = np.uint64(params["Nmd"])
 

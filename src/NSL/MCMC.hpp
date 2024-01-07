@@ -3,5 +3,6 @@
 
 #include "MarkovChain/markovState.tpp"
 #include "MarkovChain/HMC.tpp"
+#include "MarkovChain/transformerHMC.tpp"
 
 #endif // NSL_MARKOV_STATE_HPP

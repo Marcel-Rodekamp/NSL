@@ -3,6 +3,7 @@
 #include "bindLattice.cpp"
 #include "bindTensor.cpp"
 #include "bindParameter.cpp"
+#include "bindConfiguration.cpp"
 #include "bindAction.cpp"
 
 
@@ -10,6 +11,7 @@ namespace NSL::Python {
     PYBIND11_MODULE(PyNSL, m) {
         bindLattice(m);
         bindTensor(m);
+        bindConfiguration(m);
         bindAction(m);
     }
 }
