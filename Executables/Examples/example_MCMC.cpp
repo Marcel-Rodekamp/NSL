@@ -80,7 +80,7 @@ int main(int argc, char* argv[]){
 
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
-    if (lattice.sites() != params["Nx"]){
+    if (lattice.sites() != params["Nx"].template to<NSL::size_t>()){
         throw std::runtime_error("The number of ions in the parameter file does not match the number of ions in the lattice.");
     }
 

@@ -98,10 +98,10 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
     // - Source vector
     srcVec_ = Type(0);
     
-    NSL::size_t tsrcStep = this->params_["Nt"].to<NSL::size_t>()/NumberTimeSources;
+    NSL::size_t tsrcStep = this->params_["Nt"].template to<NSL::size_t>()/NumberTimeSources;
 
-    for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].to<NSL::size_t>(); tsrc+=tsrcStep){
-        for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
+    for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].template to<NSL::size_t>(); tsrc+=tsrcStep){
+        for(NSL::size_t x = 0; x < this->params_["Nx"].template to<NSL::size_t>(); ++x){
             // Define a point source
             // The Slice here takes out just the single fibre x. We put it 
             // in to return a (device) Tensor from the random access. This 
@@ -120,7 +120,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
             // shift t -> t - tsrc
             invM.shift( -tsrc );
             // apply anti periodic boundary
-            invM(NSL::Slice(this->params_["Nt"].to<NSL::size_t>()-tsrc)) *= -1;
+            invM(NSL::Slice(this->params_["Nt"].template to<NSL::size_t>()-tsrc)) *= -1;
 
             // Average over all source times
             corr_(NSL::Slice(),NSL::Slice(),x) += invM; 
