@@ -80,10 +80,10 @@ int main(int argc, char** argv){
     } else {
         // DEFAULT: Number Time Sources = Nt
         params.addParameter<NSL::size_t>(
-	    "Number Time Sources", params["Nt"]
+            "Number Time Sources", params["Nt"]
         );
-    }
-
+    } 
+        
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
     // - value is a ParameterEntry * which is a wrapper around the actual 

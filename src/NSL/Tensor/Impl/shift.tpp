@@ -29,19 +29,19 @@ class TensorShift:
      *  auto v_i_minus_1 = NSL::LinAlg::shift(v_i, +1);     // should return the same as v_shift_plus in the above python.
      *  ```
      */
-    NSL::Tensor<Type> shift(const NSL::size_t & shift){
+    NSL::Tensor<Type> shift(NSL::size_t shift){
         this->data_ = this->data_.roll(shift,0);
         return NSL::Tensor<Type>(this);
     }
 
     //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction.
-    NSL::Tensor<Type> shift(const NSL::size_t & shift, const NSL::size_t & dim){
+    NSL::Tensor<Type> shift(NSL::size_t shift, NSL::size_t dim){
         this->data_ = this->data_.roll(shift,dim);
         return NSL::Tensor<Type>(this);
     }
 
     //! Shift the 0-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
-    NSL::Tensor<Type> shift(const NSL::size_t & shift, const Type & boundary){
+    NSL::Tensor<Type> shift(NSL::size_t shift, const Type & boundary){
         this->data_ = this->data_.roll(shift,0);
 
         NSL::size_t N = NSL::Tensor<Type>(this).shape(0);
@@ -56,7 +56,7 @@ class TensorShift:
     }
 
     //! Shift the dim-th dimension by `|shift|` elements in `sgn(shift)` direction and multiply boundary.
-    NSL::Tensor<Type> shift(const NSL::size_t & shift, const NSL::size_t & dim, const Type &boundary){
+    NSL::Tensor<Type> shift(NSL::size_t shift, NSL::size_t dim, const Type &boundary){
         this->data_ = this->data_.roll(shift,dim);
 
         if(shift>0){

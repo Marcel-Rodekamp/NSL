@@ -116,6 +116,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
             // Using a point sink allows to just copy invM as corr(t,y,x)
             // We shift the 0th axis (time-axis) if invM by tsrc and apply anti periodic 
             // boundary conditions
+
             // shift t -> t - tsrc
             invM.shift( -tsrc );
             // apply anti periodic boundary
@@ -190,6 +191,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         } else {
             node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
         }
+
         if (skip_(this->params_["overwrite"],node)) {
             NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
 	        continue;
