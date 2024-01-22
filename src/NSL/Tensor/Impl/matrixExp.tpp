@@ -12,7 +12,12 @@ class TensorMatrixExp:
     public:
     //! Matrix exponential.
     /*!
-     * \todo: Add documentation
+     * The underlying implementation uses a Optimized Taylor Polynomial Approximation:
+     * https://www.mdpi.com/2227-7390/7/12/1174
+     *
+     * https://discuss.pytorch.org/t/what-implementation-is-used-for-matrix-exp/159608
+     *
+     * use with care for large matrices.
      * */
     NSL::Tensor<Type> mat_exp() {
         this->data_ = this->data_.matrix_exp();
