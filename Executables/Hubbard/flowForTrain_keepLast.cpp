@@ -7,6 +7,8 @@ double decreaseStepSize(NSL::Parameter params, double stepSize, double ImSErr);
 double increaseStepSize(NSL::Parameter params, double stepSize, double ImSErr);
 bool stepSizeCheck(NSL::Parameter params, double & stepSize, double flowTime);
 
+NSL::complex<double> i{0,1};
+
 /*! Usage  */
 int main(int argc, char ** argv){
     typedef NSL::complex<double> Type;

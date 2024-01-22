@@ -75,7 +75,7 @@ int main(int argc, char** argv){
     // Number of Sources for the cg
     if (yml["measurements"]["Number Time Sources"]){
         params.addParameter<NSL::size_t>(
-            "Number Time Sources", yml["measurements"]["Number Time Sources"].as<double>()
+            "Number Time Sources", yml["measurements"]["Number Time Sources"].as<NSL::size_t>()
         );
     } else {
         // DEFAULT: Number Time Sources = Nt

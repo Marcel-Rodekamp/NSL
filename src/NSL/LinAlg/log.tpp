@@ -6,13 +6,14 @@
 
 namespace NSL::LinAlg {
 
-template<typename Type>
+//! log(Type)
+template<NSL::Concept::isNumber Type>
 Type log(Type number){
     return std::log(number);
 }
 
-//logonential(Tensor)
-template<typename Type>
+//! log(Tensor) - element wise 
+template<NSL::Concept::isNumber Type>
 NSL::Tensor<Type> log(const Tensor<Type> & t) {
     return NSL::Tensor<Type>(t,true).log();
 }

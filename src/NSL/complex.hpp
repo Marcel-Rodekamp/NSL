@@ -76,6 +76,4 @@ constexpr bool is_complex(){
 }
 } // namespace NSL
 
-NSL::complex<double> i{0.,1.};
-
 #endif //NSL_COMPLEX_HPP

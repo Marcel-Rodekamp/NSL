@@ -92,25 +92,30 @@ int main(int argc, char ** argv){
     }};
 
     // initial condition: exp(tau * Uinv * Phi)|_{tau = 0} = 1
-    q["phi"] = Type({1,0.1});
+    q["phi"] = Type({1,0.0});
 
     Type Uinv = 1/NSL::Hubbard::tilde<Type>(params,"U");
 
+    // trajectory length
     NSL::RealTypeOf<Type> T = 1;
 
     NSL::Logger::info("Error \t step size");
-    NSL::size_t numSteps = 1;
     for(NSL::size_t numSteps = 10; numSteps < 210; numSteps+=10){
         NSL::Integrator::RungeKutta4 RK4(
-            S, T, numSteps,  true
+            /*action*/S, /*trajectory length*/T, /*number of steps*/numSteps, /*conjugatedGrad*/true
         );
         
-        NSL::Configuration<Type> qt = RK4( q );
+        // execute the Runge-Kutta (solution of the Runge-Kutta after integration)
+        // qT = phi(T)
+        NSL::Configuration<Type> qT = RK4( q );
 
-        NSL::Tensor<Type> dq = Uinv*NSL::LinAlg::exp( Uinv*T*q["phi"] ) ;
+        // Force after evolution
+        NSL::Configuration<Type> F = S.grad(qT);
 
-        NSL::Configuration<Type> F = S.grad(qt);
+        // Force of exact solution after evolving T-time
+        NSL::Tensor<Type> dq = Uinv * q["phi"] * NSL::LinAlg::exp( Uinv * T ) ;
 
+        // difference of exact vs. Runge-Kutta force 
         auto diff = dq - F["phi"].conj();
         auto error = NSL::real(NSL::LinAlg::abs( diff )).sum();
         
