@@ -178,11 +178,12 @@ int main(int argc, char* argv[]){
 
     auto therm_time =  NSL::Logger::start_profile("Thermalization");
     NSL::MCMC::MarkovState<Type> start_state;
-    if(not h5.exist("markovChain")){
+    if(not h5.exist(fmt::format("{}/markovChain",BASENODE))){
         NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
         start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>());
     } else {
         NSL::Logger::info("Appending to previous data.");
+        // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
         start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
     }
     
@@ -200,7 +201,9 @@ int main(int argc, char* argv[]){
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
-    NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
+    NSL::Logger::info("Acceptance Rate: {}%", 
+        NSL::MCMC::getAcceptanceRate(markovChain) * 100
+    );
 
     return EXIT_SUCCESS;
 }
