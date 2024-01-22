@@ -31,6 +31,10 @@ class Integrator{
     std::tuple<NSL::Configuration<TensorTypes...>, NSL::Configuration<TensorTypes ...> > 
         operator()(const NSL::Configuration<TensorTypes ...> & q, const NSL::Configuration<TensorTypes ...> & p);
 
+    template<NSL::Concept::isNumber ... TensorTypes>
+    std::tuple<NSL::Configuration<TensorTypes...>, NSL::Configuration<TensorTypes ...> > 
+        operator()(const NSL::Configuration<TensorTypes ...> & q);
+
     protected:
     NSL::Action::Action<ActionTermTypes...> action_;
 };
