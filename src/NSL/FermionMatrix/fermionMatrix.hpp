@@ -27,6 +27,10 @@ class FermionMatrix {
 
     public:
 
+    //! Used to populate configurations into the fermion matrix; 
+    //! Arguments to be determined for each implementation.
+    void populate();
+
     //Declaration of methods methods M, M_dagger, MM_dagger and MdaggerM
 
     /*!
@@ -58,11 +62,15 @@ class FermionMatrix {
     **/
     virtual Type logDetM() = 0;
 
+    /*!
+     * \returns the gradient of log of determinant of M
+     **/
+    virtual NSL::Tensor<Type> gradLogDetM() = 0;
+
     // constructors
     /*  There is no default constructor. */
     FermionMatrix() = delete;
-    FermionMatrix(FermionMatrix<Type,LatticeType> &) = delete;
-    FermionMatrix(FermionMatrix<Type,LatticeType> &&) = delete;
+
     /*! 
     *  \param lat  an object of Lattice type (Ring, square, etc.).
     **/

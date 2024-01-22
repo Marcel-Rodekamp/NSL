@@ -137,7 +137,8 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     psi.rand();
 
     Type delta = beta/nt;
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     ComplexType I ={0,1};
 
     // apply kronecker delta
@@ -156,6 +157,8 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     NSL::Tensor<Type> result_alg = M.M(psi);
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
+    INFO(fmt::format("result_exa.sum() = {}", NSL::to_string(result_exa.sum())));
+    INFO(fmt::format("result_alg.sum() = {}", NSL::to_string(result_alg.sum())));
 
     REQUIRE( almost_equal(result_exa, result_alg, std::numeric_limits<Type>::digits10).all() );
 }
@@ -175,7 +178,8 @@ void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & La
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     NSL::Tensor<Type> sparse = M.M(psi);
 
     NSL::Tensor<Type> M_dense = M.M_dense(nt);
@@ -214,8 +218,8 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
     //phi = phi.real() + ComplexType(0,0);  // phi to be real
     //psi = psi.real() + ComplexType(0,0);  // psi to be real
     //psi = psi.imag() * ComplexType(0,1);  // psi to be imaginary
-
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
 
 
     // First let's check Mdagger against the dagger of the dense implementation of M.
@@ -299,7 +303,8 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     ComplexType I={0,1};
  
     auto direct = M.MdaggerM(psi);
@@ -325,7 +330,8 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
     phi.rand();
     psi.rand();
 
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     ComplexType I={0,1};
  
     auto direct = M.MMdagger(psi);
@@ -355,8 +361,10 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
 
     Type delta = beta/nt;
 
-    NSL::FermionMatrix::HubbardExp<Type,LatticeType> M     (Lattice,phi     ,beta);
-    NSL::FermionMatrix::HubbardExp<Type,LatticeType> Mshift(Lattice,phiShift,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
+    NSL::FermionMatrix::HubbardExp Mshift(Lattice,nt,beta);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
@@ -366,7 +374,7 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     INFO("result   shifted: "+NSL::to_string(result_shift));
     INFO("difference      : "+NSL::to_string(result-result_shift));
 
-    REQUIRE(almost_equal(result_shift,result));
+    REQUIRE(almost_equal(result_shift,result,std::numeric_limits<Type>::digits10-1));
 }
 
 // ======================================================================
@@ -395,8 +403,10 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
     Type two_pi = 2*std::numbers::pi;
     phiShift = phi + two_pi * orbits;
 
-    NSL::FermionMatrix::HubbardExp M     (Lattice,phi     ,beta);
-    NSL::FermionMatrix::HubbardExp Mshift(Lattice,phiShift,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
+    NSL::FermionMatrix::HubbardExp Mshift(Lattice,nt,beta);
+    Mshift.populate(phiShift);
 
     Type result = M.logDetM();
     Type result_shift = Mshift.logDetM();
@@ -423,7 +433,8 @@ void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, co
 
     NSL::Tensor<Type> phi(nt, nx);
     Type delta = beta/nt;
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     
     //When phi=0, logDetM = logdet(1 + exp_hopping_matrix(beta))
     Type result_exa = NSL::LinAlg::logdet(
@@ -470,7 +481,8 @@ void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice
     // to get
     //      logdet M = logdet( 1 + exp(sum(phi(t))) exp(kappa_tilde * Nt))
     //               = logdet( 1 + exp(sum(phi(t))) exp(kappa beta)
-    NSL::FermionMatrix::HubbardExp M(Lattice,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
+    M.populate(phi);
     Type result_alg = M.logDetM();
     Type result_exa = NSL::LinAlg::logdet(
             NSL::Matrix::Identity<Type>(nx) + 

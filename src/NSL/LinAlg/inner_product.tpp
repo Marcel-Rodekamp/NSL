@@ -30,7 +30,20 @@ NSL::CommonTypeOf<LeftType,RightType> inner_product(
 template<NSL::Concept::isNumber Type>
 Type inner_product(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b ){
     return (NSL::LinAlg::conj(a)*b).sum();
+}
 
+//! Inner product of tensor a and b.
+/*! 
+ * Computes the dot product for 1D tensors. For higher dimensions, sums the product of elements from input and other along their last dimension.
+ *
+ * \f[
+ *    <a,b> = \sum_{i=0}^{N} a_i^* \cdot b_i 
+ * \f]
+ *
+ * */
+template<NSL::Concept::isNumber Type>
+NSL::Tensor<Type> inner(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b ){
+    return torch::inner(NSL::LinAlg::conj(a),b);
 }
 
 } // namespace NSL::LinAlg

@@ -27,12 +27,14 @@ add_NSL_test(test_LinAlg_mat_mul LinAlg/test_LinAlg_mat_mul.cpp)
 add_NSL_test(test_LinAlg_matvec LinAlg/test_LinAlg_matvec.cpp)
 add_NSL_test(test_LinAlg_shift LinAlg/test_LinAlg_shift.cpp)
 add_NSL_test(test_LinAlg_transpose LinAlg/test_LinAlg_transpose.cpp)
+add_NSL_test(test_LinAlg_inner_product LinAlg/test_LinAlg_inner_product.cpp)
 add_NSL_test(test_CG LinAlg/Solver/test_CG.cpp)
 
 add_NSL_test(test_bipartite Lattice/test_bipartite.cpp)
 add_NSL_test(test_complete Lattice/test_complete.cpp)
 add_NSL_test(test_ring Lattice/test_ring.cpp)
 add_NSL_test(test_square Lattice/test_square.cpp)
+add_NSL_test(test_honeycomb Lattice/test_honeycomb.cpp)
 
 add_NSL_test(test_FermionMatrix_hermitian FermionMatrix/test_FermionMatrix_hermitian.cpp)
 add_NSL_test(test_fermionMatrixHubbardExp FermionMatrix/test_fermionMatrixHubbardExp.cpp)
@@ -44,3 +46,7 @@ add_NSL_test(test_typePromotion Helpers/test_typePromotion.cpp)
 add_NSL_test(test_leapfrog Integrator/test_leapfrog.cpp)
 
 add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
+
+add_NSL_test(test_force Action/test_force.cpp)
+
+add_NSL_test(test_parameter Parameter/test_parameter.cpp)

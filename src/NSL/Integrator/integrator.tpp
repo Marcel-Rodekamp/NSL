@@ -8,7 +8,10 @@
 namespace NSL::Integrator {
 
 
-template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+// isTemplateDerived requires same template structure, this can not be available
+//
+//template<NSL::Concept::isTemplateDerived<NSL::Action::BaseAction> ... ActionTermTypes>
+template<typename ... ActionTermTypes>
 class Integrator{
     public:
     //! Base constructor of an Integrator

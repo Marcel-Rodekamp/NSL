@@ -2,6 +2,7 @@
 #define NSL_HUBBARD_GAUGE_ACTION_TPP
 
 #include "../action.tpp"
+#include "hubbard.tpp"
 
 namespace NSL::Action {
 
@@ -21,48 +22,20 @@ class HubbardGaugeAction :
 {   
     public: 
 
-    //! Parameter set for the Hubbard Gauge Action
-    /*!
-     * This parameters contain 
-     * - `U` The on-site interaction
-     * - `beta` The inverse temperature
-     * - `Nt` The number of time slice (troterization)
-     * */
-    class Parameters { 
-        public:
-        // inverse temperature
-	    const Type beta;
-
-        // time slices
-        const NSL::size_t Nt;
-
-        // on-site interaction
-	    const Type U;
-
-        Parameters(const Type & beta, const NSL::size_t & Nt, const Type & U) :
-            beta(beta), Nt(Nt), U(U), delta(beta/Nt), Utilde(U*delta)
-        {}
-
-        // lattice spacing
-        const Type delta;
-
-        // on-site interaction in lattice units
-        const Type Utilde;
-
-    };
-
-	HubbardGaugeAction(const Parameters & params) : 
+	HubbardGaugeAction(NSL::Parameter & params) : 
         BaseAction<Type, TensorType>(
             "phi"
         ),
-        params_(params)
+        params_(params),
+        Utilde_(NSL::Hubbard::tilde<Type>(params,"U"))
     {}
 
-	HubbardGaugeAction(const Parameters & params,const std::string & fieldName) : 
+	HubbardGaugeAction(NSL::Parameter & params,const std::string & fieldName) : 
         BaseAction<Type, TensorType>(
             fieldName
         ),
-        params_(params)
+        params_(params),
+        Utilde_(NSL::Hubbard::tilde<Type>(params,"U")) 
     {}
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -78,22 +51,23 @@ class HubbardGaugeAction :
 	Type eval(const Tensor<TensorType>& phi);
 
     protected:
-    Parameters params_;
+    NSL::Parameter params_;
+    Type Utilde_;
 };
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Type HubbardGaugeAction<Type, TensorType>::eval(const Tensor<TensorType>& phi){
-    return (phi * phi).sum() / ( 2 * this->params_.Utilde ) ;
+    return (phi * phi).sum() / ( 2 * Utilde_ ) ;
 }
 	
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::force(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{this->configKey_, phi /(- this->params_.Utilde)}};
+    return Configuration<Type>{{this->configKey_, phi /(- Utilde_)}};
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
 Configuration<TensorType> HubbardGaugeAction<Type, TensorType>::grad(const Tensor<TensorType>& phi){
-    return Configuration<Type>{{this->configKey_, phi / this->params_.Utilde}};
+    return Configuration<Type>{{this->configKey_, phi / Utilde_}};
 }
 
 } // namespace NSL::Action

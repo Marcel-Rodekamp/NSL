@@ -53,7 +53,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Complete", "[CG,Hubbard Exp,Complete]"
 
     NSL::Lattice::Complete<TestType> lat(Nx);
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 
 }
@@ -69,7 +70,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Ring", "[CG,Hubbard Exp,Ring]"){
 
     NSL::Lattice::Ring<TestType> lat(Nx);
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 }
 
@@ -84,7 +86,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 1D", "[CG,Hubbard Exp,Square,1D
 
     NSL::Lattice::Square<TestType> lat({Nx});
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 }
 
@@ -101,7 +104,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 2D", "[CG,Hubbard Exp,Square,2D
 
     NSL::Lattice::Square<TestType> lat({Nx1,Nx2});
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 }
 
@@ -119,7 +123,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 3D", "[CG,Hubbard Exp,Square,3D
 
     NSL::Lattice::Square<TestType> lat({Nx1,Nx2,Nx3});
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 }
 
@@ -138,7 +143,8 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 4D", "[CG,Hubbard Exp,Square,4D
 
     NSL::Lattice::Square<TestType> lat({Nx1,Nx2,Nx3,Nx4});
     NSL::Tensor<TestType> phi(Nt,Nx);phi.rand();
-    NSL::FermionMatrix::HubbardExp M(lat,phi,beta);
+    NSL::FermionMatrix::HubbardExp M(lat,Nt,beta);
+    M.populate(phi);
     test_CG_fermionMatrix<TestType>(M,eps,Nt,Nx);
 }
 

@@ -1,9 +1,11 @@
 #ifndef NSL_LATTICE_TPP
 #define NSL_LATTICE_TPP
 #include "lattice.hpp"
+#include <tuple>
 
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
+#include "../LinAlg/eigh.tpp"
 
 namespace NSL::Lattice {
 
@@ -53,6 +55,15 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
         this->exp_hopping_matrix_[delta] = NSL::LinAlg::mat_exp(this->hopping_matrix(delta));
     }
     return this->exp_hopping_matrix_[delta];
+}
+
+template <typename Type>
+std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::eigh_hopping(Type delta){
+    if(!this->ee_.defined()) {
+       std::tie(this->ee_, this->ev_) = NSL::LinAlg::eigh(this->hopping_matrix(delta));
+       this->ev_.transpose(); // in place transposition
+    }
+    return {this->ee_, this->ev_};
 }
 
 template <typename Type>
