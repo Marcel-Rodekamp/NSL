@@ -30,6 +30,7 @@ add_NSL_test(test_LinAlg_shift LinAlg/test_LinAlg_shift.cpp)
 add_NSL_test(test_LinAlg_transpose LinAlg/test_LinAlg_transpose.cpp)
 add_NSL_test(test_LinAlg_inner_product LinAlg/test_LinAlg_inner_product.cpp)
 add_NSL_test(test_CG LinAlg/Solver/test_CG.cpp)
+add_NSL_test(test_BiCGStab LinAlg/Solver/test_BiCGStab.cpp)
 
 add_NSL_test(test_bipartite Lattice/test_bipartite.cpp)
 add_NSL_test(test_complete Lattice/test_complete.cpp)

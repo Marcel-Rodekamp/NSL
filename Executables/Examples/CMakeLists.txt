@@ -29,6 +29,9 @@ target_link_libraries(example_honeycomb NSL)
 add_executable(example_CG example_CG.cpp)
 target_link_libraries(example_CG NSL)
 
+add_executable(example_BiCGStab example_BiCGStab.cpp)
+target_link_libraries(example_BiCGStab NSL)
+
 add_executable(example_IO example_IO.cpp)
 target_link_libraries(example_IO NSL)
 

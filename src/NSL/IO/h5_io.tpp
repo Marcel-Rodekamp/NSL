@@ -406,7 +406,7 @@ class H5IO {
         inline bool overwrite(){
             return overwrite_;
         } // overwrite()
-
+          
     private:
         //! Removes a group if overwrite == True and group exists
         void removeData_(std::string node){

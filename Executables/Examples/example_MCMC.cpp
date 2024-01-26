@@ -184,9 +184,9 @@ int main(int argc, char* argv[]){
     } else {
         NSL::Logger::info("Appending to previous data.");
         // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
-        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
+            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
     }
-    
+        
     NSL::Logger::stop_profile(therm_time);
 
     // Generate Markov Chain
