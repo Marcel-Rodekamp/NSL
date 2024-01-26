@@ -2,28 +2,22 @@
 
 NSL_TEST_CASE("Parameter", "[Parameter]"){
     NSL::Parameter params;
-    params["myParam1"] = TestType{};
-    params["myParam2"] = std::string{};
 
-    // Params can be converted to its correct Type 
-    REQUIRE(params["myParam1"].to<TestType>() == TestType{});
-    REQUIRE(params["myParam2"].to<std::string>() == std::string());
+    // let us read in a bool flag
+    REQUIRE_NOTHROW(params["key1"] = true);
+    // let us read in a double parameter
+    REQUIRE_NOTHROW(params["key2"] = 1.235);
+    // let us, finally, read in a int parameter
+    REQUIRE_NOTHROW(params["key3"] = 2);
 
-    // Params can not be converted to other Type
-    REQUIRE_THROWS(params["myParam1"].to<std::string>());
-    REQUIRE_THROWS(params["myParam2"].to<TestType>());
+    // sometimes you have a parameter that is computed out of two parameters:
+    REQUIRE_NOTHROW(params["key4"] = params["key3"]*params["key2"]);
 
-    // explicit conversion, if this works implicit conversion works automatically
-    REQUIRE_NOTHROW(TestType(params["myParam1"]));
-    REQUIRE_NOTHROW(std::string(params["myParam2"]));
+    // alternatively you can compute parameters with non-GenType numbers as long as the underlying
+    // types can be computed
+    REQUIRE_NOTHROW(params["key5"] = 0.2*params["key3"]);
 
-    // Params can not be converted to other Type
-    REQUIRE_THROWS(std::string(params["myParam1"]));
-    REQUIRE_THROWS(TestType(params["myParam2"]));
-
-    // assignment with the correct type should work
-    REQUIRE_NOTHROW(params["myParam1"] = static_cast<TestType>(2));
-    // assignment with the wrong type should fail
-    REQUIRE_THROWS(params["myParam1"] = std::string("Test"));
+    // reassign with a different type
+    REQUIRE_NOTHROW(params["key2"] = std::string("Test"));
 
 }
