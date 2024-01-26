@@ -25,33 +25,19 @@ int main(int argc, char ** argv){
 
     // convert the data from example_param.yml and put it into the params
     // The name of the physical system
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
+    params["name"] = yml["system"]["name"].as<std::string>();
     // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
+    params["beta"] = yml["system"]["beta"].as<double>();
     // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
+    params["Nt"] = yml["system"]["Nt"].as<NSL::size_t>();
     // The number of ions
-    params.addParameter<NSL::size_t>(
-        "Nx", yml["system"]["nions"].as<NSL::size_t>()
-    );
+    params["Nx"] = yml["system"]["nions"].as<NSL::size_t>();
     // The on-site interaction
-    params.addParameter<Type>(
-        "U", yml["system"]["U"].as<double>()
-    );
+    params["U"] = yml["system"]["U"].as<double>();
     // The chemical potential
-    params.addParameter<Type>(
-        "mu", yml["system"]["mu"].as<double>()
-    );
+    params["mu"] = yml["system"]["mu"].as<double>();
     // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
+    params["h5file"] = yml["fileIO"]["h5file"].as<std::string>();
     
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -61,7 +47,7 @@ int main(int argc, char ** argv){
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value);
     }
 
     // create an H5 object to store data
@@ -77,8 +63,6 @@ int main(int argc, char ** argv){
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
-
-    params.addParameter<decltype(lattice)>("lattice", lattice);
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
 

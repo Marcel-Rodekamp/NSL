@@ -19,68 +19,40 @@ int main(int argc, char ** argv){
 
     // convert the data from example_param.yml and put it into the params
     // The name of the physical system
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
+    params["name"]              = yml["system"]["name"].as<std::string>();
     // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
+    params["beta"]              = yml["system"]["beta"].as<double>();
     // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
+    params["Nt"]                = yml["system"]["Nt"].as<NSL::size_t>();
     // The number of ions
-    params.addParameter<NSL::size_t>(
-        "Nx", yml["system"]["nions"].as<NSL::size_t>()
-    );
+    params["Nx"]                = yml["system"]["nions"].as<NSL::size_t>();
     // The on-site interaction
-    params.addParameter<Type>(
-        "U", yml["system"]["U"].as<double>()
-    );
+    params["U"]                 = yml["system"]["U"].as<double>();
     // The HMC save frequency
-    params.addParameter<NSL::size_t>(
-        "save frequency", yml["HMC"]["save frequency"].as<NSL::size_t>()
-    );
+    params["save frequency"]    = yml["HMC"]["save frequency"].as<NSL::size_t>();
     // The thermalization length
-    params.addParameter<NSL::size_t>(
-        "Ntherm", yml["HMC"]["Ntherm"].as<NSL::size_t>()
-    );
+    params["Ntherm"]            = yml["HMC"]["Ntherm"].as<NSL::size_t>();
     // The number of configurations
-    params.addParameter<NSL::size_t>(
-        "Nconf", yml["HMC"]["Nconf"].as<NSL::size_t>()
-    );
+    params["Nconf"]             = yml["HMC"]["Nconf"].as<NSL::size_t>();
     // The trajectory length
-    params.addParameter<double>(
-        "trajectory length", yml["Leapfrog"]["trajectory length"].as<double>()
-    );
+    params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    params.addParameter<NSL::size_t>(
-        "Nmd", yml["Leapfrog"]["Nmd"].as<NSL::size_t>()
-    );
+    params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
     // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
-
-    params.addParameter<double>(
-        "offset", yml["system"]["offset"].as<double>()
-    );
-
-    // ==================================================================================
-    // These are optional parameters, if yml does not contain the node the default value
-    // will be used. 
-    // ==================================================================================
-
+    params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
+    // The offset: tangent plane/NLO plane
+    if (yml["system"]["offset"]){
+        params["offset"]        = yml["system"]["offset"].as<double>();
+    } else {
+        // DEFAULT: offset = 0
+        params["offset"]        = 0.0;
+    }
     // Chemical Potential
     if (yml["system"]["mu"]){
-        params.addParameter<Type>(
-            "mu", yml["system"]["mu"].as<double>()
-        );
+        params["mu"]            = yml["system"]["mu"].as<double>();
     } else {
         // DEFAULT: mu = 0
-        params.addParameter<Type>("mu");
-    }
+        params["mu"]            = 0.0;
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
