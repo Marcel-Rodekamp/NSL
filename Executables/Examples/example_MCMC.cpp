@@ -99,7 +99,10 @@ int main(int argc, char* argv[]){
     }
 
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"].to<std::string>(),NSL::File::Truncate);
+    NSL::H5IO h5(
+        params["h5file"].to<std::string>(), 
+        params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
+    );
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
@@ -174,8 +177,16 @@ int main(int argc, char* argv[]){
     // will store all states according to the saveFrequency.
 
     auto therm_time =  NSL::Logger::start_profile("Thermalization");
-    NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
-    NSL::MCMC::MarkovState<Type> start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>());
+    NSL::MCMC::MarkovState<Type> start_state;
+    if(not h5.exist(fmt::format("{}/markovChain",BASENODE))){
+        NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>());
+    } else {
+        NSL::Logger::info("Appending to previous data.");
+        // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
+    }
+    
     NSL::Logger::stop_profile(therm_time);
 
     // Generate Markov Chain
@@ -190,7 +201,9 @@ int main(int argc, char* argv[]){
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
-    NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
+    NSL::Logger::info("Acceptance Rate: {}%", 
+        NSL::MCMC::getAcceptanceRate(markovChain) * 100
+    );
 
     return EXIT_SUCCESS;
 }
@@ -199,6 +212,11 @@ template<NSL::Concept::isNumber Type, typename LatticeType>
 void writeMeta(NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE){
     // write out the physical and run parameters for this system
     HighFive::File h5file = h5.getFile();
+
+    if(h5.exist(BASENODE+"/Meta")){
+        NSL::Logger::info("Meta data already exists, skipping.");
+        return;
+    }
 
     // lattice name
     HighFive::DataSet dataset = h5file.createDataSet<std::string>(

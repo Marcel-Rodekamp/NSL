@@ -30,12 +30,14 @@ class H5IO {
     
         H5IO(std::string h5file, auto FileHandle) :
             h5file_(h5file),
-            h5f_(h5file, FileHandle)  //| File::Truncate)
+            h5f_(h5file, FileHandle),  //| File::Truncate)
+            overwrite_(false)
         {}
 
         H5IO() : 
             h5file_("data.h5"),
-            h5f_("data.h5", NSL::File::ReadWrite)
+            h5f_("data.h5", NSL::File::ReadWrite),
+            overwrite_(false)
         {}
 
         HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
@@ -67,9 +69,9 @@ class H5IO {
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
             std::string baseNode;
 	        if (node.back() == '/') { // define the node
-	            baseNode = node + std::to_string(markovstate.markovTime);
+	            baseNode = node;// + std::to_string(markovstate.markovTime);
         	} else {
-	            baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	            baseNode = node + "/";// + std::to_string(markovstate.markovTime);
 	        }
 
             this->removeData_(baseNode);
@@ -401,6 +403,10 @@ class H5IO {
 	        return h5f_.exist(node);
         }  // exist(node)
            
+        inline bool overwrite(){
+            return overwrite_;
+        } // overwrite()
+
     private:
         //! Removes a group if overwrite == True and group exists
         void removeData_(std::string node){
