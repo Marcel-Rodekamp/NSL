@@ -99,8 +99,8 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
     // - Source vector
     srcVec_ = Type(0);
 
-    NSL::size_t Nx = this->params_["Nx"].to<NSL::size_t>();
-    NSL::size_t Nt = this->params_["Nt"].to<NSL::size_t>();
+    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
     NSL::size_t tsrcStep = Nt/NumberTimeSources;
 
