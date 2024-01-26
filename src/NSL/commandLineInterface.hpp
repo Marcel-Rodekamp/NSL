@@ -62,7 +62,7 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
 
     // Define a bunch of default options 
     NSL::Parameter params;
-    app.add_option<NSL::Entry, std::string>("-f, --file", params["file"], 
+    app.add_option<NSL::GenType, std::string>("-f, --file", params["file"], 
         "Provide a parameter file"
     );
 
