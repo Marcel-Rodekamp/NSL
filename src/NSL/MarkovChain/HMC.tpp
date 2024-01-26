@@ -92,7 +92,7 @@ class HMC{
                 h5_.write(MC[nstart],fmt::format("{}/{}",baseNode,nstart));
             }
 
-            double runningAcceptance = double(MC[nstart].accepted);
+            double runningAcceptance = 0;
 
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
@@ -112,7 +112,7 @@ class HMC{
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./n);
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./(n-nstart));
                     NSL::Logger::elapsed_profile(mc_time);
                 }
             }

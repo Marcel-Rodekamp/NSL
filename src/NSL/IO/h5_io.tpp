@@ -44,7 +44,6 @@ class H5IO {
             return h5f_;
         }
 
-
         std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
     	    NSL::size_t minCfg = std::numeric_limits<NSL::size_t>::infinity();
 	        NSL::size_t maxCfg = -1;
@@ -224,7 +223,6 @@ class H5IO {
 	                dataset.read(field);
 	            }	
             }
-	
             return 0;
         } // read(markovState, node, markovTime)
 
@@ -277,8 +275,10 @@ class H5IO {
 
             // copy back to original device in case the tensor is re used.
             tensor.to(dev);
+
 	        h5f_.flush();  // force writing to disk!            
-	        return 0; 
+	        
+            return 0; 
         } // write(tensor,node)
 
         template <NSL::Concept::isNumber Type> 
@@ -376,7 +376,29 @@ class H5IO {
         
 	        return 0; 
         } // read(config,node)
+    
+        template<NSL::Concept::isNumber Type>
+        inline int write(const Type & obj, const std::string node){
+            if constexpr(NSL::is_complex<Type>()){
+                typedef NSL::RealTypeOf<Type> real;
+                typedef std::complex<real> comp;
 
+                auto dataset = h5f_.createDataSet<comp>(
+                    node,
+                    HighFive::DataSpace::From(static_cast<comp>(obj))
+                );
+                dataset.write(static_cast<comp>(obj));
+            } else {
+                auto dataset = h5f_.createDataSet<Type>(
+                    node,
+                    HighFive::DataSpace::From(obj)
+                );
+                dataset.write(obj);
+            }
+            
+            return 0;
+        }
+    
         inline bool exist(const std::string node){
 	        return h5f_.exist(node);
         }  // exist(node)
@@ -384,9 +406,8 @@ class H5IO {
         inline bool overwrite(){
             return overwrite_;
         } // overwrite()
-
+          
     private:
-
         //! Removes a group if overwrite == True and group exists
         void removeData_(std::string node){
             bool exist = this->exist(node);
@@ -402,7 +423,6 @@ class H5IO {
         std::string h5file_;
         File h5f_;
         bool overwrite_;
-    
 }; // class H5IO
 
 } // namespace NSL

@@ -6,5 +6,7 @@
 
 // 2. Factories
 #include "Tensor/Factory/like.tpp"
+#include "Tensor/Factory/eye.tpp"
+#include "Tensor/Factory/random.tpp"
 
 #endif // NSL_TENSOR_MAIN_HPP
