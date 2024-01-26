@@ -53,6 +53,7 @@ int main(int argc, char ** argv){
     } else {
         // DEFAULT: mu = 0
         params["mu"]            = 0.0;
+    }
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -62,7 +63,7 @@ int main(int argc, char ** argv){
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value );
     }
     
     // initialize the lattice 
@@ -71,9 +72,6 @@ int main(int argc, char ** argv){
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
-
-    params.addParameter<decltype(lattice)>("lattice", lattice);
-
 
     // get number of ions
     NSL::size_t Nx = lattice.sites();
@@ -97,8 +95,9 @@ int main(int argc, char ** argv){
     b(NSL::Slice(0,1), NSL::Slice(0,1)) = 1;
 
     auto bicgstab_time =  NSL::Logger::start_profile("BiCGStab");
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < 100; i++){
         NSL::Tensor<NSL::complex<double>> res = bicgstab(b);
+    }
     NSL::Logger::stop_profile(bicgstab_time);
     NSL::Logger::info("BiCGStab took {}s ",std::get<0>(bicgstab_time));
 
