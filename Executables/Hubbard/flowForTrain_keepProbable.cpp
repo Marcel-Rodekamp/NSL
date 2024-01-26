@@ -24,75 +24,41 @@ int main(int argc, char ** argv){
 
     // convert the data from example_param.yml and put it into the params
     // The name of the physical system
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
+    params["name"] = yml["system"]["name"].as<std::string>();
     // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
+    params["beta"] = yml["system"]["beta"].as<double>();
     // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
+    params["Nt"] = yml["system"]["Nt"].as<NSL::size_t>();
     // The number of ions
-    params.addParameter<NSL::size_t>(
-        "Nx", yml["system"]["nions"].as<NSL::size_t>()
-    );
+    params["Nx"] = yml["system"]["nions"].as<NSL::size_t>();
     // The on-site interaction
-    params.addParameter<Type>(
-        "U", yml["system"]["U"].as<double>()
-    );
+    params["U"] = yml["system"]["U"].as<double>();
     // The chemical potential
-    params.addParameter<Type>(
-        "mu", yml["system"]["mu"].as<double>()
-    );
+    params["mu"] = yml["system"]["mu"].as<double>();
     // The tangen plane value 
-    params.addParameter<double>(
-        "tangent plane", yml["system"]["tangent plane"].as<double>()
-    );
+    params["tangent plane"] = yml["system"]["tangent plane"].as<double>();
     // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
+    params["h5file"] = yml["fileIO"]["h5file"].as<std::string>();
     // The step size for the Runge Kutta
-    params.addParameter<double>(
-        "step size", yml["RK4"]["step size"].as<double>()
-    );
+    params["step size"] = yml["RK4"]["step size"].as<double>();
     // minimal step size
-    params.addParameter<double>(
-        "min step size", yml["RK4"]["min step size"].as<double>()
-    );
+    params["min step size"] = yml["RK4"]["min step size"].as<double>();
     // The minimal flow time
     if(yml["RK4"]["min flow time"]){
-        params.addParameter<double>(
-            "min flow time", yml["RK4"]["min flow time"].as<double>()
-        );
+        params["min flow time"] = yml["RK4"]["min flow time"].as<double>();
     } else {
         // By default we assume at least a single step.
-        params.addParameter<double>(
-            "min flow time", yml["RK4"]["step size"].as<double>()
-        );
+        params["min flow time"] = yml["RK4"]["step size"].as<double>();
     }
-    params.addParameter<double>(
-        "max flow time", yml["RK4"]["max flow time"].as<double>()
-    );
-    params.addParameter<double>(
-        "adaptive attenuation", yml["RK4"]["adaptive attenuation"].as<double>()
-    );
+    params["max flow time"] = yml["RK4"]["max flow time"].as<double>();
+    params["adaptive attenuation"] = yml["RK4"]["adaptive attenuation"].as<double>();
     // The Number of Configurations to generate
-    params.addParameter<NSL::size_t>(
-        "Nconf", yml["Train Data"]["Nconf"].as<NSL::size_t>()
-    );
+    params["Nconf"] = yml["Train Data"]["Nconf"].as<NSL::size_t>();
     // Precision with what the imaginary part must match
     if(yml["RK4"]["ImS precision"]){
-        params.addParameter<double>(
-            "ImS precision", yml["RK4"]["ImS precision"].as<double>()
-        );
+        params["ImS precision"] = yml["RK4"]["ImS precision"].as<double>();
     } else {
-        params.addParameter<double>(
-            "ImS precision", (params["max flow time"].to<double>()/params["step size"].to<double>()) * pow(params["step size"].to<double>(), 3) 
-        );
+        params["ImS precision"] = (params["max flow time"].template to<double>()/params["step size"].template to<double>()) * pow(params["step size"].template to<double>(), 3);
     }
 
     // Now we want to log the found parameters
@@ -103,11 +69,11 @@ int main(int argc, char ** argv){
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value );
     }
 
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"].to<std::string>(),NSL::File::Truncate);
+    NSL::H5IO h5(params["h5file"].template to<std::string>(),NSL::File::Truncate);
 
     // define the basenode for the h5file, everything is stored in 
     std::string BASENODE;
@@ -118,15 +84,13 @@ int main(int argc, char ** argv){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
-    params.addParameter<decltype(lattice)>("lattice", lattice);
-
     // define a hubbard gauge action
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
 
     // define a hubbard fermion action using exponential discretization
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-    > S_fermion(params);
+    > S_fermion(lattice,params);
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -134,24 +98,24 @@ int main(int argc, char ** argv){
     // Initialize a configuration to use during the generation process
     NSL::Configuration<Type> conf{{"phi",
             NSL::Tensor<Type>(
-                params["device"].to<NSL::Device>(), 
-                params["Nt"].to<NSL::size_t>(), 
-                params["Nx"].to<NSL::size_t>()
+                params["device"].template to<NSL::Device>(), 
+                params["Nt"].template to<NSL::size_t>(), 
+                params["Nx"].template to<NSL::size_t>()
             )
     }};
 
     // Define a number of maximal flow steps as a savety stop. 
-    NSL::size_t numMaxFlowStep = params["max flow time"].to<double>()/params["step size"].to<double>();
+    NSL::size_t numMaxFlowStep = params["max flow time"].template to<double>()/params["step size"].template to<double>();
 
     // Create tensors to store all data we write after all configurations 
     // are computed
-    NSL::Tensor<Type> phi_TP(params["device"].to<NSL::Device>(), params["Nconf"].to<NSL::size_t>(), params["Nt"].to<NSL::size_t>(), params["Nx"].to<NSL::size_t>());
-    NSL::Tensor<Type> phi_FM(params["device"].to<NSL::Device>(),params["Nconf"].to<NSL::size_t>(),params["Nt"].to<NSL::size_t>(),params["Nx"].to<NSL::size_t>());
-    NSL::Tensor<Type> S_TP(params["Nconf"].to<NSL::size_t>());
-    NSL::Tensor<Type> S_FM(params["Nconf"].to<NSL::size_t>());
-    NSL::Tensor<double> flowTimes(params["Nconf"].to<NSL::size_t>());
-    NSL::Tensor<double> mus(params["Nconf"].to<NSL::size_t>());
-    NSL::Tensor<double> sigmas(params["Nconf"].to<NSL::size_t>());
+    NSL::Tensor<Type> phi_TP(params["device"].template to<NSL::Device>(), params["Nconf"].template to<NSL::size_t>(), params["Nt"].template to<NSL::size_t>(), params["Nx"].template to<NSL::size_t>());
+    NSL::Tensor<Type> phi_FM(params["device"].template to<NSL::Device>(),params["Nconf"].template to<NSL::size_t>(),params["Nt"].template to<NSL::size_t>(),params["Nx"].template to<NSL::size_t>());
+    NSL::Tensor<Type> S_TP(params["Nconf"].template to<NSL::size_t>());
+    NSL::Tensor<Type> S_FM(params["Nconf"].template to<NSL::size_t>());
+    NSL::Tensor<double> flowTimes(params["Nconf"].template to<NSL::size_t>());
+    NSL::Tensor<double> mus(params["Nconf"].template to<NSL::size_t>());
+    NSL::Tensor<double> sigmas(params["Nconf"].template to<NSL::size_t>());
 
     //===================================================================
     //===================================================================
@@ -163,7 +127,7 @@ int main(int argc, char ** argv){
     //===================================================================
     //===================================================================
 
-    for(NSL::size_t n = 0; n < params["Nconf"].to<NSL::size_t>(); ++n){
+    for(NSL::size_t n = 0; n < params["Nconf"].template to<NSL::size_t>(); ++n){
         // Under some circumstances a trajectory can not be used as data
         // We then have to draw a new starting configuration and calculate 
         // a new trajectory. In this case redoFlag is set to true and the 
@@ -171,8 +135,8 @@ int main(int argc, char ** argv){
         bool redoFlag = false;
 
         // define a short hand notation for the step size to avoid writing
-        // the "to<double>()" the whole time.
-        const double stepSize = params["step size"].to<double>();
+        // the "template to<double>()" the whole time.
+        const double stepSize = params["step size"].template to<double>();
 
         // initialize RK4 step 
         // Set up a single step runge kutta with step size given from the parameters
@@ -197,7 +161,7 @@ int main(int argc, char ** argv){
         // randomly sampled real part
         conf["phi"].randn(mus(n), sigmas(n));
         // shift to tangent plane
-        conf["phi"].imag() = params["tangent plane"].to<double>();
+        conf["phi"].imag() = params["tangent plane"].template to<double>();
 
         // store the configuration
         phi_TP(n,NSL::Slice(),NSL::Slice()) = conf["phi"];
@@ -230,7 +194,7 @@ int main(int argc, char ** argv){
 
         // loop until flow time is reached
         for(tIDX=1; tIDX < numMaxFlowStep+1; ++tIDX){ 
-        //while(flowTime < params["max flow time"].to<double>()){
+        //while(flowTime < params["max flow time"].template to<double>()){
             // check that the tries do not run to large
             if(tries >= 1000){
                 NSL::Logger::debug("Max tries {} exceeded", tries);
@@ -238,13 +202,13 @@ int main(int argc, char ** argv){
             }
 
             // check if flow time is reached
-            if(flowTime >= params["max flow time"].to<double>()){break;}
+            if(flowTime >= params["max flow time"].template to<double>()){break;}
 
             // If the step size is to small we don't continue.
             // If the step is to large RKstep.stepSize() is adjusted
             if(stepSizeCheck(params,RKstep.stepSize(),flowTime)){
                 NSL::Logger::debug("Step size < min step size ({} < {})",
-                    RKstep.stepSize(), params["min step size"].to<double>()
+                    RKstep.stepSize(), params["min step size"].template to<double>()
                 );
 
                 break;
@@ -275,10 +239,10 @@ int main(int argc, char ** argv){
             // https://github.com/evanberkowitz/isle/blob/devel/src/isle/cpp/integrator.cpp#109
             double ImSErr = NSL::LinAlg::abs(NSL::LinAlg::exp( i*NSL::imag(actVal_TP-actVal) ) - 1.);
 
-            if(ImSErr > params["ImS precision"].to<double>()){
+            if(ImSErr > params["ImS precision"].template to<double>()){
                 NSL::Logger::debug(
                     "ImS precision not reached at configuration {}; ΔImS = {:.2e} > {:.1e}; new step size = {}", 
-                    n, ImSErr, params["ImS precision"].to<double>(), RKstep.stepSize() 
+                    n, ImSErr, params["ImS precision"].template to<double>(), RKstep.stepSize() 
                 );
 
                 RKstep.stepSize() = decreaseStepSize(params, RKstep.stepSize(), ImSErr);
@@ -304,7 +268,7 @@ int main(int argc, char ** argv){
 
                 // Log the current status
                 NSL::Logger::info("Configuration {}/{}: flow time {:>.4}(tIDX={}/{}; step size={}) after {} try(s); S = ({:>1.2e}; {:>1.2e}); targetS = {}",
-                    n+1,params["Nconf"].to<NSL::size_t>(),flowTime,tIDX,numMaxFlowStep,stepSize, tries+1, NSL::real(actVal), NSL::imag(actVal), targetS
+                    n+1,params["Nconf"].template to<NSL::size_t>(),flowTime,tIDX,numMaxFlowStep,stepSize, tries+1, NSL::real(actVal), NSL::imag(actVal), targetS
                 );
 
                 // allow to increase the step size again
@@ -321,7 +285,7 @@ int main(int argc, char ** argv){
         } // while flowTime < maxFlowTime and ...
 
         // if the minimal flow time is not reached redo the trajectory
-        if(flowTime < params["min flow time"].to<double>()){redoFlag=true;}
+        if(flowTime < params["min flow time"].template to<double>()){redoFlag=true;}
         
         // Redo: We pick a new trajectory starting point for the same 
         // configuration id n.
@@ -358,10 +322,10 @@ int main(int argc, char ** argv){
 
 double decreaseStepSize(NSL::Parameter params, double stepSize, double ImSErr){
     stepSize = std::max(  
-        stepSize*params["adaptive attenuation"].to<double>() * std::pow(
-            params["ImS precision"].to<double>()/ImSErr, 1.0/5.0
+        stepSize*params["adaptive attenuation"].template to<double>() * std::pow(
+            params["ImS precision"].template to<double>()/ImSErr, 1.0/5.0
         ), // pow
-        params["min step size"].to<double>()
+        params["min step size"].template to<double>()
     ); // max
 
     return stepSize;
@@ -369,8 +333,8 @@ double decreaseStepSize(NSL::Parameter params, double stepSize, double ImSErr){
 
 double increaseStepSize(NSL::Parameter params, double stepSize, double ImSErr){
     double newStepSize = stepSize * std::min(
-        params["adaptive attenuation"].to<double>() * std::pow(
-            params["ImS precision"].to<double>()/ImSErr, 1.0/4.0
+        params["adaptive attenuation"].template to<double>() * std::pow(
+            params["ImS precision"].template to<double>()/ImSErr, 1.0/4.0
         ), //  stepSize' = stepSize * \sqrt{4}{ epsMax / epsFound }
         2.0 // at most double the step size
     );
@@ -383,11 +347,11 @@ double increaseStepSize(NSL::Parameter params, double stepSize, double ImSErr){
 bool stepSizeCheck(NSL::Parameter params, double & stepSize , double flowTime){
     // ensure that the next step does not increase flow time more then 
     // max flow time 
-    if( flowTime + stepSize > params["max flow time"].to<double>() ){
-        stepSize = params["max flow time"].to<double>() - flowTime;
+    if( flowTime + stepSize > params["max flow time"].template to<double>() ){
+        stepSize = params["max flow time"].template to<double>() - flowTime;
     } 
 
     // check that the step size is not to small
-    return stepSize <= params["min step size"].to<double>();
+    return stepSize <= params["min step size"].template to<double>();
 }
 

@@ -21,9 +21,10 @@ namespace NSL {
  * */
 class Device {
     public:
-    Device() = delete;
+    Device() = default;
     Device(const Device &) = default;
     Device(Device &&) = default;
+    Device & operator=(const NSL::Device & other) = default;
 
     //! Constructor
     /*!
@@ -73,6 +74,7 @@ class Device {
     torch::TensorOptions device() {
         return dev_;
     }
+
     const torch::TensorOptions device() const {
         return dev_;
     }
@@ -116,9 +118,9 @@ class Device {
      * */
     // we store this information immutable. A new Device object is needed to be created
     //const c10::Device device;
-    const torch::TensorOptions dev_;
+    torch::TensorOptions dev_;
 
-    const std::string repr_;
+    std::string repr_;
 
    //! ToDo: Figure out how we can access different cpus etc.
 };

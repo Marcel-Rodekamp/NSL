@@ -12,7 +12,7 @@ Type tilde(NSL::Parameter & params, std::string key){
         NSL::size_t Nt = params["Nt"];
         Type beta = params["beta"];
 
-        params.addParameter<Type>("delta", beta/Nt);
+        params["delta"] = beta/Nt;
     }
 
     return Type(params["delta"])*Type(params[key]);
