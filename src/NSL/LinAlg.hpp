@@ -9,6 +9,7 @@
 #include "LinAlg/det.tpp"
 #include "LinAlg/transpose.tpp"
 #include "LinAlg/exp.tpp"
+#include "LinAlg/log.tpp"
 #include "LinAlg/inner_product.tpp"
 #include "LinAlg/mat_exp.tpp"
 #include "LinAlg/mat_mul.tpp"
@@ -22,5 +23,6 @@
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp
 #include "LinAlg/Solver/Impl/CG.tpp" 
+#include "LinAlg/Solver/Impl/BiCGStab.tpp"
 
 #endif

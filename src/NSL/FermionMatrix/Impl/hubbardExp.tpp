@@ -22,16 +22,15 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL
         this->Lat.exp_hopping_matrix(sgn_*delta_),
     // To get correct broadcasting we transpose the element-wise multiplication
     // so that each column is Nx big.
-        (this->phiExp_ * psi).transpose()
-    ).transpose();
+        (this->phiExp_ * psi).transpose(-1,-2)
+    ).transpose(-1,-2);
     // and then transpose back.
 
     // Now Fpsi contains
     // [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
     // What remains is to shift it
-    Fpsi.shift(1,0);
     // and apply B
-    Fpsi(0,NSL::Slice()) *= -1;
+    Fpsi.shift(/*shift*/1,/*dim*/-2,/*boundary*/Type(-1));
 
     return Fpsi;
 }
@@ -43,7 +42,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M(const NSL:
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(const NSL::Tensor<Type> & psi){
-    
     /** We derive M† as follows:
       *     M_{tx,iy}   = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}   exp(+iφ_{iy}  ) δ_{t,i+1}
       *     M_{tx,iy}^* = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}^* exp(-iφ_{iy}^*) δ_{t,i+1}
@@ -63,17 +61,17 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
 
     NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_)),
-        NSL::LinAlg::transpose(psi)
-        ).transpose();
-    BexpKpsi(0, NSL::Slice()) *= -1;
+        NSL::LinAlg::transpose(psi,-1,-2)
+    ).transpose(-1,-2);
 
     /** We now need to evaluate
       *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} expKpsi_{ix}
       *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t,i-1} expKpsi_{ix}
       *                          |- element-wise * -->|------- shift ------|
       **/
+    BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
 
-    return psi - ( NSL::LinAlg::conj(this->phiExp_) * (BexpKpsi.shift(-1,0)));
+    return psi - ( NSL::LinAlg::conj(this->phiExp_) * BexpKpsi);
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -96,14 +94,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger(con
       **/
     return (this->M(psi) + this->Mdagger(psi) - psi) + NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(sgn_*delta_),
-        (   NSL::LinAlg::shift(this->phiExp_ * NSL::LinAlg::conj(this->phiExp_), +1, 0)
+        (   NSL::LinAlg::shift(this->phiExp_ * NSL::LinAlg::conj(this->phiExp_), +1, -2)
           * NSL::LinAlg::mat_vec(
                 this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_)),
-                NSL::LinAlg::transpose(psi)
-            ).transpose()
-        ).transpose()
-    ).transpose();
-
+                NSL::LinAlg::transpose(psi,-1,-2)
+            ).transpose(-1,-2)
+        ).transpose(-1,-2)
+    ).transpose(-1,-2);
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -123,8 +120,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(con
       **/
     return this->M(psi) + this->Mdagger(psi) - psi + NSL::LinAlg::conj(this->phiExp_) * NSL::LinAlg::mat_mul(
         this->Lat.exp_hopping_matrix(sgn_*(NSL::LinAlg::conj(delta_)+delta_)),
-        (this->phiExp_ * psi ).transpose()
-    ).transpose();
+        (this->phiExp_ * psi ).transpose(-1,-2)
+    ).transpose(-1,-2);
 }
 
 //return type
@@ -132,6 +129,11 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::Spat
 Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1); 
+
+    // having a batch dimension requires a bit more work and refactoring of 
+    // this algorithm for now we don't implement it here
+    assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
+
     NSL::Device device = this->phi_.device();
 
     NSL::Tensor<Type> prod(device,Nt,Nx,Nx);
@@ -153,6 +155,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
     const NSL::Device device = this->phi_.device();
+
+    // having a batch dimension requires a bit more work and refactoring of 
+    // this algorithm for now we don't implement it here
+    assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
 
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
