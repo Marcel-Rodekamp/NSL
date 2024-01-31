@@ -11,7 +11,6 @@
 #include "Impl/base.tpp"
 #include "Tensor/Impl/base.tpp"
 #include "Tensor/Impl/factory.tpp"
-#include "Tensor/Impl/print.tpp"
 #include "Tensor/Impl/randomAccess.tpp"
 #include "Tensor/Impl/slice.tpp"
 #include "Tensor/Impl/stats.tpp"
