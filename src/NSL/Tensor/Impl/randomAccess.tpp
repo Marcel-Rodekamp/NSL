@@ -15,6 +15,20 @@ class TensorRandomAccess:
 {
     public:
 
+    //! Accessor for pure NSL::size_t access
+    template<NSL::Concept::isIndexer ... IndexTypes>
+        requires(!NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
+    Type & operator()(IndexTypes ... indices) {
+        return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
+    }
+
+    //! Accessor for pure NSL::size_t access
+    template<NSL::Concept::isIndexer ... IndexTypes>
+        requires(!NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
+    Type operator()(IndexTypes ... indices) const {
+        return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
+    }
+
     //! Accessor for indexer Access (NSL::Slice, NSL::Ellipsis, ...) as well as int NSL::size_t convertibles
     template<NSL::Concept::isIndexer ... IndexTypes>
         requires(NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
@@ -28,26 +42,8 @@ class TensorRandomAccess:
 
     //! Accessor for pure NSL::size_t access
     template<NSL::Concept::isIndexer ... IndexTypes>
-        requires(!NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
-    Type & operator()(IndexTypes ... indices) {
-        return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
-    }
-
-    //! Accessor for indexer Access (NSL::Slice, NSL::Ellipsis, ...) as well as int NSL::size_t convertibles
-    template<NSL::Concept::isIndexer ... IndexTypes>
         requires(NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
-    NSL::Tensor<Type> operator()(IndexTypes ... indexer) const {
-        return this->data_.index(
-                std::initializer_list<torch::indexing::TensorIndex>{
-                    torch::indexing::TensorIndex(indexer)...
-                }
-        );
-    }
-
-    //! Accessor for pure NSL::size_t access
-    template<NSL::Concept::isIndexer ... IndexTypes>
-        requires(!NSL::packContainsDerived<NSL::Indexer,IndexTypes...>::value  )
-    NSL::Tensor<Type> & operator()(IndexTypes ... indices) const {
+    NSL::Tensor<Type> operator()(IndexTypes ... indices) const {
         return this->data_.index(
                 std::initializer_list<torch::indexing::TensorIndex>{
                     torch::indexing::TensorIndex(indices)...
