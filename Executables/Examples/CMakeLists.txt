@@ -1,3 +1,5 @@
+add_executable(example_k_correlators example_k_correlators.cpp)
+target_link_libraries(example_k_correlators NSL)
 
 add_executable(example_TensorBasics example_tensor_basics.cpp)
 target_link_libraries(example_TensorBasics NSL)

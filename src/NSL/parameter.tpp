@@ -1551,6 +1551,7 @@ typedef GeneralType<
     float,double,
     NSL::complex<float>,NSL::complex<double>,
     std::string,
+    std::vector<std::vector<std::vector<std::vector<double>>>>,
 
     // NSL Types
     NSL::Device
