@@ -59,6 +59,12 @@ std::string typeToString(){
 // GeneralType to the Type specific operators
 namespace {
 
+//! A concept that checks weather a type has a shape function `.shape(NSL::size_t)`
+template<typename T> 
+concept hasShape = requires(T t) {
+    { t.shape(0) } -> std::convertible_to<NSL::size_t>;
+};
+
 //! A concept that checks weather a type has a streaming operator `operator<<`
 template<typename T> 
 concept hasStreamingOperator = requires(std::ostream &os, T t) {
@@ -464,7 +470,25 @@ class GeneralType{
                     return GeneralType<Types_...>(arg--);
                 } else {
                     throw std::runtime_error(
-                        "Can not invoke postfix operator++ on held type (" 
+                        "Can not invoke postfix operator-- on held type (" 
+                        + typeToString<decltype(arg)>() + ")"
+                    );
+                    return GeneralType<Types_...>(arg);
+                }
+            },
+            this->obj_
+        );
+    }
+
+    //! Postfix decrement operator, forwards to the prefix increment operator of the held type
+    GeneralType<Types_...> shape(NSL::size_t dim){
+        return std::visit(
+            [&dim](auto & arg){
+                if constexpr( hasShape<decltype(arg)> ){
+                    return GeneralType<Types_...>(arg.shape(dim));
+                } else {
+                    throw std::runtime_error(
+                        "Can not invoke .shape(dim) on held type (" 
                         + typeToString<decltype(arg)>() + ")"
                     );
                     return GeneralType<Types_...>(arg);
@@ -1551,7 +1575,8 @@ typedef GeneralType<
     float,double,
     NSL::complex<float>,NSL::complex<double>,
     std::string,
-    std::vector<std::vector<std::vector<std::vector<double>>>>,
+    NSL::Tensor<double>,
+    NSL::Tensor<NSL::complex<double>>,
 
     // NSL Types
     NSL::Device

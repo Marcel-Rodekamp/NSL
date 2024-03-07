@@ -57,14 +57,6 @@ int main(int argc, char** argv){
         params["Number Time Sources"] = params["Nt"];
     }
 
-    // Load momentum blocks if they exist
-    if (yml["measurements"]["momenta"]){
-      params["wallSources"] = yml["measurements"]["momenta"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
-    } else {
-      // DEFAULT: raise an exception
-      // currently don't know how to do this, will do later
-    }
-
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
     // - value is a ParameterEntry * which is a wrapper around the actual 
@@ -76,6 +68,43 @@ int main(int argc, char** argv){
         NSL::Logger::info( "{}: {}", key, value );
     }
 
+    std::vector<std::vector<std::vector<std::vector<double>>>> kblocks2d;
+    std::vector<std::vector<double>> momenta;
+   
+
+    // Load momentum blocks if they exist
+    if (yml["measurements"]["momenta"]){
+      momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
+      NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
+      for (int i=0;i<momenta.size(); i++){
+	for (int j=0;j<momenta[0].size();j++){
+	  mblocks(i,j) = momenta[i][j];
+	}
+      }
+      params["momenta"]=mblocks;
+    }
+    if (yml["measurements"]["wallSources"]){
+      kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
+      NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+      NSL::Logger::info( "Measuring {} momentum block(s), each with {} band(s) of length {}",kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+
+      // now populate the momentum blocks with proper complex variables
+      for (int i=0; i<kblocks2d.size(); i++){
+	for (int j=0; j<kblocks2d[0].size(); j++) {
+	  for (int k=0; k<kblocks2d[0][0].size(); k++) {
+	    kblocks(i,j,k) = NSL::complex<double> (kblocks2d[i][j][k][0], kblocks2d[i][j][k][1]);
+	  }
+	}
+      }
+      params["wallSources"]=kblocks;
+    } else {
+      // DEFAULT: raise an exception
+      // currently don't know how to do this, will do later
+    }
+
+    
+    //    exit(0);
+    
     // create an H5 object to store data
     NSL::H5IO h5(params["h5file"], params["overwrite"]);
 
@@ -88,38 +117,35 @@ int main(int argc, char** argv){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
+    // initialize 2 point correlation function <p^+_x p_y> 
+    NSL::Measure::Hubbard::TwoPointCorrelator<
+        Type,
+        decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<
+            Type,decltype(lattice)
+        >
+    > C2pt_sp(lattice, params, h5, NSL::Hubbard::Particle);
 
-    std::cout << params["wallSources"] << std::endl;
-    
-    // // initialize 2 point correlation function <p^+_x p_y> 
-    // NSL::Measure::Hubbard::TwoPointCorrelator<
-    //     Type,
-    //     decltype(lattice),
-    //     NSL::FermionMatrix::HubbardExp<
-    //         Type,decltype(lattice)
-    //     >
-    // > C2pt_sp(lattice, params, h5, NSL::Hubbard::Particle);
+    // Perform the measurement.
+    // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
+    //
+    // configurations from the data file specified under params["file"].
+    // Then 
+    C2pt_sp.measureK();
 
-    // // Perform the measurement.
-    // // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
-    // //
-    // // configurations from the data file specified under params["file"].
-    // // Then 
-    // C2pt_sp.measure();
+    // initialize 2 point correlation function <h^+_x h_y> 
+    NSL::Measure::Hubbard::TwoPointCorrelator<
+      Type,
+      decltype(lattice),
+      NSL::FermionMatrix::HubbardExp<
+      Type,decltype(lattice)
+      >
+    > C2pt_sh(lattice, params, h5, NSL::Hubbard::Hole);
 
-    // // initialize 2 point correlation function <h^+_x h_y> 
-    // NSL::Measure::Hubbard::TwoPointCorrelator<
-    //     Type,
-    //     decltype(lattice),
-    //     NSL::FermionMatrix::HubbardExp<
-    //         Type,decltype(lattice)
-    //     >
-    // > C2pt_sh(lattice, params, h5, NSL::Hubbard::Hole);
-
-    // // Perform the measurement.
-    // // 1. Calculate <h^+_x h_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
-    // //
-    // // configurations from the data file specified under params["file"].
-    // // Then 
-    // C2pt_sh.measure();
+    // Perform the measurement.
+    // 1. Calculate <h^+_x h_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
+    //
+    // configurations from the data file specified under params["file"].
+    // Then 
+    C2pt_sh.measureK();
 }
