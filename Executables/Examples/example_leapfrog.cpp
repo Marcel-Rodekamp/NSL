@@ -22,11 +22,11 @@ int main(){
     };
 
     NSL::Parameter params;
-    params.addParameter<cd>("beta",10);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<cd>("U",3);
-    params.addParameter<cd>("mu",0);
-    params.addParameter<decltype(lattice)>("lattice",lattice);
+    params["beta"] = 10.;
+    params["Nt"] = Nt;
+    params["U"] = 3.;
+    params["mu"] = 0.;
+
 
     // define momentum
     NSL::Configuration<cd> momentum{
@@ -34,7 +34,7 @@ int main(){
 	};
 
     NSL::Action::HubbardGaugeAction<cd> S_gauge(params);
-    NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(params);
+    NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(lattice, params);
     // define the action
     NSL::Action::Action S = S_gauge + S_fermion;
 

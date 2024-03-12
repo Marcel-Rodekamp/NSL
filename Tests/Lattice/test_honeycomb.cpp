@@ -44,7 +44,7 @@ void test_honeycomb_eigenvector_orthogonality(const NSL::Tensor<T> & eigenvector
 }
 
 template<typename T>
-void test_honeycomb_spectrum_limits(const NSL::Tensor<T> & eigenvalues, const double epsilon=1.e-6){
+void test_honeycomb_spectrum_limits(const NSL::Tensor<T> & eigenvalues, const double epsilon=1.e-5){
 
     double limit = 3 + epsilon;
 
@@ -101,22 +101,30 @@ REAL_NSL_TEST_CASE( "Lattice: Honeycomb", "[Lattice, Honeycomb]" ) {
     INFO("Sites = " << lattice.sites());
 
     INFO("Coordinates")
-	INFO("-----------");
-	INFO(lattice.coordinates());
-	INFO("-----------");
-	
+    INFO("-----------");
+    INFO(lattice.coordinates());
+    INFO("-----------");
+
     // INFO("Adjacency matrix:\n" << lattice.adjacency_matrix());
-	
+
     INFO("Energy eigenvalues");
     INFO("------------------");
     INFO(energies);
     INFO("------------------");
     
+
+    NSL::RealTypeOf<TestType> epsilon=0;
+    if (std::is_same_v<NSL::RealTypeOf<TestType>, float>){
+        epsilon = 1e-5;
+    } else {
+        epsilon = 1e-12;
+    }
+
     test_honeycomb_volume<TestType>(lattice);
     test_honeycomb_valence<TestType>(lattice);
     test_honeycomb_hermiticity<TestType>(lattice);
     test_honeycomb_eigenvector_orthogonality(vectors);
-    test_honeycomb_spectrum_limits(energies);
+    test_honeycomb_spectrum_limits(energies, epsilon);
     test_honeycomb_dirac_points(L1, L2, energies);
 }
 

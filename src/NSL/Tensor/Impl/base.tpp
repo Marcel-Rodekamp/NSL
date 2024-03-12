@@ -6,6 +6,7 @@
 
 #include "../../device.tpp"
 #include "complex.hpp"
+#include <iostream>
 
 namespace NSL{
 // declare the interface as many operators will need to return a Tensor 
@@ -59,9 +60,9 @@ class TensorBase {
 
     //! copy constructor given an std::vector
     explicit TensorBase( NSL::Device dev, const std::vector<Type> &phi) :
-    	     data_(torch::from_blob(static_cast <void*> (phi.data()), {phi.size()}))
+        data_(torch::from_blob(static_cast <void*> (phi.data()), {phi.size()}))
     {
-	//std::cout << "I did something!" << std::endl;
+    //std::cout << "I did something!" << std::endl;
     }
 
     //! copy constructor
@@ -150,8 +151,11 @@ class TensorBase {
         return data_;
     }
 
-    template<NSL::Concept::isNumber PrintType>
-    friend std::ostream & operator<<(std::ostream & os, const NSL::Tensor<PrintType> & tensor);
+    friend std::ostream & operator<<(std::ostream & os, const NSL::Tensor<Type> & tensor){
+        //! \todo Add a better printer!
+        os << tensor.data_;
+        return os;
+    }
 
     //! explicitly convert a polymorphism to this class by performing a shallow copy
     /*!

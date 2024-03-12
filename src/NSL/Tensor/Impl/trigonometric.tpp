@@ -16,6 +16,12 @@ class TensorTrigonometric:
         return NSL::Tensor<Type>(this);
     }
 
+    //! Elementwise logarithm
+    NSL::Tensor<Type> log() {
+        this->data_.log_();
+        return NSL::Tensor<Type>(this);
+    }
+
     //! Elementwise sine
     NSL::Tensor<Type> sin() {
         this->data_.sin_();

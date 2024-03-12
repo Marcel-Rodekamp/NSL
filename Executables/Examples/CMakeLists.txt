@@ -20,11 +20,17 @@ target_link_libraries(example_MCMC NSL)
 add_executable(example_leapfrog example_leapfrog.cpp)
 target_link_libraries(example_leapfrog NSL)
 
+add_executable(example_rungeKutta4 example_rungeKutta4.cpp)
+target_link_libraries(example_rungeKutta4 NSL)
+
 add_executable(example_honeycomb example_honeycomb.cpp)
 target_link_libraries(example_honeycomb NSL)
 
 add_executable(example_CG example_CG.cpp)
 target_link_libraries(example_CG NSL)
+
+add_executable(example_BiCGStab example_BiCGStab.cpp)
+target_link_libraries(example_BiCGStab NSL)
 
 add_executable(example_IO example_IO.cpp)
 target_link_libraries(example_IO NSL)
