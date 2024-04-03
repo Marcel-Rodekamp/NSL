@@ -21,12 +21,6 @@ class TwoBodyCorrelator: public Measurement {
             Measurement(params, h5),
             hfm_(lattice, params),
             cg_(hfm_, NSL::FermionMatrix::MMdagger),
-            corrKblock_(
-                params["device"].to<NSL::Device>(),
-                params["Nt"].to<NSL::size_t>(),
-                params["wallSources"].shape(1).to<NSL::size_t>(),
-                params["wallSources"].shape(1).to<NSL::size_t>()
-                ),
             corrK_(
                 params["device"].to<NSL::Device>(),
                 params["wallSources"].shape(1).to<NSL::size_t>(),
@@ -42,12 +36,6 @@ class TwoBodyCorrelator: public Measurement {
                 params["wallSources"].shape(1).to<NSL::size_t>(),
                 params["wallSources"].shape(1).to<NSL::size_t>()
                 ),
-            corr_(
-                params["device"].to<NSL::Device>(),
-                params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>()
-            ),
 	        srcVecK_(
                 params["device"].to<NSL::Device>(),
                 params["wallSources"].shape(1).to<NSL::size_t>(),
@@ -92,7 +80,7 @@ class TwoBodyCorrelator: public Measurement {
             return true;
         }
 
-        bool eq_modBZ(const NSL::Tensor<double>& k, const NSL::Tensor<double>& q, double eps = 1e-15) {
+        bool eq_modBZ_(const NSL::Tensor<double>& k, const NSL::Tensor<double>& q, double eps = 1e-15) {
             // std::cout << "WE ARE HERE" << std::endl;
             NSL::Tensor<double> diff = k-q;
             // These two vectors are linearly independent vectors that take us to
@@ -128,7 +116,7 @@ class TwoBodyCorrelator: public Measurement {
             // return false;
         }
 
-        NSL::Tensor<Type> kroneckerProduct(const NSL::Tensor<Type>& A, const NSL::Tensor<Type>& B) {
+        NSL::Tensor<Type> kroneckerProduct_(const NSL::Tensor<Type>& A, const NSL::Tensor<Type>& B) {
             
             int rowsA = A.shape(1);
             int colsA = A.shape(2);
@@ -153,9 +141,7 @@ class TwoBodyCorrelator: public Measurement {
         FermionMatrixType hfm_;
         NSL::LinAlg::CG<Type> cg_;
 
-        NSL::Tensor<Type> corr_;
         NSL::Tensor<Type> corrK_;
-        NSL::Tensor<Type> corrKblock_;
         NSL::Tensor<Type> corrKPool_;
         std::unordered_map<NSL::Hubbard::Species, NSL::Tensor<Type>> corrPool_;
         NSL::Tensor<Type> srcVecK_;
@@ -185,14 +171,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     
     NSL::size_t tsrcStep = Nt/NumberTimeSources;
 
-    // Reset memory
-    // - Result correlator
-    corrK_ = Type(0);
-    corrKblock_ = Type(0);
-    // Reset memory
-    // - Source vector
-    srcVecK_ = Type(0);
-
     int kDim = params_["wallSources"].shape(0);
     int bDim = params_["wallSources"].shape(1);
 
@@ -201,13 +179,13 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
         for (int kSinkHole=0; kSinkHole<kDim; kSinkHole++) {
             for (int kSrcHole=0; kSrcHole<kDim; kSrcHole++) {
                 for (int kSrcPart=0; kSrcPart<kDim; kSrcPart++) {
-                    if (!(eq_modBZ(momenta(kSinkPart,NSL::Slice()) + momenta(kSinkHole,NSL::Slice()), momenta(kSrcPart, NSL::Slice()) + momenta(kSrcHole,NSL::Slice())))) {
+                    if (!(eq_modBZ_(momenta(kSinkPart,NSL::Slice()) + momenta(kSinkHole,NSL::Slice()), momenta(kSrcPart, NSL::Slice()) + momenta(kSrcHole,NSL::Slice())))) {
                         continue;
                     }
-                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim, bDim, bDim, bDim);
                     // cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
                     cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim, bDim, bDim, bDim);
-                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim, bDim, bDim, bDim);
                 }
             }
         }
@@ -215,9 +193,14 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     corrPool_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
     corrPool_[NSL::Hubbard::Hole] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
 
+
     for (NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep) {
         
         for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
+            // Reset memory
+            // - Result correlator
+            corrKPool_ = Type(0);
+
             // populate the fermion matrix using the free configuration
             hfm_.populate(phi_,species);
 
@@ -227,6 +210,10 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
                 // invert MM^dagger
                 NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
+
+                // Reset memory
+                // - Source vector
+                srcVecK_ = Type(0);
 
                 // back multiply M^dagger to obtain M^{-1}
                 // invM is of shape Nx x Nt x Nx
@@ -242,8 +229,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
                 // corrK_ += invM; // I changed something here!!!!!
                 corrK_ = invM;
 
-                srcVecK_ = Type(0);
-
                 for (int kSink=0; kSink<kDim; kSink++) {
                     for (NSL::size_t t = 0; t<Nt; t++) {
                         for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
@@ -253,6 +238,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
                         }
                     }
                 }
+                // Reset memory
+                // - Result correlator
+                corrK_ = Type(0);
             } // for kSrc
 
             corrPool_[species] = corrKPool_;
@@ -332,7 +320,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         // read configuration 
         this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
-        // compute the correlator. The result is stored in corr_
+        // compute the correlator. The result is stored in corrPool_
         measure(this->params_["Number Time Sources"]);
         std::string momNode;
         for ( const auto &[kSinkPart, value1]: cI1S1Izn1Szn1_ ) {
@@ -392,9 +380,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
                                     - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),bSinkPart,bSrcHole) 
                                     * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),bSinkHole,bSrcPart))
 
-                                    / Type(params_["Number Time Sources"]));
-                                    
                                     // + eye(kSinkHole, kSrcHole, NSL::Slice(), bSinkHole, bSrcHole) * corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),bSinkPart,bSrcPart);
+
+                                    / Type(params_["Number Time Sources"]));
                                 }
                             }
                         }
