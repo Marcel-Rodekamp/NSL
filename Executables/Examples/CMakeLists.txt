@@ -1,3 +1,6 @@
+add_executable(example_2_correlators example_2_correlators.cpp)
+target_link_libraries(example_2_correlators NSL)
+
 add_executable(example_k_correlators example_k_correlators.cpp)
 target_link_libraries(example_k_correlators NSL)
 
