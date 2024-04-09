@@ -31,8 +31,9 @@ def main():
         'h5file': str(yml['fileIO']['h5file']),
     }
 
-    # params['device'] = "GPU" if torch.cuda.is_available() else "CPU"
-
+    device = "GPU" if torch.cuda.is_available() else "CPU"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device} device.")
     #TODO Logger
     # for key, value in params.items():
     #     print(f"{key:20} {value}")
@@ -52,16 +53,16 @@ def main():
     
     lattice = nsl.Lattice.Generic('/home/physics/PhD/Projects/NSL/Executables/Examples/example_param.yml')
     dim = lattice.sites()
-    # lattice.to(params["device"])
+    lattice.to(device)
 
     # params['lattice'] = lattice
 
-    # with h5.File(params['h5file'], 'w') as h5f:
-        # basenode = h5f.create_group(params['name'])
-        # write_meta(params, basenode)
-    params['mu'] = 1.j * params['mu']
+    with h5.File(params['h5file'], 'w') as h5f:
+        basenode = h5f.create_group(params['name'])
+        write_meta(params, basenode)
+
     Nx = lattice.sites()
-    test_phi = 1.j*torch.ones((params['Nt'], Nx), dtype=torch.complex128)
+    test_phi = 1.j*torch.ones((params['Nt'], Nx), dtype=torch.complex128, device=torch.device(device))
     print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}.")
     hga = nsl.Action.HubbardGaugeAction(params)
     print("HubbardGaugeAction object created from py::dict.")
@@ -69,23 +70,25 @@ def main():
     print("HubbardFermiAction object created from py::dict.")
     ha = nsl.Action.SumAction(hga, hfa)
     print("SumAction object created from two actions.")
-    print(f"eval GaugeAction: {hga.eval(test_phi)}")
-    print(f"eval FermiAction: {hfa.eval(test_phi)}")
-    print(f"eval SumAction:   {ha.eval(test_phi)}")
-    print(f"grad GaugeAction: \n{hga.grad(test_phi)}")
-    print(f"grad FermiAction: \n{hfa.grad(test_phi)}")
-    print(f"grad SumAction:   \n{ha.grad(test_phi)}")
-    print(f"force GaugeAction: \n{hga.force(test_phi)}")
-    print(f"force FermiAction: \n{hfa.force(test_phi)}")
-    print(f"force SumAction:   \n{ha.force(test_phi)}")
-    # print(action.eval(torch.ones((params['Nt'], Nx), dtype=torch.float64)))
+    # print(f"eval GaugeAction: {hga.eval(test_phi)}")
+    # print(f"eval FermiAction: {hfa.eval(test_phi)}")
+    # print(f"eval SumAction:   {ha.eval(test_phi)}")
+    # print(f"grad GaugeAction: \n{hga.grad(test_phi)}")
+    # print(f"grad FermiAction: \n{hfa.grad(test_phi)}")
+    # print(f"grad SumAction:   \n{ha.grad(test_phi)}")
+    # print(f"force GaugeAction: \n{hga.force(test_phi)}")
+    # print(f"force FermiAction: \n{hfa.force(test_phi)}")
+    # print(f"force SumAction:   \n{ha.force(test_phi)}")
 
+    config = {"phi": test_phi}
 def write_meta(params, basenode):
     # basenode["/Meta/lattice"] = str(params["lattice"].name)
 
     basenode["/Meta/params/U"] = complex(params["U"])
 
     basenode["/Meta/params/beta"] = complex(params["beta"])
+
+    basenode["/Meta/params/mu"] = complex(params["mu"])
 
     basenode["/Meta/params/Nt"] = np.uint64(params["Nt"])
 

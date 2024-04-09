@@ -21,10 +21,7 @@ namespace NSL::Python {
             .def("exp_hopping_matrix", &SpatialLattice<Type>::exp_hopping_matrix, "delta"_a = 1.)
             .def("eigh_hopping", &SpatialLattice<Type>::eigh_hopping, "delta"_a = 1.)
             .def("bipartite", &SpatialLattice<Type>::bipartite)
-            .def("to", [](SpatialLattice<Type>& self, const std::string& device_identifier, const NSL::size_t ID) {     //TODO bind NSL::Device for better style
-                NSL::Device device = NSL::Device(device_identifier, ID);
-                self.to(device);
-            }, "device"_a = "CPU", "ID"_a = 0)
+            .def("to", &SpatialLattice<Type>::to)
             .def("device", &SpatialLattice<Type>::device);
     }
 
