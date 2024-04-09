@@ -1105,10 +1105,6 @@ class GeneralType{
 
         return *this;
     }
-
-    std::string type(){
-        return typeid(value_).name();
-    }
     
     //! Right shift assignment operator, forwards to the addition operator of the held type
     GeneralType<Types_...> operator>>=(GeneralType<Types_...> rhs){
