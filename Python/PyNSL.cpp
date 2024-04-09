@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include "bindLattice.cpp"
 #include "bindTensor.cpp"
+#include "bindConfiguration.cpp"
 #include "bindParameter.cpp"
 #include "bindAction.cpp"
 

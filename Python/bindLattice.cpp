@@ -89,15 +89,15 @@ namespace NSL::Python {
         // ToDo: Documentation
         py::module m_lattice = m.def_submodule("Lattice");
         
-        bindSpatialLattice<float>(m_lattice, "SpatialLattice");
-        bindComplete<float>(m_lattice, "Complete");
-        bindTriangle<float>(m_lattice, "Triangle");
-        bindTetrahedon<float>(m_lattice, "Tetrahedron");
-        bindGeneric<float>(m_lattice, "Generic");
-        bindHoneycomb<float>(m_lattice, "Honeycomb");
-        bindRing<float>(m_lattice, "Ring");
-        bindSquare<float>(m_lattice, "Square");
-        bindCube3D<float>(m_lattice, "Cube3D");
+        bindSpatialLattice<NSL::complex<double>>(m_lattice, "SpatialLattice");
+        bindComplete<NSL::complex<double>>(m_lattice, "Complete");
+        bindTriangle<NSL::complex<double>>(m_lattice, "Triangle");
+        bindTetrahedon<NSL::complex<double>>(m_lattice, "Tetrahedron");
+        bindGeneric<NSL::complex<double>>(m_lattice, "Generic");
+        bindHoneycomb<NSL::complex<double>>(m_lattice, "Honeycomb");
+        bindRing<NSL::complex<double>>(m_lattice, "Ring");
+        bindSquare<NSL::complex<double>>(m_lattice, "Square");
+        bindCube3D<NSL::complex<double>>(m_lattice, "Cube3D");
     }
 }
 

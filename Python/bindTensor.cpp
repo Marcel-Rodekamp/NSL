@@ -88,5 +88,5 @@ template struct pybind11::detail::type_caster<NSL::Tensor<float>>;
 template struct pybind11::detail::type_caster<NSL::Tensor<double>>;
 // template struct pybind11::detail::type_caster<NSL::Tensor<long double>>;
 // template struct pybind11::detail::type_caster<NSL::Tensor<complex<float>>>;
-// template struct pybind11::detail::type_caster<NSL::Tensor<complex<double>>>;
+template struct pybind11::detail::type_caster<NSL::Tensor<complex<double>>>;
 // template struct pybind11::detail::type_caster<NSL::Tensor<complex<long double>>>;
