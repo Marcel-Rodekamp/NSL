@@ -51,36 +51,47 @@ namespace NSL::Python {
         m_action.def(("HubbardFermionAction_" + nameAppendix).c_str(), &createHubbardFermionAction<Type, TensorType>);
     }
     
-    class SumAction {
+    class SumAction : public NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>{
         py::args _baseActionList;
         public:
-        SumAction(py::args BaseActions) {
+        SumAction(py::args BaseActions) : NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>("phi"){
             _baseActionList = BaseActions;
         }
 
-        NSL::complex<double> eval(const NSL::Tensor<NSL::complex<double>> & tensor) {
+        NSL::complex<double> eval(Configuration<NSL::complex<double>> & config) {
             NSL::complex<double> sum = 0.0;
             for (auto baseAction : _baseActionList) {
-                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> eval(tensor);
+                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> eval(config);
             }
             return sum;
         }
 
-        NSL::Configuration<NSL::complex<double>> grad(const NSL::Tensor<NSL::complex<double>> & tensor) {
+        NSL::complex<double> eval(const Tensor<NSL::complex<double>> & tensor) {
+            throw std::runtime_error("This object is a SumAction, it can only be evaluated on a Configuration object");
+        }
+
+        NSL::Configuration<NSL::complex<double>> grad(Configuration<NSL::complex<double>> & config) {
             NSL::Configuration<NSL::complex<double>> sum;
             for (auto baseAction : _baseActionList) {
-                // std::cout << baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> grad(tensor) << std::endl;
-                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> grad(tensor);
+                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> grad(config);
             }
             return sum;
         }
 
-        NSL::Configuration<NSL::complex<double>> force(const NSL::Tensor<NSL::complex<double>> & tensor) {
+        NSL::Configuration<NSL::complex<double>> grad(const Tensor<NSL::complex<double>> & tensor) {
+            throw std::runtime_error("This object is a SumAction, it can only be evaluated on a Configuration object");
+        }
+
+        NSL::Configuration<NSL::complex<double>> force(Configuration<NSL::complex<double>> & config) {
             NSL::Configuration<NSL::complex<double>> sum;
             for (auto baseAction : _baseActionList) {
-                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> force(tensor);
+                sum += baseAction.cast<NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>*>() -> force(config);
             }
             return sum;
+        }
+
+        NSL::Configuration<NSL::complex<double>> force(const Tensor<NSL::complex<double>> & tensor) {
+            throw std::runtime_error("This object is a SumAction, it can only be evaluated on a Configuration object");
         }
 
     };
@@ -95,14 +106,14 @@ namespace NSL::Python {
         
         py::class_<SumAction>(m_action, "SumAction")
             .def(py::init<py::args>())
-            .def("eval", py::overload_cast<const Tensor<NSL::complex<double>>&>(&SumAction::eval))
-            // .def("eval", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::eval))
-            .def("grad", [](SumAction &self, const Tensor<NSL::complex<double>> & tensor) {
-                return self.grad(tensor);
+            // .def("eval", py::overload_cast<const Tensor<NSL::complex<double>>&>(&SumAction::eval))
+            .def("eval", py::overload_cast<NSL::Configuration<NSL::complex<double>>&>(&SumAction::eval))
+            .def("grad", [](SumAction &self, NSL::Configuration<NSL::complex<double>> & config) {
+                return self.grad(config);
             })
-            // .def("grad", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::grad))
-            .def("force", [](SumAction &self, const Tensor<NSL::complex<double>> & tensor) {
-                return self.force(tensor);
+            // // .def("grad", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::grad))
+            .def("force", [](SumAction &self, NSL::Configuration<NSL::complex<double>> & config) {
+                return self.force(config);
             });
             // .def("force", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::force));
 
