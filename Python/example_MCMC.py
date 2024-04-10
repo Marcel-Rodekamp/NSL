@@ -63,6 +63,7 @@ def main():
 
     Nx = lattice.sites()
     test_phi = 1.j*torch.ones((params['Nt'], Nx), dtype=torch.complex128, device=torch.device(device))
+    config = {"phi": test_phi}
     print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}.")
     hga = nsl.Action.HubbardGaugeAction(params)
     print("HubbardGaugeAction object created from py::dict.")
@@ -70,17 +71,20 @@ def main():
     print("HubbardFermiAction object created from py::dict.")
     ha = nsl.Action.SumAction(hga, hfa)
     print("SumAction object created from two actions.")
-    print(f"eval GaugeAction: {hga.eval(test_phi)}")
-    print(f"eval FermiAction: {hfa.eval(test_phi)}")
-    print("eval SumAction:  ", ha.eval({"phi": test_phi}))
-    print(f"grad GaugeAction: \n{hga.grad(test_phi)}")
-    print(f"grad FermiAction: \n{hfa.grad(test_phi)}")
-    print(f"grad SumAction:   \n",ha.grad({"phi": test_phi}))
-    print(f"force GaugeAction: \n{hga.force(test_phi)}")
-    print(f"force FermiAction: \n{hfa.force(test_phi)}")
-    print(f"force SumAction:   \n",ha.force({"phi": test_phi}))
+    # print(f"eval GaugeAction: {hga.eval(test_phi)}")
+    # print(f"eval FermiAction: {hfa.eval(test_phi)}")
+    # print("eval SumAction:  ", ha.eval(config))
+    # print(f"grad GaugeAction: \n{hga.grad(test_phi)}")
+    # print(f"grad FermiAction: \n{hfa.grad(test_phi)}")
+    # print(f"grad SumAction:\n", ha.grad(config))
+    # print(f"force GaugeAction: \n{hga.force(test_phi)}")
+    # print(f"force FermiAction: \n{hfa.force(test_phi)}")
+    # print(f"force SumAction:\n", ha.force(config))
 
-    config = {"phi": test_phi}
+    lf = nsl.Integrator.Leapfrog(ha, 5.0, 5)
+    print("Leapfrog object created from SumAction.\n", lf)
+    print(lf(config, config))
+
 def write_meta(params, basenode):
     # basenode["/Meta/lattice"] = str(params["lattice"].name)
 

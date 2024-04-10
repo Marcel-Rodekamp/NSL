@@ -6,6 +6,7 @@
 #include "bindConfiguration.cpp"
 #include "bindParameter.cpp"
 #include "bindAction.cpp"
+#include "bindIntegrator.cpp"
 
 
 namespace NSL::Python {
@@ -13,5 +14,6 @@ namespace NSL::Python {
         bindLattice(m);
         bindTensor(m);
         bindAction(m);
+        bindIntegrator(m);
     }
 }
