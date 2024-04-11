@@ -66,11 +66,11 @@ def main():
     config = {"phi": test_phi}
     print(f"Setting up a Hubbard action with beta={np.real(params['beta'])}, Nt={int(params['Nt'])}, U={np.real(params['U'])}, mu={np.real(params['mu'])}.")
     hga = nsl.Action.HubbardGaugeAction(params)
-    print("HubbardGaugeAction object created from py::dict.")
+    print("HubbardGaugeAction object created from py::dict.\n", hga)
     hfa = nsl.Action.HubbardFermionAction(lattice, params)
-    print("HubbardFermiAction object created from py::dict.")
+    print("HubbardFermiAction object created from py::dict.\n", hfa)
     ha = nsl.Action.SumAction(hga, hfa)
-    print("SumAction object created from two actions.")
+    print("SumAction object created from two actions.\n", ha)
     # print(f"eval GaugeAction: {hga.eval(test_phi)}")
     # print(f"eval FermiAction: {hfa.eval(test_phi)}")
     # print("eval SumAction:  ", ha.eval(config))
@@ -83,7 +83,18 @@ def main():
 
     lf = nsl.Integrator.Leapfrog(ha, 5.0, 5)
     print("Leapfrog object created from SumAction.\n", lf)
-    print(lf(config, config))
+    # print(lf(config, config))
+    lfr = nsl.Integrator.LeapfrogRealForce(ha, 5.0, 5)
+    print("LeapfrogRealForce object created from SumAction.\n", lfr)
+    # print(lfr(config, config))
+    rk2 = nsl.Integrator.RungeKutta2(ha, 1.0, 5)
+    print("RungeKutta2 object created from SumAction.\n", rk2)
+    # print(rk2(config))
+    rk4 = nsl.Integrator.RungeKutta4(ha, 1.0, 5)
+    print("RungeKutta4 object created from SumAction.\n", rk4)
+    # print(rk4(config))
+
+
 
 def write_meta(params, basenode):
     # basenode["/Meta/lattice"] = str(params["lattice"].name)
