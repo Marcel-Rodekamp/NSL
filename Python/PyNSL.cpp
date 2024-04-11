@@ -7,7 +7,7 @@
 #include "bindParameter.cpp"
 #include "bindAction.cpp"
 #include "bindIntegrator.cpp"
-
+#include "bindMCMC.cpp"
 
 namespace NSL::Python {
     PYBIND11_MODULE(PyNSL, m) {
@@ -15,5 +15,6 @@ namespace NSL::Python {
         bindTensor(m);
         bindAction(m);
         bindIntegrator(m);
+        bindMCMC(m);
     }
 }

@@ -81,19 +81,21 @@ def main():
     # print(f"force FermiAction: \n{hfa.force(test_phi)}")
     # print(f"force SumAction:\n", ha.force(config))
 
-    lf = nsl.Integrator.Leapfrog(ha, 5.0, 5)
+    lf = nsl.Integrator.Leapfrog(ha, params['trajectory length'].real,params['Nmd'])
     print("Leapfrog object created from SumAction.\n", lf)
     # print(lf(config, config))
-    lfr = nsl.Integrator.LeapfrogRealForce(ha, 5.0, 5)
+    lfr = nsl.Integrator.LeapfrogRealForce(ha, params['trajectory length'].real,params['Nmd'])
     print("LeapfrogRealForce object created from SumAction.\n", lfr)
     # print(lfr(config, config))
-    rk2 = nsl.Integrator.RungeKutta2(ha, 1.0, 5)
+    rk2 = nsl.Integrator.RungeKutta2(ha, params['trajectory length'].real, params['Nmd'])
     print("RungeKutta2 object created from SumAction.\n", rk2)
     # print(rk2(config))
-    rk4 = nsl.Integrator.RungeKutta4(ha, 1.0, 5)
+    rk4 = nsl.Integrator.RungeKutta4(ha, params['trajectory length'].real, params['Nmd'], True)
     print("RungeKutta4 object created from SumAction.\n", rk4)
     # print(rk4(config))
-
+    state = nsl.MCMC.MarkovState(config, ha.eval(config), 1.)
+    print("MarkovState object created from config.\n", state)
+    
 
 
 def write_meta(params, basenode):
