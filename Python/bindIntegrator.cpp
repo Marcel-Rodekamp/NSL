@@ -96,7 +96,7 @@ namespace NSL::Python {
     }
 
     template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    void bindIntegrator(py::module &m, std::string class_name){
+    void bindIntegrators(py::module &m, std::string class_name){
         bindIntegratorBase<Type, TensorType>(m, class_name);
         bindIntegratorImplementations<TensorType>(m, class_name);
     }
@@ -107,7 +107,7 @@ namespace NSL::Python {
         // ToDo: Documentation
         py::module m_integrator = m.def_submodule("Integrator");
         
-        bindIntegrator<NSL::complex<double>, NSL::complex<double>>(m_integrator, "IntegratorBase");
+        bindIntegrators<NSL::complex<double>, NSL::complex<double>>(m_integrator, "IntegratorBase");
         
         
     }
