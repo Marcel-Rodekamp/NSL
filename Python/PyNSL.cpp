@@ -1,5 +1,6 @@
 #include "NSL.hpp"
 #include <pybind11/pybind11.h>
+#include "bindIO.cpp"
 #include "bindDevice.cpp"
 #include "bindLattice.cpp"
 #include "bindTensor.cpp"

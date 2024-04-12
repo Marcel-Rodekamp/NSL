@@ -97,27 +97,3 @@ namespace NSL::Python {
         bindCube3D<NSL::complex<double>>(m_lattice, "Cube3D");
     }
 }
-
-namespace pybind11 {
-    namespace detail {
-        template <>
-        struct type_caster<YAML::Node> {
-        public:
-            PYBIND11_TYPE_CASTER(YAML::Node, _("YAML::Node"));
-
-            // Conversion from Python to C++
-            bool load(handle src, bool) {
-                std::string yaml_path = src.cast<std::string>();
-                value = YAML::LoadFile(yaml_path);
-                return true;
-            }
-
-            // Conversion from C++ to Python
-            static handle cast(const YAML::Node& src, return_value_policy /* policy */, handle /* parent */) {
-                std::stringstream ss;
-                ss << src;
-                return py::str(ss.str()).release();
-            }
-        };
-    }  // namespace detail
-}  // namespace pybind11
