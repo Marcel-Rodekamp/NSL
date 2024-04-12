@@ -60,6 +60,7 @@ def main():
     with h5.File(params['h5file'], 'w') as h5f:
         basenode = h5f.create_group(params['name'])
         write_meta(params, basenode)
+    print(f"Writing metadata to {params['h5file']}.")
 
     Nx = lattice.sites()
     test_phi = 1.j*torch.ones((params['Nt'], Nx), dtype=torch.complex128, device=torch.device(device))
@@ -95,8 +96,14 @@ def main():
     # print(rk4(config))
     state = nsl.MCMC.MarkovState(config, ha.eval(config), 1.)
     print("MarkovState object created from config.\n", state)
-    
-
+    hmc = nsl.MCMC.HMC(lf, ha, params['h5file'])
+    print("HMC object created from Leapfrog and SumAction.\n", hmc)
+    thermalized_state = hmc.thermalize(state, params['Ntherm'], params['save frequency'])
+    # print(hmc.generate(state).configuration)
+    # print(hmc.generate(state, Nconf=75, saveFrequency=3)[-1].configuration)
+    # print(hmc.thermalize(state, Nconf=75, saveFrequency=3).configuration)
+    mc = hmc.generate(thermalized_state, Nconf=params['Nconf'], saveFrequency=params['save frequency'])
+    print("Final MarkovChain object.\n", mc[-1].configuration)
 
 def write_meta(params, basenode):
     # basenode["/Meta/lattice"] = str(params["lattice"].name)
