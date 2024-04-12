@@ -51,11 +51,15 @@ namespace NSL::Python {
     void bindMCMC(py::module &m) {
         // ToDo: Templating
         // ToDo: Documentation
+
         py::module m_mcmc = m.def_submodule("MCMC");
         
         bindMarkovState<NSL::complex<double>>(m_mcmc, "MarkovState");
-        bindHMC<NSL::Integrator::Leapfrog<NSL::Python::SumAction>, NSL::Python::SumAction, NSL::complex<double>>(m_mcmc, "HMC");
-        
+        bindHMC<NSL::Integrator::Leapfrog<NSL::Python::SumAction>, NSL::Python::SumAction, NSL::complex<double>>(m_mcmc, "HMCC");
+        bindHMC<NSL::Integrator::LeapfrogRealForce<NSL::Python::SumAction>, NSL::Python::SumAction, NSL::complex<double>>(m_mcmc, "HMCR");
+
+        // ToDo Factory function depending on Integrator Type
+        m_mcmc.attr("HMC") = m_mcmc.attr("HMCR");
         
     }
 }
