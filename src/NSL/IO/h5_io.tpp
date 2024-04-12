@@ -16,7 +16,7 @@ using HighFive::File;
 
 class H5IO {
     public:
-        H5IO(std::string h5file) :
+        H5IO(std::string h5file="data.h5") :
             h5file_(h5file),
             h5f_(h5file, NSL::File::ReadWrite | NSL::File::OpenOrCreate ),
             overwrite_(false)
@@ -34,11 +34,11 @@ class H5IO {
             overwrite_(false)
         {}
 
-        H5IO() : 
-            h5file_("data.h5"),
-            h5f_("data.h5", NSL::File::ReadWrite),
-            overwrite_(false)
-        {}
+        // H5IO() : 
+        //     h5file_("data.h5"),
+        //     h5f_("data.h5", NSL::File::ReadWrite),
+        //     overwrite_(false)
+        // {}
 
         HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
             return h5f_;
