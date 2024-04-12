@@ -94,6 +94,10 @@ namespace NSL::Python {
             throw std::runtime_error("This object is a SumAction, it can only be evaluated on a Configuration object");
         }
 
+        NSL::complex<double> operator()(Configuration<NSL::complex<double>> & config) {
+            return eval(config);
+        }
+
     };
     void bindAction(py::module &m) {
         // ToDo: Templating
@@ -114,8 +118,11 @@ namespace NSL::Python {
             // // .def("grad", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::grad))
             .def("force", [](SumAction &self, NSL::Configuration<NSL::complex<double>> & config) {
                 return self.force(config);
-            });
+            })
             // .def("force", py::overload_cast<Configuration<NSL::complex<double>>&>(&SumAction::force));
+            .def("__call__", [](SumAction &self, NSL::Configuration<NSL::complex<double>> & config) {
+                return self(config);
+            });
 
         
         // Set default aliases
