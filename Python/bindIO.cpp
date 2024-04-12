@@ -31,6 +31,7 @@ namespace pybind11 {
 
             // Conversion from Python to C++
             bool load(handle src, bool) {
+                //TODO add option for overwrite
                 std::string filename = src.cast<std::string>();
                 value = NSL::H5IO(filename);
                 return true;
