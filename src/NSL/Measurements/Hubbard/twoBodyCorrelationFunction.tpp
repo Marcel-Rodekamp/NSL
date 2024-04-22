@@ -470,6 +470,10 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
 } // measure()
 
+// The labels of the next functions might look incorrect but they infact are the correct one. 
+// We need to read the last two labels in the opposite direction because they are part of the opperator (O_{kl})^\dagger where the dagger swaps their place.
+// For further information check Petar's Excitons Notes
+
 template<
     NSL::Concept::isNumber Type,
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
@@ -480,8 +484,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-    
     // NSL::Tensor<Type> eye(params_["device"].to<NSL::Device>(),kDim,kDim,Nt,bDim,bDim);
     // for (int k=0; k<kDim; k++) {
     //     for (int nt=0;nt<Nt; nt++){
@@ -499,7 +501,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)
@@ -530,8 +532,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI1S1Iz1Sz0_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -542,9 +542,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSrcPart,kSinkPart,NSL::Slice(), i,l)
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSrcPart,kSinkPart,NSL::Slice(), i,l)
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     - corrPoolDag_[NSL::Hubbard::Particle](kSrcPart,kSinkHole,NSL::Slice(),i,k)
@@ -576,13 +576,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_() {
     int kDim = params_["wallSources"].shape(0).to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
-    
-    // NSL::Tensor<Type> eye(params_["device"].to<NSL::Device>(),kDim,kDim,Nt,bDim,bDim);
-    // for (int k=0; k<kDim; k++) {
-    //     for (int nt=0;nt<Nt; nt++){
-    //         eye(k,k,nt,NSL::Slice(), NSL::Slice()) = NSL::Matrix::Identity<Type> (bDim);
-    //     }
-    // }
 
     for ( const auto &[kSinkPart, value1]: cI1S1Iz1Szn1_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
@@ -594,15 +587,13 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += ((corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     - corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l))
-
-                                    // + eye(kSinkHole, kSrcHole, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -625,8 +616,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI1S1Iz0Sz1_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -637,7 +626,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
@@ -682,7 +671,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
@@ -717,15 +706,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-    
-    // NSL::Tensor<Type> eye(params_["device"].to<NSL::Device>(),kDim,kDim,Nt,bDim,bDim);
-    // for (int k=0; k<kDim; k++) {
-    //     for (int nt=0;nt<Nt; nt++){
-    //         eye(k,k,nt,NSL::Slice(), NSL::Slice()) = NSL::Matrix::Identity<Type> (bDim);
-    //     }
-    // }
-
     for ( const auto &[kSinkPart, value1]: cI1S1Izn1Sz1_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -736,15 +716,13 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += ((corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     - corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l))
-
-                                    // + eye(kSinkHole, kSrcHole, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -767,8 +745,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI1S1Izn1Sz0_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -779,9 +755,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
+                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
@@ -813,13 +789,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
     int kDim = params_["wallSources"].shape(0).to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
-    
-    // NSL::Tensor<Type> eye(params_["device"].to<NSL::Device>(),kDim,kDim,Nt,bDim,bDim);
-    // for (int k=0; k<kDim; k++) {
-    //     for (int nt=0;nt<Nt; nt++){
-    //         eye(k,k,nt,NSL::Slice(), NSL::Slice()) = NSL::Matrix::Identity<Type> (bDim);
-    //     }
-    // }
 
     for ( const auto &[kSinkPart, value1]: cI1S1Izn1Szn1_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
@@ -831,15 +800,13 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
                                     * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l))
-
-                                    // + eye(kSinkHole, kSrcHole, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -862,8 +829,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI0S1Iz0Sz1_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -874,7 +839,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
@@ -920,23 +885,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    // cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
-                                    
-                                    // += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    // * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
-                                    
-                                    // + corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    // * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
-                                    
-                                    // + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    // * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
-                                    
-                                    // + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    // * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
-                                    
-                                    // / Type(params_["Number Time Sources"])));
-
-                                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
                                     += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
@@ -972,8 +921,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI1S0Iz1Sz0_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -984,9 +931,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     + corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
@@ -1019,8 +966,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    std::vector<NSL::size_t> tDim{0};
-
     for ( const auto &[kSinkPart, value1]: cI1S0Izn1Sz0_ ) {
         for ( const auto &[kSinkHole, value2]: value1 ) {
             for ( const auto &[kSrcHole, value3]: value2 ) {
@@ -1031,9 +976,9 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_() {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, k * bDim + l)
+                                    cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
+                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
                                     
                                     + corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
