@@ -77,12 +77,22 @@ int main(int argc, char** argv){
       momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
       NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
       for (int i=0;i<momenta.size(); i++){
-	for (int j=0;j<momenta[0].size();j++){
-	  mblocks(i,j) = momenta[i][j];
-	}
+        for (int j=0;j<momenta[0].size();j++){
+          mblocks(i,j) = momenta[i][j];
+        }
       }
       params["momenta"]=mblocks;
     }
+    // if (yml["measurements"]["momenta"]){
+    //   momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
+    //   NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
+    //   for (int i=0;i<momenta.size(); i++){
+    //     for (int j=0;j<momenta[0].size();j++){
+    //       mblocks(i,j) = momenta[i][j];
+    //     }
+    //   }
+    //   params["momenta"]=momenta;
+    // }
     if (yml["measurements"]["wallSources"]){
       kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
       NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
