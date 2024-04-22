@@ -141,7 +141,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         CG(FermionMatrix<Type,LatticeType> & M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             errSq_(eps*eps),
             maxIter_(maxIter),

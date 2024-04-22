@@ -20,6 +20,7 @@
 #include "LinAlg/mat_inv.tpp"
 #include "LinAlg/eigh.tpp"
 #include "LinAlg/tensordot.tpp"
+#include "LinAlg/sqrt.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp
