@@ -108,6 +108,11 @@ class RadialHMC{
 
             double runningAcceptance = 0;
             double runningRadialAcceptance = 0;
+            double increasedRadiusAcceptance = 0;
+            double decreasedRadiusAcceptance = 0;
+            double proposed_increase_count = 0;
+            double summed_accepted_incr_radius = 0;
+            double summed_accepted_decr_radius = 0;
             int step_count = 0; // counts total steps to keep track of when to perform a radial update
             int rstep_count = 0; // counts radial update steps to compute radial acceptance rate
             // generate Nconf-1 configurations
@@ -124,6 +129,16 @@ class RadialHMC{
                         rstep_count++;
                         tmp = this->radialgenerate_(tmp, radialLoc, radialScale);
                         runningRadialAcceptance += static_cast<double>(tmp.accepted);
+                        // Record whether radius was increased and whether this was accepted
+                        if (bool_rincr_){
+                            proposed_increase_count += 1;
+                            increasedRadiusAcceptance += static_cast<double>(tmp.accepted);
+                            summed_accepted_incr_radius += curr_rscale_;
+                        }
+                        else{
+                            decreasedRadiusAcceptance += static_cast<double>(tmp.accepted);
+                            summed_accepted_decr_radius += curr_rscale_;
+                        }
                         if (rstep_count % logFrequency == 0){
                             NSL::Logger::info("HMC: {}/{}; Running Radial Acceptance Rate {:.6}%", n, Nconf, runningRadialAcceptance*100./rstep_count);
                         }
@@ -137,6 +152,15 @@ class RadialHMC{
                     rstep_count++;
                     tmp = this->radialgenerate_(tmp, radialLoc, radialScale);
                     runningRadialAcceptance += static_cast<double>(tmp.accepted);
+                    if (bool_rincr_){
+                            proposed_increase_count += 1;
+                            increasedRadiusAcceptance += static_cast<double>(tmp.accepted);
+                            summed_accepted_incr_radius += curr_rscale_;
+                    }
+                    else{
+                            decreasedRadiusAcceptance += static_cast<double>(tmp.accepted);
+                            summed_accepted_decr_radius += curr_rscale_;
+                    }
                     if (rstep_count % logFrequency == 0){
                         NSL::Logger::info("HMC: {}/{}; Running Radial Acceptance Rate {:.6}%", n, Nconf, runningRadialAcceptance*100./rstep_count);
                     } 
@@ -153,6 +177,13 @@ class RadialHMC{
                     NSL::Logger::elapsed_profile(mc_time);
                 }
             }
+            // Logging of information on radial Metropolis updates
+            NSL::Logger::info("Increase in Radius Proposed: {:.6}%", (100.*proposed_increase_count/rstep_count));
+            NSL::Logger::info("Increase in Radius Accepted: {:.6}%", (100.*increasedRadiusAcceptance/proposed_increase_count));
+            NSL::Logger::info("Decrease in Radius Proposed: {:.6}%", (100.*(1-proposed_increase_count/rstep_count)));
+            NSL::Logger::info("Decrease in Radius Accepted: {:.6}%", (100.*decreasedRadiusAcceptance/(rstep_count-proposed_increase_count)));
+            NSL::Logger::info("Measure of increased exploration: {:.10}", (summed_accepted_incr_radius/proposed_increase_count));
+            NSL::Logger::info("Measure of decreased exploration: {:.10}", (summed_accepted_decr_radius/(rstep_count-proposed_increase_count)));
             NSL::Logger::stop_profile(mc_time);
 
             // return the Markov Chain
@@ -287,6 +318,9 @@ class RadialHMC{
         rscaleTensor_.lognormal(radialLoc, radialScale);  // FT: completely remove tensor?
         NSL::RealTypeOf<Type> rscale_ = NSL::real(rscaleTensor_[0]);
         NSL::RealTypeOf<Type> inv_rscale_ = 1/rscale_;
+        bool_rincr_ = (rscale_ >= 1); // tmp bool for recording whether radius was increased
+        curr_rscale_ = static_cast<double>(rscale_);
+        // std::cout << curr_rscale_ << std::endl;
         // compute the Action
         NSL::Configuration<Type> proposal_config (state.configuration,true);
         // proposal_config *= rscale_[0]; //static_cast<Type> (rscale_[0]); // Need elementwise tensor operation or static_cast here?
@@ -297,6 +331,8 @@ class RadialHMC{
 
         NSL::RealTypeOf<Type> prob_rscale = lognormalProb_(rscale_, radialLoc, radialScale);
         NSL::RealTypeOf<Type> prob_inv_rscale = lognormalProb_(inv_rscale_, radialLoc, radialScale);
+
+        std::cout << curr_rscale_ << "with prob" << prob_rscale << std::endl;
 
         Type proposal_S = this->action_(proposal_config);
 
@@ -362,6 +398,8 @@ class RadialHMC{
     //! ToDo: We need to implement a proper RNG class!
     NSL::Tensor<double> r_;
     NSL::size_t tmp_size_ = 1;
+    bool bool_rincr_ = false; 
+    double curr_rscale_;
     //NSL::Tensor<double> rscaleTensor_;
     /* NSL::RealTypeOf<Type> rscale_;
     NSL::RealTypeOf<Type> inv_rscale_;
