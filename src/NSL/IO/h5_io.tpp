@@ -74,7 +74,7 @@ class H5IO {
 	            baseNode = node + "/";// + std::to_string(markovstate.markovTime);
 	        }
 
-            this->removeData_(baseNode);
+            this->removeData(baseNode);
 
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
@@ -237,7 +237,7 @@ class H5IO {
 
             NSL::Tensor<Type> tensor = tensor_in.to(NSL::CPU()); 
 
-            this->removeData_(node);
+            this->removeData(node);
 
 	        if constexpr (NSL::is_complex<Type>()) {
                 std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(
@@ -283,7 +283,7 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::Configuration<Type> &config, const std::string node){
-            this->removeData_(node);
+            this->removeData(node);
 
 	        for (auto [key,field] : config) {
 	            if (node.back() == '/'){
@@ -406,10 +406,9 @@ class H5IO {
         inline bool overwrite(){
             return overwrite_;
         } // overwrite()
-          
-    private:
+        
         //! Removes a group if overwrite == True and group exists
-        void removeData_(std::string node){
+        void removeData(std::string node){
             bool exist = this->exist(node);
             // remove the group if it exists; once the file is closed
             // automatic repacking is applied
@@ -417,7 +416,9 @@ class H5IO {
                 NSL::Logger::debug("Unlinking Dataset (overwrite={}; node exists={}): {}",overwrite_,exist,node);
                 h5f_.unlink(node);
             }
-        }
+        }  
+    private:
+        
 
 
         std::string h5file_;
