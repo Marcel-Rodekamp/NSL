@@ -215,27 +215,27 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     int bDim = params_["wallSources"].shape(1);
 
     NSL::Tensor<double> momenta = params_["momenta"];
-    for (int kSinkPart=0; kSinkPart<kDim; kSinkPart++) {
-        for (int kSinkHole=0; kSinkHole<kDim; kSinkHole++) {
-            for (int kSrcHole=0; kSrcHole<kDim; kSrcHole++) {
-                for (int kSrcPart=0; kSrcPart<kDim; kSrcPart++) {
-                    if (!(eq_modBZ_(momenta(kSinkPart,NSL::Slice()) + momenta(kSinkHole,NSL::Slice()), momenta(kSrcPart, NSL::Slice()) + momenta(kSrcHole,NSL::Slice())))) {
+    for (int w=0; w<kDim; w++) {
+        for (int x=0; x<kDim; x++) {
+            for (int y=0; y<kDim; y++) {
+                for (int z=0; z<kDim; z++) {
+                    if (!(eq_modBZ_(momenta(w,NSL::Slice()) + momenta(x,NSL::Slice()), momenta(z, NSL::Slice()) + momenta(y,NSL::Slice())))) {
                         continue;
                     }
-                    cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz0Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz0Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
 
-                    cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI0S1Iz0Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI0S1Iz0Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
 
-                    cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S0Iz1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S0Izn1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
                 }
             }
         }
@@ -347,46 +347,46 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
     measure(1);
     std::string momNode;
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz1Sz1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz1Sz1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
                     // write the result
-                    momNode = fmt::format("/cI1S1Iz1Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Iz1Sz1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Iz1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Iz1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Izn1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-
-
-                    momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-                    momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S1Izn1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
 
-                    momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-                    momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                    this->h5_.write(cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI0S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI0S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+
+
+                    momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S0Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    this->h5_.write(cI1S0Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
                 }
             }
         }
@@ -421,46 +421,46 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         // compute the correlator. The result is stored in corrPool_
         measure(this->params_["Number Time Sources"]);
         std::string momNode;
-        for ( const auto &[kSinkPart, value1]: cI1S1Iz1Sz1_ ) {
-            for ( const auto &[kSinkHole, value2]: value1 ) {
-                for ( const auto &[kSrcHole, value3]: value2 ) {
-                    for ( const auto &[kSrcPart, value4]: value3 ) {
+        for ( const auto &[w, value1]: cI1S1Iz1Sz1_ ) {
+            for ( const auto &[x, value2]: value1 ) {
+                for ( const auto &[y, value3]: value2 ) {
+                    for ( const auto &[z, value4]: value3 ) {
                         // write the result
-                        momNode = fmt::format("/cI1S1Iz1Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Iz1Sz1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Iz1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Iz1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Izn1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                        momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-
-
-                        momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-                        momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S1Izn1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
 
-                        momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
-                        momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",kSinkPart,kSinkHole,kSrcPart,kSrcHole);
-                        this->h5_.write(cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI0S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI0S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+
+
+                        momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S0Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+                        momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                        this->h5_.write(cI1S0Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
                     }
                 }
             }
@@ -491,25 +491,25 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_() {
     //     }
     // }
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz1Sz1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz1Sz1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Iz1Sz1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k)
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l))
+                                    - corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k)
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l))
 
-                                    // + eye(kSinkHole, kSrcHole, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
+                                    // + eye(x, y, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l)
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -532,29 +532,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz1Sz0_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz1Sz0_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Iz1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSrcPart,kSinkPart,NSL::Slice(), i,l)
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](z,w,NSL::Slice(), i,l)
+                                    * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Particle](kSrcPart,kSinkHole,NSL::Slice(),i,k)
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPoolDag_[NSL::Hubbard::Particle](z,x,NSL::Slice(),i,k)
+                                    * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    - corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSrcHole,kSinkPart,NSL::Slice(),j,l)
+                                    - corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](y,w,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSrcHole,kSinkHole,NSL::Slice(),j,k)) 
+                                    + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](y,x,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
@@ -577,23 +577,23 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz1Szn1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz1Szn1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Iz1Szn1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += ((corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += ((corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l))
+                                    - corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l))
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -616,29 +616,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz0Sz1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz0Sz1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Iz0Sz1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l)
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l)
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k)
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k)
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k)
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k)
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l)
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l)
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
@@ -661,29 +661,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Iz0Szn1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Iz0Szn1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Iz0Szn1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    - corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
@@ -706,23 +706,23 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Izn1Sz1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Izn1Sz1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Izn1Sz1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += ((corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += ((corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l))
+                                    - corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l))
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -745,29 +745,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Izn1Sz0_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Izn1Sz0_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Izn1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    - corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
@@ -790,23 +790,23 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S1Izn1Szn1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S1Izn1Szn1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S1Izn1Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S1Izn1Szn1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += ((corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l))
+                                    - corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l))
 
                                     / Type(params_["Number Time Sources"]));
                                 }
@@ -829,29 +829,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI0S1Iz0Sz1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI0S1Iz0Sz1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI0S1Iz0Sz1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI0S1Iz0Sz1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
 
@@ -875,29 +875,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI0S1Iz0Szn1_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI0S1Iz0Szn1_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI0S1Iz0Szn1_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI0S1Iz0Szn1_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (0.5 * ((corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    + corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
 
@@ -921,29 +921,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S0Iz1Sz0_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S0Iz1Sz0_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S0Iz1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S0Iz1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPool_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
@@ -966,29 +966,29 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_() {
     int bDim = params_["wallSources"].shape(1).to<NSL::size_t>();
     int Nt = params_["Nt"].to<NSL::size_t>();
 
-    for ( const auto &[kSinkPart, value1]: cI1S0Izn1Sz0_ ) {
-        for ( const auto &[kSinkHole, value2]: value1 ) {
-            for ( const auto &[kSrcHole, value3]: value2 ) {
-                for ( const auto &[kSrcPart, value4]: value3 ) {
+    for ( const auto &[w, value1]: cI1S0Izn1Sz0_ ) {
+        for ( const auto &[x, value2]: value1 ) {
+            for ( const auto &[y, value3]: value2 ) {
+                for ( const auto &[z, value4]: value3 ) {
 
                     for (int i=0; i<bDim; i++) {
                         for (int j=0; j<bDim; j++) {
                             for (int k=0; k<bDim; k++) {
                                 for (int l=0; l<bDim; l++) {
 
-                                    cI1S0Izn1Sz0_[kSinkPart][kSinkHole][kSrcHole][kSrcPart](NSL::Slice(), i * bDim + j, l * bDim + k)
+                                    cI1S0Izn1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcHole,NSL::Slice(),j,k)
+                                    += (-0.5 * ((corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    + corrPool_[NSL::Hubbard::Particle](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Hole](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
+                                    * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcHole,NSL::Slice(),i,k) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcPart,NSL::Slice(),j,l)
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
-                                    + corrPoolDag_[NSL::Hubbard::Hole](kSinkPart,kSrcPart,NSL::Slice(),i,l) 
-                                    * corrPool_[NSL::Hubbard::Particle](kSinkHole,kSrcHole,NSL::Slice(),j,k)) 
+                                    + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
+                                    * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(params_["Number Time Sources"])));
                                 }
