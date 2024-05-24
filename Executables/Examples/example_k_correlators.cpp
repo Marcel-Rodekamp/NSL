@@ -106,7 +106,10 @@ int main(int argc, char** argv){
     //    exit(0);
     
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"], params["overwrite"]);
+    NSL::H5IO h5(
+        params["h5file"].to<std::string>(), 
+        params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
+    );
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
