@@ -150,9 +150,11 @@ int main(int argc, char* argv[]){
 
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
-    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
+    // double test_vol = config["phi"].numel();
+    // std::cout << test_vol << std::endl;
     
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", params["trajectory length"], params["Nmd"]);
 
