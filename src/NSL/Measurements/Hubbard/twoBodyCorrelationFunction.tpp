@@ -183,20 +183,20 @@ class TwoBodyCorrelator: public Measurement {
 
         std::string basenode_;
 
-        void I1S1Iz1Sz1_();
-        void I1S1Iz1Sz0_();
-        void I1S1Iz1Szn1_();
-        void I1S1Iz0Sz1_();
-        void I1S1Iz0Szn1_();
-        void I1S1Izn1Sz1_();
-        void I1S1Izn1Sz0_();
-        void I1S1Izn1Szn1_();
+        void I1S1Iz1Sz1_(NSL::size_t NumberTimeSources);
+        void I1S1Iz1Sz0_(NSL::size_t NumberTimeSources);
+        void I1S1Iz1Szn1_(NSL::size_t NumberTimeSources);
+        void I1S1Iz0Sz1_(NSL::size_t NumberTimeSources);
+        void I1S1Iz0Szn1_(NSL::size_t NumberTimeSources);
+        void I1S1Izn1Sz1_(NSL::size_t NumberTimeSources);
+        void I1S1Izn1Sz0_(NSL::size_t NumberTimeSources);
+        void I1S1Izn1Szn1_(NSL::size_t NumberTimeSources);
 
-        void I0S1Iz0Sz1_();
-        void I0S1Iz0Szn1_();
+        void I0S1Iz0Sz1_(NSL::size_t NumberTimeSources);
+        void I0S1Iz0Szn1_(NSL::size_t NumberTimeSources);
 
-        void I1S0Iz1Sz0_();
-        void I1S0Izn1Sz0_();
+        void I1S0Iz1Sz0_(NSL::size_t NumberTimeSources);
+        void I1S0Izn1Sz0_(NSL::size_t NumberTimeSources);
 };
 
 
@@ -306,20 +306,20 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             corrPoolDag_[species] = corrKPoolDag_.conj();
         } // for species
 
-        I1S1Iz1Sz1_();
-        I1S1Iz1Sz0_();
-        I1S1Iz1Szn1_();
-        I1S1Iz0Sz1_();
-        I1S1Iz0Szn1_();
-        I1S1Izn1Sz1_();
-        I1S1Izn1Sz0_();
-        I1S1Izn1Szn1_();
+        I1S1Iz1Sz1_(NumberTimeSources);
+        I1S1Iz1Sz0_(NumberTimeSources);
+        I1S1Iz1Szn1_(NumberTimeSources);
+        I1S1Iz0Sz1_(NumberTimeSources);
+        I1S1Iz0Szn1_(NumberTimeSources);
+        I1S1Izn1Sz1_(NumberTimeSources);
+        I1S1Izn1Sz0_(NumberTimeSources);
+        I1S1Izn1Szn1_(NumberTimeSources);
 
-        I0S1Iz0Sz1_();
-        I0S1Iz0Szn1_();
+        I0S1Iz0Sz1_(NumberTimeSources);
+        I0S1Iz0Szn1_(NumberTimeSources);
 
-        I1S0Iz1Sz0_();
-        I1S0Izn1Sz0_();
+        I1S0Iz1Sz0_(NumberTimeSources);
+        I1S0Izn1Sz0_(NumberTimeSources);
     } // for tscr
 
 } // measure(Ntsrc);
@@ -482,7 +482,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -514,7 +514,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_() {
 
                                     // + eye(x, y, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l)
 
-                                    / Type(params_["Number Time Sources"]));
+                                    / Type(NumberTimeSources));
                                 }
                             }
                         }
@@ -530,7 +530,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -559,7 +559,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_() {
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Particle](y,x,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
@@ -575,7 +575,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -598,7 +598,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_() {
                                     - corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
                                     * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l))
 
-                                    / Type(params_["Number Time Sources"]));
+                                    / Type(NumberTimeSources));
                                 }
                             }
                         }
@@ -614,7 +614,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -643,7 +643,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_() {
                                     + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l)
                                     * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
@@ -659,7 +659,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -688,7 +688,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_() {
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
@@ -704,7 +704,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -727,7 +727,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_() {
                                     - corrPoolDag_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
                                     * corrPoolDag_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l))
 
-                                    / Type(params_["Number Time Sources"]));
+                                    / Type(NumberTimeSources));
                                 }
                             }
                         }
@@ -743,7 +743,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -772,7 +772,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_() {
                                     + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
@@ -788,7 +788,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -811,7 +811,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_() {
                                     - corrPool_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k) 
                                     * corrPool_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l))
 
-                                    / Type(params_["Number Time Sources"]));
+                                    / Type(NumberTimeSources));
                                 }
                             }
                         }
@@ -827,7 +827,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -856,7 +856,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_() {
                                     + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
 
                                 }
                             }
@@ -873,7 +873,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -902,7 +902,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_() {
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
 
                                 }
                             }
@@ -919,7 +919,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -948,7 +948,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_() {
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
@@ -964,7 +964,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_() {
+void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_(NSL::size_t NumberTimeSources) {
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
     int Nt = params_["Nt"].template to<NSL::size_t>();
@@ -993,7 +993,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_() {
                                     + corrPoolDag_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
                                     * corrPool_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
-                                    / Type(params_["Number Time Sources"])));
+                                    / Type(NumberTimeSources)));
                                 }
                             }
                         }
