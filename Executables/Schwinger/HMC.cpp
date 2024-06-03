@@ -6,6 +6,8 @@ void writeMeta(NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE);
 int main(int argc, char* argv[]){
     typedef NSL::complex<double> Type;
 
+    NSL::complex<double> I{0,1};
+
     NSL::Parameter params = NSL::init(argc, argv, "Schwinger Model HMC");
 
     YAML::Node yml = YAML::LoadFile(params["file"]);

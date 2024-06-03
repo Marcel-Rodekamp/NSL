@@ -60,6 +60,9 @@ class BaseAction{
         // contribute
         return NSL::Configuration<TensorType>();
     }
+    void pseudoFermion(const NSL::Tensor<Type> & pf){
+        // do nothing
+    }
 
     protected:
     std::string configKey_;
@@ -163,6 +166,16 @@ public:
         );
 
         return pseudoFermions;
+    };
+
+    template<NSL::Concept::isNumber Type>
+    void pseudoFermion(const NSL::Tensor<Type> & pf){
+        std::apply(
+            [&pf](auto & ... terms){
+                ( terms.pseudoFermion(pf) ,...);
+            },
+            summands_
+        );
     };
 
     template<NSL::Concept::isNumber TensorType>

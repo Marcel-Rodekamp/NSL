@@ -26,7 +26,7 @@ set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -Wall -pedantic ${CMAKE_CXX_FLAGS_DEBUG_INIT}
 # to avoid warning we put -Wno-narrowing
 # ToDo: There should be a better way to circumvent this problem!!!
 set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -Wno-narrowing" )
-set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
+set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -g" )
 
 
 # Create main library to include in C++
