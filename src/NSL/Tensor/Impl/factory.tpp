@@ -47,7 +47,6 @@ class TensorFactories:
     */
     NSL::Tensor<Type> randn(NSL::RealTypeOf<Type> mean, NSL::RealTypeOf<Type> std){
         this->data_.normal_(mean,1.414213562373095048801689*std);
-        //this->data_.normal_(mean,std);
         return NSL::Tensor<Type>(this);
     }
 

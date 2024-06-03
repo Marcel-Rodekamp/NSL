@@ -15,7 +15,6 @@ int main(int argc, char ** argv){
     // For a more sophisticated CLI refer to the documentation at the end
     // of this file
     NSL::Parameter params = NSL::init(argc,argv,"Example CLI");
-
     // We can read in the parameter file and put the read data into the 
     // params object, notice this uses the example_param.yml file
     // For personal files, this code needs to be adjusted accordingly
@@ -23,45 +22,16 @@ int main(int argc, char ** argv){
 
     // convert the data from example_param.yml and put it into the params
     // The name of the physical system
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
-    // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
-    // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
-    // The on-site interaction
-    params.addParameter<Type>(
-        "U", yml["system"]["U"].as<double>()
-    );
-    // The HMC save frequency
-    params.addParameter<NSL::size_t>(
-        "save frequency", yml["HMC"]["save frequency"].as<NSL::size_t>()
-    );
-    // The thermalization length
-    params.addParameter<NSL::size_t>(
-        "Ntherm", yml["HMC"]["Ntherm"].as<NSL::size_t>()
-    );
-    // The number of configurations
-    params.addParameter<NSL::size_t>(
-        "Nconf", yml["HMC"]["Nconf"].as<NSL::size_t>()
-    );
-    // The trajectory length
-    params.addParameter<double>(
-        "trajectory length", yml["Leapfrog"]["trajectory length"].as<double>()
-    );
-    // The number of molecular dynamic steps
-    params.addParameter<NSL::size_t>(
-        "Nmd", yml["Leapfrog"]["Nmd"].as<NSL::size_t>()
-    );
-    // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
+    params["name"] = yml["system"]["name"].as<std::string>();
+    params["beta"] = yml["system"]["beta"].as<double>();
+    params["Nt"] = yml["system"]["Nt"].as<NSL::size_t>();
+    params["U"] = yml["system"]["U"].as<double>();
+    params["save frequency"] = yml["HMC"]["save frequency"].as<NSL::size_t>();
+    params["Ntherm"] = yml["HMC"]["Ntherm"].as<NSL::size_t>();
+    params["Nconf"] = yml["HMC"]["Nconf"].as<NSL::size_t>();
+    params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
+    params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    params["h5file"] = yml["fileIO"]["h5file"].as<std::string>();
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -69,7 +39,7 @@ int main(int argc, char ** argv){
     //   value of interest, we can use ParameterEntry::repr() to get a string
     //   representation of the stored value
     for(auto [key, value]: params){
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value);
     }
 
 }

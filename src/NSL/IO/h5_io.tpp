@@ -4,11 +4,13 @@
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include "../logger.hpp"
+#include "../realImag.tpp"
 #include <iostream>
 #include <vector>
 #include "device.tpp"
 #include "highfive/H5File.hpp"
 #include "MarkovChain/markovState.tpp"
+
 
 namespace NSL {
 
@@ -30,18 +32,19 @@ class H5IO {
     
         H5IO(std::string h5file, auto FileHandle) :
             h5file_(h5file),
-            h5f_(h5file, FileHandle)  //| File::Truncate)
+            h5f_(h5file, FileHandle),  //| File::Truncate)
+            overwrite_(false)
         {}
 
         H5IO() : 
             h5file_("data.h5"),
-            h5f_("data.h5", NSL::File::ReadWrite)
+            h5f_("data.h5", NSL::File::ReadWrite),
+            overwrite_(false)
         {}
 
         HighFive::File &getFile() { // !!!!! WARNING !!!! FOR EXPERT USE ONLY !!!!! (KEEP AWAY FROM TOM!!!!) 
             return h5f_;
         }
-
 
         std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
     	    NSL::size_t minCfg = std::numeric_limits<NSL::size_t>::infinity();
@@ -66,14 +69,17 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
-            std::string baseNode = node;
+            std::string baseNode;
+	        if (node.back() == '/') { // define the node
+	            baseNode = node;// + std::to_string(markovstate.markovTime);
+        	} else {
+	            baseNode = node + "/";// + std::to_string(markovstate.markovTime);
+	        }
 
-            this->removeData_(node);
+            this->removeData_(baseNode);
 
-	
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
-    	    this -> write(markovstate.pseudoFermion, baseNode+"/pseudoFermion/");
 
 	        if constexpr (NSL::is_complex<Type>()) {
 	            // write out the actionValue
@@ -105,8 +111,8 @@ class H5IO {
 
 	                dataset.write(static_cast <std::complex<NSL::RealTypeOf<Type>>> (field));
 	            }
-
-                // write out the markovTime
+	   
+	            // write out the markovTime
 	            dataset = h5f_.createDataSet<int>(
                     baseNode+"/markovTime",
                     HighFive::DataSpace::From(markovstate.markovTime)
@@ -137,8 +143,8 @@ class H5IO {
                     );
 	                dataset.write(field);
 	            }
-
-	            // write out the markovTime
+	            
+                // write out the markovTime
 	            dataset = h5f_.createDataSet<int>(
                     baseNode+"/markovTime",
                     HighFive::DataSpace::From(markovstate.markovTime)
@@ -161,7 +167,8 @@ class H5IO {
 	                markovstate.markovTime = std::stoi(configs[i]);
                 }
             }
-	        NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
+	
+            NSL::Logger::info("Searching for most recent trajectory . . . found {}/{}", node,markovstate.markovTime);
 	        this -> read(markovstate, node, markovstate.markovTime);
 
             return 0;
@@ -169,16 +176,22 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node, const int markovTime){
-            std::string baseNode = node;
+            std::string baseNode;
 
             markovstate.markovTime = markovTime;
-	    
+	
+	        if (node.back() == '/') { // define the node
+	           baseNode = node + std::to_string(markovstate.markovTime);
+	        } else {
+	           baseNode = node + "/" + std::to_string(markovstate.markovTime);
+	        }
+
 	        NSL::Logger::info("Loading in {}",baseNode);
 
             if constexpr (NSL::is_complex<Type>()) {
                 std::complex<NSL::RealTypeOf<Type>> temp; // I need to define a temp variable, since I cannot static_cast within a dataset.read() call
-	       
-        	    this->read(markovstate.configuration, baseNode); // read in the configuration
+	   
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -196,7 +209,7 @@ class H5IO {
 	                field = temp;
 	            }
 	        } else {
-        	    this -> read(markovstate.configuration, baseNode); // read in the configuration
+    	        this -> read(markovstate.configuration, baseNode); // read in the configuration
 
 	            // read in the actionValue
 	            HighFive::DataSet dataset = h5f_.getDataSet(baseNode+"/actVal");
@@ -212,7 +225,6 @@ class H5IO {
 	                dataset.read(field);
 	            }	
             }
-	    
             return 0;
         } // read(markovState, node, markovTime)
 
@@ -265,8 +277,10 @@ class H5IO {
 
             // copy back to original device in case the tensor is re used.
             tensor.to(dev);
+
 	        h5f_.flush();  // force writing to disk!            
-	        return 0; 
+	        
+            return 0; 
         } // write(tensor,node)
 
         template <NSL::Concept::isNumber Type> 
@@ -364,58 +378,38 @@ class H5IO {
         
 	        return 0; 
         } // read(config,node)
+    
+        template<NSL::Concept::isNumber Type>
+        inline int write(const Type & obj, const std::string node){
+            if constexpr(NSL::is_complex<Type>()){
+                typedef NSL::RealTypeOf<Type> real;
+                typedef std::complex<real> comp;
 
-        template <typename Type>
-        inline int write(Type scalar, const std::string node){
-            removeData_(node);
-
-            if constexpr (NSL::is_complex<Type>()) {
-                 HighFive::DataSet dataset = this->h5f_.createDataSet<
-                     std::complex<NSL::RealTypeOf<Type>>>
-                (
+                auto dataset = h5f_.createDataSet<comp>(
                     node,
-                    HighFive::DataSpace::From( static_cast<std::complex<NSL::RealTypeOf<Type>>>(scalar) )
+                    HighFive::DataSpace::From(static_cast<comp>(obj))
                 );
-                dataset.write(static_cast<std::complex<NSL::RealTypeOf<Type>>>(scalar));               
+                dataset.write(static_cast<comp>(obj));
             } else {
-                HighFive::DataSet dataset = this->h5f_.createDataSet<Type>(
+                auto dataset = h5f_.createDataSet<Type>(
                     node,
-                    HighFive::DataSpace::From( scalar )
+                    HighFive::DataSpace::From(obj)
                 );
-                dataset.write(scalar);
+                dataset.write(obj);
             }
-
+            
             return 0;
         }
-
-        template<NSL::Concept::isNumber Type>
-        inline int read(Type & scalar, const std::string node){
-            if(h5f_.exist(node)){ // check if the node exists
-                HighFive::DataSet dataset = h5f_.getDataSet(node);
-                if constexpr ( NSL::is_complex<Type>() ){
-                    std::complex<NSL::RealTypeOf<Type>> scalar_ = 0;
-	                dataset.read(scalar_);
-                    scalar = static_cast<Type>(scalar_);
-                } else {
-	                dataset.read(scalar);
-                }
-	        
-                return 0;
-            } else { 
-                // node does not exist
-                NSL::Logger::error("Error! Node {} doesn't exist!", node); 
-                
-                return 1;
-            }
-        } // read(Type&,std::string)
-
+    
         inline bool exist(const std::string node){
 	        return h5f_.exist(node);
         }  // exist(node)
            
-
+        inline bool overwrite(){
+            return overwrite_;
+        } // overwrite()
+          
     private:
-
         //! Removes a group if overwrite == True and group exists
         void removeData_(std::string node){
             bool exist = this->exist(node);
@@ -431,7 +425,6 @@ class H5IO {
         std::string h5file_;
         File h5f_;
         bool overwrite_;
-    
 }; // class H5IO
 
 } // namespace NSL

@@ -53,7 +53,7 @@ void test_Hubbard_force(){
     //    Number of time slices
     NSL::size_t Nt = 8;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx =  2;
+    NSL::size_t Nx = 2;
 
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
@@ -62,14 +62,13 @@ void test_Hubbard_force(){
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a ring with {} sites.", NSL::real(beta), Nt, NSL::real(U), Nx);
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("U",U);
-    params.addParameter<Type>("mu",0);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<decltype(lattice)>("lattice", lattice);
+    params["beta"] = beta;
+    params["U"] = U;
+    params["mu"] = 0.;
+    params["Nt"] = Nt;
 
     NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
-    NSL::Action::HubbardFermionAction<Type,decltype(lattice),HFM<Type,decltype(lattice)>> S_fermion(params);
+    NSL::Action::HubbardFermionAction<Type,decltype(lattice),HFM<Type,decltype(lattice)>> S_fermion(lattice, params);
 
     // Initialize the action
     NSL::Action::Action S = S_gauge + S_fermion;

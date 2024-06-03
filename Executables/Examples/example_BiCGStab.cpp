@@ -1,10 +1,15 @@
 #include "NSL.hpp"
+#include "logger.hpp"
 
-int main(int argc, char** argv){
+int main(int argc, char ** argv){
     typedef NSL::complex<double> Type;
 
-    NSL::Parameter params = NSL::init(argc,argv,"NSL Hubbard Correlator");
-    
+    // Initialize NSL
+    NSL::Parameter params = NSL::init(argc, argv, "Example MCMC");
+    // an example parameter file is can be found in example_param.yml
+
+    auto init_time = NSL::Logger::start_profile("Initialization");
+
     // Now all parameters are stored in yml, we want to translate them 
     // into the parameter object
     // We can read in the parameter file and put the read data into the 
@@ -49,13 +54,6 @@ int main(int argc, char** argv){
         // DEFAULT: mu = 0
         params["mu"]            = 0.0;
     }
-    // Number of Sources for the cg
-    if (yml["measurements"]["Number Time Sources"]){
-        params["Number Time Sources"] = yml["measurements"]["Number Time Sources"].as<NSL::size_t>();
-    } else {
-        // DEFAULT: Number Time Sources = Nt
-        params["Number Time Sources"] = params["Nt"];
-    }
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -67,48 +65,42 @@ int main(int argc, char** argv){
         if (key == "device" || key == "file") {continue;}
         NSL::Logger::info( "{}: {}", key, value );
     }
-
-    // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"], params["overwrite"]);
-
-    // define the basenode for the h5file, everything is stored in 
-    // params["h5Filename"]/BASENODE/
-    std::string BASENODE(fmt::format("{}",std::string(params["name"])));
+    
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
+    NSL::size_t dim = lattice.sites();
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
-    // initialize 2 point correlation function <p^+_x p_y> 
-    NSL::Measure::Hubbard::TwoPointCorrelator<
-        Type,
-        decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<
-            Type,decltype(lattice)
-        >
-    > C2pt_sp(lattice, params, h5, NSL::Hubbard::Particle);
+    // get number of ions
+    NSL::size_t Nx = lattice.sites();
 
-    // Perform the measurement.
-    // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
-    //
-    // configurations from the data file specified under params["file"].
-    // Then 
-    C2pt_sp.measure();
+    NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.",
+        NSL::real( Type(params["beta"]) ),
+        params["Nt"].to<NSL::size_t>(),
+        NSL::real( Type(params["U"])),
+        std::string( params["name"] )
+    );
 
-    // initialize 2 point correlation function <h^+_x h_y> 
-    NSL::Measure::Hubbard::TwoPointCorrelator<
-        Type,
-        decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<
-            Type,decltype(lattice)
-        >
-    > C2pt_sh(lattice, params, h5, NSL::Hubbard::Hole);
+    NSL::Tensor<NSL::complex<double>> phi(params["device"].to<NSL::Device>(), params["Nt"].to<NSL::size_t>(),params["Nx"].to<NSL::size_t>());
+    NSL::FermionMatrix::HubbardExp M(lattice,params["Nt"].to<NSL::size_t>(),params["beta"].to<Type>());
+    M.populate(phi,NSL::Hubbard::Species::Particle);
 
-    // Perform the measurement.
-    // 1. Calculate <h^+_x h_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
-    //
-    // configurations from the data file specified under params["file"].
-    // Then 
-    C2pt_sh.measure();
+    NSL::Logger::info("Running BiCGStab to compute MM†@x = b.");
+
+    NSL::LinAlg::BiCGStab<NSL::complex<double>> bicgstab(M,NSL::FermionMatrix::MMdagger, 1e-10);
+
+    NSL::Tensor<NSL::complex<double>> b = NSL::zeros_like(phi);
+    b(NSL::Slice(0,1), NSL::Slice(0,1)) = 1;
+
+    auto bicgstab_time =  NSL::Logger::start_profile("BiCGStab");
+    for(int i = 0; i < 100; i++){
+        NSL::Tensor<NSL::complex<double>> res = bicgstab(b);
+    }
+    NSL::Logger::stop_profile(bicgstab_time);
+    NSL::Logger::info("BiCGStab took {}s ",std::get<0>(bicgstab_time));
+
+    NSL::Logger::info("Done");
 }
+

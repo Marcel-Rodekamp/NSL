@@ -7,50 +7,31 @@ int main(int argc, char* argv[]){
 
     YAML::Node yml = YAML::LoadFile(params["file"]);
 
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
+       // convert the data from example_param.yml and put it into the params
+    // The name of the physical system
+    params["name"]              = yml["system"]["name"].as<std::string>();
     // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
-    params.addParameter<Type>(
-        "bare mass", yml["system"]["bare mass"].as<double>()
-    );
+    params["beta"]              = yml["system"]["beta"].as<double>();
+    // bare mass 
+    params["bare mass"]         = yml["system"]["bare mass"].as<double>();
     // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
+    params["Nt"] = yml["system"]["Nt"].as<NSL::size_t>();
     // The number of ions
-    params.addParameter<NSL::size_t>(
-        "Nx", yml["system"]["Nx"].as<NSL::size_t>()
-    );
+    params["Nx"] = yml["system"]["Nx"].as<NSL::size_t>();
     // The HMC save frequency
-    params.addParameter<NSL::size_t>(
-        "save frequency", yml["HMC"]["save frequency"].as<NSL::size_t>()
-    );
+    params["save frequency"] = yml["HMC"]["save frequency"].as<NSL::size_t>();
     // The thermalization length
-    params.addParameter<NSL::size_t>(
-        "Ntherm", yml["HMC"]["Ntherm"].as<NSL::size_t>()
-    );
+    params["Ntherm"] = yml["HMC"]["Ntherm"].as<NSL::size_t>();
     // The number of configurations
-    params.addParameter<NSL::size_t>(
-        "Nconf", yml["HMC"]["Nconf"].as<NSL::size_t>()
-    );
+    params["Nconf"] = yml["HMC"]["Nconf"].as<NSL::size_t>();
     // The trajectory length
-    params.addParameter<double>(
-        "trajectory length", yml["Leapfrog"]["trajectory length"].as<double>()
-    );
+    params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    params.addParameter<NSL::size_t>(
-        "Nmd", yml["Leapfrog"]["Nmd"].as<NSL::size_t>()
-    );
+    params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
     // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
-
-    params.addParameter<NSL::size_t>("dim",2);
+    params["h5file"] = yml["fileIO"]["h5file"].as<std::string>();
+    // dimension of the system 
+    params["dim"] = 2;
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
@@ -58,12 +39,10 @@ int main(int argc, char* argv[]){
     });
     lattice.to(params["device"].to<NSL::Device>());
 
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
-
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value );
     }
 
     // create an H5 object to store data
@@ -71,7 +50,7 @@ int main(int argc, char* argv[]){
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
-    std::string BASENODE(fmt::format("{}",params["name"].repr()));
+    std::string BASENODE(fmt::format("{}",params["name"]));
 
 
     for( NSL::size_t nx = 1; nx < params["Nx"].to<NSL::size_t>() / 2+1; ++nx) { 

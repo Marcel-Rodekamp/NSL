@@ -1,5 +1,5 @@
-#ifndef NSL_CG_HPP
-#define NSL_CG_HPP
+#ifndef NSL_BICGSTAB_HPP
+#define NSL_BICGSTAB_HPP
 
 #include "../Solver.hpp" 
 #include "realImag.tpp"
@@ -10,7 +10,7 @@ namespace NSL::LinAlg {
 
 //! Conjugate Gradient, solving \f$M x = b \f$
 template<NSL::Concept::isNumber Type>
-class CG: public NSL::LinAlg::Solver<Type> {
+class BiCGStab: public NSL::LinAlg::Solver<Type> {
     public:
         
         //! Constructor
@@ -20,16 +20,16 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *          \f[ M x = b \f]
          *        is sovled for x.
          * \param eps
-         *        Error at which the CG is stopped as 
+         *        Error at which the BiCGStab is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
+         *        In case the BiCGStab doesn't converge this is a fall back to 
          *        exit. If the iteration count exeeds this number a runtime
          *        error is raised.
          *
-         * This Solver implementation uses the conjugate gradient (CG) algorithm.
+         * This Solver implementation uses the conjugate gradient (BiCGStab) algorithm.
          * */
-        CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
+        BiCGStab(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
                const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
@@ -37,7 +37,11 @@ class CG: public NSL::LinAlg::Solver<Type> {
             x_(),
             t_(),
             r_(),
-            p_()
+            s_(),
+            y_(),
+            w_(),
+            Aw_(),
+            As_()
         {}
 
         //! Constructor
@@ -48,10 +52,10 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *          \f[ M x = b \f]
          *        is sovled for x.
          * \param eps
-         *        Error at which the CG is stopped as 
+         *        Error at which the BiCGStab is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
+         *        In case the BiCGStab doesn't converge this is a fall back to 
          *        exit. If the iteration count exeeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
@@ -70,7 +74,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *      M = NSL::FermionMatrix::FermionMatrixImpl.M
          * ```
          *
-         * This Solver implementation uses the conjugate gradient (CG) algorithm.
+         * This Solver implementation uses the conjugate gradient (BiCGStab) algorithm.
          *
          * */
         template<
@@ -81,7 +85,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M,
+        BiCGStab(FermionMatrix<Type,LatticeType> & M,
                const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
@@ -89,7 +93,12 @@ class CG: public NSL::LinAlg::Solver<Type> {
             x_(),
             t_(),
             r_(),
-            p_()
+            s_(),
+            y_(),
+            w_(),
+            Aw_(),
+            As_()
+
         {}
 
         //! Constructor
@@ -108,10 +117,10 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MMdagger 
          * \param eps
-         *        Error at which the CG is stopped as 
+         *        Error at which the BiCGStab is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
+         *        In case the BiCGStab doesn't converge this is a fall back to 
          *        exit. If the iteration count exeeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
@@ -130,7 +139,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *      M = *function_ptr 
          * ```
          *
-         * This Solver implementation uses the conjugate gradient (CG) algorithm.
+         * This Solver implementation uses the conjugate gradient (BiCGStab) algorithm.
          * */
         template<
             template<typename TypeHelper, typename LatticeHelper> class FermionMatrix,
@@ -140,7 +149,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M, 
+        BiCGStab(FermionMatrix<Type,LatticeType> & M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination,
                const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
@@ -149,10 +158,15 @@ class CG: public NSL::LinAlg::Solver<Type> {
             x_(),
             t_(),
             r_(),
-            p_()
+            s_(),
+            y_(),
+            w_(),
+            Aw_(),
+            As_()
+
         {}
 
-        //! Apply CG
+        //! Apply BiCGStab
         /*!
          *  \param b, NSL::Tensor, RHS of the equation to be solved
          *
@@ -182,9 +196,19 @@ class CG: public NSL::LinAlg::Solver<Type> {
         // residual vector
         NSL::Tensor<Type> r_;
         // gradient vector
-        NSL::Tensor<Type> p_;
-}; // class CG
+        NSL::Tensor<Type> s_;
+        // stabilizing vector
+        NSL::Tensor<Type> y_;
+        // direction vector
+        NSL::Tensor<Type> w_;
+        // cache vector
+        NSL::Tensor<Type> As_;
+        // cache vector
+        NSL::Tensor<Type> Aw_;
+
+
+}; // class BiCGStab
         
 } //namespace NSL::LinAlg
 
-#endif // NSL_CG_HPP
+#endif // NSL_BICGSTAB_HPP

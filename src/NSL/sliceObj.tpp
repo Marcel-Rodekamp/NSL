@@ -110,6 +110,40 @@ class NewDim: public Indexer {
 
 };
 
+class Range: public Indexer {
+    public:
+
+    explicit Range(NSL::size_t start, NSL::size_t stop, NSL::size_t step = 1):
+        t_(start,stop,step)
+    {}
+
+    explicit Range(NSL::size_t stop, NSL::size_t step = 1):
+        t_(0,stop,step)
+    {}
+
+    inline NSL::size_t start() const {return std::get<0>(t_);}
+    inline NSL::size_t  stop() const {return std::get<1>(t_);}
+    inline NSL::size_t  step() const {return std::get<2>(t_);}
+    inline std::tuple<NSL::size_t,NSL::size_t,NSL::size_t> operator()(){
+        return t_;
+    };
+
+    operator torch::indexing::TensorIndex () const override {
+        return torch::arange(std::get<0>(t_),std::get<1>(t_),std::get<2>(t_));
+    }
+
+    private:
+
+    //! Variable to hold the start, step and stop parameters:
+    /*!
+     * t_[1] = start
+     * t_[2] = stop
+     * t_[3] = step
+     */
+     std::tuple<NSL::size_t,NSL::size_t,NSL::size_t> t_;
+};
+
+
 } // namespace NSL
 
 #endif //NSL_SLICE_OBJ_TPP

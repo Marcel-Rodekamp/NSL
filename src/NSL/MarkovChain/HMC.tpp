@@ -24,7 +24,7 @@ class HMC{
         r_(1),
         integrator_(integrator),
         action_(action),
-	h5_(h5)
+	    h5_(h5)
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -74,13 +74,31 @@ class HMC{
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
 
             // Put the initial configuration in the 0th element
-            MC[0] = state;
-		    
-            h5_.write(MC[0],fmt::format("{}/{}",baseNode,0));
+            
+            // check if the file already contains configs and if we are allowed to overwrite them
+            NSL::size_t nstart = 0;
+            
+            if (h5_.exist(baseNode)){
+                auto [minConfigID, maxConfigID] = h5_.getMinMaxConfigs(baseNode);
+                nstart = maxConfigID;
+            }
+
+            if (nstart > 0){
+                // this reader looks for the most recent markov state and reads it into the state
+                MC[nstart] = state;
+                h5_.read(MC[nstart], baseNode);
+
+            } else{
+                MC[nstart] = state;
+                NSL::Logger::info("HMC: Starting new Markov Chain");
+                h5_.write(MC[nstart],fmt::format("{}/{}",baseNode,nstart));
+            }
+
+            double runningAcceptance = 0;
 
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
-            for(NSL::size_t n = 1; n < Nconf; ++n){
+            for(NSL::size_t n = nstart+1; n < Nconf; ++n){
                 auto tmp = MC[n-1];
                 
                 // between each configuration generate saveFrequency which 
@@ -96,7 +114,7 @@ class HMC{
 
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./n);
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./(n-nstart));
                     NSL::Logger::elapsed_profile(mc_time);
                 }
             }
@@ -115,11 +133,8 @@ class HMC{
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
                 newState = this->generate_(newState);
 
-                runningAcceptance += static_cast<double>(newState.accepted);
-
                 if (n % logFrequency == 0){
-                    //NSL::Logger::info("HMC: {}/{}", n, Nconf);
-                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./n);
+                    NSL::Logger::info("HMC: {}/{}", n, Nconf);
                 }
             }
 
@@ -192,6 +207,7 @@ class HMC{
         for( const auto& [key,field]: momentum){
             starting_H += 0.5*(field * field).sum();
         }
+
         
         // End point of the trajectory i.e. proposal
         Type proposal_H = proposal_S;
@@ -203,9 +219,11 @@ class HMC{
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
+
         // accept reject
 	    if ( r_.rand()[0] <= acceptanceProb ){
-            return NSL::MCMC::MarkovState<Type> {
+
+            return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 this->action_.pseudoFermion(),
                 proposal_S,

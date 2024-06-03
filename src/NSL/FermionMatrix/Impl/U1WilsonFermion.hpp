@@ -14,14 +14,14 @@ class Wilson : public NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Squar
     /*  There is no default constructor. */
     Wilson() = delete;
 
-    Wilson(NSL::Parameter & params):
+    Wilson(NSL::Lattice::Square<Type> lattice, NSL::Parameter & params):
         // the lattice information is tightly bound to the construction
         // we don't need it here thus just do a default construction which
         // leaves it undefined
-        NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Square<Type>>(params["lattice"].to<NSL::Lattice::Square<Type>>()),
+        NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Square<Type>>(lattice),
         bareMass_(params["bare mass"].to<Type>()),
         U_(params["device"].to<NSL::Device>(), 
-           params["lattice"].to<NSL::Lattice::Square<Type>>().sites()
+           lattice.sites()
            *params["dim"].to<NSL::size_t>() 
         ),
         dim_(params["dim"].to<NSL::size_t>()),

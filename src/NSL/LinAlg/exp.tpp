@@ -7,13 +7,14 @@
 
 namespace NSL::LinAlg {
 
-template<typename Type>
+//! exponential(Type)
+template <NSL::Concept::isNumber Type>
 Type exp(Type number){
     return std::exp(number);
 }
 
-//exponential(Tensor)
-template<typename Type>
+//! exponential(Tensor) - element wise
+template <NSL::Concept::isNumber Type>
 NSL::Tensor<Type> exp(const Tensor<Type> & t) {
     return NSL::Tensor<Type>(t,true).exp();
 }

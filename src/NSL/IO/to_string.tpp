@@ -2,6 +2,7 @@
 #define NSL_IO_TO_STRING_TPP
 #include "../complex.hpp"
 #include "../concepts.hpp"
+#include "../realImag.tpp"
 
 namespace NSL {
 template <NSL::Concept::isNumber Type>

@@ -10,16 +10,16 @@ template<NSL::Concept::isNumber Type,
 class PseudoFermionAction: public BaseAction<Type,Type>{
     public:
         
-        PseudoFermionAction(NSL::Parameter & params) :
+        PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params) :
             BaseAction<Type,Type>("phi"),
-            FM_(params),
+            FM_(lattice, params),
             chi_(),
             pseudoFermion_()
         {}
 
-        PseudoFermionAction(NSL::Parameter & params, const std::string & fieldName) :
+        PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
             BaseAction<Type,Type>(fieldName),
-            FM_(params),
+            FM_(lattice, params),
             chi_(),
             pseudoFermion_()
         {}

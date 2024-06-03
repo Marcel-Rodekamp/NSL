@@ -66,33 +66,4 @@ class TensorImag:
 } // namespace NSL::TensorImpl
 
 
-namespace NSL{
-
-//! If `complex<>`, returns the real part; otherwise returns the passed value.
-template<typename Type>
-NSL::Tensor<NSL::RealTypeOf<Type>> real(const NSL::Tensor<Type> &value){
-    if constexpr(is_complex<Type>()) {
-        // See NOTE above for std::explanation.
-        return value.real();
-    }
-    else {
-        return value;
-    }
-}
-
-//! If `complex<>`, returns the imaginary part; otherwise returns 0.
-template<typename Type>
-NSL::Tensor<NSL::RealTypeOf<Type>> imag(const NSL::Tensor<Type> &value){
-    if constexpr(is_complex<Type>()) {
-        // See NOTE above for std::explanation.
-        return value.imag();
-    }
-    else {
-        return NSL::zeros_like(value);
-    }
-}
-
-} // namespace NSL
-
-
 #endif //NSL_TENSOR_IMPL_REAL_IMAG_TPP

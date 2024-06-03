@@ -12,6 +12,7 @@
 #include "types.hpp"
 #include "complex.hpp"
 #include "logger.hpp"
+#include "realImag.tpp"
 
 // NSL
 #include "Tensor.hpp"
@@ -29,5 +30,6 @@
 #include "Measurements.hpp"
 #include "U1.hpp"
 #include "Dirac/gamma.tpp"
+#include "RNG.hpp"
 
 #endif

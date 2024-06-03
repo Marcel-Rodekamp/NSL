@@ -16,9 +16,9 @@ template<
 >
 class TwoPointCorrelator: public Measurement {
     public:
-        TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
+        TwoPointCorrelator(LatticeType & lattice, NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
             Measurement(params, h5),
-            hfm_(params),
+            hfm_(lattice, params),
             cg_(hfm_, NSL::FermionMatrix::MMdagger),
             species_(species),
             corr_(
@@ -29,6 +29,7 @@ class TwoPointCorrelator: public Measurement {
             ),
             srcVec_(
                 params["device"].to<NSL::Device>(),
+                params["Nx"].to<NSL::size_t>(),
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
@@ -40,12 +41,13 @@ class TwoPointCorrelator: public Measurement {
             basenode_(basenode_)
     {}
 
-    TwoPointCorrelator(NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species):
+    TwoPointCorrelator(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5, NSL::Hubbard::Species species):
         TwoPointCorrelator(
-            params, 
+            lattice,
+            params,
             h5, 
             species,
-            fmt::format("{}",params["name"].repr())
+            params["name"]
         )
     {}
 
@@ -57,7 +59,7 @@ class TwoPointCorrelator: public Measurement {
 
     protected:
     bool skip_(bool overwrite, std::string node){
-        bool exists = this->h5_.exist(fmt::format("{}{}",basenode_,node));
+        bool exists = this->h5_.exist(fmt::format("{}{}",std::string(basenode_),node));
 
         // if overwrite is specified always calculate the correlator
         if (overwrite){return false;}
@@ -89,41 +91,46 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_);
+    hfm_.populate(phi_,species_);
 
     // Reset memory
     // - Result correlator
     corr_ = Type(0);
     // - Source vector
     srcVec_ = Type(0);
-    
-    NSL::size_t tsrcStep = this->params_["Nt"].to<NSL::size_t>()/NumberTimeSources;
 
-    for(NSL::size_t tsrc = 0; tsrc<this->params_["Nt"].to<NSL::size_t>(); tsrc+=tsrcStep){
-        for(NSL::size_t x = 0; x < this->params_["Nx"].to<NSL::size_t>(); ++x){
-            // Define a point source
-            srcVec_(tsrc,x) = Type(1);            
+    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
-            // invert MM^dagger
-            NSL::Tensor<Type> invMMdag = cg_(srcVec_);
+    NSL::size_t tsrcStep = Nt/NumberTimeSources;
 
-            // back multiply M^dagger to obtain M^{-1}
-            NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
+    for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
+        // Define a point source
+        // The Slice here takes out just the single fibre x. We put it 
+        // in to return a (device) Tensor from the random access. This 
+        // is a hack and should be improved for standard random access.
+        srcVec_.index_fill(Type(1), NSL::Range(Nx), tsrc, NSL::Range(Nx));
 
-            // Using a point sink allows to just copy invM as corr(t,y,x)
-            // We shift the 0th axis (time-axis) if invM by tsrc and apply anti periodic 
-            // boundary conditions
-            // shift t -> t - tsrc
-            invM.shift( -tsrc );
-            // apply anti periodic boundary
-            invM(NSL::Slice(this->params_["Nt"].to<NSL::size_t>()-tsrc)) *= -1;
+        // invert MM^dagger
+        NSL::Tensor<Type> invMMdag = cg_(srcVec_);
 
-            // Average over all source times
-            corr_(NSL::Slice(),NSL::Slice(),x) += invM; 
+        // back multiply M^dagger to obtain M^{-1}
+        // invM is of shape Nx x Nt x Nx
+        NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
 
-            // reset source vector
-            srcVec_(tsrc,x) = Type(0);
-        } // x
+        // Using a point sink allows to just copy invM as corr(t,y,x)
+        // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
+        // boundary conditions
+        // shift t -> t - tsrc
+        invM.shift( -tsrc, -2, -Type(1) );
+        
+        // Average over all source times
+        corr_ += invM.transpose(0,1).transpose(1,2); 
+
+        // reset source vector
+        // Slice: same as above
+        //srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
+        srcVec_ = Type(0);
     } // tsrc
 
     corr_ /= Type(NumberTimeSources);
@@ -160,16 +167,15 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         measure(1);
 
         // write the calculated correlator to file
-       h5_.write(corr_,basenode_+node);
+       h5_.write(corr_,std::string(basenode_)+node);
     } else {
         NSL::Logger::info("Non-interacting correlators already exist");
     }
 
     // Interacting Correlators
     // Initialize memory for the configurations
-
      // get the range of configuration ids from the h5file
-    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(basenode_+"/markovChain");
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
     NSL::size_t saveFreq = this->params_["save frequency"];
     
     NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
@@ -186,6 +192,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         } else {
             node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
         }
+
         if (skip_(this->params_["overwrite"],node)) {
             NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
 	        continue;
@@ -194,13 +201,13 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
         // read configuration 
-        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",basenode_,cfgID));
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
         // compute the correlator. The result is stored in corr_
         measure(this->params_["Number Time Sources"]);
 
         // write the result
-        this->h5_.write(corr_,basenode_+node);
+        this->h5_.write(corr_,std::string(basenode_)+node);
     } // for cfgID
 
 } // measure()

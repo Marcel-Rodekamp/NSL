@@ -20,6 +20,12 @@ inline NSL::Tensor<Type> randn_like(const NSL::Tensor<Type> & other, NSL::RealTy
     return NSL::Tensor<Type>(other,true).randn(mean,std);
 }
 
+template<NSL::Concept::isNumber Type>
+inline NSL::Tensor<Type> ones_like(const NSL::Tensor<Type> & other){
+    return torch::ones_like(other);
+}
+
+
 } // namespace NSL
 
 #endif //NSL_TENSOR_FACTORY_LIKE_TPP

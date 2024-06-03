@@ -5,57 +5,44 @@ void writeMeta(NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE);
 
 int main(int argc, char* argv[]){
     typedef NSL::complex<double> Type;
-
     NSL::complex<double> I{0,1};
 
+    // Initialize NSL
     NSL::Parameter params = NSL::init(argc, argv, "Schwinger Model HMC");
-
+    // an example parameter file is can be found in example_param.yml
+    
+    // Now all parameters are stored in yml, we want to translate them 
+    // into the parameter object
+    // We can read in the parameter file and put the read data into the 
+    // params object, notice this uses the example_param.yml file
+    // For personal files, this code needs to be adjusted accordingly
     YAML::Node yml = YAML::LoadFile(params["file"]);
 
-    params.addParameter<std::string>(
-        "name", yml["system"]["name"].as<std::string>()
-    );
+    // convert the data from example_param.yml and put it into the params
+    // The name of the physical system
+    params["name"]              = yml["system"]["name"].as<std::string>();
     // The inverse temperature 
-    params.addParameter<Type>(
-        "beta", yml["system"]["beta"].as<double>()
-    );
-    params.addParameter<Type>(
-        "bare mass", yml["system"]["bare mass"].as<double>()
-    );
+    params["beta"]              = yml["system"]["beta"].as<double>();
+    // bare mass 
+    params["bare mass"]         = yml["system"]["bare mass"].as<double>();
     // The number of time slices
-    params.addParameter<NSL::size_t>(
-        "Nt", yml["system"]["Nt"].as<NSL::size_t>()
-    );
+    params["Nt"] = yml["system"]["Nt"].as<NSL::size_t>();
     // The number of ions
-    params.addParameter<NSL::size_t>(
-        "Nx", yml["system"]["Nx"].as<NSL::size_t>()
-    );
+    params["Nx"] = yml["system"]["Nx"].as<NSL::size_t>();
     // The HMC save frequency
-    params.addParameter<NSL::size_t>(
-        "save frequency", yml["HMC"]["save frequency"].as<NSL::size_t>()
-    );
+    params["save frequency"] = yml["HMC"]["save frequency"].as<NSL::size_t>();
     // The thermalization length
-    params.addParameter<NSL::size_t>(
-        "Ntherm", yml["HMC"]["Ntherm"].as<NSL::size_t>()
-    );
+    params["Ntherm"] = yml["HMC"]["Ntherm"].as<NSL::size_t>();
     // The number of configurations
-    params.addParameter<NSL::size_t>(
-        "Nconf", yml["HMC"]["Nconf"].as<NSL::size_t>()
-    );
+    params["Nconf"] = yml["HMC"]["Nconf"].as<NSL::size_t>();
     // The trajectory length
-    params.addParameter<double>(
-        "trajectory length", yml["Leapfrog"]["trajectory length"].as<double>()
-    );
+    params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    params.addParameter<NSL::size_t>(
-        "Nmd", yml["Leapfrog"]["Nmd"].as<NSL::size_t>()
-    );
+    params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
     // The h5 file name to store the simulation results
-    params.addParameter<std::string>(
-        "h5file", yml["fileIO"]["h5file"].as<std::string>()
-    );
-
-    params.addParameter<NSL::size_t>("dim",2);
+    params["h5file"] = yml["fileIO"]["h5file"].as<std::string>();
+    // dimension of the system 
+    params["dim"] = 2;
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
@@ -63,12 +50,10 @@ int main(int argc, char* argv[]){
     });
     lattice.to(params["device"].to<NSL::Device>());
 
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
-
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
-        NSL::Logger::info( "{}: {}", key, value->repr() );
+        NSL::Logger::info( "{}: {}", key, value );
     }
 
     // create an H5 object to store data
@@ -77,7 +62,7 @@ int main(int argc, char* argv[]){
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
-    std::string BASENODE(fmt::format("{}",params["name"].repr()));
+    std::string BASENODE(fmt::format("{}",params["name"]));
 
     // write the meta data to the h5file
     writeMeta<Type>(params, h5, BASENODE);
@@ -88,7 +73,7 @@ int main(int argc, char* argv[]){
                                 Type,
                                 decltype(lattice),
                                 NSL::FermionMatrix::U1::Wilson<Type>
-                            >(params,"U")
+                            >(lattice,params,"U")
                           + NSL::Action::U1::WilsonGaugeAction<Type>(params)
     ;
 
