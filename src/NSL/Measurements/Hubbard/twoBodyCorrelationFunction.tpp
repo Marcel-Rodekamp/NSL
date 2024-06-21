@@ -547,17 +547,17 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_(NSL::siz
 
                                     cI1S1Iz1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](z,w,NSL::Slice(), i,l)
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(), i,l)
                                     * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
-                                    - corrPoolDag_[NSL::Hubbard::Particle](z,x,NSL::Slice(),i,k)
+                                    - corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k)
                                     * corrPool_[NSL::Hubbard::Hole](x,z,NSL::Slice(),j,l)
                                     
                                     - corrPool_[NSL::Hubbard::Hole](w,y,NSL::Slice(),i,k) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](y,w,NSL::Slice(),j,l)
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](y,x,NSL::Slice(),j,k)) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,k)) 
                                     
                                     / Type(NumberTimeSources)));
                                 }
