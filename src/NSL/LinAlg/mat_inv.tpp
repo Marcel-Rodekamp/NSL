@@ -12,6 +12,12 @@ NSL::Tensor<Type> mat_inv(const NSL::Tensor<Type> & t){
     return torch::inverse( t ); 
 }
 
+template <NSL::Concept::isNumber Type>
+Type trace(const NSL::Tensor<Type> & t){
+    //! \todo: add inv as a Tensor member
+    return torch::trace(t).template item <Type>(); 
+}
+
 } // namespace NSL::LinAlg
 
 #endif // NSL_LINALG_INV_TPP

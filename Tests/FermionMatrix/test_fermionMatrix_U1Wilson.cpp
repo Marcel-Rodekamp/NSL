@@ -23,15 +23,14 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixU1Wilson: M", "[fermionMatrixU1,Wilson, M, 
     lattice.to(dev);
 
     NSL::Parameter params;
-    params.addParameter<NSL::size_t>( "Nt", Nt );
-    params.addParameter<NSL::size_t>( "Nx", Nx );
-    params.addParameter<NSL::size_t>( "dim", dim );
-    params.addParameter<TestType>( "bare mass", bareMass );
-    params.addParameter<NSL::Device>( "device", dev );
-    params.addParameter<NSL::Lattice::Square<TestType>>("lattice",lattice);
+    params["Nt"]= Nt ;
+    params["Nx"]=Nx ;
+    params["dim"]=dim ;
+    params["bare mass"]= bareMass ;
+    params["device"] =dev ;
     NSL::Tensor<TestType> U(dev,Nt,Nx,dim); U = 1;
  
-    NSL::FermionMatrix::U1::Wilson<TestType> wfm(params);
+    NSL::FermionMatrix::U1::Wilson<TestType> wfm(lattice,params);
     wfm.populate(U);
 
     auto impleResult = wfm.M(psi);
@@ -131,15 +130,14 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixU1Wilson: Mdagger", "[fermionMatrixU1,Wilso
     lattice.to(dev);
 
     NSL::Parameter params;
-    params.addParameter<NSL::size_t>( "Nt", Nt );
-    params.addParameter<NSL::size_t>( "Nx", Nx );
-    params.addParameter<NSL::size_t>( "dim", dim );
-    params.addParameter<TestType>( "bare mass", bareMass );
-    params.addParameter<NSL::Device>( "device", dev );
-    params.addParameter<NSL::Lattice::Square<TestType>>("lattice",lattice);
+    params[ "Nt"]= Nt;
+    params["Nx"]=Nx;
+    params[ "dim"]= dim ;
+    params[ "bare mass"]= bareMass ;
+    params[ "device"]= dev ;
     NSL::Tensor<TestType> U(dev,Nt,Nx,dim); U = 1;
  
-    NSL::FermionMatrix::U1::Wilson<TestType> wfm(params);
+    NSL::FermionMatrix::U1::Wilson<TestType> wfm(lattice,params);
     wfm.populate(U);
 
     auto impleResult = wfm.Mdagger(psi);

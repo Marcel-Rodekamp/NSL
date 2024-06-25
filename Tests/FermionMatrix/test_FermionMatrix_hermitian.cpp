@@ -146,18 +146,16 @@ void test_FermionMatrix_U1Wilson_MMdagger_hermitian(NSL::size_t nt, NSL::size_t 
 
     NSL::Lattice::Square<Type> lattice({nt,nx});
     NSL::Parameter params;
-    params.addParameter<NSL::size_t>( "Nt", nt );
-    params.addParameter<NSL::size_t>( "Nx", nx );
-    params.addParameter<NSL::size_t>( "dim", dim );
-    params.addParameter<Type>( "bare mass", 2 );
-    params.addParameter<NSL::Device>( "device", NSL::CPU() );
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
+    params["Nt"] = nt ;
+    params["Nx"]= nx ;
+    params["dim"]=dim ;
+    params["bare mass"]= 2;
 
 	//NSL::Tensor<Type> U = NSL::LinAlg::exp( I*NSL::randn<Type>(nt,nx,dim) );
 	NSL::Tensor<Type> U(nt,nx,dim); 
     U = NSL::LinAlg::exp(I*NSL::randn_like(U));
 	//generate random fermion matrix for given lattice
-    NSL::FermionMatrix::U1::Wilson<Type> M(params);
+    NSL::FermionMatrix::U1::Wilson<Type> M(lattice,params);
     M.populate(U);
 
 	// Then we apply MMdagger to each column to generate the full matrix.

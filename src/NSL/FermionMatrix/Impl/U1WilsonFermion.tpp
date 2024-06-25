@@ -1,6 +1,5 @@
 #ifndef NSL_FERMION_MATRIX_WILSON_TPP
 #define NSL_FERMION_MATRIX_WILSON_TPP
-
 #include "U1WilsonFermion.hpp"
 
 //! todo define gamma matrices
@@ -123,14 +122,226 @@ NSL::Tensor<Type> NSL::FermionMatrix::U1::Wilson<Type>::MdaggerM(const NSL::Tens
 
 template<NSL::Concept::isNumber Type>
 Type NSL::FermionMatrix::U1::Wilson<Type>::logDetM(){
-    throw std::logic_error("FermionMatrix::U1::Wilson::logDetM is not implemented");
-    return 0;
+    Type kappa = 0.5/(bareMass_+2);
+    NSL::size_t Nt = U_.shape(0);
+    NSL::size_t Nx = U_.shape(1);
+
+    NSL::Tensor<Type> Ap (2*Nx,2*Nx);
+    NSL::Tensor<Type> Am (2*Nx,2*Nx);
+    NSL::Tensor<Type> T = NSL::eye<NSL::complex<double>>(2*Nx);
+    NSL::Tensor<Type> B (2*Nx,2*Nx);
+    NSL::Tensor<Type> C (Nx,Nx);
+    NSL::Tensor<Type> D (Nx,Nx);
+    Type detR = 1;
+
+    for(NSL::size_t t = 0; t < Nt; t++){
+        D = NSL::zeros_like(D);
+        C = NSL::zeros_like(C);
+        B = NSL::zeros_like(B);
+         for(NSL:: size_t x = 0; x < Nx; x++){
+            D(x,x) += 1;
+            D(x,(x+1)%Nx) += -1*kappa*U_(t,x,1);
+            D(x,(x-1+Nx)%Nx) += NSL::LinAlg::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+            C(x,(x+1)%Nx) += kappa*U_(t,x,1);
+            C(x,(x-1+Nx)%Nx) += std::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+
+            Ap(x,x) = U_(t,x,0);
+            Ap(x+Nx,x+Nx) = U_(t,x,0);
+            Am(x,x) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            Am(x+Nx,x+Nx) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            
+        }
+        B(NSL::Slice(0,Nx) ,NSL::Slice(0,Nx)) = D;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(Nx,Nx*2)) = D;
+        B(NSL::Slice(0,Nx) ,NSL::Slice(Nx,Nx*2)) = C;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(0,Nx)) = C;
+       
+
+        NSL::Tensor<Type> S = NSL::LinAlg::mat_mul(B,P0m)-2*kappa*NSL::LinAlg::mat_mul(Ap,P0p);
+        NSL::Tensor<Type> R = NSL::LinAlg::mat_mul(B,P0p)-2*kappa*NSL::LinAlg::mat_mul(Am,P0m);
+
+        NSL::Tensor<Type> Rinv = NSL::LinAlg::mat_inv(R);
+
+        T.mat_mul(NSL::LinAlg::mat_mul(Rinv,S));
+        detR *= NSL::LinAlg::det(R);
+    
+    }
+    Type res2 = detR * NSL::LinAlg::det(id+T);
+    Type res = NSL::LinAlg::log(detR * NSL::LinAlg::det(id+T)) + Nx*Nt*2*NSL::LinAlg::log(bareMass_+2);
+    return res;
 }
 
 template<NSL::Concept::isNumber Type>
 NSL::Tensor<Type> NSL::FermionMatrix::U1::Wilson<Type>::gradLogDetM(){
-    throw std::logic_error("FermionMatrix::U1::Wilson::gradLogDetM is not implemented");
-    return NSL::zeros_like(U_);
+    Type kappa = 0.5/(bareMass_+2);
+    NSL::complex<double> I{0,1};
+    NSL::size_t Nt = U_.shape(0);
+    NSL::size_t Nx = U_.shape(1);
+    NSL::Tensor<Type> force = NSL::zeros_like(U_);
+    NSL::Tensor<Type> Ap (2*Nx,2*Nx);
+    NSL::Tensor<Type> Am (2*Nx,2*Nx);
+    NSL::Tensor<Type> B (2*Nx,2*Nx);
+    NSL::Tensor<Type> C (Nx,Nx);
+    NSL::Tensor<Type> D (Nx,Nx);
+    NSL:: Tensor <Type> dR(2*Nx, 2*Nx);
+    NSL:: Tensor <Type> dS(2*Nx,2*Nx);
+    NSL::Tensor<Type> inv_saus(2*Nx,2*Nx);
+    NSL::Tensor<Type> dT(2*Nx,2*Nx);
+    NSL::Tensor<Type> dTm(2*Nx, 2*Nx);
+
+
+
+    for(NSL::size_t t = 0; t < Nt; t++){
+
+        D = NSL::zeros_like(D);
+        C = NSL::zeros_like(C);
+        B = NSL::zeros_like(B);
+         for(NSL:: size_t x = 0; x < Nx; x++){
+            D(x,x) += 1;
+            D(x,(x+1)%Nx) += -1*kappa*U_(t,x,1);
+            D(x,(x-1+Nx)%Nx) += NSL::LinAlg::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+            C(x,(x+1)%Nx) += kappa*U_(t,x,1);
+            C(x,(x-1+Nx)%Nx) += std::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+
+            Ap(x,x) = U_(t,x,0);
+            Ap(x+Nx,x+Nx) = U_(t,x,0);
+            Am(x,x) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            Am(x+Nx,x+Nx) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            
+        }
+        B(NSL::Slice(0,Nx) ,NSL::Slice(0,Nx)) = D;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(Nx,Nx*2)) = D;
+        B(NSL::Slice(0,Nx) ,NSL::Slice(Nx,Nx*2)) = C;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(0,Nx)) = C;
+       
+        NSL::Tensor<Type> S = NSL::LinAlg::mat_mul(B,P0m)-2*kappa*NSL::LinAlg::mat_mul(Ap,P0p);
+        NSL::Tensor<Type> R = NSL::LinAlg::mat_mul(B,P0p)-2*kappa*NSL::LinAlg::mat_mul(Am,P0m);
+        NSL::Tensor<Type> Rinv = NSL::LinAlg::mat_inv(R);
+
+        NSL::Tensor<Type> dB (2*Nx,2*Nx);
+        NSL::Tensor<Type> dC (Nx,Nx);
+        NSL::Tensor<Type> dD (Nx,Nx);
+
+        for(NSL:: size_t x = 0; x < Nx; x++){
+
+            dB = NSL::zeros_like(B);
+            dD = NSL::zeros_like(D);
+            dC = NSL::zeros_like(C);
+
+    
+            dD(x,(x+1)%Nx) += -1*kappa*U_(t,x,1)*I;
+            dD((x+1)%Nx,x) += NSL::LinAlg::conj(-1*kappa*U_(t,x,1)) * -I;
+            dC(x,(x+1)%Nx) += kappa*U_(t,x,1) * I;
+            dC((x+1)%Nx,x) += std::conj(-1*kappa*U_(t,x,1)) * -I;
+
+            dB(NSL::Slice(0,Nx) ,NSL::Slice(0,Nx)) = dD;
+            dB(NSL::Slice(Nx,Nx*2) ,NSL::Slice(Nx,Nx*2)) = dD;
+            dB(NSL::Slice(0,Nx) ,NSL::Slice(Nx,Nx*2)) = dC;
+            dB(NSL::Slice(Nx,Nx*2) ,NSL::Slice(0,Nx)) = dC;
+
+            dR = NSL::LinAlg::mat_mul(dB,P0p);
+            dS = NSL::LinAlg::mat_mul(dB,P0m);
+
+            NSL::Tensor<Type> dTi = NSL::LinAlg::mat_mul(Rinv, dS) - NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Rinv, NSL::LinAlg::mat_mul(dR, Rinv)), S);
+
+            inv_saus = NSL::LinAlg::mat_inv(id+TT(0,Nt));
+
+
+
+            if (t==0){
+                force(t,x,1) = NSL::LinAlg::trace(NSL::LinAlg::mat_mul(Rinv,dR)) + NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(dTi, TT(t+1,Nt))));
+            }else if (t == Nt-1){
+                force(t,x,1) = NSL::LinAlg::trace(NSL::LinAlg::mat_mul(Rinv,dR)) + NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),dTi)));
+            }else{
+                force(t,x,1) = NSL::LinAlg::trace(NSL::LinAlg::mat_mul(Rinv,dR)) + NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),NSL::LinAlg::mat_mul(dTi,TT(t+1,Nt)))));
+            }
+        }
+
+        NSL::Tensor<Type> dAp (2*Nx,2*Nx);
+        NSL::Tensor<Type> dAm (2*Nx,2*Nx);
+
+        for(NSL:: size_t x = 0; x < Nx; x++){
+            dAp = NSL::zeros_like(Ap);
+            dAm = NSL::zeros_like(Am);
+
+            dAp(x,x) = U_(t,x,0) *I;
+            dAp(x+Nx,x+Nx) = U_(t,x,0) *I;
+            dAm(x,x) = std::conj(U_((t-1+Nt)%Nt,x,0)) * -I;
+            dAm(x+Nx,x+Nx) = std::conj(U_((t-1+Nt)%Nt,x,0)) * -I;
+
+            dR = -2*kappa * NSL::LinAlg::mat_mul(dAm,P0m);
+            dS = -2* kappa * NSL::LinAlg::mat_mul(dAp,P0p);
+
+            dT = NSL::LinAlg::mat_mul(Rinv, dS);
+
+            dTm = - NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Rinv, NSL::LinAlg::mat_mul(dR, Rinv)),S);
+
+            force((t-1+Nt)%Nt,x,0) += NSL::LinAlg::trace(NSL::LinAlg::mat_mul(Rinv, dR));
+
+
+            if (t==0){
+                force(t,x,0) +=  NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(dT, TT(t+1,Nt))));
+                force((t-1+Nt)%Nt,x,0) +=  NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(dTm, TT(t+1,Nt))));
+            }else if (t == Nt-1){
+                force(t,x,0) += NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),dT)));
+                force((t-1+Nt)%Nt,x,0) +=  NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),dTm)));
+            }else{
+                force(t,x,0) +=  NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),NSL::LinAlg::mat_mul(dT,TT(t+1,Nt)))));
+                force((t-1+Nt)%Nt,x,0) +=  NSL::LinAlg::trace(NSL::LinAlg::mat_mul(inv_saus, NSL::LinAlg::mat_mul(TT(0,t),NSL::LinAlg::mat_mul(dTm,TT(t+1,Nt)))));
+            }
+        }
+    }
+    return force; //+ Nx*Nt*2*NSL::LinAlg::log(bareMass_ + 2);
+}
+
+template<NSL::Concept::isNumber Type>
+NSL::Tensor<Type> NSL::FermionMatrix::U1::Wilson<Type>::TT(NSL::size_t i, NSL::size_t j){
+
+
+    Type kappa = 0.5/(bareMass_+2);
+    NSL::size_t Nt = U_.shape(0);
+    NSL::size_t Nx = U_.shape(1);
+
+    NSL::Tensor<Type> Ap (2*Nx,2*Nx);
+    NSL::Tensor<Type> Am (2*Nx,2*Nx);
+    NSL::Tensor<Type> T = NSL::eye<NSL::complex<double>>(2*Nx);
+    NSL::Tensor<Type> B (2*Nx,2*Nx);
+    NSL::Tensor<Type> C (Nx,Nx);
+    NSL::Tensor<Type> D (Nx,Nx);
+
+    for(NSL::size_t t = i; t < j; t++){
+        B = NSL::zeros_like(B);
+        D = NSL::zeros_like(D);
+        C = NSL::zeros_like(C);
+
+         for(NSL:: size_t x = 0; x < Nx; x++){
+            D(x,x) += 1;
+            D(x,(x+1)%Nx) += -1*kappa*U_(t,x,1);
+            D(x,(x-1+Nx)%Nx) += NSL::LinAlg::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+            C(x,(x+1)%Nx) += kappa*U_(t,x,1);
+            C(x,(x-1+Nx)%Nx) += std::conj(-1*kappa*U_(t,(x-1+Nx)%Nx,1));
+
+            Ap(x,x) = U_(t,x,0);
+            Ap(x+Nx,x+Nx) = U_(t,x,0);
+            Am(x,x) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            Am(x+Nx,x+Nx) = std::conj(U_((t-1+Nt)%Nt,x,0));
+            
+        }
+        B(NSL::Slice(0,Nx) ,NSL::Slice(0,Nx)) = D;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(Nx,Nx*2)) = D;
+        B(NSL::Slice(0,Nx) ,NSL::Slice(Nx,Nx*2)) = C;
+        B(NSL::Slice(Nx,Nx*2) ,NSL::Slice(0,Nx)) = C;
+       
+
+        NSL::Tensor<Type> S = NSL::LinAlg::mat_mul(B,P0m)-2*kappa*NSL::LinAlg::mat_mul(Ap,P0p);
+        NSL::Tensor<Type> R = NSL::LinAlg::mat_mul(B,P0p)-2*kappa*NSL::LinAlg::mat_mul(Am,P0m);
+
+        NSL::Tensor<Type> Rinv = NSL::LinAlg::mat_inv(R);
+
+        T.mat_mul(NSL::LinAlg::mat_mul(Rinv,S));    
+    }
+  
+    return T;
 }
 
 template<NSL::Concept::isNumber Type>

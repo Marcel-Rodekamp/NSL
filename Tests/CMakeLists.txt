@@ -57,3 +57,6 @@ add_NSL_test(test_parameter Parameter/test_parameter.cpp)
 # Stand alone Executalbes to test stuff
 add_executable(test_leapfrog_convergence Integrator/test_leapfrog_convergence.cpp)
 target_link_libraries(test_leapfrog_convergence NSL)
+
+add_executable(test_leapfrog_convergence_Wilson Integrator/test_leapfrog_convergence_Wilson.cpp)
+target_link_libraries(test_leapfrog_convergence_Wilson NSL)

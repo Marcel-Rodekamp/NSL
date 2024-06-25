@@ -29,7 +29,21 @@ class Wilson : public NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Squar
             params["device"].to<NSL::Device>(), 
             params["dim"].to<NSL::size_t>()
         )
-    {}
+    {
+        NSL::size_t Nt = params["Nt"];
+        NSL::size_t Nx = params["Nx"];
+
+        NSL::Tensor<Type> sig3(2*Nx,2*Nx);
+
+        id = NSL::eye<NSL::complex<double>>(2*Nx);
+        NSL::Tensor<Type> id_space= NSL::eye<NSL::complex<double>>(Nx);
+        sig3(NSL::Slice(0,Nx) ,NSL::Slice(0,Nx)) = id_space;
+        sig3(NSL::Slice(Nx,Nx*2) ,NSL::Slice(Nx,Nx*2)) = -1*id_space;
+
+        P0m = 0.5 *(id+sig3);
+        P0p = 0.5 *(id-sig3);
+    
+    }
 
     void populate(const NSL::Tensor<Type> & phi);
 
@@ -69,6 +83,8 @@ class Wilson : public NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Squar
      **/
     NSL::Tensor<Type> gradLogDetM() override;
 
+    NSL::Tensor<Type> TT(NSL::size_t i, NSL::size_t j); 
+
     //! Calculate the derivative of M in respect to the input gauge configuration
     //! and apply it to the input psi
     NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
@@ -86,6 +102,11 @@ class Wilson : public NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::Squar
     NSL::Gamma<Type> gamma_;
 
     NSL::size_t dim_;
+    NSL::Tensor <Type> id;
+    NSL::Tensor<Type> P0m;
+    NSL::Tensor<Type> P0p;
+
+
     
 };
 

@@ -10,6 +10,6 @@ fileIO:
 system:
   name: ""
   beta: 1
-  bare mass: 2
-  Nt: 1
-  Nx: 1
+  bare mass: .1
+  Nt: 4
+  Nx: 4

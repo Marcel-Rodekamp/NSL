@@ -50,9 +50,9 @@ int main(){
     //    Inverse temperature 
     Type beta = 1.;
     //    On-Site Coupling
-    Type m    = 2.0;
+    Type m    = .1;
     //    Number of time slices
-    NSL::size_t Nt = 4;
+    NSL::size_t Nt = 8;
     //    Number of ions (spatial sites)
     NSL::size_t Nx = 4;
     //    Dimension of the System
@@ -73,10 +73,10 @@ int main(){
     });
     // Initialize the action
     NSL::Action::Action S = 
-        NSL::Action::PseudoFermionAction<
+        NSL::Action::WilsonFermionAction<
             Type,decltype(lattice), NSL::FermionMatrix::U1::Wilson<Type>
         >(lattice,params,"U")
-        +NSL::Action::U1::WilsonGaugeAction<Type>(params)
+        //+NSL::Action::U1::WilsonGaugeAction<Type>(params)
     ;
 
     // Initialize a configuration as starting point for the MC change
@@ -88,7 +88,7 @@ int main(){
         I * NSL::randn<NSL::RealTypeOf<Type>>(Nt,Nx,dim)
     );
 
-    S.computePseudoFermion(config);
+    
 
     NSL::Configuration<Type> momentum{
         {"U", NSL::Tensor<Type>(Nt,Nx,dim)}

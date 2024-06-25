@@ -138,11 +138,11 @@ void test_U1_force(){
     NSL::complex<NSL::RealTypeOf<Type>> I{0,1}; 
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("bare mass",m);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<NSL::size_t>("Nx",Nx);
-    params.addParameter<NSL::size_t>("dim",dim);
+    params["beta"]=beta;
+    params["bare mass"]=m;
+    params["Nt"]=Nt;
+    params["Nx"]=Nx;
+    params["dim"]=dim;
 
     NSL::Action::U1::WilsonGaugeAction<Type> S_gauge(params);
 
@@ -214,23 +214,21 @@ void test_U1_Wilson_PseudoFermion_force(){
     NSL::complex<NSL::RealTypeOf<Type>> I{0,1}; 
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("bare mass",m);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<NSL::size_t>("Nx",Nx);
-    params.addParameter<NSL::size_t>("dim",dim);
-    params.addParameter<NSL::Device>("device",NSL::CPU());
+    params["beta"]=beta;
+    params["bare mass"]=m;
+    params["Nt"]=Nt;
+    params["Nx"]=Nx;
+    params["dim"]=dim;
+    params["device"]=NSL::CPU();
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
         params["Nx"].to<NSL::size_t>()
     });
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
-    
     // Initialize the action
     NSL::Action::Action S = NSL::Action::PseudoFermionAction<
                                 Type,decltype(lattice), NSL::FermionMatrix::U1::Wilson<Type>
-                            >(params)
+                            >(lattice,params)
                          // + NSL::Action::U1::WilsonGaugeAction<Type>(params)
     ;
 
@@ -319,21 +317,20 @@ void test_U1_Wilson_dMdPhi(){
     NSL::complex<NSL::RealTypeOf<Type>> I{0,1}; 
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("bare mass",m);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<NSL::size_t>("Nx",Nx);
-    params.addParameter<NSL::size_t>("dim",dim);
-    params.addParameter<NSL::Device>("device",NSL::CPU());
+    params["beta"]=beta;
+    params["bare mass"]=m;
+    params["Nt"]=Nt;
+    params["Nx"]=Nx;
+    params["dim"]=dim;
+    params["device"]=NSL::CPU();
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
         params["Nx"].to<NSL::size_t>()
     });
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
     
     // Initialize the action
-    NSL::FermionMatrix::U1::Wilson<Type> M(params);
+    NSL::FermionMatrix::U1::Wilson<Type> M(lattice,params);
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here
@@ -399,21 +396,21 @@ void test_U1_Wilson_dMdaggerdPhi(){
     NSL::complex<NSL::RealTypeOf<Type>> I{0,1}; 
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("bare mass",m);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<NSL::size_t>("Nx",Nx);
-    params.addParameter<NSL::size_t>("dim",dim);
-    params.addParameter<NSL::Device>("device",NSL::CPU());
+    params["beta"]=beta;
+    params["bare mass"]=m;
+    params["Nt"]=Nt;
+    params["Nx"]=Nx;
+    params["dim"]=dim;
+    params["device"]=NSL::CPU();
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
         params["Nx"].to<NSL::size_t>()
     });
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
+    
     
     // Initialize the action
-    NSL::FermionMatrix::U1::Wilson<Type> M(params);
+    NSL::FermionMatrix::U1::Wilson<Type> M(lattice,params);
 
     // Initialize a configuration as starting point for the MC change
     // For CPU code put here

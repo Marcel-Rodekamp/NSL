@@ -8,5 +8,6 @@
 #include "Action/Implementations/hubbardFermiAction.tpp"
 #include "Action/Implementations/U1WilsonGaugeAction.tpp"
 #include "Action/Implementations/PseudoFermionAction.tpp"
+#include "Action/Implementations/WilsonFermionAction.tpp"
 
 #endif //NSL_ACTION_HPP
