@@ -335,6 +335,12 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     // This is the default basenode we used so far
     // ToDo: this should go into the const
 
+    // write the momenta out
+    if (!h5_.exist(std::string(basenode_)+"/Momenta")){
+        NSL::Tensor<double> momenta = params_["momenta"];
+        this->h5_.write(momenta,std::string(basenode_)+"/Momenta");
+    }
+
     // write the non interacting correlator 
     std::string node;
     node = "/NonInteracting/correlators/twobody";
