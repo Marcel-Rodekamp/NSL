@@ -19,7 +19,8 @@ class WilsonFermionAction :
 	WilsonFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) : 
         BaseAction<Type, TensorType>(fieldName),
         params_(params),
-        wfm_(lattice,params)
+        wfm_(lattice,params),
+        Nf(params["Nf"].to<NSL::size_t>())
     {}
 
 	WilsonFermionAction(LatticeType & lattice, NSL::Parameter & params): 
@@ -40,6 +41,7 @@ class WilsonFermionAction :
 
     protected:
     NSL::Parameter params_;
+    NSL::size_t Nf;
 
     FermionMatrixType wfm_;
 }; // class WilsonFermiAction
@@ -55,7 +57,7 @@ Type WilsonFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(co
     wfm_.populate(U);
     Type logDetM= wfm_.logDetM();
 
-    return -logDetM;
+    return (-1)*logDetM*Nf;
 }
 	
 template<
@@ -81,9 +83,7 @@ Configuration<TensorType> WilsonFermionAction<Type,LatticeType,FermionMatrixType
 
    
     wfm_.populate(U);
-    dS[this->configKey_]+= wfm_.gradLogDetM();
-
-
+    dS[this->configKey_]+= wfm_.gradLogDetM()*Nf;
     return dS;
 }
 

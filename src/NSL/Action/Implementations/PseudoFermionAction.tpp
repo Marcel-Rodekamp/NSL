@@ -14,14 +14,17 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             BaseAction<Type,Type>("phi"),
             FM_(lattice, params),
             chi_(),
-            pseudoFermion_()
+            pseudoFermion_(),
+            Nf(params["Nf"].to<NSL::size_t>())
         {}
 
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
             BaseAction<Type,Type>(fieldName),
             FM_(lattice, params),
             chi_(),
-            pseudoFermion_()
+            pseudoFermion_(),
+            Nf(params["Nf"].to<NSL::size_t>())
+
         {}
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -54,7 +57,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
     bool computePseudoFermion(const NSL::Configuration<Type> & config) {
         // sqrt(0.5) = 0.707... is used to remove the factor 1/2 from the 
         // normal distribution. chi_ ~ exp(-Chi^+ Chi)
-        chi_ = NSL::randn_like(config.at(this->configKey_), 0., 0.7071067811865476 );
+        chi_ = NSL::randn_like(config.at(this->configKey_), 0.,1);
         //chi_ = NSL::randn_like(config.at(this->configKey_));
 
         // populate the fermion matrix 
@@ -70,6 +73,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
     protected:
         FermionMatrixType FM_;
         //NSL::LinAlg::CG<Type> cg_;
+        NSL::size_t Nf;
 
         NSL::Tensor<Type> chi_;
         NSL::Tensor<Type> pseudoFermion_;
@@ -81,7 +85,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType 
 >
 Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<Type>& phi){
-    // compute pseudo fermion; This sets the tensor pseudoFermion_
+    // compute pseudo fermion; This sets the tensor pseudoFermion_ why not done here ? 
     // and populates the fermion matrix
     FM_.populate(phi);
 
@@ -91,7 +95,7 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
     
     // The pseudo fermion action is then given by the inner product
-    return -NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv);
+    return (NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv))/(2.)*Nf; // with facotr of 1/2 it is a single flavour simulation
 }
 	
 template<
@@ -120,8 +124,8 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
     NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
 
     // calculate the derivatives of the fermion matrix
-    return NSL::Configuration<Type> {{ this->configKey_,
-        2*FM_.dMdPhi(
+    return Nf*(-1)*NSL::Configuration<Type> {{ this->configKey_,
+        FM_.dMdPhi(
             /*left*/NSL::LinAlg::conj(MMdaggerInv),/*right*/FM_.Mdagger(MMdaggerInv)
         ).real()
         //+FM_.dMdaggerdPhi(

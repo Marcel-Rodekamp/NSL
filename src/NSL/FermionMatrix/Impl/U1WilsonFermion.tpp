@@ -291,7 +291,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::U1::Wilson<Type>::gradLogDetM(){
             }
         }
     }
-    return force; //+ Nx*Nt*2*NSL::LinAlg::log(bareMass_ + 2);
+    return -1*force; //+ Nx*Nt*2*NSL::LinAlg::log(bareMass_ + 2);
 }
 
 template<NSL::Concept::isNumber Type>

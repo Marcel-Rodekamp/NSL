@@ -70,14 +70,14 @@ int main(int argc, char* argv[]){
 
     NSL::Logger::info("Setting up: Schwinger Model Action with Wilson fermion and gauge") ;
 
-       NSL::Action::Action S =
-                             NSL::Action::WilsonFermionAction<
-                             Type,decltype(lattice), 
+     NSL::Action::Action S =  
+                            NSL::Action::PseudoFermionAction<
+                            Type,decltype(lattice),
                              NSL::FermionMatrix::U1::Wilson<Type>
                              >(lattice,params,"U")
-                         + 
+                       + 
                         NSL::Action::U1::WilsonGaugeAction<Type>(params)
-                           ;
+    ;
 
     // Initialize a configuration as starting point for the MC change
     NSL::Configuration<Type> config;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]){
     ) );
 
     // compute pseudo fermions (if they don't exist this call does nothing)
-    //S.computePseudoFermion(config);
+    S.computePseudoFermion(config);
 
     NSL::Logger::info("Setting up: Leapfrog integrator");
 

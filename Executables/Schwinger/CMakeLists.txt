@@ -2,8 +2,14 @@
 add_executable(HMC HMC.cpp)
 target_link_libraries(HMC NSL)
 
+add_executable(HMC_pseudo HMC_pseudo.cpp)
+target_link_libraries(HMC_pseudo NSL)
+
 add_executable(Measure Measure.cpp)
 target_link_libraries(Measure NSL)
+
+add_executable(Measure_CC Measure_CC.cpp)
+target_link_libraries(Measure_CC NSL)
 
 #add_executable(StN StN.cpp)
 #target_link_libraries(StN NSL)

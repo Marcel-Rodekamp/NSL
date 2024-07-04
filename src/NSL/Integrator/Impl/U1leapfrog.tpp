@@ -50,6 +50,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
             p += static_cast<TensorType>(stepSize_) * this->action_.force(q);
+            std::cout << this->action_.force(q) << std::endl;
             q *= NSL::LinAlg::exp( I * static_cast<TensorType>(stepSize_) * p );
         }
 

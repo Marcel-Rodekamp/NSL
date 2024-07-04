@@ -50,7 +50,7 @@ int main(){
     //    Inverse temperature 
     Type beta = 1.;
     //    On-Site Coupling
-    Type m    = 2.0;
+    Type m    = 1;
     //    Number of time slices
     NSL::size_t Nt = 4;
     //    Number of ions (spatial sites)
@@ -66,6 +66,7 @@ int main(){
     params["Nx"]=Nx;
     params["dim"]=dim;
     params["device"]=NSL::CPU();
+    params["Nf"] = 2;
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
@@ -76,7 +77,7 @@ int main(){
         NSL::Action::PseudoFermionAction<
             Type,decltype(lattice), NSL::FermionMatrix::U1::Wilson<Type>
         >(lattice,params,"U")
-        +NSL::Action::U1::WilsonGaugeAction<Type>(params)
+       // +NSL::Action::U1::WilsonGaugeAction<Type>(params)
     ;
 
     // Initialize a configuration as starting point for the MC change
@@ -101,7 +102,7 @@ int main(){
     std::cout << "[\n";
 
     // loop over different molecular dynamics steps
-    for (NSL::size_t Nmd = 1; Nmd < 100; Nmd+=10){
+    for (NSL::size_t Nmd = 100; Nmd < 500; Nmd+=25){
 
         // Initialize the integrator
         NSL::Integrator::U1::Leapfrog leapfrog( 

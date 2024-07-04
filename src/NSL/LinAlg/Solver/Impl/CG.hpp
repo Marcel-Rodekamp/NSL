@@ -30,7 +30,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
         CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
             maxIter_(maxIter),
