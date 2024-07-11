@@ -54,7 +54,10 @@ int main(int argc, char* argv[]){
 
 
     NSL::Measure::U1::corr<Type> co( params, h5, BASENODE);
-    co.measure();
+
+    
+    co.measureBlack();
+
 
 
     return EXIT_SUCCESS;
