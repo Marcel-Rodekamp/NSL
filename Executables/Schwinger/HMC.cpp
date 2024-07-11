@@ -75,7 +75,7 @@ int main(int argc, char* argv[]){
                              Type,decltype(lattice), 
                              NSL::FermionMatrix::U1::Wilson<Type>
                              >(lattice,params,"U")
-                         + 
+                        + 
                         NSL::Action::U1::WilsonGaugeAction<Type>(params)
                            ;
 

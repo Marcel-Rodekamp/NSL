@@ -66,7 +66,7 @@ int main(){
     params["Nx"]=Nx;
     params["dim"]=dim;
     params["device"]=NSL::CPU();
-    params["Nf"] = 1;
+    params["Nf"] = 2;
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),

@@ -11,6 +11,9 @@ target_link_libraries(Measure NSL)
 add_executable(Measure_CC Measure_CC.cpp)
 target_link_libraries(Measure_CC NSL)
 
+add_executable(Measure_corr Measure_corr.cpp)
+target_link_libraries(Measure_corr NSL)
+
 #add_executable(StN StN.cpp)
 #target_link_libraries(StN NSL)
 add_executable(wilsonlogdet wilsonlogdet.cpp)

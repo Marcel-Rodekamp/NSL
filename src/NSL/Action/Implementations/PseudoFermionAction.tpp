@@ -15,7 +15,9 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             FM_(lattice, params),
             chi_(),
             pseudoFermion_(),
-            Nf(params["Nf"].to<NSL::size_t>())
+            Nf(params["Nf"].to<NSL::size_t>()),
+            Nt(params["Nt"].to<NSL::size_t>()),
+            Nx(params["Nx"].to<NSL::size_t>())
         {}
 
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
@@ -23,7 +25,9 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             FM_(lattice, params),
             chi_(),
             pseudoFermion_(),
-            Nf(params["Nf"].to<NSL::size_t>())
+            Nf(params["Nf"].to<NSL::size_t>()),
+            Nt(params["Nt"].to<NSL::size_t>()),
+            Nx(params["Nx"].to<NSL::size_t>())
 
         {}
 
@@ -74,6 +78,9 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
         FermionMatrixType FM_;
         //NSL::LinAlg::CG<Type> cg_;
         NSL::size_t Nf;
+        NSL::size_t Nx;
+        NSL::size_t Nt;
+
 
         NSL::Tensor<Type> chi_;
         NSL::Tensor<Type> pseudoFermion_;
@@ -95,7 +102,7 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
     
     // The pseudo fermion action is then given by the inner product
-    return (NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv))/(2.)*Nf; // with facotr of 1/2 it is a single flavour simulation
+    return NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv)/(2.)*Nf; // with facotr of 1/2 it is a single flavour simulation
 }
 	
 template<

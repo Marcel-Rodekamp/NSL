@@ -148,18 +148,13 @@ int main(int argc, char* argv[]){
     std::cout << "]" << std::endl;
 
 
+
+
     
     M.populate(U);
 
-    std::cout << M.gradLogDetM()(3,3,0).real() << std::endl;
 
-    
-    
-
-
-    // //chi = NSL::randn_like(config.at(this->configKey_), 0., 0.7071067811865476 );
-    // NSL::Tensor<Type> chi = NSL::randn_like(U,0., (0.7071067811865476));
-
+    // NSL::Tensor<Type> chi = NSL::randn_like(U,0., (1.));
 
     // std::cout << M.M(chi).reshape(NSL::size_t(params["Nt"])*NSL::size_t(params["Nx"])*2).real() << std::endl;
     // std::cout << M.M(chi).reshape(NSL::size_t(params["Nt"])*NSL::size_t(params["Nx"])*2).imag() << std::endl;
@@ -169,6 +164,27 @@ int main(int argc, char* argv[]){
     // std::cout << chi.reshape(NSL::size_t(params["Nt"])*NSL::size_t(params["Nx"])*2).imag() << std::endl;
 
     // std::cout << "_______________" << std::endl;
+
+NSL::Tensor<Type> basisV (Nt,Nx,2);
+
+NSL::Tensor<Type> expliciteMatrix (2*Nx*Nt, 2*Nt*Nx);
+std::cout << "test"<< std::endl;
+    for (NSL::size_t t = 0; t < Nt; ++t) { // Äußere Schleife für Zeilen
+        for (NSL::size_t x = 0; x < Nx; ++x) {
+            for (NSL::size_t s = 0; s < 2; ++s) {
+                NSL::size_t ind = s+ 2*x + 2*Nx*t;
+                basisV = NSL::zeros_like(basisV);
+                basisV[ind] = 1.;
+                expliciteMatrix(NSL::Slice(0,2*Nx*Nt), ind) = M.M(basisV).reshape(Nt*Nx*2);
+            }
+        }
+    }
+
+ std::cout << "test"<< std::endl;
+std::cout << expliciteMatrix.real() << std::endl;
+
+
+
 
 
 
