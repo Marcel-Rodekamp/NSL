@@ -553,7 +553,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_(NSL::siz
 
                                     cI1S1Iz1Sz0_[w][x][z][y](NSL::Slice(), i * bDim + j, l * bDim + k)
                                     
-                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(), i,l)
+                                    += (-0.5 * ((corrPoolDag_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l)
                                     * corrPool_[NSL::Hubbard::Hole](x,y,NSL::Slice(),j,k)
                                     
                                     - corrPoolDag_[NSL::Hubbard::Particle](w,y,NSL::Slice(),i,k)
@@ -563,7 +563,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_(NSL::siz
                                     * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,l)
                                     
                                     + corrPool_[NSL::Hubbard::Hole](w,z,NSL::Slice(),i,l) 
-                                    * corrPoolDag_[NSL::Hubbard::Particle](x,z,NSL::Slice(),j,k)) 
+                                    * corrPoolDag_[NSL::Hubbard::Particle](x,y,NSL::Slice(),j,k)) 
                                     
                                     / Type(NumberTimeSources)));
                                 }
