@@ -10,6 +10,7 @@
 #include "concepts.hpp"
 #include "IO.hpp"
 #include "logger.hpp"
+#include <fstream>
 
 namespace NSL::MCMC{
 
@@ -65,7 +66,7 @@ class RadialHMC{
 
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
-    generate(NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t radialFrequency,  NSL::RealTypeOf<Type> radialLoc, NSL::RealTypeOf<Type> radialScale, NSL::size_t saveFrequency = 1, std::string baseNode = "markovChain"){
+    generate(NSL::MCMC::MarkovState<Type> & state, NSL::size_t Nconf, NSL::size_t radialFrequency,  NSL::RealTypeOf<Type> radialLoc, NSL::RealTypeOf<Type> radialScale, std::string racc_file, NSL::size_t saveFrequency = 1, std::string baseNode = "markovChain"){
         // ensure that saveFrequency is at least 1. 
         if (saveFrequency <= 0) {
             saveFrequency = 1;
@@ -82,7 +83,7 @@ class RadialHMC{
         }
 
         NSL::RealTypeOf<Type> volume = state.configuration["phi"].numel(); // volume, i.e. number of total sites for accept reject in radial update step
-
+        std::ofstream out_racc{ racc_file };
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
@@ -131,6 +132,7 @@ class RadialHMC{
                         rstep_count++;
                         tmp = this->radialgenerate_(tmp, volume, radialLoc, radialScale);
                         runningRadialAcceptance += static_cast<double>(tmp.accepted);
+                        out_racc << static_cast<double>(tmp.accepted) << "\n";
                         // Record whether radius was increased and whether this was accepted
                         if (bool_rincr_){
                             proposed_increase_count += 1;
@@ -158,6 +160,7 @@ class RadialHMC{
                     rstep_count++;
                     tmp = this->radialgenerate_(tmp, volume, radialLoc, radialScale);
                     runningRadialAcceptance += static_cast<double>(tmp.accepted);
+                    out_racc << static_cast<double>(tmp.accepted) << "\n";
                     if (bool_rincr_){
                         proposed_increase_count += 1;
                         increasedRadiusAcceptance += static_cast<double>(tmp.accepted);
@@ -193,7 +196,7 @@ class RadialHMC{
 
 
 
-            std::cout << "Changes 2" << std::endl;
+            std::cout << "Version 3" << std::endl;
             NSL::Logger::info("proposed_increase_count: {:.6}", (proposed_increase_count));
             NSL::Logger::info("summed accepted incr radius: {:.6}", (summed_accepted_incr_radius));
             NSL::Logger::info("summed accepted decr radius: {:.6}", (summed_accepted_decr_radius));
@@ -235,7 +238,7 @@ class RadialHMC{
 
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
-    generate(NSL::Configuration<Type> & config, NSL::size_t Nconf, NSL::size_t radialFrequency,  NSL::RealTypeOf<Type> radialLoc, NSL::RealTypeOf<Type> radialScale, NSL::size_t saveFrequency = 1){
+    generate(NSL::Configuration<Type> & config, NSL::size_t Nconf, NSL::size_t radialFrequency,  NSL::RealTypeOf<Type> radialLoc, NSL::RealTypeOf<Type> radialScale, std::string racc_file, NSL::size_t saveFrequency = 1){
         NSL::MCMC::MarkovState<Type> initialState(
             /*Configuration                        */ config,
             /*Action Value                         */ this->action_(config),
@@ -243,7 +246,7 @@ class RadialHMC{
             /*Markov Time                          */ 1 ,
             /*accepted                             */ true
         );
-        return this->generate<chain,Type>(initialState, Nconf, radialFrequency, radialLoc, radialScale, saveFrequency);
+        return this->generate<chain,Type>(initialState, Nconf, radialFrequency, radialLoc, radialScale, racc_file, saveFrequency);
     }
 
     // a single pure HMC update
@@ -291,7 +294,7 @@ class RadialHMC{
         }
 
         // use integrator to generate proposal 
-        auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+         auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
 
         // compute the Action
         Type proposal_S = this->action_(proposal_config);

@@ -99,6 +99,8 @@ int main(int argc, char* argv[]){
         params["h5file"].to<std::string>(), 
         params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
     );
+    std::string racc_file = std::string(params["h5file"].to<std::string>(), 0, params["h5file"].to<std::string>().size()-3) + "_racc_hist.txt";
+
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
@@ -183,11 +185,11 @@ int main(int argc, char* argv[]){
     NSL::MCMC::MarkovState<Type> start_state;
     if(not h5.exist(fmt::format("{}/markovChain",BASENODE))){
         NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
-        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>(), params["radial frequency"], params["radial loc"], params["radial scale"]);
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>(), params["radial frequency"], params["radial loc"], params["radial scale"], racc_file);
     } else {
         NSL::Logger::info("Appending to previous data.");
         // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
-            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1, params["radial frequency"], params["radial loc"], params["radial scale"]);
+            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1, params["radial frequency"], params["radial loc"], params["radial scale"], racc_file);
     }
 
     NSL::Logger::stop_profile(therm_time);
@@ -200,7 +202,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", params["Nconf"], params["save frequency"]);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, params["Nconf"], params["radial frequency"], params["radial loc"], params["radial scale"], params["save frequency"], BASENODE+"/markovChain");
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, params["Nconf"], params["radial frequency"], params["radial loc"], params["radial scale"], racc_file, params["save frequency"], BASENODE+"/markovChain");
     // std::vector<NSL::MCMC::RadialMarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, params["Nconf"], params["radial frequency"], params["radial loc"], params["radial scale"], params["save frequency"], params["save radial steps"], BASENODE+"/markovChain");
     NSL::Logger::stop_profile(gen_time);
 
