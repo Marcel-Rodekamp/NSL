@@ -83,7 +83,10 @@ class RadialHMC{
         }
 
         NSL::RealTypeOf<Type> volume = state.configuration["phi"].numel(); // volume, i.e. number of total sites for accept reject in radial update step
-        std::ofstream out_racc{ racc_file };
+        int N_radial_steps = saveFrequency * Nconf / radialFrequency;
+        std::vector<int> racc_hist(N_radial_steps);
+        std::cout << N_radial_steps << std::endl;
+        int rhist_count = 0;
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
@@ -132,7 +135,9 @@ class RadialHMC{
                         rstep_count++;
                         tmp = this->radialgenerate_(tmp, volume, radialLoc, radialScale);
                         runningRadialAcceptance += static_cast<double>(tmp.accepted);
-                        out_racc << static_cast<double>(tmp.accepted) << "\n";
+                        racc_hist[rhist_count] = static_cast<int>(tmp.accepted);
+                        rhist_count += 1;
+                        // out_racc << static_cast<double>(tmp.accepted) << "\n";
                         // Record whether radius was increased and whether this was accepted
                         if (bool_rincr_){
                             proposed_increase_count += 1;
@@ -160,7 +165,9 @@ class RadialHMC{
                     rstep_count++;
                     tmp = this->radialgenerate_(tmp, volume, radialLoc, radialScale);
                     runningRadialAcceptance += static_cast<double>(tmp.accepted);
-                    out_racc << static_cast<double>(tmp.accepted) << "\n";
+                    racc_hist[rhist_count] = static_cast<int>(tmp.accepted);
+                    rhist_count += 1;
+                    // out_racc << static_cast<double>(tmp.accepted) << "\n";
                     if (bool_rincr_){
                         proposed_increase_count += 1;
                         increasedRadiusAcceptance += static_cast<double>(tmp.accepted);
@@ -194,9 +201,15 @@ class RadialHMC{
             double incr_acc = increasedRadiusAcceptance/proposed_increase_count;
             double decr_acc = decreasedRadiusAcceptance/(rstep_count-proposed_increase_count);
 
+            std::ofstream out_racc{ racc_file };
+
+            for (int i = 0; i<racc_hist.size(); ++i) {
+                out_racc << racc_hist[i] << std::endl;
+            }
+            out_racc.close();
 
 
-            std::cout << "Version 3" << std::endl;
+            std::cout << "Version 4" << std::endl;
             NSL::Logger::info("proposed_increase_count: {:.6}", (proposed_increase_count));
             NSL::Logger::info("summed accepted incr radius: {:.6}", (summed_accepted_incr_radius));
             NSL::Logger::info("summed accepted decr radius: {:.6}", (summed_accepted_decr_radius));
