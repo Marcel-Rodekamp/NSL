@@ -204,7 +204,7 @@ class RadialHMC{
             std::ofstream out_racc{ racc_file };
 
             for (int i = 0; i<racc_hist.size(); ++i) {
-                out_racc << racc_hist[i] << std::endl;
+                out_racc << racc_hist[i] << "\n";
             }
             out_racc.close();
 
