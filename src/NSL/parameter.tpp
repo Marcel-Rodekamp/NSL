@@ -1578,6 +1578,8 @@ typedef GeneralType<
     NSL::Tensor<double>,
     NSL::Tensor<NSL::complex<double>>,
 
+    std::vector<std::vector<double>>,
+
     // NSL Types
     NSL::Device
 >  GenType;
