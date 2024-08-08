@@ -63,7 +63,33 @@ class TwoBodyCorrelator: public Measurement {
                 params["Nt"].template to<NSL::size_t>(),
                 params["Nx"].template to<NSL::size_t>()
             ),
-            basenode_(basenode_)
+            basenode_(basenode_),
+            hfmPre_(lattice, params),
+            cgPre_(hfm_, hfmPre_, NSL::FermionMatrix::MMdagger),
+            cgDagPre_(hfm_, hfmPre_, NSL::FermionMatrix::MdaggerM),
+            phiPre_(
+                params["device"].template to<NSL::Device>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>()
+            ),
+            saveCfg_(
+                params["device"].template to<NSL::Device>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(),
+                2,
+                params["wallSources"].shape(1).template to<NSL::size_t>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>()
+            ),
+            saveCfgDag_(
+                params["device"].template to<NSL::Device>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(),
+                2,
+                params["wallSources"].shape(1).template to<NSL::size_t>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>()
+            )
         {}
 
         TwoBodyCorrelator(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5):
@@ -156,6 +182,13 @@ class TwoBodyCorrelator: public Measurement {
         NSL::LinAlg::CG<Type> cg_;
         NSL::LinAlg::CG<Type> cgDag_;
 
+        FermionMatrixType hfmPre_;
+        NSL::LinAlg::CG<Type> cgPre_;
+        NSL::LinAlg::CG<Type> cgDagPre_;
+        NSL::Tensor<Type> phiPre_;
+        NSL::Tensor<Type> saveCfg_;
+        NSL::Tensor<Type> saveCfgDag_;
+
         NSL::Tensor<Type> corrK_;
         NSL::Tensor<Type> corrKDag_;
         NSL::Tensor<Type> corrKPool_;
@@ -245,25 +278,72 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     corrPoolDag_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
     corrPoolDag_[NSL::Hubbard::Hole] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
 
-
+    NSL::size_t tID = 0;
     for (NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep) {
-        
+        NSL::size_t i = 0;
         for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
             // Reset memory
             // - Result correlator
             corrKPool_ = Type(0);
 
             // populate the fermion matrix using the free configuration
+            hfmPre_.populate(phiPre_,species);
+
+            // populate the fermion matrix using the free configuration
             hfm_.populate(phi_,species);
 
             for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+
                 // Define a wall source
                 srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(kSrc,NSL::Slice(),NSL::Slice());
+                // invert MM^dagger pre
+                NSL::Tensor<Type> invMMdag = cgPre_(srcVecK_, saveCfg_(tID, kSrc, i, NSL::Ellipsis()));
+                // invert M^daggerM pre
+                NSL::Tensor<Type> invMdagM = cgDagPre_(srcVecK_, saveCfgDag_(tID, kSrc, i, NSL::Ellipsis()));
 
-                // invert MM^dagger
-                NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
-                // invert M^daggerM
-                NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_);
+                // // invert MM^dagger pre
+                // NSL::Tensor<Type> invMMdagPre = cg_(srcVecK_, srcVecK_);
+                // // invert M^daggerM pre
+                // NSL::Tensor<Type> invMdagMPre = cgDag_(srcVecK_, srcVecK_);
+
+                // invMMdagPre += 1.000001;
+                // invMdagMPre += 1.000001;
+                
+                // // invert MM^dagger pre
+                // NSL::Tensor<Type> invMMdag = cg_(srcVecK_, invMMdagPre);
+                // // invert M^daggerM pre
+                // NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_, invMdagMPre);
+
+                saveCfg_(tID, kSrc, i, NSL::Ellipsis()) = Type(0);
+                saveCfgDag_(tID, kSrc, i, NSL::Ellipsis()) = Type(0);
+
+                saveCfg_(tID, kSrc, i, NSL::Ellipsis()) = invMMdag;
+                saveCfgDag_(tID, kSrc, i, NSL::Ellipsis()) = invMdagM;
+
+                // saveCfg_(
+                // params["device"].template to<NSL::Device>(),
+                // params["Number Time Sources"].template to<NSL::size_t>(),
+                // params["wallSources"].shape(0).template to<NSL::size_t>(),
+                // 2,
+                // params["wallSources"].shape(1).template to<NSL::size_t>(),
+                // params["Nt"].template to<NSL::size_t>(),
+                // params["Nx"].template to<NSL::size_t>()
+            // )
+                // // invert MM^dagger pre
+                // // std::cout << "HERE" << std::endl;
+                // NSL::Tensor<Type> invMMdagPre = cgPre_(srcVecK_ - hfm_.MMdagger(srcVecK_));
+                // // invert M^daggerM pre
+                // NSL::Tensor<Type> invMdagMPre = cgDagPre_(srcVecK_ - hfm_.MdaggerM(srcVecK_));
+
+                // // for (int preStep=0; preStep<100; preStep++ ){
+                // //     invMMdagPre = hfm_.MMdagger(invMMdagPre);
+                // //     invMdagMPre = hfm_.MdaggerM(invMdagMPre);
+                // // }
+
+                // // invert MM^dagger
+                // NSL::Tensor<Type> invMMdag = cg_(srcVecK_, invMMdagPre);
+                // // invert M^daggerM
+                // NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_, invMdagMPre);
 
                 // Reset memory
                 // - Source vector
@@ -304,6 +384,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
             corrPool_[species] = corrKPool_;
             corrPoolDag_[species] = corrKPoolDag_.conj();
+            i++;
         } // for species
 
         I1S1Iz1Sz1_(NumberTimeSources);
@@ -320,6 +401,8 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
         I1S0Iz1Sz0_(NumberTimeSources);
         I1S0Izn1Sz0_(NumberTimeSources);
+
+        tID++;
     } // for tscr
 
 } // measure(Ntsrc);
@@ -334,6 +417,8 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
     // This is the default basenode we used so far
     // ToDo: this should go into the const
+
+    phiPre_ = Type(0);
 
     // write the momenta out
     if (!h5_.exist(std::string(basenode_)+"/Momenta")){
