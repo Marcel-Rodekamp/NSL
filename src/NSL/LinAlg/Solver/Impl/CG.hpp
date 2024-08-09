@@ -227,22 +227,6 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
 
-        //! Apply CG
-        /*!
-         *  \param b, NSL::Tensor, RHS of the equation to be solved
-         *
-         * This operator performs the solve of 
-         * \f[
-         *      M x = b
-         * \f]
-         * It returns an NSL::Tensor being the (approximate) solution
-         * \f[
-         *      x = M^{-1} b
-         * \f]
-         * for the stored fermion matrix M.
-         * */
-        NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & pre);
-
     private:
 
         // precision at which the algorithm is stopped
