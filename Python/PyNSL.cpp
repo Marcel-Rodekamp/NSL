@@ -13,7 +13,7 @@
 namespace NSL::Python {
     PYBIND11_MODULE(PyNSL, m) {
         bindLattice(m);
-        bindTensor(m);
+        // bindTensor(m);
         bindAction(m);
         bindIntegrator(m);
         bindMCMC(m);

@@ -22,7 +22,7 @@ namespace detail {
 
         // Conversion from Python to C++
         bool load(handle src, bool) {
-            if (!isinstance<dict>(src)) {
+            if (!isinstance<py::dict>(src)) {
                 return false;
             }
             value.clear();
@@ -39,7 +39,7 @@ namespace detail {
         static handle cast(const Configuration<Type>& src, return_value_policy policy, handle parent) {
             py::dict out_dict;
             for (const auto& item : src) {
-                out_dict[item.first.c_str()] = py::cast(item.second, policy, parent);
+                out_dict[item.first] = py::cast(item.second, policy, parent);
             }
             return out_dict.release();
         }

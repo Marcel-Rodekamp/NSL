@@ -11,7 +11,7 @@ using namespace pybind11::literals;
 namespace NSL::Python {
     template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
     void bindBaseAction(py::module &m, std::string class_name){
-        py::class_<NSL::Action::BaseAction<Type, TensorType>, std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>>>(m, class_name.c_str())
+        py::class_<NSL::Action::BaseAction<Type, TensorType>, std::unique_ptr<NSL::Action::BaseAction<Type, TensorType>>>(m, class_name.c_str())
             .def("eval", py::overload_cast<const Tensor<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::eval))
             .def("eval", py::overload_cast<Configuration<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::eval))
             .def("grad", py::overload_cast<const Tensor<TensorType>&>(&NSL::Action::BaseAction<Type, TensorType>::grad))
@@ -21,22 +21,16 @@ namespace NSL::Python {
     }
 
     template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> createHubbardGaugeAction(NSL::Parameter & params) {
-        std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> hga = std::make_unique<NSL::Action::HubbardGaugeAction<Type, TensorType>>(params);
+    std::unique_ptr<NSL::Action::BaseAction<Type, TensorType>> createHubbardGaugeAction(NSL::Parameter & params) {
+        std::unique_ptr<NSL::Action::BaseAction<Type, TensorType>> hga = std::make_unique<NSL::Action::HubbardGaugeAction<Type, TensorType>>(params);
         return hga;
     }
 
     template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> createHubbardFermionAction(NSL::Lattice::SpatialLattice<Type> & lattice, NSL::Parameter & params) {
+    std::unique_ptr<NSL::Action::BaseAction<Type, TensorType>> createHubbardFermionAction(NSL::Lattice::SpatialLattice<Type> & lattice, NSL::Parameter & params) {
         using FermionMatrixType = NSL::FermionMatrix::HubbardExp<Type, NSL::Lattice::SpatialLattice<Type>>;
-        std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> hfa = std::make_unique<NSL::Action::HubbardFermionAction<Type, NSL::Lattice::SpatialLattice<Type>, FermionMatrixType, TensorType>>(lattice, params);
+        std::unique_ptr<NSL::Action::BaseAction<Type, TensorType>> hfa = std::make_unique<NSL::Action::HubbardFermionAction<Type, NSL::Lattice::SpatialLattice<Type>, FermionMatrixType, TensorType>>(lattice, params);
         return hfa;
-    }
-
-    template <NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
-    std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> createSumAction(std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> action1, std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> action2) {
-        std::shared_ptr<NSL::Action::BaseAction<Type, TensorType>> sumAction = std::make_shared<NSL::Action::Action<NSL::Action::BaseAction<Type, TensorType>, NSL::Action::BaseAction<Type, TensorType>>>(action1, action2);
-        return sumAction;
     }
 
     template <typename Type, typename TensorType>
@@ -52,7 +46,6 @@ namespace NSL::Python {
     }
     
     class SumAction : public NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>{
-        py::args _baseActionList;
         public:
         SumAction(py::args BaseActions) : NSL::Action::BaseAction<NSL::complex<double>, NSL::complex<double>>("phi"){
             _baseActionList = BaseActions;
@@ -98,6 +91,8 @@ namespace NSL::Python {
             return eval(config);
         }
 
+        private:
+        py::args _baseActionList;
     };
     void bindAction(py::module &m) {
         // ToDo: Templating

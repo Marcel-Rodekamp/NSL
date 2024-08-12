@@ -11,6 +11,9 @@ struct type_caster<NSL::Device> {
     // Conversion from Python to C++
     bool load(handle src, bool) {
         torch::Device py_device = src.cast<torch::Device>();
+        if (!py_device.is_cuda() && !py_device.is_cpu()) {
+            throw std::runtime_error("Device must be either CPU or CUDA");
+        }
         std::string device_identifier = py_device.is_cuda() ? "GPU" : "CPU";
         value = NSL::Device(device_identifier, py_device.index());
         return true;

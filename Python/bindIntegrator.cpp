@@ -30,9 +30,7 @@ namespace NSL::Python {
         py::class_<NSL::Integrator::Leapfrog<NSL::Python::SumAction>>(m, class_name.c_str())
             .def(py::init<const NSL::Python::SumAction&, const double&, const NSL::size_t&, bool>(), "action"_a, "trajectoryLength"_a, "numberSteps"_a, "backward"_a = false)
             .def("__call__", [](NSL::Integrator::Leapfrog<NSL::Python::SumAction> &integrator, py::args args){
-                if (args.size() == 1){
-                    throw std::runtime_error("Invalid number of arguments");
-                } else if (args.size() == 2){
+                if (args.size() == 2){
                     NSL::Configuration<TensorType> q = args[0].cast<NSL::Configuration<TensorType>>();
                     NSL::Configuration<TensorType> p = args[1].cast<NSL::Configuration<TensorType>>();
                     return integrator(q, p);
@@ -47,9 +45,7 @@ namespace NSL::Python {
         py::class_<NSL::Integrator::LeapfrogRealForce<NSL::Python::SumAction>>(m, class_name.c_str())
             .def(py::init<const NSL::Python::SumAction&, const double&, const NSL::size_t&, bool>(), "action"_a, "trajectoryLength"_a, "numberSteps"_a, "backward"_a = false)
             .def("__call__", [](NSL::Integrator::LeapfrogRealForce<NSL::Python::SumAction> &integrator, py::args args){
-                if (args.size() == 1){
-                    throw std::runtime_error("Invalid number of arguments");
-                } else if (args.size() == 2){
+                if (args.size() == 2){
                     NSL::Configuration<TensorType> q = args[0].cast<NSL::Configuration<TensorType>>();
                     NSL::Configuration<TensorType> p = args[1].cast<NSL::Configuration<TensorType>>();
                     return integrator(q, p);
