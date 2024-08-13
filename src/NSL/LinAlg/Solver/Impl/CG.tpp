@@ -105,16 +105,16 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     return solve_(b);
 }
 
-// template<NSL::Concept::isNumber Type >
-// NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b , const NSL::Tensor<Type> & x0 ){
-//     // initialize the solution vector x_ which after convergence 
-//     // stores the approximate result x = M^{-1} @ b.
-//     // Multiple initializations are possible and can enhance the convergence
-//     // see e.g. Preconditioning. Here we just choose a simple start vector
-//     // which is an arbitrary choise.
-//     x_ = x0;    
-//     return solve_(b);
-// }
+template<NSL::Concept::isNumber Type >
+NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b , const NSL::Tensor<Type> & x0 ){
+    // initialize the solution vector x_ which after convergence 
+    // stores the approximate result x = M^{-1} @ b.
+    // Multiple initializations are possible and can enhance the convergence
+    // see e.g. Preconditioning. Here we just choose a simple start vector
+    // which is an arbitrary choise.
+    x_ = x0;    
+    return solve_(b);
+}
 
 } // namespace NSL::LinAlg
 
