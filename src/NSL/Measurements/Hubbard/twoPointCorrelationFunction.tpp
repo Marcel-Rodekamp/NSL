@@ -276,6 +276,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         minCfg, maxCfg, saveFreq
     );
 
+    bool trimFlag = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
@@ -289,8 +290,14 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
         if (skip_(this->params_["overwrite"],node)) {
             NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
-	        continue;
-	    } 
+	        trimFlag = true;
+            continue;
+	    }
+
+        if (trimFlag) {
+            this->h5_.trimData(node);
+            trimFlag = false;
+        }
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 

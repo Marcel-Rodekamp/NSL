@@ -416,7 +416,18 @@ class H5IO {
                 NSL::Logger::debug("Unlinking Dataset (overwrite={}; node exists={}): {}",overwrite_,exist,node);
                 h5f_.unlink(node);
             }
-        }  
+        } 
+
+        //! Removes a group if group exists
+        void trimData(std::string node){
+            bool exist = this->exist(node);
+            // remove the group if it exists; once the file is closed
+            // automatic repacking is applied
+            if (exist){
+                NSL::Logger::debug("Unlinking Dataset (node exists={}): {}",exist,node);
+                h5f_.unlink(node);
+            }
+        }
     private:
         
 
