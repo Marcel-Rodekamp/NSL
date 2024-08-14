@@ -30,7 +30,7 @@ NSL::Tensor<Type> CG<Type>::solve_(const NSL::Tensor<Type> & b){
     // part is extracted, the imaginary part is 0 by construction
     // typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
     // typename NSL::RT_extractor<Type>::type rsqr_prev = rsqr_curr;
-    typename NSL::RT_extractor<Type>::type rsqr_prev = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
+    NSL::RealTypeOf<Type> rsqr_prev = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
     
     // if the guess is already good enough return
     if (rsqr_prev <= errSq_) {
@@ -62,7 +62,7 @@ NSL::Tensor<Type> CG<Type>::solve_(const NSL::Tensor<Type> & b){
 
         // and the resulting error square
         // err = (r{i+1},r{i+1})
-        typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
+        NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
 
         // check for convergence agains the errSq_ determined by the 
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
@@ -74,7 +74,7 @@ NSL::Tensor<Type> CG<Type>::solve_(const NSL::Tensor<Type> & b){
 
         // compute the momentum update scale
         // beta{i} = (r{i+1},r{i+1})/(r{i},r{i}
-        typename NSL::RT_extractor<Type>::type beta = rsqr_curr / rsqr_prev;
+        NSL::RealTypeOf<Type> beta = rsqr_curr / rsqr_prev;
 
         // update the momentum
         // p{i+1} = r{i+1} + beta{i} * p{i}
@@ -96,22 +96,18 @@ NSL::Tensor<Type> CG<Type>::solve_(const NSL::Tensor<Type> & b){
 
 template<NSL::Concept::isNumber Type >
 NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
-    // initialize the solution vector x_ which after convergence 
+    // initialize the solution vector x_ = b which after convergence 
     // stores the approximate result x = M^{-1} @ b.
-    // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
     x_ = b;//NSL::randn_like(b);
     return solve_(b);
 }
 
 template<NSL::Concept::isNumber Type >
 NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b , const NSL::Tensor<Type> & x0 ){
-    // initialize the solution vector x_ which after convergence 
+    // initialize the solution vector x_ = x0 which after convergence 
     // stores the approximate result x = M^{-1} @ b.
     // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
+    // see e.g. Preconditioning.
     x_ = x0;    
     return solve_(b);
 }

@@ -27,7 +27,6 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
 
     // The initial gradient vector is then given by the residual
     p_ = z_;
-    std::cout << "Debug 1" << std::endl;
 
     // The residual square is given by the square of the residual
     // We require two instances to store the previous (prev) and the current (curr)
@@ -36,8 +35,8 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
     // part is extracted, the imaginary part is 0 by construction
     // typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
     // typename NSL::RT_extractor<Type>::type rsqr_prev = rsqr_curr;
-    typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
-    typename NSL::RT_extractor<Type>::type rz_prev   = NSL::real( NSL::LinAlg::inner_product(r_,z_) );
+    NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
+    NSL::RealTypeOf<Type> rz_prev   = NSL::real( NSL::LinAlg::inner_product(r_,z_) );
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
@@ -54,7 +53,7 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
         t_ = this->M_(p_);
 
         // determine the scale of the orthogonalization
-        //alpha{i} = (r{i},r{i})/(p{i},t{i}) (remember we stored (r{i},r{i}) in rsqr_prev)
+        //alpha{i} = (r{i},z{i})/(p{i},t{i}) (remember we stored (r{i},z{i}) in rsqr_prev)
         Type alpha = rz_prev / NSL::LinAlg::inner_product(p_, t_);
 
         // update the solution x according to the step
@@ -78,14 +77,14 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
         }
 
         z_ = this->innerCG_(r_);
-        typename NSL::RT_extractor<Type>::type rz_curr = NSL::real( NSL::LinAlg::inner_product(r_,z_) );
+        NSL::RealTypeOf<Type> rz_curr = NSL::real( NSL::LinAlg::inner_product(r_,z_) );
 
         // compute the momentum update scale
-        // beta{i} = (r{i+1},r{i+1})/(r{i},r{i}
-        typename NSL::RT_extractor<Type>::type beta = rz_curr / rz_prev;
+        // beta{i} = (r{i+1},z{i+1})/(r{i},z{i}
+        NSL::RealTypeOf<Type> beta = rz_curr / rz_prev;
 
         // update the momentum
-        // p{i+1} = r{i+1} + beta{i} * p{i}
+        // p{i+1} = z{i+1} + beta{i} * p{i}
         p_ = z_ + beta * p_;
 
         // now prepare the previous residual square for the next iteration
@@ -104,11 +103,8 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
 
 template<NSL::Concept::isNumber Type >
 NSL::Tensor<Type> CGpreconditioned<Type>::operator()(const NSL::Tensor<Type> & b ){
-    // initialize the solution vector x_ which after convergence 
+    // initialize the solution vector x_ = b which after convergence 
     // stores the approximate result x = M^{-1} @ b.
-    // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
     x_ = b;//NSL::randn_like(b);
     return solve_(b);
 }
@@ -118,8 +114,7 @@ NSL::Tensor<Type> CGpreconditioned<Type>::operator()(const NSL::Tensor<Type> & b
     // initialize the solution vector x_ = x0 which after convergence 
     // stores the approximate result x = M^{-1} @ b.
     // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
+    // see e.g. Preconditioning.
     x_ = x0;    
     return solve_(b);
 }
