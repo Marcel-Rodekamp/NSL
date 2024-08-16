@@ -183,8 +183,8 @@ class TwoBodyCorrelator: public Measurement {
         NSL::LinAlg::CG<Type> cgDag_;
 
         FermionMatrixType hfmPre_;
-        NSL::LinAlg::CG<Type> cgPre_;
-        NSL::LinAlg::CG<Type> cgDagPre_;
+        NSL::LinAlg::CGpreconditioned<Type> cgPre_;
+        NSL::LinAlg::CGpreconditioned<Type> cgDagPre_;
         NSL::Tensor<Type> phiPre_;
         NSL::Tensor<Type> saveCfg_;
         NSL::Tensor<Type> saveCfgDag_;
