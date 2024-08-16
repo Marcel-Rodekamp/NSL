@@ -16,6 +16,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 class TwoBodyCorrelator: public Measurement {
+    typedef std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> d4Map;
     public:
         TwoBodyCorrelator(LatticeType & lattice, NSL::Parameter params, NSL::H5IO & h5, std::string basenode_):
             Measurement(params, h5),
@@ -164,20 +165,20 @@ class TwoBodyCorrelator: public Measurement {
         std::unordered_map<NSL::Hubbard::Species, NSL::Tensor<Type>> corrPoolDag_;
         NSL::Tensor<Type> srcVecK_;
 
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Iz1Sz1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Iz1Sz0_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Iz1Szn1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Iz0Sz1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Iz0Szn1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Izn1Sz1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Izn1Sz0_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S1Izn1Szn1_;
+        d4Map cI1S1Iz1Sz1_;
+        d4Map cI1S1Iz1Sz0_;
+        d4Map cI1S1Iz1Szn1_;
+        d4Map cI1S1Iz0Sz1_;
+        d4Map cI1S1Iz0Szn1_;
+        d4Map cI1S1Izn1Sz1_;
+        d4Map cI1S1Izn1Sz0_;
+        d4Map cI1S1Izn1Szn1_;
 
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI0S1Iz0Sz1_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI0S1Iz0Szn1_;
+        d4Map cI0S1Iz0Sz1_;
+        d4Map cI0S1Iz0Szn1_;
 
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S0Iz1Sz0_;
-        std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, std::unordered_map<NSL::size_t, NSL::Tensor<Type>>>>> cI1S0Izn1Sz0_;
+        d4Map cI1S0Iz1Sz0_;
+        d4Map cI1S0Izn1Sz0_;
 
         NSL::Tensor<Type> phi_;
 
@@ -219,31 +220,31 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
         for (int x=0; x<kDim; x++) {
             for (int y=0; y<kDim; y++) {
                 for (int z=0; z<kDim; z++) {
-                    if (!(eq_modBZ_(momenta(w,NSL::Slice()) + momenta(x,NSL::Slice()), momenta(z, NSL::Slice()) + momenta(y,NSL::Slice())))) {
+                    if (!(eq_modBZ_(momenta(w, NSL::Slice()) + momenta(x, NSL::Slice()), momenta(z, NSL::Slice()) + momenta(y, NSL::Slice())))) {
                         continue;
                     }
-                    cI1S1Iz1Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz1Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz0Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Iz0Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Izn1Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S1Izn1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Sz1_[w][x][z][y]   = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Sz0_[w][x][z][y]   = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz1Szn1_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz0Sz1_[w][x][z][y]   = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Iz0Szn1_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Sz1_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S1Izn1Sz0_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
                     cI1S1Izn1Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
 
-                    cI0S1Iz0Sz1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI0S1Iz0Szn1_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI0S1Iz0Sz1_[w][x][z][y]   = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI0S1Iz0Szn1_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
 
-                    cI1S0Iz1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
-                    cI1S0Izn1Sz0_[w][x][z][y] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S0Iz1Sz0_[w][x][z][y]   = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
+                    cI1S0Izn1Sz0_[w][x][z][y]  = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), Nt, bDim * bDim, bDim * bDim);
                 }
             }
         }
     }
-    corrPool_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
-    corrPool_[NSL::Hubbard::Hole] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
+    corrPool_[NSL::Hubbard::Particle]    = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
+    corrPool_[NSL::Hubbard::Hole]        = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
     corrPoolDag_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
-    corrPoolDag_[NSL::Hubbard::Hole] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
+    corrPoolDag_[NSL::Hubbard::Hole]     = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
 
 
     for (NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep) {
@@ -258,7 +259,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
             for (int kSrc=0; kSrc<kDim; kSrc++ ) {
                 // Define a wall source
-                srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(kSrc,NSL::Slice(),NSL::Slice());
+                srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(kSrc,NSL::Slice(),NSL::Slice()); // Maybe explicitly send it to device
 
                 // invert MM^dagger
                 NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
@@ -271,19 +272,19 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
                 // back multiply M^dagger to obtain M^{-1}
                 // invM is of shape Nx x Nt x Nx
-                NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
-                NSL::Tensor<Type> invMdagger = hfm_.M(invMdagM);
+                corrK_ = hfm_.Mdagger(invMMdag);
+                corrKDag_ = hfm_.M(invMdagM);
 
                 // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
                 // boundary conditions
                 // shift t -> t - tsrc
-                invM.shift( -tsrc, -2, -Type(1) );
-                invMdagger.shift( -tsrc, -2, -Type(1) );
+                corrK_.shift( -tsrc, -2, -Type(1) );
+                corrKDag_.shift( -tsrc, -2, -Type(1) );
 
                 // Average over all source times
                 // corrK_ += invM; // I changed something here!!!!!
-                corrK_ = invM;
-                corrKDag_ = invMdagger;
+                // corrK_ = invM;
+                // corrKDag_ = invMdagger;
 
                 for (int kSink=0; kSink<kDim; kSink++) {
                     for (NSL::size_t t = 0; t<Nt; t++) {
@@ -361,43 +362,45 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
                     	momNode = fmt::format("/cI1S1Iz1Sz1/{}-{}-{}-{}",w,x,z,y);
                     	this->h5_.write(cI1S1Iz1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                   	 momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+                   	    momNode = fmt::format("/cI1S1Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Iz1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Iz1Szn1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Iz1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Izn1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Izn1Sz1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Izn1Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S1Izn1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI1S1Izn1Szn1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S1Izn1Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI0S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-			 momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI0S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
+                    	momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI0S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-                    	 momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S0Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+			            momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI0S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
-			 momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
-                    	 this->h5_.write(cI1S0Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
-                	 }
-            	     }
-       		 }
-    	    }
-        } else {
+
+                    	momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S0Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+
+			            momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
+                    	this->h5_.write(cI1S0Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+                	}
+            	}
+       		}
+    	}
+    } else {
         NSL::Logger::info("Non-interacting correlators already exist");
     }
     // Interacting Correlators
@@ -413,8 +416,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     bool trimFlag = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
-        // this is a shortcut, we don't need to invert if we don't overwrite
-        // data
 
         node = fmt::format("/markovChain/{}/correlators/twobody",cfgID);
 
@@ -469,12 +470,14 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
                         momNode = fmt::format("/cI0S1Iz0Sz1/{}-{}-{}-{}",w,x,z,y);
                         this->h5_.write(cI0S1Iz0Sz1_[w][x][z][y],std::string(basenode_)+node+momNode);
+
                         momNode = fmt::format("/cI0S1Iz0Szn1/{}-{}-{}-{}",w,x,z,y);
                         this->h5_.write(cI0S1Iz0Szn1_[w][x][z][y],std::string(basenode_)+node+momNode);
 
 
                         momNode = fmt::format("/cI1S0Iz1Sz0/{}-{}-{}-{}",w,x,z,y);
                         this->h5_.write(cI1S0Iz1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
+
                         momNode = fmt::format("/cI1S0Izn1Sz0/{}-{}-{}-{}",w,x,z,y);
                         this->h5_.write(cI1S0Izn1Sz0_[w][x][z][y],std::string(basenode_)+node+momNode);
                     }

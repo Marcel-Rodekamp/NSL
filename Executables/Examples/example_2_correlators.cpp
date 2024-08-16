@@ -131,20 +131,26 @@ int main(int argc, char** argv){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
-    // initialize 2 point correlation function <p^+_x p_y> 
+    // Initialize 2 point correlation function
     NSL::Measure::Hubbard::TwoBodyCorrelator<
         Type,
         decltype(lattice),
         NSL::FermionMatrix::HubbardExp<
             Type,decltype(lattice)
         >
-    > C2pt_sp(lattice, params, h5);//, NSL::Hubbard::Particle, NSL::Hubbard::Particle);
+    > C2pt_2b(lattice, params, h5);
 
     // Perform the measurement.
-    // 1. Calculate <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y } >
+    // 1. Calculate all:
+    // <p^+_x p_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y }[\phi] >
+    // <p_x p^+_y> = \sum_{ts} < M^{-1}^+_{t-t_s,x;0;y }[-\phi] >
+    // <h^+_x h_y> = \sum_{ts} < M^{-1}_{t-t_s,x;0;y }[\phi] >
+    // <h_x h^+_y> = \sum_{ts} < M^{-1}^+_{t-t_s,x;0;y }[-\phi] >
+    // 
+    // 2. Create the two-body correlation functions
     //
-    // configurations from the data file specified under params["file"].
+    // Configurations from the data file specified under params["file"].
     // Then 
-    C2pt_sp.measure();
+    C2pt_2b.measure();
 
 }
