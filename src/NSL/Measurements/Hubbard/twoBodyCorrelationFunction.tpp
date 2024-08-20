@@ -281,8 +281,8 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
                 for (int kSink=0; kSink<kDim; kSink++) {
                     for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                        NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice()).expand(Nt, 0);
                         for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                            NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice()).expand(Nt, 0);
                             // I don't understand when torch copies to cpu and when it doesn't
                             // corrKPool_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,t,NSL::Slice()));
                             corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
