@@ -96,7 +96,7 @@ int main(int argc, char** argv){
 	  }
 	}
       }
-      params["wallSources"]=kblocks;
+      params["wallSources"]=kblocks.to(params["device"]);
     } else {
       // DEFAULT: raise an exception
       // currently don't know how to do this, will do later
