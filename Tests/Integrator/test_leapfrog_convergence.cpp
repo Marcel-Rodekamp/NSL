@@ -48,36 +48,35 @@ int main(){
     // a code but for this example we just specify them here
     // System Parameters
     //    Inverse temperature 
-    Type beta = 1.;
+    Type beta = 0.25;
     //    On-Site Coupling
-    Type m    = 2.0;
+    Type m    = -1;
     //    Number of time slices
-    NSL::size_t Nt = 4;
+    NSL::size_t Nt = 8;
     //    Number of ions (spatial sites)
-    NSL::size_t Nx = 4;
+    NSL::size_t Nx = 8;
     //    Dimension of the System
     NSL::size_t dim = 2;
     double trajectoryLength = 1;
 
     NSL::Parameter params;
-    params.addParameter<Type>("beta",beta);
-    params.addParameter<Type>("bare mass",m);
-    params.addParameter<NSL::size_t>("Nt",Nt);
-    params.addParameter<NSL::size_t>("Nx",Nx);
-    params.addParameter<NSL::size_t>("dim",dim);
-    params.addParameter<NSL::Device>("device",NSL::CPU());
+    params["beta"]= beta;
+    params["bare mass"]=m;
+    params["Nt"]=Nt;
+    params["Nx"]=Nx;
+    params["dim"]=dim;
+    params["device"]=NSL::CPU();
+    params["Nf"] = 1;
 
     NSL::Lattice::Square<Type> lattice({
         params["Nt"].to<NSL::size_t>(),
         params["Nx"].to<NSL::size_t>()
     });
-    params.addParameter<NSL::Lattice::Square<Type>>("lattice",lattice);
-    
     // Initialize the action
     NSL::Action::Action S = 
         NSL::Action::PseudoFermionAction<
             Type,decltype(lattice), NSL::FermionMatrix::U1::Wilson<Type>
-        >(params,"U")
+        >(lattice,params,"U")
         +NSL::Action::U1::WilsonGaugeAction<Type>(params)
     ;
 
@@ -103,7 +102,7 @@ int main(){
     std::cout << "[\n";
 
     // loop over different molecular dynamics steps
-    for (NSL::size_t Nmd = 1; Nmd < 100; Nmd+=10){
+    for (NSL::size_t Nmd = 100; Nmd < 500; Nmd+=25){
 
         // Initialize the integrator
         NSL::Integrator::U1::Leapfrog leapfrog( 
