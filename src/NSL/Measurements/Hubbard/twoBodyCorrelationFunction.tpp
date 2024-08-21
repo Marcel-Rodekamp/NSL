@@ -248,6 +248,22 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     corrPoolDag_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
     corrPoolDag_[NSL::Hubbard::Hole]     = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), kDim, kDim, Nt, bDim, bDim);
 
+    /*
+    We need to calculate 
+
+    Mx = b and M^{+}x = b^{+} because the two-body operators could have daggers at the source and at the sink. In order to be able to calculate this, we have to solve twice
+
+    (1) Mx = b --> x = M^{-1}b --> b^{+}M^{-1}b
+
+    (2) M^{+}x = b^{+} --> x = M^{-1}^{+}b^{+} --> b^{+}^{+}M^{-1}^{+}b^{+} --> b^{+}M^{-1}^{T}b
+
+    Example:
+
+    We use (1) when we have <p_t p^{+}_0>
+
+    We use (2) when we have <p^{+}_t p_0>
+
+    */
     for (NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep) {
         
         for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
@@ -265,7 +281,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
                 // invert MM^dagger
                 NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
                 // invert M^daggerM
-                NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_);
+                NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_.conj());
                 // Reset memory
                 // - Source vector
                 srcVecK_ = Type(0);
@@ -288,7 +304,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
                             corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
 
                             // corrKPoolDag_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrKDag_(sigmaSrc,t,NSL::Slice()));
-                            corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrKDag_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
+                            corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource.conj() , corrKDag_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
                         }
                     }
                 }
