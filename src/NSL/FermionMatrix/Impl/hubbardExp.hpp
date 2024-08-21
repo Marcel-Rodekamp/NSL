@@ -180,6 +180,10 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
      **/
     NSL::Tensor<Type> gradLogDetM() override;
 
+    NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+
+    NSL::Tensor<Type> dMdaggerdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+
     //! Query the current species of the fermion matrix. To change the species please use populate(phi, species).
     NSL::Hubbard::Species species() {
         return species_;

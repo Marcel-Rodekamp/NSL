@@ -210,6 +210,34 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     return pi_dot_;
 }
 
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+    NSL::Tensor<Type> PsiB = left;
+    NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
+        this->Lat.exp_hopping_matrix(sgn_*delta_).transpose(-1,-2),
+        (1.*PsiB).transpose(-1,-2)      // 1.* is a hack to make sure it is a copy
+    ).transpose(-1,-2);
+    
+    sum.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
+    sum *= this->phiExp_ * right;
+    
+    return -NSL::complex<NSL::RealTypeOf<Type>>(0,1) * sum;
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdaggerdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+NSL::Tensor<Type> PsiB = right;
+    NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
+        this->Lat.exp_hopping_matrix(sgn_*delta_),
+        (1.*PsiB).transpose(-1,-2)      // 1.* is a hack to make sure it is a copy
+    ).transpose(-1,-2);
+
+    sum.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
+    sum *= this->phiExpInv_ * left;
+    
+    return NSL::complex<NSL::RealTypeOf<Type>>(0,1) * sum;
+}
+
 } // namespace FermionMatrix
 
 #endif //NSL_FERMION_MATRIX_HUBBARD_EXP_TPP
