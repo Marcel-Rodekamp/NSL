@@ -3,6 +3,7 @@
  * */
 #include <iostream>
 #include "NSL.hpp"
+#include <cmath>
 
 int main(){
 	typedef NSL::complex<double> cd;
@@ -27,8 +28,6 @@ int main(){
     // phi[3] = 3.0;
     FM.populate(phi);
 
-    std::cout << phi << std::endl;
-
     // for (int u = 0; u < NT; u++){
     //     for (int z = 0; z < 2; z++){
     //         std::cout << std::endl << "derivative of M with respect to phi(" << u << "," << z << "):" << std::endl;
@@ -50,15 +49,14 @@ int main(){
     //     }
     // }
 
-    NSL::Action::Action S = NSL::Action::PseudoFermionAction<
-                                cd,decltype(lattice), NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>
+    NSL::Action::Action S = NSL::Action::HubbardGaugeAction<cd>(params)
+                            + NSL::Action::PseudoFermionAction<
+                            cd,decltype(lattice), NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>
                             >(lattice, params)
-                        //  + NSL::Action::HubbardGaugeAction<cd,decltype(lattice)>(params)
     ;
 
     NSL::Tensor<cd> phi2(NT,2); phi2.randn(); 
     NSL::Tensor<cd> pi(NT,2); pi.randn();
-    
     phi2.imag() = 0;
     pi.imag() = 0;
 
@@ -73,24 +71,39 @@ int main(){
     cd Hi, Hf;
 
     S.computePseudoFermion(config);
+    
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
-
-    for (int Nmd = 10; Nmd < 210; Nmd += 10){
+    
+    for (int Nmd = 1; Nmd < 10001; Nmd *= 2){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
-        /*trajectoryLength=*/ .1,
+        /*trajectoryLength=*/ 2.,
         /*numberSteps=*/ Nmd,
         /*backward*/ false // optional
       );
 
       // integrate eom
       auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
- 
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
       std::cout << Nmd << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << std::endl;
     }
 
+    /*
+./Executables/Examples/example_Pseudofermion | python3 -c "
+import sys
+import matplotlib.pyplot as plt
+
+data = [line.split() for line in sys.stdin]
+x = [float(point[0]) for point in data]
+y = [float(point[1]) for point in data]
+
+plt.loglog(x, y, marker='o')
+plt.xlabel('$ N_{md}$')
+plt.ylabel('$|\\\\frac{H_f-H_i}{H_i}|$')
+plt.title('Trajectory-Length $=2$')
+plt.show()"
+    */
 	return EXIT_SUCCESS;
 
 }

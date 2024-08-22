@@ -91,7 +91,7 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
     
     // The pseudo fermion action is then given by the inner product
-    return -NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv);
+    return NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv);
 }
 	
 template<
@@ -121,12 +121,12 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
 
     // calculate the derivatives of the fermion matrix
     return NSL::Configuration<Type> {{ this->configKey_,
-        2*FM_.dMdPhi(
+        -FM_.dMdPhi(
             /*left*/NSL::LinAlg::conj(MMdaggerInv),/*right*/FM_.Mdagger(MMdaggerInv)
         ).real()
-        //+FM_.dMdaggerdPhi(
-        //    /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
-        //)
+        -FM_.dMdaggerdPhi(
+            /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
+        ).real()
     }};
 }
 
