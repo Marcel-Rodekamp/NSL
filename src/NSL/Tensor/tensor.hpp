@@ -38,6 +38,7 @@
 #include "Tensor/Impl/trigonometric.tpp"
 #include "Tensor/Impl/reductions.tpp"
 #include "Tensor/Impl/matmul.tpp"
+#include "Tensor/Impl/sqrt.tpp"
 
 #include <stdexcept>
 
@@ -71,7 +72,8 @@ class Tensor:
     public NSL::TensorImpl::TensorDevice<Type>,
     public NSL::TensorImpl::TensorFlatten<Type>,
     public NSL::TensorImpl::TensorResize<Type>,
-    public NSL::TensorImpl::TensorReshape<Type>
+    public NSL::TensorImpl::TensorReshape<Type>,
+    public NSL::TensorImpl::TensorSqrt<Type>
 {
     public:
 
