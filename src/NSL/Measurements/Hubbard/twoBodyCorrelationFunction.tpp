@@ -270,6 +270,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             // Reset memory
             // - Result correlator
             corrKPool_ = Type(0);
+            corrKPoolDag_ = Type(0);
 
             // populate the fermion matrix using the free configuration
             hfm_.populate(phi_,species);
@@ -277,11 +278,13 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             for (int kSrc=0; kSrc<kDim; kSrc++ ) {
                 // Define a wall source
                 srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(kSrc,NSL::Slice(),NSL::Slice()); // Maybe explicitly send it to device ToDo get this out of the loops!!!
+                // srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = wallSource(kSrc,NSL::Slice(),NSL::Slice());
+                // NSL::Tensor<Type> snkVecK(srcVecK_, true);
 
                 // invert MM^dagger
                 NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
                 // invert M^daggerM
-                NSL::Tensor<Type> invMdagM = cgDag_(srcVecK_.conj());
+                NSL::Tensor<Type> invMdagM = cgDag_(NSL::LinAlg::conj(srcVecK_));
                 // Reset memory
                 // - Source vector
                 srcVecK_ = Type(0);
@@ -297,15 +300,19 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
                 for (int kSink=0; kSink<kDim; kSink++) {
                     for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
-                        NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice()).expand(Nt, 0);
-                        for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                            // I don't understand when torch copies to cpu and when it doesn't
-                            // corrKPool_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,t,NSL::Slice()));
-                            corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
+                        NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice());
+                        // for (int t=0; t<Nt; t++) {
+                            for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                                // NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice());
+                                // NSL::Tensor<Type> wallSink(wallSource, true);
+                                // I don't understand when torch copies to cpu and when it doesn't
+                                // corrKPool_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource(kSink,sigmaSink,NSL::Slice()) , corrK_(sigmaSrc,t,NSL::Slice()));
+                                corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
 
-                            // corrKPoolDag_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrKDag_(sigmaSrc,t,NSL::Slice()));
-                            corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource.conj() , corrKDag_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
-                        }
+                                // corrKPoolDag_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( NSL::LinAlg::conj(wallSource(kSink,sigmaSink,NSL::Slice())) , corrKDag_(sigmaSrc,t,NSL::Slice()));
+                                corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( NSL::LinAlg::conj(wallSource) , corrKDag_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
+                            }
+                        // }
                     }
                 }
                 // Reset memory
@@ -315,7 +322,10 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             } // for kSrc
 
             corrPool_[species] = corrKPool_;
-            corrPoolDag_[species] = corrKPoolDag_.conj();
+            corrPoolDag_[species] = NSL::LinAlg::conj(corrKPoolDag_);
+
+            corrKPool_ = Type(0);
+            corrKPoolDag_ = Type(0);
         } // for species
 
         I1S1Iz1Sz1_(NumberTimeSources);
