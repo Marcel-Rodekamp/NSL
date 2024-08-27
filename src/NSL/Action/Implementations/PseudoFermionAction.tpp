@@ -121,12 +121,12 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
 
     // calculate the derivatives of the fermion matrix
     return NSL::Configuration<Type> {{ this->configKey_,
-        -FM_.dMdPhi(
+        -2.*FM_.dMdPhi(
             /*left*/NSL::LinAlg::conj(MMdaggerInv),/*right*/FM_.Mdagger(MMdaggerInv)
         ).real()
-        -FM_.dMdaggerdPhi(
-            /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
-        ).real()
+        // -FM_.dMdaggerdPhi(
+        //     /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
+        // )
     }};
 }
 
