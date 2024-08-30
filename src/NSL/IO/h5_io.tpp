@@ -98,6 +98,14 @@ class H5IO {
 	            
                 dataset.write(markovstate.acceptanceProbability);
 
+                // write out the acceptanceRate
+	            dataset = h5f_.createDataSet<NSL::size_t>(
+                    baseNode+"/acceptanceRate",
+                    HighFive::DataSpace::From(static_cast <NSL::size_t> (markovstate.accepted))
+                );
+	            
+                dataset.write(static_cast <NSL::size_t> (markovstate.accepted));
+
 	            // write out the weights (eg logdetJ, etc. . .)
 	            for (auto [key,field] : markovstate.weights) {
 	                dataset = h5f_.createDataSet<std::complex<NSL::RealTypeOf<Type>>>(
@@ -132,6 +140,13 @@ class H5IO {
                     HighFive::DataSpace::From(markovstate.acceptanceProbability)
                 );
 	            dataset.write(markovstate.acceptanceProbability);
+
+                // write out the acceptanceRate
+	            dataset = h5f_.createDataSet<NSL::size_t>(
+                    baseNode+"/acceptanceRate",
+                    HighFive::DataSpace::From(static_cast <NSL::size_t> (markovstate.accepted))
+                );
+                dataset.write(static_cast <NSL::size_t> (markovstate.accepted));
 
 	            // write out the weights (eg logdetJ, etc. . .)
 	            for (auto [key,field] : markovstate.weights) {
@@ -200,6 +215,10 @@ class H5IO {
 	            dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
 	            dataset.read(markovstate.acceptanceProbability);
 
+                // read in the acceptanceProbability
+	            dataset = h5f_.getDataSet(baseNode+"/acceptanceRate");
+	            dataset.read(markovstate.accepted);
+
 	            // read in the weights (eg logdetJ, etc. . .)
 	            for (auto & [key,field] : markovstate.weights) {
 	                dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
@@ -216,6 +235,10 @@ class H5IO {
 	            // read in the acceptanceProbability
 	            dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
 	            dataset.read(markovstate.acceptanceProbability);
+
+                // read in the acceptanceProbability
+	            dataset = h5f_.getDataSet(baseNode+"/acceptanceRate");
+	            dataset.read(markovstate.accepted);
 
 	            // read in the weights (eg logdetJ, etc. . .)
 	            for (auto & [key,field] : markovstate.weights) {
