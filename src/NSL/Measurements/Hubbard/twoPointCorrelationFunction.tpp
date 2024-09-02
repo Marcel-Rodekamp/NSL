@@ -296,7 +296,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 	    }
 
         if (trimFlag) {
-            this->h5_.trimData(node);
+            this->h5_.deleteData(node);
             trimFlag = false;
         }
 

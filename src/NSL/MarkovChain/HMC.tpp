@@ -89,8 +89,7 @@ class HMC{
                 }
                 catch(...) {
                 // in case the last markov state is corrupted try again
-                    // h5_.removeData(fmt::format("{}/{}",baseNode,nstart));
-                    h5_.trimData(fmt::format("{}/{}",baseNode,nstart));
+                    h5_.deleteData(fmt::format("{}/{}",baseNode,nstart));
                     nstart--;
                     MC[nstart] = state;
                     h5_.read(MC[nstart], baseNode, nstart);
