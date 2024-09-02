@@ -215,10 +215,6 @@ class H5IO {
 	            dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
 	            dataset.read(markovstate.acceptanceProbability);
 
-                // read in the acceptanceProbability
-	            dataset = h5f_.getDataSet(baseNode+"/acceptanceRate");
-	            dataset.read(markovstate.accepted);
-
 	            // read in the weights (eg logdetJ, etc. . .)
 	            for (auto & [key,field] : markovstate.weights) {
 	                dataset = h5f_.getDataSet(baseNode+"/weights/"+key);
@@ -235,10 +231,6 @@ class H5IO {
 	            // read in the acceptanceProbability
 	            dataset = h5f_.getDataSet(baseNode+"/acceptanceProbability");
 	            dataset.read(markovstate.acceptanceProbability);
-
-                // read in the acceptanceProbability
-	            dataset = h5f_.getDataSet(baseNode+"/acceptanceRate");
-	            dataset.read(markovstate.accepted);
 
 	            // read in the weights (eg logdetJ, etc. . .)
 	            for (auto & [key,field] : markovstate.weights) {
