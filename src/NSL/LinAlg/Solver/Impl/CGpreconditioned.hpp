@@ -34,7 +34,7 @@ class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
         CGpreconditioned(
                 std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
                 std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
-                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
             innerCG_(Mprec, eps, maxIter),
             errSq_(eps*eps),
@@ -84,7 +84,7 @@ class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
                 FermionMatrix<Type,LatticeType> & M,
                 FermionMatrix<Type,LatticeType> & Mprec,
                 NSL::FermionMatrix::MatrixCombination matrixCombination,
-                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             innerCG_(Mprec, matrixCombination, eps, maxIter),
             errSq_(eps*eps),
@@ -134,7 +134,7 @@ class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
                 FermionMatrix<Type,LatticeType> & M,
                 std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
                 NSL::FermionMatrix::MatrixCombination matrixCombination,
-                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             innerCG_(Mprec, eps, maxIter),
             errSq_(eps*eps),
@@ -183,7 +183,7 @@ class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
         CGpreconditioned(
                 FermionMatrix<Type,LatticeType> & M,
                 std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
-                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
             innerCG_(Mprec, eps, maxIter),
             errSq_(eps*eps),
@@ -232,7 +232,7 @@ class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
     private:
 
         // precision at which the algorithm is stopped
-        const typename NSL::RT_extractor<Type>::type errSq_;
+        const NSL::RealTypeOf<Type> errSq_;
         // maximum of iterations as fall back in case we don't converge
         const NSL::size_t maxIter_;
 
