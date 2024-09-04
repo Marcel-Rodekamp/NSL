@@ -25,39 +25,38 @@ class TwoBodyCorrelator: public Measurement {
             cgDag_(hfm_, NSL::FermionMatrix::MdaggerM),
             corrK_(
                 params["device"].template to<NSL::Device>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
-                params["Nx"].template to<NSL::size_t>()
+                params["Nx"].template to<NSL::size_t>() 
                 ),
             corrKDag_(
                 params["device"].template to<NSL::Device>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
                 params["Nx"].template to<NSL::size_t>()
                 ),
             corrKPool_(
                 params["device"].template to<NSL::Device>(),
-                // NSL::Device("CPU"),
-                params["wallSources"].shape(0).template to<NSL::size_t>(),
-                params["wallSources"].shape(0).template to<NSL::size_t>(),
-                // NSL::size_t (species_.size()), // I want to have a size 2 in this place
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(0).template to<NSL::size_t>(), //momenta
                 params["Nt"].template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>()
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
+                params["wallSources"].shape(1).template to<NSL::size_t>() //bands
                 ),
             corrKPoolDag_(
                 params["device"].template to<NSL::Device>(),
-                // NSL::Device("CPU"),
-                params["wallSources"].shape(0).template to<NSL::size_t>(),
-                params["wallSources"].shape(0).template to<NSL::size_t>(),
-                // NSL::size_t (species_.size()), // I want to have a size 2 in this place
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["Nt"].template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>()
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
+                params["wallSources"].shape(1).template to<NSL::size_t>() // bands
                 ),
 	        srcVecK_(
                 params["device"].template to<NSL::Device>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
                 params["Nx"].template to<NSL::size_t>()
             ),
@@ -132,28 +131,6 @@ class TwoBodyCorrelator: public Measurement {
 
             // return false;
         }
-
-        // NSL::Tensor<Type> kroneckerProduct_(const NSL::Tensor<Type>& A, const NSL::Tensor<Type>& B) {
-            
-        //     int rowsA = A.shape(1);
-        //     int colsA = A.shape(2);
-        //     int rowsB = B.shape(1);
-        //     int colsB = B.shape(2);
-
-        //     // Result Tensor has shape ( (rowsA*rowsB) x (colsA*colsB) )
-        //     NSL::Tensor<Type> result(params_["device"].template to<NSL::Device>(), A.shape(0), rowsA * rowsB, colsA * colsB);
-
-        //     for (int i = 0; i < rowsA; ++i) {
-        //         for (int j = 0; j < colsA; ++j) {
-        //             for (int k = 0; k < rowsB; ++k) {
-        //                 for (int l = 0; l < colsB; ++l) {
-        //                     result(NSL::Slice(), i * rowsB + k, j * colsB + l) = A(NSL::Slice(),i,j) * B(NSL::Slice(),k,l);
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     return result;
-        // }
 
         FermionMatrixType hfm_;
         NSL::LinAlg::CG<Type> cg_;
@@ -265,68 +242,50 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 
     */
     for (NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep) {
+        // Define a wall source
+        srcVecK_(NSL::Slice(),NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(NSL::Slice(),NSL::Slice(),NSL::Slice());
         
         for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
-            // Reset memory
-            // - Result correlator
-            corrKPool_ = Type(0);
-            corrKPoolDag_ = Type(0);
-
             // populate the fermion matrix using the free configuration
             hfm_.populate(phi_,species);
 
+            // invert MM^dagger
+            NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
+            // invert M^daggerM
+            NSL::Tensor<Type> invMdagM = cgDag_(NSL::LinAlg::conj(srcVecK_));
+
+            // back multiply M^dagger to obtain M^{-1}
+            // invM is of shape kDim x bDim x Nt x Nx
+            corrK_ = hfm_.Mdagger(invMMdag);
+            corrKDag_ = hfm_.M(invMdagM);
+
+            // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
+            // boundary conditions
+            // shift t -> t - tsrc
+            corrK_.shift( -tsrc, -2, -Type(1) );
+            corrKDag_.shift( -tsrc, -2, -Type(1) );
+
             for (int kSrc=0; kSrc<kDim; kSrc++ ) {
-                // Define a wall source
-                srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(kSrc,NSL::Slice(),NSL::Slice()); // Maybe explicitly send it to device ToDo get this out of the loops!!!
-                // srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = wallSource(kSrc,NSL::Slice(),NSL::Slice());
-                // NSL::Tensor<Type> snkVecK(srcVecK_, true);
-
-                // invert MM^dagger
-                NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
-                // invert M^daggerM
-                NSL::Tensor<Type> invMdagM = cgDag_(NSL::LinAlg::conj(srcVecK_));
-                // Reset memory
-                // - Source vector
-                srcVecK_ = Type(0);
-                // back multiply M^dagger to obtain M^{-1}
-                // invM is of shape Nx x Nt x Nx
-                corrK_ = hfm_.Mdagger(invMMdag);
-                corrKDag_ = hfm_.M(invMdagM);
-                // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
-                // boundary conditions
-                // shift t -> t - tsrc
-                corrK_.shift( -tsrc, -2, -Type(1) );
-                corrKDag_.shift( -tsrc, -2, -Type(1) );
-
                 for (int kSink=0; kSink<kDim; kSink++) {
                     for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
                         NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice());
-                        // for (int t=0; t<Nt; t++) {
-                            for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                                // NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(kSink,sigmaSink,NSL::Slice());
-                                // NSL::Tensor<Type> wallSink(wallSource, true);
-                                // I don't understand when torch copies to cpu and when it doesn't
-                                // corrKPool_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource(kSink,sigmaSink,NSL::Slice()) , corrK_(sigmaSrc,t,NSL::Slice()));
-                                corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
 
-                                // corrKPoolDag_(kSink,kSrc,t,sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( NSL::LinAlg::conj(wallSource(kSink,sigmaSink,NSL::Slice())) , corrKDag_(sigmaSrc,t,NSL::Slice()));
-                                corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( NSL::LinAlg::conj(wallSource) , corrKDag_(sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
-                            }
-                        // }
+                        for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                            corrKPool_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSource , corrK_(kSrc,sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
+
+                            corrKPoolDag_(kSink,kSrc,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( NSL::LinAlg::conj(wallSource) , corrKDag_(kSrc,sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
+                        }
                     }
                 }
-                // Reset memory
-                // - Result correlator
-                corrK_ = Type(0);
-                corrKDag_ = Type(0);
             } // for kSrc
 
             corrPool_[species] = corrKPool_;
             corrPoolDag_[species] = NSL::LinAlg::conj(corrKPoolDag_);
-
-            corrKPool_ = Type(0);
-            corrKPoolDag_ = Type(0);
         } // for species
+        
+        // Reset memory
+        // - Source vector
+        srcVecK_ = Type(0);
 
         I1S1Iz1Sz1_(NumberTimeSources);
         I1S1Iz1Sz0_(NumberTimeSources);
