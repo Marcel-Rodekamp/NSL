@@ -1,7 +1,8 @@
-#ifndef NSL_CG_HPP
-#define NSL_CG_HPP
+#ifndef NSL_CG_PREC_HPP
+#define NSL_CG_PREC_HPP
 
 #include "../Solver.hpp" 
+#include "CG.hpp"
 #include "complex.hpp"
 #include "types.hpp"
 
@@ -9,7 +10,7 @@ namespace NSL::LinAlg {
 
 //! Conjugate Gradient, solving \f$M x = b \f$
 template<NSL::Concept::isNumber Type>
-class CG: public NSL::LinAlg::Solver<Type> {
+class CGpreconditioned: public NSL::LinAlg::Solver<Type> {
     public:
         
         //! Constructor
@@ -18,6 +19,8 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        Matrix times vector application for which the equation 
          *          \f[ M x = b \f]
          *        is sovled for x.
+         * \param Mprec
+         *        Preconditioner matrix
          * \param eps
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
@@ -28,76 +31,29 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
-        CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+        CGpreconditioned(
+                std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
+                std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
+            innerCG_(Mprec, eps, maxIter),
             errSq_(eps*eps),
             maxIter_(maxIter),
             x_(),
             t_(),
             r_(),
-            p_()
-        {}
-
-        //! Constructor
-        /*! 
-         * \param M 
-         *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
-         *        a fermion matrix for which the equation 
-         *          \f[ M x = b \f]
-         *        is sovled for x.
-         * \param eps
-         *        Error at which the CG is stopped as 
-         *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
-         * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
-         *        error is raised.
-         * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
-         *                   This template defines the type of Fermion Matrix, as any fermion 
-         *                   matrix derived from NS::FermionMatrix::FermionMatrix requires two
-         *                   template arguments (Type,Lattice) we have to give a template as template argument.
-         *                   Hereby the usage is: FermionMatrix<Type,LatticeType>
-         *                   defining the final type used throughout the classes.
-         * \param `LatticeType`(Template)
-         *                   This defines the LatticeType used for the FermionMatrix template template argument.
-         *                   It is checked that it derives from NSL::Lattice::SpatialLattice as to
-         *                   ensure that the required interface is given.
-         *
-         * This default case uses the application of the fermion matrix
-         * ```
-         *      M = NSL::FermionMatrix::FermionMatrixImpl.M
-         * ```
-         *
-         * This Solver implementation uses the conjugate gradient (CG) algorithm.
-         *
-         * */
-        template<
-            template<typename TypeHelper, typename LatticeHelper> class FermionMatrix,
-            NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType
-        >
-            // Check that the given FermionMatrix<Type,LatticeType> is
-            // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
-            // to ensure that the required interface is given.
-            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
-            NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
-            errSq_(eps*eps),
-            maxIter_(maxIter),
-            x_(),
-            t_(),
-            r_(),
+            z_(),
             p_()
         {}
 
         //! Constructor
         /*! 
          * \param M
-         *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
-         *        a fermion matrix for which the equation 
+         *        Matrix times vector application for which the equation 
          *          \f[ M x = b \f]
          *        is sovled for x.
+         * \param Mprec
+         *        Preconditioner matrix
          * \param function_ptr
          *        this specifies which application of the 
          *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
@@ -113,21 +69,6 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        In case the CG doesn't converge this is a fall back to 
          *        exit. If the iteration count exeeds this number a runtime
          *        error is raised.
-         * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
-         *                   This template defines the type of Fermion Matrix, as any fermion 
-         *                   matrix derived from NS::FermionMatrix::FermionMatrix requires two
-         *                   template arguments (Type,Lattice) we have to give a template as template argument.
-         *                   Hereby the usage is: FermionMatrix<Type,LatticeType>
-         *                   defining the final type used throughout the classes.
-         * \param `LatticeType`(Template)
-         *                   This defines the LatticeType used for the FermionMatrix template template argument.
-         *                   It is checked that it derives from NSL::Lattice::SpatialLattice as to
-         *                   ensure that the required interface is given.
-         *
-         * This default case uses the application of ther fermion matrix
-         * ```
-         *      M = *function_ptr 
-         * ```
          *
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
@@ -139,15 +80,118 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M, 
-               NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+        CGpreconditioned(
+                FermionMatrix<Type,LatticeType> & M,
+                FermionMatrix<Type,LatticeType> & Mprec,
+                NSL::FermionMatrix::MatrixCombination matrixCombination,
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
+            innerCG_(Mprec, matrixCombination, eps, maxIter),
             errSq_(eps*eps),
             maxIter_(maxIter),
             x_(),
             t_(),
             r_(),
+            z_(),
+            p_()
+        {}
+
+        //! Constructor
+        /*! 
+         * \param M
+         *        Matrix times vector application for which the equation 
+         *          \f[ M x = b \f]
+         *        is sovled for x.
+         * \param Mprec
+         *        Preconditioner matrix
+         * \param function_ptr
+         *        this specifies which application of the 
+         *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
+         *        solved. You can use explesstions like
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::Mdagger 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MMdagger 
+         * \param eps
+         *        Error at which the CG is stopped as 
+         *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
+         * \param maxIter
+         *        In case the CG doesn't converge this is a fall back to 
+         *        exit. If the iteration count exeeds this number a runtime
+         *        error is raised.
+         *
+         * This Solver implementation uses the conjugate gradient (CG) algorithm.
+         * */
+        template<
+            template<typename TypeHelper, typename LatticeHelper> class FermionMatrix,
+            NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType
+        >
+            // Check that the given FermionMatrix<Type,LatticeType> is
+            // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
+            // to ensure that the required interface is given.
+            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
+        CGpreconditioned(
+                FermionMatrix<Type,LatticeType> & M,
+                std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
+                NSL::FermionMatrix::MatrixCombination matrixCombination,
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+            NSL::LinAlg::Solver<Type>(M,matrixCombination),
+            innerCG_(Mprec, eps, maxIter),
+            errSq_(eps*eps),
+            maxIter_(maxIter),
+            x_(),
+            t_(),
+            r_(),
+            z_(),
+            p_()
+        {}
+
+        //! Constructor
+        /*! 
+         * \param M
+         *        Matrix times vector application for which the equation 
+         *          \f[ M x = b \f]
+         *        is sovled for x.
+         * \param Mprec
+         *        Preconditioner matrix
+         * \param function_ptr
+         *        this specifies which application of the 
+         *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
+         *        solved. You can use explesstions like
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::Mdagger 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MMdagger 
+         * \param eps
+         *        Error at which the CG is stopped as 
+         *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
+         * \param maxIter
+         *        In case the CG doesn't converge this is a fall back to 
+         *        exit. If the iteration count exeeds this number a runtime
+         *        error is raised.
+         *
+         * This Solver implementation uses the conjugate gradient (CG) algorithm.
+         * */
+        template<
+            template<typename TypeHelper, typename LatticeHelper> class FermionMatrix,
+            NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType
+        >
+            // Check that the given FermionMatrix<Type,LatticeType> is
+            // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
+            // to ensure that the required interface is given.
+            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
+        CGpreconditioned(
+                FermionMatrix<Type,LatticeType> & M,
+                std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> Mprec,
+                const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+            NSL::LinAlg::Solver<Type>(M),
+            innerCG_(Mprec, eps, maxIter),
+            errSq_(eps*eps),
+            maxIter_(maxIter),
+            x_(),
+            t_(),
+            r_(),
+            z_(),
             p_()
         {}
 
@@ -198,6 +242,8 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<Type> t_;
         // residual vector
         NSL::Tensor<Type> r_;
+        // prec residual vector
+        NSL::Tensor<Type> z_;
         // gradient vector
         NSL::Tensor<Type> p_;
 
@@ -215,9 +261,11 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * \f]
          * for the stored fermion matrix M.
          * */
-        NSL::Tensor<Type> solve_(const NSL::Tensor<Type> & b );
+        NSL::Tensor<Type> solve_(const NSL::Tensor<Type> & b);
+        
+        NSL::LinAlg::CG<Type> innerCG_;
 }; // class CG
         
 } //namespace NSL::LinAlg
 
-#endif // NSL_CG_HPP
+#endif // NSL_CG_PREC_HPP
