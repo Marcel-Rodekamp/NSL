@@ -58,7 +58,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        hoppingExp_d_   = this->Lat.exp_hopping_matrix(sgn_*delta_);
+        hoppingExp_cd_  = this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_));
+        hoppingExp_md_  = this->Lat.exp_hopping_matrix((-1)*sgn_*delta_);
+        hoppingExp_2rd_ = this->Lat.exp_hopping_matrix(sgn_*(delta_ + NSL::LinAlg::conj(delta_)));
+    }
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
@@ -73,7 +78,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        hoppingExp_d_   = this->Lat.exp_hopping_matrix(sgn_*delta_);
+        hoppingExp_cd_  = this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_));
+        hoppingExp_md_  = this->Lat.exp_hopping_matrix((-1)*sgn_*delta_);
+        hoppingExp_2rd_ = this->Lat.exp_hopping_matrix(sgn_*(delta_ + NSL::LinAlg::conj(delta_)));
+    }
 
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
@@ -121,6 +131,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         // calculate exp(+/- i phi)
         this->phiExp_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
+        );
+        this->phiExpCon_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * NSL::LinAlg::conj(phi) + sgn_*NSL::LinAlg::conj(mu_)
         );
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
         this->phiExpInv_ = NSL::LinAlg::exp(
@@ -203,10 +216,17 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     // Sign of exp( +/- kappa), is assigned in populate
     int sgn_;
 
+    NSL::Tensor<Type> hoppingExp_d_;
+    NSL::Tensor<Type> hoppingExp_cd_;
+    NSL::Tensor<Type> hoppingExp_md_;
+    NSL::Tensor<Type> hoppingExp_2rd_;
+
     //! The configuration phi (N_t x N_x)
     NSL::Tensor<Type> phi_;
     //! Exponential of phi
     NSL::Tensor<Type> phiExp_;
+    //! Exponential conjugate of phi
+    NSL::Tensor<Type> phiExpCon_;
     //! Inverse Exponential of phi
     NSL::Tensor<Type> phiExpInv_;
 
