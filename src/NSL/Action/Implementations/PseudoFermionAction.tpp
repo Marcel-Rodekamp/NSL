@@ -73,6 +73,8 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
 
         NSL::Tensor<Type> chi_;
         NSL::Tensor<Type> pseudoFermion_;
+        NSL::Tensor<Type> pseudoFermionInv_;
+        bool useCache = false;
 };
 
 template<
@@ -88,10 +90,14 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     NSL::LinAlg::CG<Type> cg_(FM_, NSL::FermionMatrix::MMdagger);
 
     // compute MMdagger * pseudoFermion
-    NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
-    
+    if (useCache){
+        pseudoFermionInv_ = cg_(pseudoFermion_, pseudoFermionInv_);
+    } else {
+        pseudoFermionInv_ = cg_(pseudoFermion_);
+        useCache = true;
+    }
     // The pseudo fermion action is then given by the inner product
-    return NSL::LinAlg::inner_product(pseudoFermion_,MMdaggerInv);
+    return NSL::LinAlg::inner_product(pseudoFermion_,pseudoFermionInv_);
 }
 	
 template<
@@ -117,17 +123,23 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
     // calculate (MM^+)^{-1} * pseudoFermion
     NSL::LinAlg::CG<Type> cg_(FM_, NSL::FermionMatrix::MMdagger);
 
-    NSL::Tensor<Type> MMdaggerInv = cg_(pseudoFermion_);
+    if (useCache){
+        pseudoFermionInv_ = cg_(pseudoFermion_, pseudoFermionInv_);
+    } else {
+        pseudoFermionInv_ = cg_(pseudoFermion_);
+        useCache = true;
+    }
 
     // calculate the derivatives of the fermion matrix
     return NSL::Configuration<Type> {{ this->configKey_,
         -2.*FM_.dMdPhi(
-            /*left*/NSL::LinAlg::conj(MMdaggerInv),/*right*/FM_.Mdagger(MMdaggerInv)
+            /*left*/NSL::LinAlg::conj(pseudoFermionInv_),/*right*/FM_.Mdagger(pseudoFermionInv_)
         ).real()
         // -FM_.dMdaggerdPhi(
         //     /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
         // )
     }};
+
 }
 
 

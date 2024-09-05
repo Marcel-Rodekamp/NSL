@@ -1,12 +1,12 @@
 Leapfrog:
-  trajectory length: .1
-  Nmd: 10
+  trajectory length: 1.
+  Nmd: 12
 HMC:
   save frequency: 4
   Ntherm: 100
-  Nconf: 1000
+  Nconf: 10000
 fileIO:
-  h5file: "example_four_sites.h5"
+  h5file: "example_four_sites_p.h5"
 system:
   name: "1x2 Honeycomb"
   Nt: 32
