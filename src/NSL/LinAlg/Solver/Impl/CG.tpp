@@ -41,7 +41,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
-        NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),0);
+        // NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),0);
         return x_;
     }
 
@@ -74,7 +74,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
-            NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),count);
+            // NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),count);
             return x_;
         }
 

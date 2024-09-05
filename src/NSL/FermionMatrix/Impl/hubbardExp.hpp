@@ -164,24 +164,28 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \returns M acting on psi, M.psi.
     **/
     NSL::Tensor<Type> M(const NSL::Tensor<Type> & psi) override;
+    NSL::Tensor<Type> M_new(const NSL::Tensor<Type> & psi);
 
     /*!
     *  \param psi a vector with the dimensions N_t x N_x.
     *  \returns Mdagger acting on psi, Mdagger.psi.
     **/
     NSL::Tensor<Type> Mdagger(const NSL::Tensor<Type> & psi) override;
+    NSL::Tensor<Type> Mdagger_new(const NSL::Tensor<Type> & psi);
 
     /*!
     *  \param psi a vector with the dimensions N_t x N_x.
     *  \returns MMdagger acting on psi, MMdagger.psi.
     **/
     NSL::Tensor<Type> MMdagger(const NSL::Tensor<Type> & psi) override;
+    NSL::Tensor<Type> MMdagger_new(const NSL::Tensor<Type> & psi);
 
     /*!
     *  \param psi a vector with the dimensions N_t x N_x.
     *  \returns MdaggerM acting on psi, MdaggerM.psi.
     **/
     NSL::Tensor<Type> MdaggerM(const NSL::Tensor<Type> & psi) override;
+    NSL::Tensor<Type> MdaggerM_new(const NSL::Tensor<Type> & psi);
 
     /*!
     *  \returns log of determinant of M.
@@ -194,8 +198,10 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> gradLogDetM() override;
 
     NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+    NSL::Tensor<Type> dMdPhi_new(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
 
     NSL::Tensor<Type> dMdaggerdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+    NSL::Tensor<Type> dMdaggerdPhi_new(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
 
     //! Query the current species of the fermion matrix. To change the species please use populate(phi, species).
     NSL::Hubbard::Species species() {

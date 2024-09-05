@@ -46,6 +46,17 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M(const NSL:
 
     return psi - Fpsi;
 }
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M_new(const NSL::Tensor<Type> & psi){
+    NSL::Tensor<Type> Fpsi = NSL::LinAlg::mat_mul(
+        psi*this->phiExp_,
+        hoppingExp_d_
+    );
+
+    Fpsi.shift(/*shift*/1,/*dim*/-2,/*boundary*/Type(-1));
+
+    return psi - Fpsi;
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -75,9 +86,18 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger(cons
     BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
 
     return psi - ( this->phiExpCon_ * BexpKpsi);
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::Mdagger_new(const NSL::Tensor<Type> & psi){
+    NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_mul(
+        psi,
+        hoppingExp_cd_
+    );
+
     BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
 
-    return psi - ( NSL::LinAlg::conj(this->phiExp_) * BexpKpsi);
+    return psi - ( this->phiExpCon_ * BexpKpsi);
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -102,7 +122,34 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger(con
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MMdagger_new(const NSL::Tensor<Type> & psi){
+    
+    return this->M_new(this->Mdagger_new(psi));
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(const NSL::Tensor<Type> & psi){
+    /** Let's evaluate MM† using the index representations above.
+      *     (M†M)_{tx,iy}   = (M†)_{tx,uz} M_{uz,iy}
+      *                     = (δ_{tu} δ_{xz} - B_u [exp(δ^* K)]_{xz} exp(-iφ_{tx}^*) δ_{t+1,u})
+      *                       (δ_{ui} δ_{zy} - B_u δ_{u,i+1} [exp(δK)]_{zy} exp(+iφ_{iy}) )
+      * Note that the first term in each paren is just the identity matrix.
+      * So, if we expand the parentheses we can write 
+      *     (MM†)_{tx,iy}   = M_{tx,iy} + M†_{tx,iy) - δ_{ti} δ_{xy}
+      *                     + B_u^2 δ_{t+1,u} δ_{u,i+1} exp(-iφ_{tx}^*) [exp(δ^* Κ)]_{xz} [exp(δ K)]_{zy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t+1,i+1} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t,i} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + exp(-iφ_{ix}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *
+      **/
+    return this->M(psi) + this->Mdagger(psi) - psi + NSL::LinAlg::conj(this->phiExp_) * NSL::LinAlg::mat_mul(
+        this->Lat.exp_hopping_matrix(sgn_*(NSL::LinAlg::conj(delta_)+delta_)),
+        (this->phiExp_ * psi ).transpose(-1,-2)
+    ).transpose(-1,-2);
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM_new(const NSL::Tensor<Type> & psi){
     /** Let's evaluate MM† using the index representations above.
       *     (M†M)_{tx,iy}   = (M†)_{tx,uz} M_{uz,iy}
       *                     = (δ_{tu} δ_{xz} - B_u [exp(δ^* K)]_{xz} exp(-iφ_{tx}^*) δ_{t+1,u})
@@ -222,7 +269,34 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi(const
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdPhi_new(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+    NSL::Tensor<Type> sum = NSL::LinAlg::mat_mul(
+        left,      // 1.* is a hack to make sure it is a copy
+        hoppingExp_d_
+    );
+    
+    sum.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
+    sum *= this->phiExp_ * right;
+    
+    return -NSL::complex<NSL::RealTypeOf<Type>>(0,1) * sum;
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdaggerdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
+NSL::Tensor<Type> PsiB = right;
+    NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
+        this->Lat.exp_hopping_matrix(sgn_*delta_),
+        (1.*PsiB).transpose(-1,-2)      // 1.* is a hack to make sure it is a copy
+    ).transpose(-1,-2);
+
+    sum.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
+    sum *= this->phiExpInv_ * left;
+    
+    return NSL::complex<NSL::RealTypeOf<Type>>(0,1) * sum;
+}
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::dMdaggerdPhi_new(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right){
 NSL::Tensor<Type> PsiB = right;
     NSL::Tensor<Type> sum = NSL::LinAlg::mat_vec(
         this->Lat.exp_hopping_matrix(sgn_*delta_),

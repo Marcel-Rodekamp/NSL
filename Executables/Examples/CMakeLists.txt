@@ -19,6 +19,9 @@ target_link_libraries(example_action NSL)
 add_executable(example_MCMC example_MCMC.cpp)
 target_link_libraries(example_MCMC NSL)
 
+add_executable(bench_fermion_matrix bench_fermion_matrix.cpp)
+target_link_libraries(bench_fermion_matrix NSL)
+
 #add_executable(example_GPU_Tensor example_GPU_Tensor.cpp)
 #target_link_libraries(example_GPU_Tensor NSL)
 
