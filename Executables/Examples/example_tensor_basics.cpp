@@ -193,7 +193,19 @@ int main(){
                  
     std::cout << std::endl << "=================================" << std::endl << std::endl;
 
-    // 2. Elementwise operations like exponentiation
+    // 2. Tensor arithmetic like (elementwise) multiplication
+    NSL::Tensor<double> mat3(4,4); mat3.rand();
+    auto matProd = mat(0, NSL::Slice()) * mat3; // creates a new tensor with new memory
+
+    std::cout << "Multiplying another random matrix to `mat` results in: " << std::endl
+              << mat(0, NSL::Slice())
+              << mat3
+              << matProd
+              << std::endl;
+                 
+    std::cout << std::endl << "=================================" << std::endl << std::endl;
+
+    // 3. Elementwise operations like exponentiation
     auto matExp = NSL::LinAlg::exp(mat); // creates a new tensor with new memory
     mat.exp(); // uses the same memory space as mat
     

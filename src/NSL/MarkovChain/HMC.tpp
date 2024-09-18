@@ -84,7 +84,16 @@ class HMC{
             if (nstart > 0){
                 // this reader looks for the most recent markov state and reads it into the state
                 MC[nstart] = state;
-                h5_.read(MC[nstart], baseNode);
+                try {
+                    h5_.read(MC[nstart], baseNode);
+                }
+                catch(...) {
+                // in case the last markov state is corrupted try again
+                    h5_.deleteData(fmt::format("{}/{}",baseNode,nstart));
+                    nstart--;
+                    MC[nstart] = state;
+                    h5_.read(MC[nstart], baseNode, nstart);
+                }
 
             } else{
                 MC[nstart] = state;
@@ -93,6 +102,7 @@ class HMC{
             }
 
             double runningAcceptance = 0;
+            NSL::size_t backWindow = 100;
 
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
@@ -109,10 +119,13 @@ class HMC{
 		        h5_.write(MC[n],fmt::format("{}/{}",baseNode,n));
 
                 runningAcceptance += static_cast<double>(MC[n].accepted);
-
+                if ((n-backWindow) > 0) {
+                    runningAcceptance -= static_cast<double>(MC[n-backWindow].accepted);
+                }
+                
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
-                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance*100./(n-nstart));
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance/* *100. / backWindow (n-nstart) */ );
                     NSL::Logger::elapsed_profile(mc_time);
                 }
             }

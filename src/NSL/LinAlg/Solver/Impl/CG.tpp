@@ -40,7 +40,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
-        NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,0);
+        NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),0);
         return x_;
     }
 
@@ -73,7 +73,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
-            NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,count);
+            NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),count);
             return x_;
         }
 
@@ -92,7 +92,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
         NSL::Logger::debug("CG Iteration: {}/{} | α = {} | ε² = {} |  β = {}", count, maxIter_, NSL::to_string(alpha), rsqr_curr, beta);
     } // for(counter)
 
-    NSL::Logger::error("Error CG did not converge within {} iterations! |r|^2 = {}", maxIter_, rsqr_prev);
+    NSL::Logger::error("Error CG did not converge within {} iterations! |r| = {}", maxIter_, NSL::LinAlg::sqrt(rsqr_prev));
 
     // this should never be reached but put it just in case something goes wrong.
     return x_;

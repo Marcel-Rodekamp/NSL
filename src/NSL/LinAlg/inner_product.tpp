@@ -32,6 +32,11 @@ Type inner_product(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b ){
     return (NSL::LinAlg::conj(a)*b).sum();
 }
 
+template<NSL::Concept::isNumber Type>
+NSL::Tensor<Type> inner_product(const NSL::Tensor<Type> & a, const NSL::Tensor<Type> & b , const NSL::size_t & dim){
+    return (NSL::LinAlg::conj(a)*b).sum(dim);
+}
+
 //! Inner product of tensor a and b.
 /*! 
  * Computes the dot product for 1D tensors. For higher dimensions, sums the product of elements from input and other along their last dimension.
