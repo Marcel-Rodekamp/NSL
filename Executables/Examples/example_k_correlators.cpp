@@ -150,5 +150,5 @@ int main(int argc, char** argv){
     //
     // configurations from the data file specified under params["file"].
     // Then 
-    C2pt_sh.measureK();
+    // C2pt_sh.measureK();
 }
