@@ -41,6 +41,20 @@ int main(int argc, char* argv[]){
     params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
+    // The offset: tangent plane/NLO plane
+    if (yml["system"]["offset"]){
+        params["offset"]        = yml["system"]["offset"].as<double>();
+    } else {
+        // DEFAULT: offset = 0
+        params["offset"]        = 0.0;
+    }
+    // Chemical Potential
+    if (yml["system"]["mu"]){
+        params["mu"]            = yml["system"]["mu"].as<double>();
+    } else {
+        // DEFAULT: mu = 0
+        params["mu"]            = 0.0;
+    }
     
     for(auto [key, value]: params){
         // skip these keys as they are logged in init already
@@ -93,6 +107,7 @@ int main(int argc, char* argv[]){
     };
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     // compute pseudo fermions (if they don't exist this call does nothing)
     S.computePseudoFermion(config);
