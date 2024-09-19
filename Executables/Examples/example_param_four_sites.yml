@@ -1,6 +1,6 @@
 Leapfrog:
-  trajectory length: .1
-  Nmd: 10
+  trajectory length: 2.5
+  Nmd: 12
 HMC:
   save frequency: 4
   Ntherm: 100
