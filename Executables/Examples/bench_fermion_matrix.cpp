@@ -148,6 +148,30 @@ void compare_old_new(int L, int NT){
     // std::cout << "dMdPhi_new: \t" << dMdPhi_new_time << std::endl;
     std::cout << "dMdPhi_speedup: \t" << dMdPhi_time*100/dMdPhi_new_time << "%" << std::endl;
 
+    // test correctness of dMdaggerdPhi
+    result = FM.dMdaggerdPhi(psi,psi);
+    result_new = FM.dMdaggerdPhi_new(psi,psi);
+    std::cout << "dMdaggerdPhi vs dMdaggerdPhi_new err: " << ((result - result_new)*NSL::LinAlg::conj(result - result_new)).sum() << std::endl;
+
+    // measure speed of dMdaggerdPhi
+    begin = std::chrono::steady_clock::now();
+    for (int i = 0; i < 5000; i++){
+        FM.dMdaggerdPhi(psi,psi);
+    }
+    end = std::chrono::steady_clock::now();
+    auto dMdaggerdPhi_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    // std::cout << "dMdaggerdPhi: \t" << dMdaggerdPhi_time << std::endl;
+
+    // measure speed of dMdaggerdPhi_new
+    begin = std::chrono::steady_clock::now();
+    for (int i = 0; i < 5000; i++){
+        FM.dMdaggerdPhi_new(psi,psi);
+    }
+    end = std::chrono::steady_clock::now();
+    auto dMdaggerdPhi_new_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    // std::cout << "dMdaggerdPhi_new: \t" << dMdaggerdPhi_new_time << std::endl;
+    std::cout << "dMdaggerdPhi_speedup: \t" << dMdaggerdPhi_time*100/dMdaggerdPhi_new_time << "%" << std::endl;
+
 }
 
 int main(int argc, char* argv[]){
