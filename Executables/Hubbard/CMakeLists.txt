@@ -4,6 +4,9 @@ target_link_libraries(flowForTrain_keepLast NSL)
 add_executable(flowForTrain_keepProbable flowForTrain_keepProbable.cpp)
 target_link_libraries(flowForTrain_keepProbable NSL)
 
+add_executable(flowForTrain_stepwise flowForTrain_stepwise.cpp)
+target_link_libraries(flowForTrain_stepwise NSL)
+
 add_executable(HubbardHMC HMC.cpp)
 target_link_libraries(HubbardHMC NSL)
 
