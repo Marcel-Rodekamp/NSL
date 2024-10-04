@@ -14,7 +14,7 @@ system:
   nions: 4
   U: 2.
   mu: 0
-  offset: 0
+  offset: 0.
   hopping: [2.,1.,1.,2.]
   adjacency:
   - - 0
@@ -76,3 +76,11 @@ measurements:
       - - -0.24999999999999636
         - 0.4330127018922214
 
+RK4:
+  step size: 0.01           # The step size for the Runge-Kutta integration
+  min step size: 0.001      # The minimal allowed step size
+  max flow time: 1.0        # The maximum flow time
+  adaptive attenuation: 0.9 # The attenuation factor for adaptive step size
+  nSteps: 10                # Number of steps to save configurations
+Train Data:
+  Nconf: 1000               # Number of trajectories/configurations to generate
