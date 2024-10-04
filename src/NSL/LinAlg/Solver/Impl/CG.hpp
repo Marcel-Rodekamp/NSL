@@ -167,6 +167,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * for the stored fermion matrix M.
          * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
+        NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
 
     private:
 
