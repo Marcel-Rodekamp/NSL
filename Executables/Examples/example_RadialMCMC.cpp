@@ -33,10 +33,23 @@ int main(int argc, char* argv[]){
     params["Nx"]                = yml["system"]["nions"].as<NSL::size_t>();
     // The on-site interaction
     params["U"]                 = yml["system"]["U"].as<double>();
-    // The HMC save frequency
+    // The full algorithm's save frequency; i.e. frequency in combined update steps of Nradial radial updates and Nhmc HMC steps 
     params["save frequency"]    = yml["HMC"]["save frequency"].as<NSL::size_t>();
-    // The Radial HMC frequency
-    params["radial frequency"]  = yml["HMC"]["radial frequency"].as<NSL::size_t>();
+    // The number of Radial Updates per combined step
+    if (yml["HMC"]["Nradial"]){
+        params["Nradial"]  = yml["HMC"]["Nradial"].as<NSL::size_t>();
+    }
+    else {
+        params["Nradial"] = 0;
+    }
+    // The number of HMC steps per combined step
+    if (yml["HMC"]["Nhmc"]){
+        params["Nhmc"]  = yml["HMC"]["Nhmc"].as<NSL::size_t>();
+    }
+    else {
+        params["Nhmc"] = 1;
+    }
+    params["Nhmc"]  = yml["HMC"]["Nhmc"].as<NSL::size_t>();
     // The thermalization length
     params["Ntherm"]            = yml["HMC"]["Ntherm"].as<NSL::size_t>();
     // The number of configurations
@@ -67,15 +80,13 @@ int main(int argc, char* argv[]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();
     } else {
         // DEFAULT: radialScale = 1/Volume
-        params["radial scale"]    = 1./(params["Nt"].to<double>()*params["Nx"].to<double>()); // I think this is wrong or does this convert to double?
+        params["radial scale"]    = 1./(params["Nt"].to<double>()*params["Nx"].to<double>()); 
     }
 
-/*     if (yml["HMC"]["save radial steps"]){
-        params["save radial steps"]    = yml["HMC"]["save radial steps"].as<bool>();
-    } else {
-        // DEFAULT: radialScale = 1/Volume
-        params["save radial steps"]    = false;
-    } */
+    if (params["radial scale"]==0){
+        params["Nradial"] = 0;
+    }
+
 
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
@@ -178,11 +189,11 @@ int main(int argc, char* argv[]){
     NSL::MCMC::MarkovState<Type> start_state;
     if(not h5.exist(fmt::format("{}/markovChain",BASENODE))){
         NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
-        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>(), params["radial frequency"], params["radial scale"]);
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>(), params["Nradial"], params["Nhmc"], params["radial scale"]);
     } else {
         NSL::Logger::info("Appending to previous data.");
         // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
-            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1, params["radial frequency"], params["radial scale"]);
+            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1, params["Nradial"], params["Nhmc"], params["radial scale"]);
     }
 
     NSL::Logger::stop_profile(therm_time);
@@ -195,7 +206,7 @@ int main(int argc, char* argv[]){
     // Note: This also has a overload for providing a configuration only.
     auto gen_time =  NSL::Logger::start_profile("Generation");
     NSL::Logger::info("Generating {} steps, saving every {}...", params["Nconf"], params["save frequency"]);
-    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, params["Nconf"], params["radial frequency"], params["radial scale"], params["save frequency"], BASENODE+"/markovChain");
+    std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, params["Nconf"], params["Nradial"], params["Nhmc"], params["radial scale"], params["save frequency"], BASENODE+"/markovChain");
     NSL::Logger::stop_profile(gen_time);
 
     // Print some final statistics
