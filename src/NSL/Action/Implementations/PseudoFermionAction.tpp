@@ -1,6 +1,9 @@
 #ifndef NSL_PSEUDO_FERMION_ACTION_TPP
 #define NSL_PSEUDO_FERMION_ACTION_TPP
 
+#define USE_NVTX
+#include "profiling.hpp"
+
 namespace NSL::Action {
 
 template<NSL::Concept::isNumber Type,
@@ -117,21 +120,28 @@ template<
 >
 Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::grad(const Tensor<Type>& phi){
     
+    PUSH_RANGE("populating fermion matrix", 0);
     // Compute pseudo fermion (this populates the fermion matrix)
     FM_.populate(phi);
+    POP_RANGE;
 
+    PUSH_RANGE("setting up CG", 1);
     // calculate (MM^+)^{-1} * pseudoFermion
     NSL::LinAlg::CG<Type> cg_(FM_, NSL::FermionMatrix::MMdagger);
+    POP_RANGE;
 
+    PUSH_RANGE("computing inverse", 2);
     if (useCache){
         pseudoFermionInv_ = cg_(pseudoFermion_, pseudoFermionInv_);
     } else {
         pseudoFermionInv_ = cg_(pseudoFermion_);
         useCache = true;
     }
+    POP_RANGE;
 
     // calculate the derivatives of the fermion matrix
-    return NSL::Configuration<Type> {{ this->configKey_,
+    PUSH_RANGE("computing derivative", 3);
+    NSL::Configuration<Type> out = NSL::Configuration<Type> {{ this->configKey_,
         -2.*FM_.dMdPhi(
             /*left*/NSL::LinAlg::conj(pseudoFermionInv_),/*right*/FM_.Mdagger(pseudoFermionInv_)
         ).real()
@@ -139,10 +149,13 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
         //     /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
         // )
     }};
+    POP_RANGE;
+    return out;
 
 }
 
 
 } // namespace NSL::Action
 
+#undef USE_NVTX
 #endif // NSL_PSEUDO_FERMION_ACTION_TPP
