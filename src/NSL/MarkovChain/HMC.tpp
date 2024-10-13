@@ -283,4 +283,5 @@ class HMC{
 
 } // namespace NSL::MCMC
 
+#undef USE_NVTX
 #endif //NSL_HMC_TPP
