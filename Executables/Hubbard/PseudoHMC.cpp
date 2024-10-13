@@ -1,12 +1,17 @@
 #include "NSL.hpp"
 
+#define USE_NVTX
+#include "profiling.hpp"
+
 template<NSL::Concept::isNumber Type, typename LatticeType>
 void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE);
 
 int main(int argc, char* argv[]){
+    PUSH_RANGE("main", 0);
     typedef NSL::complex<double> Type;
     NSL::complex<double> I{0,1};
 
+    PUSH_RANGE("init", 1);
     // Initialize NSL
     NSL::Parameter params = NSL::init(argc, argv, "Hubbard Model HMC with Pseudofermions");
     // an example parameter file is can be found in example_param.yml
@@ -76,6 +81,7 @@ int main(int argc, char* argv[]){
     // params["h5Filename"]/BASENODE/
     std::string BASENODE(fmt::format("{}",params["name"]));
 
+    PUSH_RANGE("lattice", 2);
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
     if (lattice.sites() != params["Nx"].template to<NSL::size_t>()){
@@ -84,6 +90,7 @@ int main(int argc, char* argv[]){
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
+    POP_RANGE; // lattice
 
     // write the meta data to the h5file
     writeMeta<Type,decltype(lattice)>(lattice, params, h5, BASENODE);
@@ -95,12 +102,15 @@ int main(int argc, char* argv[]){
         params["name"]
     );
 
+    PUSH_RANGE("action", 3);
     NSL::Action::Action S = NSL::Action::HubbardGaugeAction<Type>(params)
                             + NSL::Action::PseudoFermionAction<
                             Type,decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
                             >(lattice, params)
     ;
+    POP_RANGE; // action
 
+    PUSH_RANGE("config", 4);
     // Initialize a configuration as starting point for the MC change
     NSL::Configuration<Type> config{
         {"phi", 
@@ -115,11 +125,13 @@ int main(int argc, char* argv[]){
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
+    POP_RANGE; // config
     // compute pseudo fermions (if they don't exist this call does nothing)
     S.computePseudoFermion(config);
 
     NSL::Logger::info("Setting up: Leapfrog integrator");
 
+    PUSH_RANGE("hmc", 5);
     // Initialize the integrator defining the equation of motion via the 
     // real part of the force (real part of the action)
     NSL::Integrator::LeapfrogRealForce leapfrog( 
@@ -130,21 +142,29 @@ int main(int argc, char* argv[]){
 
     NSL::Logger::info("Setting up: HMC");
     NSL::MCMC::HMC hmc(leapfrog, S, h5);
-    
+    POP_RANGE; // hmc
+    POP_RANGE; // init
+
+    PUSH_RANGE("thermalize", 2);
     NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
     NSL::MCMC::MarkovState<Type> start_state = hmc.generate<
         NSL::MCMC::Chain::LastState
     >(config, params["Ntherm"].to<NSL::size_t>());
+    POP_RANGE; // thermalize
  
+    PUSH_RANGE("generate", 3);
     NSL::Logger::info("Generating {} steps, saving every {}...", params["Nconf"].to<NSL::size_t>(), params["save frequency"].to<NSL::size_t>());
     std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<
         NSL::MCMC::Chain::AllStates
     >(start_state, params["Nconf"], params["save frequency"], BASENODE+"/markovChain");
 
     NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
+    POP_RANGE; // generate
 
+    PUSH_RANGE("write", 4);
     h5.write(NSL::MCMC::getAcceptanceRate(markovChain), fmt::format("{}/Meta/acceptenceRate",BASENODE));
-    
+    POP_RANGE; // write
+    POP_RANGE;  // main
     return EXIT_SUCCESS;
 }
 
@@ -222,3 +242,4 @@ void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::st
     dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
     dataset.write(action);
 }
+#undef USE_NVTX
