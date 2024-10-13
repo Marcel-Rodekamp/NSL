@@ -5,6 +5,9 @@
 #include "Configuration/Configuration.tpp"
 #include "typePromotion.hpp"
 
+#define USE_NVTX
+#include "profiling.hpp"
+
 namespace NSL::Integrator {
 
 
@@ -42,7 +45,9 @@ class LeapfrogRealForce: Integrator<ActionTermTypes...> {
         NSL::Configuration<TensorType> p (p_,true);
 
         // first half step
+    PUSH_RANGE("Force", 3);
 	auto tmp = this->action_.force(q);
+    POP_RANGE;
 	for(auto & [key,field]: tmp){
 		 field.imag() = 0; // ??
 	}
@@ -53,7 +58,9 @@ class LeapfrogRealForce: Integrator<ActionTermTypes...> {
         q += static_cast<TensorType>(stepSize_) * p;
 
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
-	    tmp = this->action_.force(q);
+	    PUSH_RANGE("Force", 3);
+        tmp = this->action_.force(q);
+        POP_RANGE;
 	    for(auto & [key,field]: tmp){
 		 field.imag() = 0; // ??
 	    }
@@ -63,7 +70,9 @@ class LeapfrogRealForce: Integrator<ActionTermTypes...> {
         }
 
         // final half step
+    PUSH_RANGE("Force", 3);
 	tmp = this->action_.force(q);
+    POP_RANGE;
 	for(auto & [key,field]: tmp){
 		 field.imag() = 0; // ??
 	}
@@ -80,4 +89,6 @@ class LeapfrogRealForce: Integrator<ActionTermTypes...> {
 };
 
 }
+
+#undef USE_NVTX
 #endif //NSL_LEAPFROG_REAL_FORCE_TPP
