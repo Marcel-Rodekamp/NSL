@@ -168,9 +168,9 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
-
+        void CG_iteration(NSL::Tensor<Type> & alpha, NSL::Tensor<typename NSL::RT_extractor<Type>::type> & rsqr_curr, NSL::Tensor<typename NSL::RT_extractor<Type>::type> & rsqr_prev, NSL::Tensor<typename NSL::RT_extractor<Type>::type> & beta);
+        void CG_iteration(){};
     private:
-
         // precision at which the algorithm is stopped
         const typename NSL::RT_extractor<Type>::type errSq_;
         // maximum of iterations as fall back in case we don't converge

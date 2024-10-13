@@ -16,6 +16,11 @@ class TensorReductions:
     }
 
     //! Reduction: +
+    NSL::Tensor<Type> tensor_sum(){
+        return this->data_.sum();
+    }
+
+    //! Reduction: +
     Type sum(){
         return this->data_.sum().template item<Type>();
     }
