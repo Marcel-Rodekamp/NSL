@@ -3,6 +3,7 @@
 
 #define USE_NVTX
 #include "profiling.hpp"
+// #include <ATen/cuda/CUDAGeneratorImpl.h>
 
 namespace NSL::Action {
 
@@ -17,15 +18,23 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             BaseAction<Type,Type>("phi"),
             FM_(lattice, params),
             chi_(),
-            pseudoFermion_()
-        {}
+            pseudoFermion_(),
+            cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
+        {
+            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), 128, lattice.sites());
+            cg_->optimize_for_GPU(z);
+        }
 
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
             BaseAction<Type,Type>(fieldName),
             FM_(lattice, params),
             chi_(),
-            pseudoFermion_()
-        {}
+            pseudoFermion_(),
+            cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
+        {
+            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), 128, lattice.sites());
+            cg_->optimize_for_GPU(z);
+        }
 
     // We import the eval/grad/force functions from the BaseAction such 
     // that we do not need to reimplement the Configuration based versions
@@ -72,7 +81,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
 
     protected:
         FermionMatrixType FM_;
-        //NSL::LinAlg::CG<Type> cg_;
+        std::shared_ptr<NSL::LinAlg::CG<Type>> cg_;
 
         NSL::Tensor<Type> chi_;
         NSL::Tensor<Type> pseudoFermion_;
@@ -90,13 +99,11 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     // and populates the fermion matrix
     FM_.populate(phi);
 
-    NSL::LinAlg::CG<Type> cg_(FM_, NSL::FermionMatrix::MMdagger);
-
     // compute MMdagger * pseudoFermion
     if (useCache){
-        pseudoFermionInv_ = cg_(pseudoFermion_, pseudoFermionInv_);
+        pseudoFermionInv_ = (*cg_)(pseudoFermion_, pseudoFermionInv_);
     } else {
-        pseudoFermionInv_ = cg_(pseudoFermion_);
+        pseudoFermionInv_ = (*cg_)(pseudoFermion_);
         useCache = true;
     }
     // The pseudo fermion action is then given by the inner product
@@ -125,16 +132,13 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
     FM_.populate(phi);
     POP_RANGE;
 
-    PUSH_RANGE("setting up CG", 1);
     // calculate (MM^+)^{-1} * pseudoFermion
-    NSL::LinAlg::CG<Type> cg_(FM_, NSL::FermionMatrix::MMdagger);
-    POP_RANGE;
 
     PUSH_RANGE("computing inverse", 2);
     if (useCache){
-        pseudoFermionInv_ = cg_(pseudoFermion_, pseudoFermionInv_);
+        pseudoFermionInv_ = (*cg_)(pseudoFermion_, pseudoFermionInv_);
     } else {
-        pseudoFermionInv_ = cg_(pseudoFermion_);
+        pseudoFermionInv_ = (*cg_)(pseudoFermion_);
         useCache = true;
     }
     POP_RANGE;

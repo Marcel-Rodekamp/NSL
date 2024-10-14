@@ -45,7 +45,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0, const bool init_populate = true ):
         FermionMatrix<Type,LatticeType>(lat),
         species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
@@ -58,9 +58,14 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        if (init_populate) {
+            phi_ = 0;
+            this->populate(phi_);
+        }
+    }
 
-    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0, const bool init_populate = true ):
         FermionMatrix<Type,LatticeType>(lat),
         species_(species),
         delta_( beta/Nt ),
@@ -73,7 +78,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        if (init_populate) {
+            phi_ = 0;
+            this->populate(phi_);
+        }
+    }
 
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
