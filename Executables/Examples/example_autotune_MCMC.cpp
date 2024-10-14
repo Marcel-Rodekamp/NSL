@@ -42,7 +42,8 @@ int main(int argc, char* argv[]){
     // The trajectory length
     params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    // params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    params["Nmd"]               = (NSL::size_t) 200;
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
     // The offset: tangent plane/NLO plane
@@ -71,6 +72,12 @@ int main(int argc, char* argv[]){
         NSL::Logger::info( "{}: {}", key, value );
     }
 
+    NSL::size_t _thermalFlag = 1;
+    params["thermalFlag"] = _thermalFlag;
+
+    NSL::size_t _tuneFlag = 0;
+    params["tuneFlag"] = _tuneFlag;
+
     // create an H5 object to store data
     NSL::H5IO h5(
         params["h5file"].to<std::string>(), 
@@ -92,6 +99,15 @@ int main(int argc, char* argv[]){
 
     // write the meta data to the h5file
     writeMeta<Type,decltype(lattice)>(lattice, params, h5, BASENODE);
+
+    if (h5.exist(fmt::format("{}/Meta/params/nMD",BASENODE))) {
+        NSL::size_t temp;
+        h5.read(temp, fmt::format("{}/Meta/params/nMD",BASENODE));
+        params["Nmd"] = temp;
+    }
+    h5.read(_thermalFlag, fmt::format("{}/Meta/params/thermalFlag",BASENODE));
+    h5.read(_tuneFlag, fmt::format("{}/Meta/params/tuneFlag",BASENODE));
+
 
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.", 
         params["beta"],
@@ -156,14 +172,32 @@ int main(int argc, char* argv[]){
 
     auto therm_time =  NSL::Logger::start_profile("Thermalization");
     NSL::MCMC::MarkovState<Type> start_state;
-    if(not h5.exist(fmt::format("{}/markovChain",BASENODE))){
-        NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
-        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, params["Ntherm"].to<NSL::size_t>());
-    } else {
-        NSL::Logger::info("Appending to previous data.");
-        // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
-            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
+    if (_tuneFlag == 0) {
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
+        NSL::size_t n = 2;
+        if (h5.exist(fmt::format("{}/thermal",BASENODE))) {
+            auto [minConfigID, maxConfigID] = h5.getMinMaxConfigs(fmt::format("{}/thermal",BASENODE));
+            n = maxConfigID + 2;
+            // h5.read(start_state, BASENODE+"/thermal"); // We might not need this line because it is read again in generate()
+        }
+
+        // We are thermalizing inbetween two stages of autotuning
+        if (_thermalFlag == 0) {
+            NSL::Logger::info("Thermalizing {} steps...", params["Ntherm"].to<NSL::size_t>());
+            h5.read(start_state, BASENODE+"/thermal");
+            start_state = hmc.generate<NSL::MCMC::Chain::LastState>(start_state, params["Ntherm"].to<NSL::size_t>());
+        }
+
+        std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, n, 1, BASENODE+"/thermal");
+
+        return EXIT_SUCCESS;
+
     }
+
+    NSL::Logger::info("Appending to previous data.");
+    // ToDo: This is required in order to have the Tensor in the state to be defined. If it is empty, an undefined tensor is queried for tensor options which ends in a runtime error. See issue #160
+    start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1);
+    h5.read(start_state, BASENODE+"/thermal");
 
     NSL::Logger::stop_profile(therm_time);
 
@@ -259,4 +293,18 @@ void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::st
     std::string action = "hubbardExp";
     dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
     dataset.write(action);
+
+    // _thermalFlag
+    dataset = h5file.createDataSet<NSL::size_t>(
+        BASENODE+"/Meta/params/thermalFlag",
+        HighFive::DataSpace::From(NSL::size_t(params["thermalFlag"]))
+    );
+    dataset.write(NSL::size_t(params["thermalFlag"]));
+
+    // _tuneFlag
+    dataset = h5file.createDataSet<NSL::size_t>(
+        BASENODE+"/Meta/params/tuneFlag",
+        HighFive::DataSpace::From(NSL::size_t(params["tuneFlag"]))
+    );
+    dataset.write(NSL::size_t(params["tuneFlag"]));
 }
