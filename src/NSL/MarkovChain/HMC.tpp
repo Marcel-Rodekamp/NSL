@@ -233,7 +233,7 @@ class HMC{
             return NSL::MCMC::MarkovState<Type>(
                 state.configuration,
                 state.actionValue,
-                state.acceptanceProbability,
+                acceptanceProb,
                 state.markovTime+1,
                 false
             );
