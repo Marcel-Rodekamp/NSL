@@ -21,7 +21,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             pseudoFermion_(),
             cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
         {
-            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), 128, lattice.sites());
+            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites());
             cg_->optimize_for_GPU(z);
         }
 
@@ -32,7 +32,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
             pseudoFermion_(),
             cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
         {
-            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), 128, lattice.sites());
+            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites());
             cg_->optimize_for_GPU(z);
         }
 
