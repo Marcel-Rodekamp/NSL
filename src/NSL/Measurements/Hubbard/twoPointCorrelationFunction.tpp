@@ -184,7 +184,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
     	// Define a wall source
-	srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,NSL::Slice(),NSL::Slice());
+	    srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,NSL::Slice(),NSL::Slice());
 
         // invert MM^dagger
         NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
@@ -203,21 +203,22 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
         corrK_ += invM; // I changed something here!!!!!
 
         srcVecK_ = Type(0);
-     } // tsrc
+    } // tsrc
 
-     corrK_ /= Type(NumberTimeSources);
-     int uDim = params_["wallSources"].shape(1);
+    corrK_ /= Type(NumberTimeSources);
+    int uDim = params_["wallSources"].shape(1);
 
-     for (int t = 0;t< Nt;t++){
-       for(int sigma1=0; sigma1<uDim; sigma1++){
-         for(int sigma2=0; sigma2<uDim; sigma2++){
-     	   corrKblock_(t,sigma1,sigma2) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,sigma1,NSL::Slice()),corrK_(sigma2,t,NSL::Slice()));
-	 }
-}
+    // for (int t = 0;t< Nt;t++){
+        for(int sigma1=0; sigma1<uDim; sigma1++){
+            NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(k,sigma1,NSL::Slice()).expand(Nt, 0);
+            for(int sigma2=0; sigma2<uDim; sigma2++){
+     	        corrKblock_(NSL::Slice(),sigma1,sigma2) = NSL::LinAlg::inner_product(wallSource, corrK_(sigma2,NSL::Slice(),NSL::Slice()), 1);
+	        }
+        }
 //	 corrKblock_(t,0,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,0,NSL::Slice()),corrK_(1,t,NSL::Slice()));
 //	 corrKblock_(t,1,0) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(0,t,NSL::Slice()));
 //	 corrKblock_(t,1,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(1,t,NSL::Slice()));
-     }
+    // }
 
      /*
      for (int t=0;t<Nt;t++) {
@@ -276,6 +277,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         minCfg, maxCfg, saveFreq
     );
 
+    bool trimFlag = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
@@ -289,8 +291,14 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
 
         if (skip_(this->params_["overwrite"],node)) {
             NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
-	        continue;
-	    } 
+	        trimFlag = true;
+            continue;
+	    }
+
+        if (trimFlag) {
+            this->h5_.deleteData(node);
+            trimFlag = false;
+        }
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
