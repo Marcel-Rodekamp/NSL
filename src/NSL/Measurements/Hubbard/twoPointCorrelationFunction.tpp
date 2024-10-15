@@ -33,10 +33,28 @@ class TwoPointCorrelator: public Measurement {
 		params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
+	    corrKblock_(
+                params["device"].to<NSL::Device>(),
+		params["Nt"].to<NSL::size_t>(),
+		params["wallSources"].shape(1).to<NSL::size_t>(),
+		params["wallSources"].shape(1).to<NSL::size_t>()
+            ),
+	    corrK_(
+                params["device"].to<NSL::Device>(),
+                params["wallSources"].shape(1).to<NSL::size_t>(),
+		params["Nt"].to<NSL::size_t>(),
+                params["Nx"].to<NSL::size_t>()
+            ),
             corr_(
                 params["device"].to<NSL::Device>(),
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>(),
+                params["Nx"].to<NSL::size_t>()
+            ),
+	    srcVecK_(
+                params["device"].to<NSL::Device>(),
+                params["wallSources"].shape(1).to<NSL::size_t>(),
+                params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
 	    srcVecK_(
@@ -78,6 +96,9 @@ class TwoPointCorrelator: public Measurement {
     void measureK();
     void measureK(NSL::size_t k, NSL::size_t NumberTimeSources);
 
+    void measureK();
+    void measureK(NSL::size_t k, NSL::size_t NumberTimeSources);
+
     protected:
     bool skip_(bool overwrite, std::string node){
         bool exists = this->h5_.exist(fmt::format("{}{}",std::string(basenode_),node));
@@ -100,7 +121,10 @@ class TwoPointCorrelator: public Measurement {
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
     NSL::Tensor<Type> corrKblock_;
+    NSL::Tensor<Type> corrK_;
+    NSL::Tensor<Type> corrKblock_;
     NSL::Tensor<Type> srcVec_;
+    NSL::Tensor<Type> srcVecK_;
     NSL::Tensor<Type> srcVecK_;
 
     NSL::Tensor<Type> phi_;
@@ -276,6 +300,91 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         minCfg, maxCfg, saveFreq
     );
 
+    bool trimFlag = false;
+    // Determine the number of time sources:
+    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
+        // this is a shortcut, we don't need to invert if we don't overwrite
+        // data
+
+        if (species_ == NSL::Hubbard::Particle){
+            node = fmt::format("/markovChain/{}/correlators/single/particle",cfgID);
+        } else {
+            node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
+        }
+
+        if (skip_(this->params_["overwrite"],node)) {
+            NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+	        trimFlag = true;
+            continue;
+	    }
+
+        if (trimFlag) {
+            this->h5_.deleteData(node);
+            trimFlag = false;
+        }
+
+        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
+
+        // read configuration 
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+
+        // compute the correlator. The result is stored in corr_
+        measure(this->params_["Number Time Sources"]);
+
+        // write the result
+        this->h5_.write(corr_,std::string(basenode_)+node);
+    } // for cfgID
+
+} // measure()
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
+    NSL::Logger::info("Start Measuring Hubbard::TwoPointCorrelator");
+
+    // This is the default basenode we used so far
+    // ToDo: this should go into the const
+
+    // write the non interacting correlator 
+    std::string node;
+    if (species_ == NSL::Hubbard::Particle){
+          node = "/NonInteracting/correlators/single/particle";
+    } else {
+          node = "/NonInteracting/correlators/single/hole";
+    }
+    // this is a shortcut, we don't need to calculate the non-interacting 
+    // correlators if we won't update the file
+
+    // measure the non-interacting theory
+    // U = 0 <=> phi = 0
+    phi_ = Type(0);
+
+    int uDim = params_["wallSources"].shape(0);
+
+    for (int k=0; k< uDim; k++ ){
+    	if(!skip_(this->params_["overwrite"], std::string(basenode_)+node+"/k"+std::to_string(k))) {
+       	    // this stores the result in corrKblock_
+            measureK(k,1);
+
+            // write the calculated correlator to file
+       	    h5_.write(corrKblock_,std::string(basenode_)+node+"/k"+std::to_string(k));
+	}
+    } 
+
+
+    // Interacting Correlators
+    // Initialize memory for the configurations
+    // get the range of configuration ids from the h5file
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
+    NSL::size_t saveFreq = this->params_["save frequency"];
+    
+    NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
+        minCfg, maxCfg, saveFreq
+    );
+
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
@@ -297,12 +406,16 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         // read configuration 
         this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
-        // compute the correlator. The result is stored in corr_
-        measure(this->params_["Number Time Sources"]);
+	for (int k=0; k< uDim; k++ ){
+    	  if(!skip_(this->params_["overwrite"], std::string(basenode_)+node+"/k"+std::to_string(k))) {
+       	    // compute the correlator. The result is stored in corrKblock_
+            measureK(k,this->params_["Number Time Sources"]);
 
-        // write the result
-        this->h5_.write(corr_,std::string(basenode_)+node);
-    } // for cfgID
+            // write the calculated correlator to file
+       	    this->h5_.write(corrKblock_,std::string(basenode_)+node+"/k"+std::to_string(k));
+	  }
+        } // for k
+    } // for cfgI
 
 } // measure()
 

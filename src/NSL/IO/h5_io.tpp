@@ -76,8 +76,6 @@ class H5IO {
 	            baseNode = node + "/";// + std::to_string(markovstate.markovTime);
 	        }
 
-            this->removeData(baseNode);
-
             // write out the configuration
     	    this -> write(markovstate.configuration, baseNode);
 
@@ -99,6 +97,14 @@ class H5IO {
                 );
 	            
                 dataset.write(markovstate.acceptanceProbability);
+
+                // write out the acceptanceRate
+	            dataset = h5f_.createDataSet<NSL::size_t>(
+                    baseNode+"/acceptanceRate",
+                    HighFive::DataSpace::From(static_cast <NSL::size_t> (markovstate.accepted))
+                );
+	            
+                dataset.write(static_cast <NSL::size_t> (markovstate.accepted));
 
 	            // write out the weights (eg logdetJ, etc. . .)
 	            for (auto [key,field] : markovstate.weights) {
@@ -134,6 +140,13 @@ class H5IO {
                     HighFive::DataSpace::From(markovstate.acceptanceProbability)
                 );
 	            dataset.write(markovstate.acceptanceProbability);
+
+                // write out the acceptanceRate
+	            dataset = h5f_.createDataSet<NSL::size_t>(
+                    baseNode+"/acceptanceRate",
+                    HighFive::DataSpace::From(static_cast <NSL::size_t> (markovstate.accepted))
+                );
+                dataset.write(static_cast <NSL::size_t> (markovstate.accepted));
 
 	            // write out the weights (eg logdetJ, etc. . .)
 	            for (auto [key,field] : markovstate.weights) {
@@ -239,8 +252,6 @@ class H5IO {
 
             NSL::Tensor<Type> tensor = tensor_in.to(NSL::CPU()); 
 
-            this->removeData(node);
-
 	        if constexpr (NSL::is_complex<Type>()) {
                 std::vector<std::complex<NSL::RealTypeOf<Type>>> phi(
                     tensor.data(), 
@@ -285,7 +296,6 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::Configuration<Type> &config, const std::string node){
-            this->removeData(node);
 
 	        for (auto [key,field] : config) {
 	            if (node.back() == '/'){
@@ -408,21 +418,19 @@ class H5IO {
         inline bool overwrite(){
             return overwrite_;
         } // overwrite()
-        
-        //! Removes a group if overwrite == True and group exists
-        void removeData(std::string node){
+
+        //! Deletes a group if group exists
+        void deleteData(std::string node){
             bool exist = this->exist(node);
             // remove the group if it exists; once the file is closed
             // automatic repacking is applied
-            if (overwrite_ and exist){
-                NSL::Logger::debug("Unlinking Dataset (overwrite={}; node exists={}): {}",overwrite_,exist,node);
+            if (exist){
+                NSL::Logger::debug("Unlinking Dataset (node exists={}): {}",exist,node);
                 h5f_.unlink(node);
             }
-        }  
+        }
     private:
         
-
-
         std::string h5file_;
         File h5f_;
         bool overwrite_;
