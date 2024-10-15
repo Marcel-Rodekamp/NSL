@@ -33,10 +33,28 @@ class TwoPointCorrelator: public Measurement {
 		params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
+	    corrKblock_(
+                params["device"].to<NSL::Device>(),
+		params["Nt"].to<NSL::size_t>(),
+		params["wallSources"].shape(1).to<NSL::size_t>(),
+		params["wallSources"].shape(1).to<NSL::size_t>()
+            ),
+	    corrK_(
+                params["device"].to<NSL::Device>(),
+                params["wallSources"].shape(1).to<NSL::size_t>(),
+		params["Nt"].to<NSL::size_t>(),
+                params["Nx"].to<NSL::size_t>()
+            ),
             corr_(
                 params["device"].to<NSL::Device>(),
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>(),
+                params["Nx"].to<NSL::size_t>()
+            ),
+	    srcVecK_(
+                params["device"].to<NSL::Device>(),
+                params["wallSources"].shape(1).to<NSL::size_t>(),
+                params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
 	    srcVecK_(
@@ -78,6 +96,9 @@ class TwoPointCorrelator: public Measurement {
     void measureK();
     void measureK(NSL::size_t k, NSL::size_t NumberTimeSources);
 
+    void measureK();
+    void measureK(NSL::size_t k, NSL::size_t NumberTimeSources);
+
     protected:
     bool skip_(bool overwrite, std::string node){
         bool exists = this->h5_.exist(fmt::format("{}{}",std::string(basenode_),node));
@@ -100,7 +121,10 @@ class TwoPointCorrelator: public Measurement {
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
     NSL::Tensor<Type> corrKblock_;
+    NSL::Tensor<Type> corrK_;
+    NSL::Tensor<Type> corrKblock_;
     NSL::Tensor<Type> srcVec_;
+    NSL::Tensor<Type> srcVecK_;
     NSL::Tensor<Type> srcVecK_;
 
     NSL::Tensor<Type> phi_;
