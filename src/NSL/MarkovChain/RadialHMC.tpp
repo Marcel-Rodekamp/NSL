@@ -3,18 +3,16 @@
 
 #include "Integrator/integrator.tpp"
 #include "MarkovChain/markovState.tpp"
-// #include "MarkovChain/radialMarkovState.tpp"
 #include "Tensor/Factory/like.tpp"
 #include "LinAlg.hpp"
 #include "complex.hpp"
 #include "concepts.hpp"
 #include "IO.hpp"
 #include "logger.hpp"
-//#include <fstream>
 
 namespace NSL::MCMC{
 
-// enum Chain{ AllStates, LastState }; // FT: what is this? Do I need this here again if it is already in HMC.tpp
+// enum Chain{ AllStates, LastState }; Already defined in HMC.tpp in NSL::MCMC namespace
 
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
           NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType
@@ -58,12 +56,6 @@ class RadialHMC{
      *
      * */
 
-    /* 
-        - generate with radial update step: 
-        - TODO: resolve ambiguity with other generate due to default args (resolved by radialScale?)
-        - TODO: radialScale/Type can be complex? has to be cast to real if that is the case
-    */
-
 
     template<Chain chain, NSL::Concept::isNumber Type>
         std::conditional_t<chain == Chain::AllStates, std::vector<NSL::MCMC::MarkovState<Type>>, NSL::MCMC::MarkovState<Type>> 
@@ -88,8 +80,8 @@ class RadialHMC{
             logFrequency = static_cast<NSL::size_t>( 0.01*Nconf );
         }
 
-        NSL::RealTypeOf<Type> volume = state.configuration["phi"].numel(); // volume, i.e. number of total sites for accept reject in radial update step
-        // int N_radial_steps = saveFrequency * Nconf / radialFrequency;
+        // volume, i.e. number of total sites for accept reject in radial update step
+        NSL::RealTypeOf<Type> volume = state.configuration["phi"].numel(); 
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
