@@ -98,6 +98,10 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
         "Using device: {}", std::string(params["device"])
     );
 
+    // This initializes all possible OpenMP/KNL threads
+    // Notice this requires torch 
+    at::init_num_threads();
+
     return params;
 }
 
