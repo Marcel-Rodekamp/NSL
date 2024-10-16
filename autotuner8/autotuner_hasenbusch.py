@@ -81,7 +81,7 @@ all_steps = []
 last_counter = 0
 all_accept_rates = dict()
 
-os.system("mkdir -p autotune-graphs")
+os.system(f"mkdir -p {graph_dir}")
 
 if os.path.exists(ymlFile["fileIO"]["h5file"]):
     with h5.File(ymlFile["fileIO"]["h5file"], 'r') as f:
@@ -190,7 +190,7 @@ for counter in range(max_counter):
                 independent_var, dependent_var), verbose=fitting_verbose_level, loss='soft_l1', max_nfev=1000)
             if res.cost < best_res.cost:
                 best_res = res
-        last_guess = res.x0
+        last_guess = res.x
 
         # Get a set of predictions from the model
         u_test = np.linspace(hasenbusch_timescale, 2000, 20000)
@@ -210,7 +210,7 @@ for counter in range(max_counter):
             pl.grid(color='#dddddd', linestyle='--', linewidth=0.5)
 
             pl.gcf().set_size_inches(12.14, 7.5)
-            pl.savefig(f"graphs/{str(graph_counter).zfill(2)}.png", dpi=None, facecolor='w', edgecolor='w',
+            pl.savefig(f"{graph_dir}/{str(graph_counter).zfill(2)}.png", dpi=None, facecolor='w', edgecolor='w',
                        format='png', transparent=False, bbox_inches=None, pad_inches=0.1)#, rameon=None)
             pl.clf()
             graph_counter += 1
