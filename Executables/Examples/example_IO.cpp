@@ -7,6 +7,13 @@ int main(){
   NSL::Tensor<NSL::complex<double>> pout(2,3,4); // define tensor to write out
   pout.rand(); // assign random values
   io.write(pout,"tensor"); // write out the tensor
+
+  double thermalflag = 1;
+  io.write(thermalflag, "meta");
+
+  double newflag;
+  io.read(newflag, "meta");
+  std::cout << newflag << std::endl;
   
   NSL::Tensor<NSL::complex<double>> pin(3,4); // define tensor to store 
   io.read(pin,"tensor"); // read in the tensor
@@ -71,6 +78,8 @@ int main(){
 
   // now read in a specific markovstate
   io.read(markovstateD,"markovstate",1);
+
+  
   
   return 0;
 }

@@ -388,6 +388,24 @@ class H5IO {
         
 	        return 0; 
         } // read(config,node)
+
+        template <NSL::Concept::isNumber Type> 
+        inline int read(Type & obj,const std::string node){
+            if(h5f_.exist(node)){ // check if the node exists
+
+                // read in the acceptanceProbability
+	            HighFive::DataSet dataset = h5f_.getDataSet(node);
+	            dataset.read(obj);
+
+                return 0;
+
+            } else { 
+                // node does not exist
+                NSL::Logger::error("Error! Node {} doesn't exist!", node); 
+                
+                return 1;
+            }
+        }
     
         template<NSL::Concept::isNumber Type>
         inline int write(const Type & obj, const std::string node){

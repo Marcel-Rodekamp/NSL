@@ -86,7 +86,7 @@ class HMC{
                 nstart = maxConfigID;
             }
 
-            if (nstart > 0){
+            if (h5_.exist(fmt::format("{}/{}",baseNode,nstart))){
                 // this reader looks for the most recent markov state and reads it into the state
                 MC[nstart] = state;
                 try {
@@ -129,8 +129,13 @@ class HMC{
                     runningAcceptance -= static_cast<double>(MC[n-backWindow].accepted);
                 }
                 
+                if ((n-backWindow) > 0) {
+                    runningAcceptance -= static_cast<double>(MC[n-backWindow].accepted);
+                }
+                
                 // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
+                    NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance/* *100. / backWindow (n-nstart) */ );
                     NSL::Logger::info("HMC: {}/{}; Running Acceptence Rate: {:.6}%", n, Nconf, runningAcceptance/* *100. / backWindow (n-nstart) */ );
                     NSL::Logger::elapsed_profile(mc_time);
                 }
