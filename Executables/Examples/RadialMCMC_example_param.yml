@@ -1,0 +1,28 @@
+Leapfrog:
+  trajectory length: 1
+  Nmd: 10
+HMC:
+  save frequency: 2
+  Ntherm: 1000
+  Nconf: 1000
+  Nhmc: 1
+  Nradial: 1
+  radial scale: 1.0
+fileIO:
+  h5file: "2Site_radial_test.h5"
+measurements:
+  Number Time Sources: 4
+system:
+  name: "RadialMCMC"
+  nions: 2
+  Nt: 1
+  beta: 1.0
+  U: 18.
+  mu: 0
+  offset: 0
+  hopping: 1.
+  adjacency: 
+  - [0 , 1 ]
+  positions: 
+  - [0,0,0]
+  - [1,0,0]
