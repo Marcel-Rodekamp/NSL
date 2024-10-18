@@ -3,7 +3,7 @@
 
 //! \file tensor.hpp
 
-#include "../complex.hpp" // get NSL::RT_extractor
+#include "../complex.hpp" // get NSL::RealTypeOf
 #include "../concepts.hpp" // get NSL::Concept::
 
 

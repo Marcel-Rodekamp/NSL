@@ -17,9 +17,9 @@ class TensorReal:
      * Else `Type` refers to a RealType expression (e.g. `float`,`double`, ...)
      * and is simply returned.
      * */
-    NSL::Tensor<typename RT_extractor<Type>::type> real(){
+    NSL::Tensor<NSL::RealTypeOf<Type>> real(){
         if constexpr(NSL::is_complex<Type>()){
-            return NSL::Tensor<typename RT_extractor<Type>::type>(torch::real(this->data_));
+            return NSL::Tensor<NSL::RealTypeOf<Type>>(torch::real(this->data_));
         } else {
             return NSL::Tensor<Type>(this);
         }
@@ -37,11 +37,11 @@ class TensorImag:
      * Else `Type` refers to a RealType expression and does not have an imaginary
      * part, a Tensor with zeros is returned.
      * */
-        Tensor<typename RT_extractor<Type>::type> imag(){
+        Tensor<NSL::RealTypeOf<Type>> imag(){
             if constexpr(NSL::is_complex<Type>()){
-                return Tensor<typename RT_extractor<Type>::type>(torch::imag(this->data_));
+                return Tensor<NSL::RealTypeOf<Type>>(torch::imag(this->data_));
             } else {
-                return Tensor<typename RT_extractor<Type>::type>(torch::zeros_like(this->data_));
+                return Tensor<NSL::RealTypeOf<Type>>(torch::zeros_like(this->data_));
             }
         }
 };
