@@ -3,7 +3,7 @@
 
 // The following code is copied from the NVTX website
 #ifdef USE_NVTX
-#include "nvtx3/nvToolsExt.h"        //TODO: figure out how to include this with CMAKE
+#include <nvtx3/nvToolsExt.h> 
 
 const uint32_t colors[] = { 0xff00ff00, 0xff0000ff, 0xffffff00, 0xffff00ff, 0xff00ffff, 0xffff0000, 0xffffffff };
 const int num_colors = sizeof(colors)/sizeof(uint32_t);
