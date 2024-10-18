@@ -31,13 +31,13 @@ void test_CG_fermionMatrix(FermionMatrix & M,const NSL::RealTypeOf<Type> eps, NS
 FLOAT_NSL_TEST_CASE("CG - Random Matrix", "[CG,Random Matrix]"){
 
     // for double types we can demand higer precisions and volumes
-    if constexpr( std::is_same_v<double, NSL::RealTypeOf<Type>>) {
+    if constexpr( std::is_same_v<double, NSL::RealTypeOf<TestType>>) {
         NSL::size_t V_d = GENERATE(1,2,4,8,10,16,20,30,32,100,1000);
-        NSL::RealTypeOf<Type> eps_d = GENERATE(1e-1,1e-2,1e-3,1e-4,1e-6,1e-8,1e-10);
+        NSL::RealTypeOf<TestType> eps_d = GENERATE(1e-1,1e-2,1e-3,1e-4,1e-6,1e-8,1e-10);
         test_CG_randomMatrix<TestType>(eps_d, V_d);
     }  else {
         NSL::size_t V = GENERATE(1,2,4,8,10,16,20,30,32);
-        NSL::RealTypeOf<Type> eps = GENERATE(1e-1,1e-2,1e-3,1e-4);
+        NSL::RealTypeOf<TestType> eps = GENERATE(1e-1,1e-2,1e-3,1e-4);
         test_CG_randomMatrix<TestType>(eps, V);
     }
 }
@@ -47,7 +47,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Complete", "[CG,Hubbard Exp,Complete]"
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -64,7 +64,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Ring", "[CG,Hubbard Exp,Ring]"){
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -80,7 +80,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 1D", "[CG,Hubbard Exp,Square,1D
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -98,7 +98,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 2D", "[CG,Hubbard Exp,Square,2D
     NSL::size_t Nx = Nx1*Nx2;
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -117,7 +117,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 3D", "[CG,Hubbard Exp,Square,3D
     NSL::size_t Nx = Nx1*Nx2*Nx3;
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -137,7 +137,7 @@ COMPLEX_NSL_TEST_CASE("CG - Hubbard Exp - Square 4D", "[CG,Hubbard Exp,Square,4D
     NSL::size_t Nx = Nx1*Nx2*Nx3*Nx4;
     TestType beta = GENERATE(1,1.5);
 
-    NSL::RealTypeOf<Type> eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 

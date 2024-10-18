@@ -63,8 +63,8 @@
  *
  * */
 template<NSL::Concept::isFloatingPoint T>
-bool compare_floating_point(T a, T b, NSL::RealTypeOf<Type> factor = 10){
-    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<NSL::RealTypeOf<Type>>::epsilon();
+bool compare_floating_point(T a, T b, NSL::RealTypeOf<T> factor = 10){
+    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<NSL::RealTypeOf<T>>::epsilon();
 }
 
 //! compare two integer numbers a,b
