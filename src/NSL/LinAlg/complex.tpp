@@ -13,18 +13,18 @@ namespace NSL::LinAlg {
 
 //! Returns the complex conjugate, maintaining type (`complex<>` if `complex<>`, not if not).
 template<NSL::Concept::isNumber Type>
-inline typename NSL::RT_extractor<Type>::type arg(const Type &value){
+inline NSL::RealTypeOf<Type> arg(const Type &value){
     if constexpr(is_complex<Type>()) {
         // See NOTE above for std::explanation.
         return std::arg(value);
     }
     else {
-        if(value > 0) return static_cast<typename NSL::RT_extractor<Type>::type>(0);
+        if(value > 0) return static_cast<NSL::RealTypeOf<Type>>(0);
         //! todo We should be very careful about the branch-cut of arg.
         // If we want arg to be single-valued, we should pick a finite interval,
         // say (-π,+π], which is 2π periodic.  However, the negative real axis
         // is right on the boundary.
-        return static_cast<typename NSL::RT_extractor<Type>::type>(+std::numbers::pi);
+        return static_cast<NSL::RealTypeOf<Type>>(+std::numbers::pi);
         // I picked + because in Mathematica
         //      Arg[-1] == +π
         // and I trust Wolfram to have these conventions sorted out.

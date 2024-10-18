@@ -153,21 +153,21 @@ void test_half_periods(SizeTypes ... Ns){
     // sine
     {
         NSL::Tensor<Type> unshifted(A,true);
-        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<typename NSL::RT_extractor<Type>::type>,true);
+        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<NSL::RealTypeOf<Type>>,true);
         REQUIRE( almost_equal(unshifted.sin() + shifted.sin(), Type(0) ).all() );
     }
 
     // cosine
     {
         NSL::Tensor<Type> unshifted(A,true);
-        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<typename NSL::RT_extractor<Type>::type>,true);
+        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<NSL::RealTypeOf<Type>>,true);
         REQUIRE( almost_equal(unshifted.cos() + shifted.cos(), Type(0) ).all() );
     }
 
     // tan
     {
         NSL::Tensor<Type> unshifted(A,true);
-        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<typename NSL::RT_extractor<Type>::type>,true);
+        NSL::Tensor<Type> shifted(A+std::numbers::pi_v<NSL::RealTypeOf<Type>>,true);
         REQUIRE( almost_equal(unshifted.tan(), shifted.tan()).all() );
     }
 
