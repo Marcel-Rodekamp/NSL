@@ -210,7 +210,7 @@ for counter in range(max_counter):
             pl.grid(color='#dddddd', linestyle='--', linewidth=0.5)
 
             pl.gcf().set_size_inches(12.14, 7.5)
-            pl.savefig(f"{graph_dir}/{str(graph_counter).zfill(2)}.png", dpi=None, facecolor='w', edgecolor='w',
+            pl.savefig(f"{graph_dir}/{ymlFile['fileIO']['h5file'][:-3]}-{str(graph_counter).zfill(2)}.png", dpi=None, facecolor='w', edgecolor='w',
                        format='png', transparent=False, bbox_inches=None, pad_inches=0.1)#, rameon=None)
             pl.clf()
             graph_counter += 1
