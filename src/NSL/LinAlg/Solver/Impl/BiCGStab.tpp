@@ -12,16 +12,9 @@
 
 namespace NSL::LinAlg{
 template<NSL::Concept::isNumber Type >
-NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
+NSL::Tensor<Type> BiCGStab<Type>::solve_(const NSL::Tensor<Type> & b){
     // This algorithm can be found e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
     //
-
-    // initialize the solution vector x_ which after convergence 
-    // stores the approximate result x = M^{-1} @ b.
-    // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
-    x_ = b;
 
     // Compute the initial matrix vector product and store it in the 
     // corresponding vector t
@@ -35,12 +28,11 @@ NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
     // error (this is a simple efficiency optimization)
     // inner_product returns a number of type `Type` from which the real 
     // part is extracted, the imaginary part is 0 by construction
-    typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
-    typename NSL::RT_extractor<Type>::type rsqr_prev = rsqr_curr;
+    NSL::RealTypeOf<Type> rsqr_prev = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
     
     // if the guess is already good enough return
-    if (rsqr_curr <= errSq_) {
-        NSL::Logger::info("BiCGStab Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,0);
+    if (rsqr_prev <= errSq_) {
+        NSL::Logger::info("BiCGStab Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_prev),NSL::LinAlg::sqrt(errSq_),0);
         return x_;
     }
 
@@ -104,15 +96,13 @@ NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
 
         // and the resulting error square
         // err = (r{i+1},r{i+1})
-        rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
-
-
+        NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
 
         // check for convergence agains the errSq_ determined by the 
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         if (rsqr_curr <= errSq_) {
-            NSL::Logger::info("BiCGStab Converged with precision: {} < {} after {} steps", rsqr_curr,errSq_,count);
+            NSL::Logger::info("BiCGStab Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),count);
             return x_;
         }
 
@@ -131,6 +121,31 @@ NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
 
     // this should never be reached but put it just in case something goes wrong.
     return x_;
+
+} // solve_()
+
+
+template<NSL::Concept::isNumber Type >
+NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
+    // initialize the solution vector x_ which after convergence 
+    // stores the approximate result x = M^{-1} @ b.
+    // Multiple initializations are possible and can enhance the convergence
+    // see e.g. Preconditioning. Here we just choose a simple start vector
+    // which is an arbitrary choise.
+    x_ = b;
+    return solve_(b);
+
+} // operator()
+
+template<NSL::Concept::isNumber Type >
+NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b , const NSL::Tensor<Type> & x0 ){
+    // initialize the solution vector x_ which after convergence 
+    // stores the approximate result x = M^{-1} @ b.
+    // Multiple initializations are possible and can enhance the convergence
+    // see e.g. Preconditioning. Here we just choose a simple start vector
+    // which is an arbitrary choise.
+    x_ = x0;
+    return solve_(b);
 
 } // operator()
 
