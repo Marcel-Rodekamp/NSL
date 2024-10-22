@@ -6,9 +6,7 @@
 #include "complex.hpp"
 #include "types.hpp"
 
-#include <ATen/cuda/CUDAEvent.h>
-#include <ATen/cuda/CUDAGraph.h>
-#include <c10/cuda/CUDAStream.h>
+#include "CUDA.hpp"
 #include <torch/torch.h>
 
 namespace NSL::LinAlg {
@@ -35,24 +33,17 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
         CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, const bool GPU_optimization = true, NSL::size_t batchsize = 100) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
             maxIter_(maxIter),
             batchsize_(batchsize),
-            GPU_optimization_(GPU_optimization && NSL::gpu_available()),
             alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
             p_()
-        {
-            if(GPU_optimization_){
-                // alpha_.to(NSL::GPU()); beta_.to(NSL::GPU()); rsqr_curr_.to(NSL::GPU()); rsqr_prev_.to(NSL::GPU());
-            } else if (GPU_optimization){
-                std::cerr << "GPU optimization requested but no GPU available. Falling back to CPU." << std::endl;
-            }
-        }
+        {}
 
         //! Constructor
         /*! 
@@ -95,25 +86,18 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, const bool GPU_optimization = true, NSL::size_t batchsize = 100) : 
+        CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
             maxIter_(maxIter),
             batchsize_(batchsize),
-            GPU_optimization_(GPU_optimization && NSL::gpu_available()),
             alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
             p_()
-        {
-            if(GPU_optimization_){
-                // alpha_.to(NSL::GPU()); beta_.to(NSL::GPU()); rsqr_curr_.to(NSL::GPU()); rsqr_prev_.to(NSL::GPU());
-            } else if (GPU_optimization){
-                std::cerr << "GPU optimization requested but no GPU available. Falling back to CPU." << std::endl;
-            }
-        }
+        {}
 
         //! Constructor
         /*! 
@@ -163,26 +147,19 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M, 
+        CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
                NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, bool GPU_optimization = true, NSL::size_t batchsize = 100) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, const NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             errSq_(eps*eps),
             maxIter_(maxIter),
             batchsize_(batchsize),
-            GPU_optimization_(GPU_optimization && NSL::gpu_available()),
             alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
             p_()
-        {
-            if(GPU_optimization_){
-                // alpha_.to(NSL::GPU()); beta_.to(NSL::GPU()); rsqr_curr_.to(NSL::GPU()); rsqr_prev_.to(NSL::GPU());
-            } else if (GPU_optimization){
-                std::cerr << "GPU optimization requested but no GPU available. Falling back to CPU." << std::endl;
-            }
-        }
+        {}
 
         //! Apply CG
         /*!
@@ -201,10 +178,9 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
         
-        void optimize_for_GPU(const NSL::Tensor<Type> & b);
     private:
         void CG_iteration_();
-        void CG_iteration_base_();
+        void CG_batch_();
         
         NSL::Tensor<Type> alpha_; 
         NSL::Tensor<typename NSL::RT_extractor<Type>::type> beta_;
@@ -226,11 +202,13 @@ class CG: public NSL::LinAlg::Solver<Type> {
         // gradient vector
         NSL::Tensor<Type> p_;
 
-        bool GPU_optimization_;
+        #ifdef USE_CUDA
         // cuda graph for GPU optimization
         at::cuda::CUDAGraph graph_;
+        void optimize_for_GPU(const NSL::Tensor<Type> & b);
+        #endif
         // batch size for sequential iterations without abortion check
-        NSL::size_t batchsize_ = 1;
+        const NSL::size_t batchsize_ = 1;
 }; // class CG
         
 } //namespace NSL::LinAlg

@@ -16,24 +16,21 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
         
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params) :
             BaseAction<Type,Type>("phi"),
-            FM_(lattice, params),
+            FM_(new FermionMatrixType(lattice, params)),
             chi_(),
             pseudoFermion_(),
             cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
         {
-            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites());
-            cg_->optimize_for_GPU(z);
         }
 
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
             BaseAction<Type,Type>(fieldName),
-            FM_(lattice, params),
+            FM_(new FermionMatrixType(lattice, params)),
             chi_(),
             pseudoFermion_(),
             cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
         {
-            NSL::Tensor<Type> z = NSL::Tensor<Type>(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites());
-            cg_->optimize_for_GPU(z);
+            // cg_->optimize_for_GPU(z);
         }
 
     // We import the eval/grad/force functions from the BaseAction such 
@@ -70,17 +67,17 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
         //chi_ = NSL::randn_like(config.at(this->configKey_));
 
         // populate the fermion matrix 
-        FM_.populate(config.at(this->configKey_));
+        FM_->populate(config.at(this->configKey_));
 
         // compute the pseudo fermion
         // chi_ has been sampled already
-        pseudoFermion_ = FM_.M( chi_ );
+        pseudoFermion_ = FM_->M( chi_ );
 
         return true;
     }
 
     protected:
-        FermionMatrixType FM_;
+        std::shared_ptr<FermionMatrixType> FM_;
         std::shared_ptr<NSL::LinAlg::CG<Type>> cg_;
 
         NSL::Tensor<Type> chi_;
@@ -97,7 +94,7 @@ template<
 Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<Type>& phi){
     // compute pseudo fermion; This sets the tensor pseudoFermion_
     // and populates the fermion matrix
-    FM_.populate(phi);
+    FM_->populate(phi);
 
     // compute MMdagger * pseudoFermion
     if (useCache){
@@ -129,7 +126,7 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
     
     PUSH_RANGE("populating fermion matrix", 0);
     // Compute pseudo fermion (this populates the fermion matrix)
-    FM_.populate(phi);
+    FM_->populate(phi);
     POP_RANGE;
 
     // calculate (MM^+)^{-1} * pseudoFermion
@@ -146,11 +143,11 @@ Configuration<Type> PseudoFermionAction<Type,LatticeType,FermionMatrixType>::gra
     // calculate the derivatives of the fermion matrix
     PUSH_RANGE("computing derivative", 3);
     NSL::Configuration<Type> out = NSL::Configuration<Type> {{ this->configKey_,
-        -2.*FM_.dMdPhi(
-            /*left*/NSL::LinAlg::conj(pseudoFermionInv_),/*right*/FM_.Mdagger(pseudoFermionInv_)
+        -2.*FM_->dMdPhi(
+            /*left*/NSL::LinAlg::conj(pseudoFermionInv_),/*right*/FM_->Mdagger(pseudoFermionInv_)
         ).real()
-        // -FM_.dMdaggerdPhi(
-        //     /*left*/NSL::LinAlg::conj(FM_.Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
+        // -FM_->dMdaggerdPhi(
+        //     /*left*/NSL::LinAlg::conj(FM_->Mdagger(MMdaggerInv)),/*right*/MMdaggerInv
         // )
     }};
     POP_RANGE;

@@ -83,15 +83,15 @@ class Solver{
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        Solver(FermionMatrix<Type,LatticeType> & M, 
+        Solver(std::shared_ptr<FermionMatrix<Type,LatticeType>> M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination = NSL::FermionMatrix::M
         ) {
             switch(matrixCombination){
-                case NSL::FermionMatrix::M        : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.M(psi);} ); break;
-                case NSL::FermionMatrix::Mdagger  : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.Mdagger(psi);} ); break;
-                case NSL::FermionMatrix::MdaggerM : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.MdaggerM(psi);} ); break;
-                case NSL::FermionMatrix::MMdagger : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.MMdagger(psi);} ); break;
-                default: throw std::runtime_error("NSL::Solver: Could not identify fermion matrix combination pass either NSL:FermionMatrix::(M,Mdagger,MdaggerM or MMdagger)!");
+                case NSL::FermionMatrix::M        : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->M(psi);} ); break;
+                case NSL::FermionMatrix::Mdagger  : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->Mdagger(psi);} ); break;
+                case NSL::FermionMatrix::MdaggerM : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->MdaggerM(psi);} ); break;
+                case NSL::FermionMatrix::MMdagger : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->MMdagger(psi);} ); break;
+            default: throw std::runtime_error("NSL::Solver: Could not identify fermion matrix combination pass either NSL:FermionMatrix::(M,Mdagger,MdaggerM or MMdagger)!");
             }
         }
         //Solver(const FermionMatrix<Type,LatticeType> & M, 

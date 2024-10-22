@@ -13,16 +13,9 @@
 #define USE_NVTX
 #include "profiling.hpp"
 
-void stream_sync(
-    at::cuda::CUDAStream& dependency,
-    at::cuda::CUDAStream& dependent) {
-  at::cuda::CUDAEvent cuda_ev;
-  cuda_ev.record(dependency);
-  cuda_ev.block(dependent);
-}
-
 namespace NSL::LinAlg{
 
+#ifdef USE_CUDA
 template<NSL::Concept::isNumber Type >
 void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     if (b.device() == NSL::Device("cpu")){
@@ -66,9 +59,10 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     at::cuda::setCurrentCUDAStream(legacyStream);
     NSL::Logger::info("CG Graph captured");
 }
+#endif
 
 template<NSL::Concept::isNumber Type >
-void CG<Type>::CG_iteration_base_(){
+void CG<Type>::CG_iteration_(){
     // compute the matrix vector product to determine the direction
     // t = M @ p
     t_ = this->M_(p_);
@@ -82,12 +76,14 @@ void CG<Type>::CG_iteration_base_(){
 }
 
 template<NSL::Concept::isNumber Type >
-void CG<Type>::CG_iteration_(){
-    if (GPU_optimization_){
+void CG<Type>::CG_batch_(){
+    #ifdef USE_CUDA
         graph_.replay();
-    } else {
-        CG_iteration_base_();
-    }
+    #else
+        for (NSL::size_t i = 0; i < batchsize_; i++){
+            CG_iteration_();
+        }
+    #endif
 }
 
 template<NSL::Concept::isNumber Type >
@@ -109,7 +105,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::T
 
     // Compute the initial matrix vector product and store it in the 
     // corresponding vector t
-    t_ = this->M_(x_);
+    t_ = this->M_(x0);
 
     // This initial matrix vector product defines the initial residual vector 
     r_ = b-t_;
@@ -135,7 +131,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::T
     // break up condition for maximum number of iteration
     for(NSL::size_t count = 1; count <= maxIter_; count+=batchsize_){
         PUSH_RANGE("CG Iteration",6);
-        CG_iteration_();
+        CG_batch_();
 
         // now prepare the previous residual square for the next iteration
         // rsqr_prev = rsqr_curr;
