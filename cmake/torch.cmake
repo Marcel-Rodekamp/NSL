@@ -15,3 +15,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 target_link_libraries(NSL
     ${TORCH_LIBRARIES}
 )
+
+option(USE_CPU "Use CPU instead of GPU" OFF)
+# Check if Torch is built with CUDA support
+if (USE_CPU)
+    message(STATUS "USE_CPU flag is set, disabling GPU optimizations")
+    add_definitions(-DUSE_CPU)
+else()
+    if (Torch_FOUND AND Torch_CUDA_VERSION)
+        message(STATUS "Torch with CUDA support found, enabling GPU optimizations")
+        add_definitions(-DUSE_CUDA)
+    else()
+        message(STATUS "Torch without CUDA support found, disabling GPU optimizations")
+        add_definitions(-DUSE_CPU)
+    endif()
+endif()
