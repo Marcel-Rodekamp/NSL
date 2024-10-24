@@ -3,5 +3,6 @@
 
 #include "Measurements/Hubbard/twoPointCorrelationFunction.tpp"
 #include "Measurements/Hubbard/twoBodyCorrelationFunction.tpp"
+#include "Measurements/U1/wilsonLoop.tpp"
 
 #endif //NSL_MEASURE_HPP
