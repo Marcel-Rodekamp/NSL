@@ -16,7 +16,7 @@ class TensorAbs:
      * Whether a complex type or a real type, the absolute value is real.
      *
      * */
-    NSL::Tensor<typename RT_extractor<Type>::type> abs(){
+    NSL::Tensor<NSL::RealTypeOf<Type>> abs(){
         return torch::abs(this->data_);
     }
 

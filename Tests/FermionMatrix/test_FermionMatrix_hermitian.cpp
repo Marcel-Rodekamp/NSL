@@ -51,7 +51,7 @@ COMPLEX_NSL_TEST_CASE( "FermionMatrix: MdaggerM hermitian", "[FermionMatrix, Mda
 //Test if MMdagger is hermitian
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & Lattice, const std::string latticeName, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
+    typedef NSL::complex<NSL::RealTypeOf<Type>> ComplexType;
     NSL::size_t nx = Lattice.sites();
 	NSL::Tensor<Type> phi(nt, nx);
     phi.rand();
@@ -90,7 +90,7 @@ void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & L
 //Test if MdaggerM is hermitian
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & Lattice, const std::string latticeName, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
+    typedef NSL::complex<NSL::RealTypeOf<Type>> ComplexType;
     NSL::size_t nx = Lattice.sites();
 	NSL::Tensor<Type> phi(nt, nx);
     phi.rand();

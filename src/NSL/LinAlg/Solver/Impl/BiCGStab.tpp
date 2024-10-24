@@ -35,8 +35,8 @@ NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
     // error (this is a simple efficiency optimization)
     // inner_product returns a number of type `Type` from which the real 
     // part is extracted, the imaginary part is 0 by construction
-    typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
-    typename NSL::RT_extractor<Type>::type rsqr_prev = rsqr_curr;
+    NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
+    NSL::RealTypeOf<Type> rsqr_prev = rsqr_curr;
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
@@ -118,7 +118,7 @@ NSL::Tensor<Type> BiCGStab<Type>::operator()(const NSL::Tensor<Type> & b ){
 
         // compute the momentum update scale
         // beta{i} = (r{i+1},r{i+1})/(r{i},r{i}
-        typename NSL::RT_extractor<Type>::type beta = rsqr_curr / rsqr_prev;
+        NSL::RealTypeOf<Type> beta = rsqr_curr / rsqr_prev;
 
         // now prepare the previous residual square for the next iteration
         rsqr_prev = rsqr_curr;

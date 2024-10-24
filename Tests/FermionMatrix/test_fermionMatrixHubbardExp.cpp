@@ -142,7 +142,6 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardExp: logDetM_uniform_timeslices", "[
 //Test for the function M(psi)
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
     //hardcoding the calculation done in the method M of fermionMatrixHubbardExp class
     NSL::Tensor<Type> phi(nt, nx);
@@ -153,7 +152,7 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
     Type delta = beta/nt;
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I ={0,1};
+    Type I ={0,1};
 
     // apply kronecker delta
     //NSL::Tensor<Type> psiShift = NSL::LinAlg::shift(psi,1);
@@ -183,7 +182,6 @@ void test_fermionMatrixHubbardExp_M(const NSL::size_t nt, LatticeType & Lattice,
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -219,19 +217,18 @@ void test_fermionMatrixHubbardExp_M_dense(const NSL::size_t nt, LatticeType & La
 //Test for the function Mdagger(psi)
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
 
-    NSL::Tensor<ComplexType> phi(nt, nx);
-    NSL::Tensor<ComplexType> psi(nt, nx);
+    NSL::Tensor<Type> phi(nt, nx);
+    NSL::Tensor<Type> psi(nt, nx);
     phi.rand();
     psi.rand();
 
     // To simplify this test one can force the field
-    //phi = phi.real() + ComplexType(0,0);  // phi to be real
-    //psi = psi.real() + ComplexType(0,0);  // psi to be real
-    //psi = psi.imag() * ComplexType(0,1);  // psi to be imaginary
+    //phi = phi.real() + Type(0,0);  // phi to be real
+    //psi = psi.real() + Type(0,0);  // psi to be real
+    //psi = psi.imag() * Type(0,1);  // psi to be imaginary
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
 
@@ -239,22 +236,22 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
     // First let's check Mdagger against the dagger of the dense implementation of M.
     
     // Construct a dense representation of M† from a dense representation of M
-    NSL::Tensor<ComplexType> Mdense_dagger = M.M_dense(nt).transpose(0,2).transpose(1,3).conj();
+    NSL::Tensor<Type> Mdense_dagger = M.M_dense(nt).transpose(0,2).transpose(1,3).conj();
 
     //  We can also apply Mdagger to the identity matrix in order to get a dense Mdagger.
     //  Follow the M_dense implementation:
 
-    NSL::Tensor<ComplexType> dense(nt, nx, nt, nx);
+    NSL::Tensor<Type> dense(nt, nx, nt, nx);
 
     // Construct the identity matrix.
-    NSL::Tensor<ComplexType> identity(nt, nx, nt, nx);
+    NSL::Tensor<Type> identity(nt, nx, nt, nx);
     for(int t = 0; t < nt; t++){
-        identity(t,NSL::Slice(), t, NSL::Slice()) = NSL::Matrix::Identity<ComplexType>(nx);
+        identity(t,NSL::Slice(), t, NSL::Slice()) = NSL::Matrix::Identity<Type>(nx);
     }
 
     // Ensure it's really the identity in the mat-vec sense.
     // Apply the identity to psi via obvious mat-vec
-    NSL::Tensor<ComplexType> Ipsi(nt, nx);
+    NSL::Tensor<Type> Ipsi(nt, nx);
     for(int t=0; t < nt; t++){
         for(int x=0; x < nx; x++){
             for(int i=0; i< nt; i++){
@@ -275,7 +272,7 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
     }
     
     // So, we can compare M†.I to (M.I)†
-    REQUIRE( almost_equal(Mdense_dagger-dense, ComplexType(0,0)).all() );
+    REQUIRE( almost_equal(Mdense_dagger-dense, Type(0,0)).all() );
     // This REQUIREment looks funny; why not just check that the two tensors are almost_equal directly, as in
     //      REQUIRE( almost_equal(Mdense_dagger, dense).all() );
     // TODO: almost_equal of +0.0000... and -0.0000... evaluates to False and that's extremely misleading
@@ -284,7 +281,7 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
 
 
     // Finally, compare two ways of computing M†ψ
-    NSL::Tensor<ComplexType>Mdense_dagger_psi(nt, nx), M_dagger_psi(nt, nx);
+    NSL::Tensor<Type>Mdense_dagger_psi(nt, nx), M_dagger_psi(nt, nx);
     // by doing the obvious mat-vec,
     for(int t=0; t < nt; t++){
         for(int x=0; x < nx; x++){
@@ -308,7 +305,6 @@ void test_fermionMatrixHubbardExp_Mdagger(const NSL::size_t nt, LatticeType & La
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardExp class
@@ -319,7 +315,7 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.MdaggerM(psi);
     auto indirect = M.Mdagger(M.M(psi));
@@ -335,7 +331,6 @@ void test_fermionMatrixHubbardExp_MdaggerM(const NSL::size_t nt, LatticeType & L
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -345,7 +340,7 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.MMdagger(psi);
     auto indirect = M.M(M.Mdagger(psi));
@@ -361,7 +356,6 @@ void test_fermionMatrixHubbardExp_MMdagger(const NSL::size_t nt, LatticeType & L
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_M_batched(const NSL::size_t nt, LatticeType & Lattice, const Type & beta){
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::size_t Nbatch = 10;
@@ -373,7 +367,7 @@ void test_fermionMatrixHubbardExp_M_batched(const NSL::size_t nt, LatticeType & 
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.M(psi);
 
@@ -389,7 +383,6 @@ void test_fermionMatrixHubbardExp_M_batched(const NSL::size_t nt, LatticeType & 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_Mdagger_batched(const NSL::size_t nt, LatticeType & Lattice, const Type & beta){
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::size_t Nbatch = 10;
@@ -401,7 +394,7 @@ void test_fermionMatrixHubbardExp_Mdagger_batched(const NSL::size_t nt, LatticeT
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.Mdagger(psi);
 
@@ -417,7 +410,6 @@ void test_fermionMatrixHubbardExp_Mdagger_batched(const NSL::size_t nt, LatticeT
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_MMdagger_batched(const NSL::size_t nt, LatticeType & Lattice, const Type & beta){
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::size_t Nbatch = 10;
@@ -429,7 +421,7 @@ void test_fermionMatrixHubbardExp_MMdagger_batched(const NSL::size_t nt, Lattice
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.MMdagger(psi);
 
@@ -445,7 +437,6 @@ void test_fermionMatrixHubbardExp_MMdagger_batched(const NSL::size_t nt, Lattice
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardExp_MdaggerM_batched(const NSL::size_t nt, LatticeType & Lattice, const Type & beta){
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::size_t Nbatch = 10;
@@ -457,7 +448,7 @@ void test_fermionMatrixHubbardExp_MdaggerM_batched(const NSL::size_t nt, Lattice
 
     NSL::FermionMatrix::HubbardExp M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
+    Type I={0,1};
  
     auto direct = M.MdaggerM(psi);
 
@@ -477,7 +468,6 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     // We should find that shifting phi in time doesn't change the determinant.
     int slices_to_shift_by=4;
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     size_t nx = Lattice.sites();
     NSL::Tensor<Type> phi(nt, nx), phiShift(nt, nx);
     phi.rand();
@@ -512,7 +502,6 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
 
     // We should find that by shifting any element of phi by 2π the determinant doesn't change.
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
     Type delta = beta/nt;
 
@@ -552,7 +541,6 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -583,12 +571,11 @@ void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, co
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
     Type delta = beta/nt;
-    ComplexType I ={0,1};
+    Type I ={0,1};
 
     // When phi on a given timeslice is the same on every spatial site
     NSL::Tensor<Type> tmp (nt); tmp.rand();
@@ -598,9 +585,9 @@ void test_logDetM_uniform_timeslices(const NSL::size_t nt, LatticeType & Lattice
     // exp(i phi(t)) matrix is proportional to the identity matrix and can be
     // treated like a scalar.
     // When EVERY timeslice is like that we gather all the scalars together
-    NSL::Tensor<ComplexType> sum(1);
+    NSL::Tensor<Type> sum(1);
     sum(0) = I*phi( NSL::Slice(), 0).sum();
-    ComplexType expsum = NSL::LinAlg::exp(sum)(0);
+    Type expsum = NSL::LinAlg::exp(sum)(0);
 
     // to get
     //      logdet M = logdet( 1 + exp(sum(phi(t))) exp(kappa_tilde * Nt))

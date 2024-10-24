@@ -60,7 +60,7 @@ void test_exponential_of_diagonal(const size_type & size){
     }
 }
 
-template<typename T, typename RT = typename NSL::RT_extractor<T>::value_type>
+template<typename T, typename RT = NSL::RealTypeOf<T>>
 void test_exponential_of_hermitian(const size_type & size){
     INFO("Type = " << typeid(T).name());
     INFO("size = " << size);

@@ -15,14 +15,14 @@
  * */
 
 template<typename Type>
-void test_BiCGStab_randomMatrix(const typename NSL::RT_extractor<Type>::type eps, NSL::size_t V);
+void test_BiCGStab_randomMatrix(const NSL::RealTypeOf<Type> eps, NSL::size_t V);
 
 // Notice it is a good idea to check that the `FermionMatrix`
 // is a viable Fermion Matrix, i.e. if it dervives from 
 // `NSL::FermionMatrix::FermionMatrix`. 
 // However, this is done savely in the construction of the BiCGStab regardless.
 template<typename Type, class FermionMatrix>
-void test_BiCGStab_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extractor<Type>::type eps, NSL::size_t Nt, NSL::size_t Nx);
+void test_BiCGStab_fermionMatrix(FermionMatrix & M,const NSL::RealTypeOf<Type> eps, NSL::size_t Nt, NSL::size_t Nx);
 
 // =======================================================================
 // Test Cases
@@ -31,13 +31,13 @@ void test_BiCGStab_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extrac
 FLOAT_NSL_TEST_CASE("BiCGStab - Random Matrix", "[BiCGStab,Random Matrix]"){
 
     // for double types we can demand higer precisions and volumes
-    if constexpr( std::is_same_v<double, typename NSL::RT_extractor<TestType>::type>) {
+    if constexpr( std::is_same_v<double, NSL::RealTypeOf<TestType>>) {
         NSL::size_t V_d = GENERATE(1,2,4,8,10,16,20,30,32,100,1000);
-        typename NSL::RT_extractor<TestType>::type eps_d = GENERATE(1e-1,1e-2,1e-3,1e-4,1e-6,1e-8,1e-10);
+        NSL::RealTypeOf<TestType> eps_d = GENERATE(1e-1,1e-2,1e-3,1e-4,1e-6,1e-8,1e-10);
         test_BiCGStab_randomMatrix<TestType>(eps_d, V_d);
     }  else {
         NSL::size_t V = GENERATE(1,2,4,8,10,16,20,30,32);
-        typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-1,1e-2,1e-3,1e-4);
+        NSL::RealTypeOf<TestType> eps = GENERATE(1e-1,1e-2,1e-3,1e-4);
         test_BiCGStab_randomMatrix<TestType>(eps, V);
     }
 }
@@ -47,7 +47,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Complete", "[BiCGStab,Hubbard Ex
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -64,7 +64,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Ring", "[BiCGStab,Hubbard Exp,Ri
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -80,7 +80,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Square 1D", "[BiCGStab,Hubbard E
     NSL::size_t Nx = GENERATE(2,8);
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -98,7 +98,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Square 2D", "[BiCGStab,Hubbard E
     NSL::size_t Nx = Nx1*Nx2;
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -117,7 +117,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Square 3D", "[BiCGStab,Hubbard E
     NSL::size_t Nx = Nx1*Nx2*Nx3;
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -137,7 +137,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Square 4D", "[BiCGStab,Hubbard E
     NSL::size_t Nx = Nx1*Nx2*Nx3*Nx4;
     TestType beta = GENERATE(1,1.5);
 
-    typename NSL::RT_extractor<TestType>::type eps = GENERATE(1e-3,1e-5);
+    NSL::RealTypeOf<TestType> eps = GENERATE(1e-3,1e-5);
 
     INFO(std::string("beta= ") + std::to_string(NSL::real(beta)));
 
@@ -154,7 +154,7 @@ COMPLEX_NSL_TEST_CASE("BiCGStab - Hubbard Exp - Square 4D", "[BiCGStab,Hubbard E
 // ======================================================================
 
 template<typename Type>
-void test_BiCGStab_randomMatrix(const typename NSL::RT_extractor<Type>::type eps, NSL::size_t V){
+void test_BiCGStab_randomMatrix(const NSL::RealTypeOf<Type> eps, NSL::size_t V){
     INFO( std::string("V = ") + std::to_string(V) );
     INFO( std::string("eps = ") + std::to_string(eps) );
     INFO( std::string("Matching Digits = ") + std::to_string(getMatchingDigits(eps)) );
@@ -187,7 +187,7 @@ void test_BiCGStab_randomMatrix(const typename NSL::RT_extractor<Type>::type eps
 // Implementation details: test_BiCGStab_fermionMatrix
 // ======================================================================
 template<typename Type, class FermionMatrix>
-void test_BiCGStab_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extractor<Type>::type eps, NSL::size_t Nt, NSL::size_t Nx){
+void test_BiCGStab_fermionMatrix(FermionMatrix & M,const NSL::RealTypeOf<Type> eps, NSL::size_t Nt, NSL::size_t Nx){
     NSL::Tensor<Type> b(Nt,Nx);b.rand();
 
     // MdaggerM =========================================================

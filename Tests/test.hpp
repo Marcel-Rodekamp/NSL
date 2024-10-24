@@ -63,8 +63,8 @@
  *
  * */
 template<NSL::Concept::isFloatingPoint T>
-bool compare_floating_point(T a, T b, typename NSL::RT_extractor<T>::type factor = 10){
-    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<typename NSL::RT_extractor<T>::type>::epsilon();
+bool compare_floating_point(T a, T b, NSL::RealTypeOf<T> factor = 10){
+    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<NSL::RealTypeOf<T>>::epsilon();
 }
 
 //! compare two integer numbers a,b
@@ -132,7 +132,7 @@ template<typename Type>
 NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10){
     assertm( y.shape() == x.shape(), "To be almost equal two tensors must be the same shape.");
 
-    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<NSL::RealTypeOf<Type>>>(x));
     result = false;
     NSL::size_t elements = x.numel();
     for(NSL::size_t i = 0; i < elements; i++){
@@ -144,7 +144,7 @@ NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int mat
 
 template<typename Type>
 NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10){
-    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
+    NSL::Tensor<bool> result(static_cast<NSL::Tensor<NSL::RealTypeOf<Type>>>(x));
     result = false;
     NSL::size_t elements = x.numel();
     for(NSL::size_t i = 0; i < elements; i++){
