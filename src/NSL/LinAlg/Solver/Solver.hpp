@@ -94,7 +94,7 @@ class Solver{
                 default: throw std::runtime_error("NSL::Solver: Could not identify fermion matrix combination pass either NSL:FermionMatrix::(M,Mdagger,MdaggerM or MMdagger)!");
             }
         }
-        //Solver(const FermionMatrix<Type,LatticeType> & M, 
+
         //       NSL::Tensor<Type> (FermionMatrix<Type,LatticeType>::* function_ptr)(const NSL::Tensor<Type> &)) : 
         //    M_(std::bind_front( function_ptr,&M ))
         //{}

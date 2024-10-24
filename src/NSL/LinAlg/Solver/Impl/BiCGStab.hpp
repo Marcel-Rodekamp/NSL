@@ -29,7 +29,7 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
          * This Solver implementation uses the conjugate gradient (BiCGStab) algorithm.
          * */
         BiCGStab(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -85,7 +85,7 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         BiCGStab(FermionMatrix<Type,LatticeType> & M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -150,7 +150,7 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         BiCGStab(FermionMatrix<Type,LatticeType> & M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-6, const NSL::size_t maxIter = 10000) : 
+               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -181,6 +181,24 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
          * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
 
+        //! Apply BiCGStab
+        /*!
+         *  \param b, NSL::Tensor, RHS of the equation to be solved
+         *
+         *  \param x0, NSL::Tensor, Initial guess for x
+         *
+         * This operator performs the solve of 
+         * \f[
+         *      M x = b
+         * \f]
+         * It returns an NSL::Tensor being the (approximate) solution
+         * \f[
+         *      x = M^{-1} b
+         * \f]
+         * for the stored fermion matrix M.
+         * */
+        NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
+
     private:
 
         // precision at which the algorithm is stopped
@@ -205,7 +223,21 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
         // cache vector
         NSL::Tensor<Type> Aw_;
 
-
+        //! Apply BiCGStab
+        /*!
+         *  \param b, NSL::Tensor, RHS of the equation to be solved
+         *
+         * This operator performs the solve of 
+         * \f[
+         *      M x = b
+         * \f]
+         * It returns an NSL::Tensor being the (approximate) solution
+         * \f[
+         *      x = M^{-1} b
+         * \f]
+         * for the stored fermion matrix M.
+         * */
+        NSL::Tensor<Type> solve_(const NSL::Tensor<Type> & b );
 }; // class BiCGStab
         
 } //namespace NSL::LinAlg
