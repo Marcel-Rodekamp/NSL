@@ -28,7 +28,10 @@ int main(int argc, char ** argv){
  
     NSL::Logger::info("Running CG to compute MM†@x = b.");
 
-    NSL::LinAlg::CG<NSL::complex<double>> cg(M,NSL::FermionMatrix::MMdagger);
+    //get types
+    typedef NSL::complex<double> Type;
+    typedef decltype(lat) LatticeType;
+    NSL::LinAlg::CG<NSL::complex<double>> cg(std::make_shared<NSL::FermionMatrix::HubbardExp<Type,LatticeType>>(M),NSL::FermionMatrix::MMdagger);
 
     NSL::Tensor<NSL::complex<double>> b(device,Nt,Nx); b.rand();
 

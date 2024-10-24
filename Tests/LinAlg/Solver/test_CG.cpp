@@ -189,12 +189,12 @@ void test_CG_randomMatrix(const typename NSL::RT_extractor<Type>::type eps, NSL:
 template<typename Type, class FermionMatrix>
 void test_CG_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extractor<Type>::type eps, NSL::size_t Nt, NSL::size_t Nx){
     NSL::Tensor<Type> b(Nt,Nx);b.rand();
-
+    std::shared_ptr<FermionMatrix> M_ptr = std::make_shared<FermionMatrix>(M);
     // MdaggerM =========================================================
     {
     // for now we just test the default case of cg:
     // maxIter = 10000
-    NSL::LinAlg::CG<Type> cg(M,NSL::FermionMatrix::MdaggerM,eps);
+    NSL::LinAlg::CG<Type> cg(M_ptr,NSL::FermionMatrix::MdaggerM,eps);
 
     NSL::Tensor<Type> res = cg(b);
 
@@ -213,7 +213,7 @@ void test_CG_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extractor<Ty
     {
     // for now we just test the default case of cg:
     // maxIter = 10000
-    NSL::LinAlg::CG<Type> cg(M,NSL::FermionMatrix::MMdagger,eps);
+    NSL::LinAlg::CG<Type> cg(M_ptr,NSL::FermionMatrix::MMdagger,eps);
 
     NSL::Tensor<Type> res = cg(b);
 

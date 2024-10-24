@@ -89,7 +89,9 @@ int main(int argc, char ** argv){
 
     NSL::Logger::info("Running BiCGStab to compute MM†@x = b.");
 
-    NSL::LinAlg::BiCGStab<NSL::complex<double>> bicgstab(M,NSL::FermionMatrix::MMdagger, 1e-10);
+    typedef NSL::complex<double> Type;
+    typedef decltype(lattice) LatticeType;
+    NSL::LinAlg::BiCGStab<NSL::complex<double>> bicgstab(std::make_shared<NSL::FermionMatrix::HubbardExp<Type,LatticeType>>(M),NSL::FermionMatrix::MMdagger, 1e-10);
 
     NSL::Tensor<NSL::complex<double>> b = NSL::zeros_like(phi);
     b(NSL::Slice(0,1), NSL::Slice(0,1)) = 1;

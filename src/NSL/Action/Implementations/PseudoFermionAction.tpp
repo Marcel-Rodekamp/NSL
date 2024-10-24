@@ -16,19 +16,19 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
         
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params) :
             BaseAction<Type,Type>("phi"),
-            FM_(new FermionMatrixType(lattice, params)),
+            FM_(std::make_shared<FermionMatrixType>(lattice, params)),
             chi_(),
             pseudoFermion_(),
-            cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
+            cg_(std::make_shared<NSL::LinAlg::CG<Type>>(std::static_pointer_cast<NSL::FermionMatrix::FermionMatrix<Type, LatticeType>>(FM_), NSL::FermionMatrix::MMdagger))
         {
         }
 
         PseudoFermionAction(LatticeType & lattice, NSL::Parameter & params, const std::string & fieldName) :
             BaseAction<Type,Type>(fieldName),
-            FM_(new FermionMatrixType(lattice, params)),
+            FM_(std::make_shared<FermionMatrixType>(lattice, params)),
             chi_(),
             pseudoFermion_(),
-            cg_(new NSL::LinAlg::CG<Type>(FM_, NSL::FermionMatrix::MMdagger))
+            cg_(std::make_shared<NSL::LinAlg::CG<Type>>(std::static_pointer_cast<NSL::FermionMatrix::FermionMatrix<Type, LatticeType>>(FM_), NSL::FermionMatrix::MMdagger))
         {
             // cg_->optimize_for_GPU(z);
         }
