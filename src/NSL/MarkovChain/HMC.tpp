@@ -81,7 +81,7 @@ class HMC{
                 nstart = maxConfigID;
             }
 
-            if (nstart > 0){
+            if (h5_.exist(fmt::format("{}/{}",baseNode,nstart))){
                 // this reader looks for the most recent markov state and reads it into the state
                 MC[nstart] = state;
                 try {
