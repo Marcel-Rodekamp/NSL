@@ -43,7 +43,12 @@ class CG: public NSL::LinAlg::Solver<Type> {
             t_(),
             r_(),
             p_()
-        {}
+        {
+            #ifdef USE_CUDA
+            NSL::Tensor<Type> b = NSL::Tensor<Type>(NSL::GPU(),64,20);
+            optimize_for_GPU(b);
+            #endif
+        }
 
         //! Constructor
         /*! 
@@ -97,7 +102,12 @@ class CG: public NSL::LinAlg::Solver<Type> {
             t_(),
             r_(),
             p_()
-        {}
+        {
+            #ifdef USE_CUDA
+            NSL::Tensor<Type> b = NSL::Tensor<Type>(NSL::GPU(),64,20);
+            optimize_for_GPU(b);
+            #endif
+        }
 
         //! Constructor
         /*! 
@@ -159,7 +169,12 @@ class CG: public NSL::LinAlg::Solver<Type> {
             t_(),
             r_(),
             p_()
-        {}
+        {
+            #ifdef USE_CUDA
+            NSL::Tensor<Type> b = NSL::Tensor<Type>(NSL::GPU(),64,20);
+            optimize_for_GPU(b);
+            #endif
+        }
 
         //! Apply CG
         /*!
@@ -204,6 +219,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
 
         #ifdef USE_CUDA
         // cuda graph for GPU optimization
+        bool GPU_optimization_;
         at::cuda::CUDAGraph graph_;
         void optimize_for_GPU(const NSL::Tensor<Type> & b);
         #endif

@@ -20,7 +20,6 @@ template<NSL::Concept::isNumber Type >
 void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     if (b.device() == NSL::Device("cpu")){
         GPU_optimization_ = false;
-        batchsize_ = 1;
         NSL::Logger::warn("Turning off GPU optimization for CG solver. The input vector is on CPU");
         return;
     }
@@ -40,7 +39,7 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     PUSH_RANGE("Graph Warmup",0);
     for (int iter = 0; iter < 10; iter++) {
         PUSH_RANGE("Warmup-Iteration",1);
-        CG_iteration_base_();
+        CG_iteration_();
         POP_RANGE;
     }
     POP_RANGE;
@@ -50,7 +49,7 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     PUSH_RANGE("Graph Capture (batch)",0);
     graph_.capture_begin();
     for (NSL::size_t i = 0; i < batchsize_; i++){
-        CG_iteration_base_();
+        CG_iteration_();
     }
     graph_.capture_end();
     POP_RANGE;
@@ -60,6 +59,17 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     NSL::Logger::info("CG Graph captured");
 }
 #endif
+
+template<NSL::Concept::isNumber Type >
+void CG<Type>::CG_batch_(){
+    #ifdef USE_CUDA
+        graph_.replay();
+    #else
+        for (NSL::size_t i = 0; i < batchsize_; i++){
+            CG_iteration_();
+        }
+    #endif
+}
 
 template<NSL::Concept::isNumber Type >
 void CG<Type>::CG_iteration_(){
@@ -73,17 +83,6 @@ void CG<Type>::CG_iteration_(){
     beta_ = rsqr_curr_ / rsqr_prev_;
     p_ = r_ + beta_ * p_;
     rsqr_prev_ = rsqr_curr_;
-}
-
-template<NSL::Concept::isNumber Type >
-void CG<Type>::CG_batch_(){
-    #ifdef USE_CUDA
-        graph_.replay();
-    #else
-        for (NSL::size_t i = 0; i < batchsize_; i++){
-            CG_iteration_();
-        }
-    #endif
 }
 
 template<NSL::Concept::isNumber Type >
