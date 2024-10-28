@@ -18,8 +18,7 @@ namespace NSL::LinAlg{
 #ifdef USE_CUDA
 template<NSL::Concept::isNumber Type >
 void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
-    if (b.device() == NSL::Device("cpu")){
-        GPU_optimization_ = false;
+    if (!b.device().is_cuda()){
         NSL::Logger::warn("Turning off GPU optimization for CG solver. The input vector is on CPU");
         return;
     }
@@ -61,13 +60,29 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
 #endif
 
 template<NSL::Concept::isNumber Type >
-void CG<Type>::CG_batch_(){
+void CG<Type>::CG_batch_CPU_(){
+    for (NSL::size_t i = 0; i < batchsize_; i++){
+        CG_iteration_();
+    }
+}
+
+#ifdef USE_CUDA
+template<NSL::Concept::isNumber Type >
+void CG<Type>::CG_batch_GPU_(){
+    graph_.replay();
+}
+#endif
+
+template<NSL::Concept::isNumber Type >
+void CG<Type>::optimize_(const NSL::Tensor<Type> & b){
     #ifdef USE_CUDA
-        graph_.replay();
-    #else
-        for (NSL::size_t i = 0; i < batchsize_; i++){
-            CG_iteration_();
-        }
+    NSL::Device device = b.device();
+    if(device.is_cuda()){
+        optimize_for_GPU(b);
+        CG_batch_ =std::bind(&CG::CG_batch_GPU_,this);
+    }else{
+        NSL::Logger::warn("Tensor on CPU -> skipping GPU optimization");
+    }
     #endif
 }
 
@@ -95,6 +110,7 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::T
     // This algorithm can be found e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
     //
 
+    std::call_once(init_flag_, &CG<Type>::optimize_, this, std::ref(b));
     // initialize the solution vector x_ which after convergence 
     // stores the approximate result x = M^{-1} @ b.
     // Multiple initializations are possible and can enhance the convergence
