@@ -117,8 +117,8 @@ if tuneFlag == 0:
 
         # Run
         # p.cpu_affinity(cpuList)
-        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
-        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
+        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
+        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
         print(result)
 
         # os.system(f"./{binary} --file {args.yaml}")
