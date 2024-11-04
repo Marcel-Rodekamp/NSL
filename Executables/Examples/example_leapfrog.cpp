@@ -3,7 +3,7 @@
 #include "Integrator/Impl/leapfrog.tpp"
 #include "NSL.hpp"
 
-int main(){
+int main(int argc, char** argv){
     
     typedef NSL::complex<double> cd;
 	
@@ -13,6 +13,9 @@ int main(){
     NSL::Tensor<cd> pi(Nt,Nx); pi.randn();
     NSL::Lattice::Ring<cd> lattice(Nx); 
 
+
+    NSL::Parameter params2 = NSL::init(argc, argv, "Hubbard Model HMC with Pseudofermions");
+    
     phi.imag() = 0;
     pi.imag() = 0;
    
@@ -34,10 +37,14 @@ int main(){
 	};
 
     NSL::Action::HubbardGaugeAction<cd> S_gauge(params);
+    //NSL::Action::PseudoFermionAction<cd,decltype(lattice), NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>>S_fermion(lattice, params);
     NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(lattice, params);
     // define the action
     NSL::Action::Action S = S_gauge + S_fermion;
 
+    // compute pseudo fermions (if they don't exist this call does nothing)
+    S.computePseudoFermion(config);
+    
     cd Hi, Hf;
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
