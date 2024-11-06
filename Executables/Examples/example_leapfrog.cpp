@@ -37,8 +37,8 @@ int main(int argc, char** argv){
 	};
 
     NSL::Action::HubbardGaugeAction<cd> S_gauge(params);
-    //NSL::Action::PseudoFermionAction<cd,decltype(lattice), NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>>S_fermion(lattice, params);
-    NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(lattice, params);
+    NSL::Action::PseudoFermionAction<cd,decltype(lattice), NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>>S_fermion(lattice, params);
+    //NSL::Action::HubbardFermionAction<cd,decltype(lattice),NSL::FermionMatrix::HubbardExp<cd,decltype(lattice)>> S_fermion(lattice, params);
     // define the action
     NSL::Action::Action S = S_gauge + S_fermion;
 
