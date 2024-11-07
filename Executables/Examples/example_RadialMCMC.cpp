@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
         params["radial scale"]    = 1./(params["Nt"].to<double>()*params["Nx"].to<double>()); 
     }
 
-    if (params["radial scale"]==0){
+    if (params["radial scale"].to<double>()==0.0){
         params["Nradial"] = 0;
     }
 
