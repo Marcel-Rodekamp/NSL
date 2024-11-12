@@ -63,7 +63,7 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
     bool computePseudoFermion(const NSL::Configuration<Type> & config) {
         // sqrt(0.5) = 0.707... is used to remove the factor 1/2 from the 
         // normal distribution. chi_ ~ exp(-Chi^+ Chi)
-        chi_ = NSL::randn_like(config.at(this->configKey_), 0., 0.7071067811865476 );
+        chi_ = NSL::randn_like(config.at(this->configKey_));
         //chi_ = NSL::randn_like(config.at(this->configKey_));
 
         // populate the fermion matrix 
