@@ -26,8 +26,8 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     }
     x_ = b;
     t_ = this->M_(x_);
-    r_ = b-t_;
-    rsqr_curr_ = NSL::real( (NSL::LinAlg::conj(r_) * r_).tensor_sum() );
+    r_ = b - t_;
+    rsqr_curr_ = NSL::real((NSL::LinAlg::conj(r_) * r_).tensor_sum());
     rsqr_prev_ = rsqr_curr_;
     p_ = r_;
     auto warmupStream = at::cuda::getStreamFromPool();
@@ -37,9 +37,9 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
     at::cuda::setCurrentCUDAStream(warmupStream);
 
     stream_sync(legacyStream, warmupStream);
-    PUSH_RANGE("Graph Warmup",0);
+    PUSH_RANGE("Graph Warmup", 0);
     for (int iter = 0; iter < 10; iter++) {
-        PUSH_RANGE("Warmup-Iteration",1);
+        PUSH_RANGE("Warmup-Iteration", 1);
         CG_iteration_base_();
         POP_RANGE;
     }
@@ -47,7 +47,7 @@ void CG<Type>::optimize_for_GPU(const NSL::Tensor<Type> & b){
 
     stream_sync(warmupStream, captureStream);
     at::cuda::setCurrentCUDAStream(captureStream);
-    PUSH_RANGE("Graph Capture (batch)",0);
+    PUSH_RANGE("Graph Capture (batch)", 0);
     graph_.capture_begin();
     for (NSL::size_t i = 0; i < batchsize_; i++){
         CG_iteration_base_();
@@ -66,10 +66,10 @@ void CG<Type>::CG_iteration_(){
     // compute the matrix vector product to determine the direction
     // t = M @ p
     t_ = this->M_(p_);
-    alpha_ = rsqr_prev_ / (NSL::LinAlg::conj(p_) * t_).tensor_sum();
+    alpha_ = rsqr_prev_ / ((NSL::LinAlg::conj(p_) * t_).tensor_sum() + errSq_*1e-6);        // The addition of an infinitesimal constant avoids instability in the case of overshooting the precision of the machine (happens when batchsize is far greater than necessary)
     x_ += alpha_ * p_;
     r_ -= alpha_ * t_;
-    rsqr_curr_ = NSL::real( (NSL::LinAlg::conj(r_) * r_).tensor_sum() );
+    rsqr_curr_ = NSL::real((NSL::LinAlg::conj(r_) * r_).tensor_sum());
     beta_ = rsqr_curr_ / rsqr_prev_;
     p_ = r_ + beta_ * p_;
     rsqr_prev_ = rsqr_curr_;
@@ -94,13 +94,12 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
 template<NSL::Concept::isNumber Type >
 NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0 ){
     // This algorithm can be found e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
-    //
 
     // initialize the solution vector x_ which after convergence 
     // stores the approximate result x = M^{-1} @ b.
     // Multiple initializations are possible and can enhance the convergence
     // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choise.
+    // which is an arbitrary choice.
     x_ = x0;
 
     // Compute the initial matrix vector product and store it in the 
@@ -108,39 +107,39 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::T
     t_ = this->M_(x0);
 
     // This initial matrix vector product defines the initial residual vector 
-    r_ = b-t_;
+    r_ = b - t_;
 
     // The residual square is given by the square of the residual
     // We require two instances to store the previous (prev) and the current (curr)
     // error (this is a simple efficiency optimization)
     // inner_product returns a number of type `Type` from which the real 
     // part is extracted, the imaginary part is 0 by construction
-    rsqr_curr_ = NSL::real( (NSL::LinAlg::conj(r_) * r_).tensor_sum() );
+    rsqr_curr_ = NSL::real((NSL::LinAlg::conj(r_) * r_).tensor_sum());
     rsqr_prev_ = rsqr_curr_;
 
     // if the guess is already good enough return
     auto rsqr_curr_cpu = rsqr_curr_.to(NSL::CPU());
     if (rsqr_curr_cpu[0] <= errSq_) {
-        NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr_cpu[0]),NSL::LinAlg::sqrt(errSq_),0);
+        NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr_cpu[0]), NSL::LinAlg::sqrt(errSq_), 0);
         return x_;
     }
 
     // The initial gradient vector is then given by the residual
     p_ = r_;
 
-    // break up condition for maximum number of iteration
-    for(NSL::size_t count = 1; count <= maxIter_; count+=batchsize_){
-        PUSH_RANGE("CG Iteration",6);
+    // break up condition for maximum number of iterations
+    for(NSL::size_t count = batchsize_; count <= maxIter_; count += batchsize_){
+        PUSH_RANGE("CG Iteration", 6);
         CG_batch_();
 
         // now prepare the previous residual square for the next iteration
         // rsqr_prev = rsqr_curr;
-        // check for convergence agains the errSq_ determined by the 
+        // check for convergence against the errSq_ determined by the 
         // parameter eps (errSq_ = eps*eps) of the constructor to this class
         // if succeeded return the solution x_ = M^{-1} b;
         rsqr_curr_cpu = rsqr_curr_.to(NSL::CPU());
         if (rsqr_curr_cpu[0] <= errSq_) {
-            NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr_cpu[0]),NSL::LinAlg::sqrt(errSq_),count);
+            NSL::Logger::debug("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr_cpu[0]), NSL::LinAlg::sqrt(errSq_), count);
             POP_RANGE;
             POP_RANGE;
             return x_;
