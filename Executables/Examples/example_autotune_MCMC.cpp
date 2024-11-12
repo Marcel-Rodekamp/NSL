@@ -123,9 +123,9 @@ int main(int argc, char* argv[]){
     // hard wired in the meta data if you change this here, also change the
     // writeMeta()
     //
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-    > S_fermion(lattice,params);
+    NSL::Action::PseudoFermionAction<
+                            Type,decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+                            > S_fermion(lattice, params);
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -146,6 +146,7 @@ int main(int argc, char* argv[]){
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
+    S.computePseudoFermion(config);
     
     NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", params["trajectory length"], params["Nmd"]);
 
