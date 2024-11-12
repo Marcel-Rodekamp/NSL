@@ -5,6 +5,7 @@
 #include "realImag.tpp"
 #include "complex.hpp"
 #include "types.hpp"
+#include <mutex>
 
 #include "CUDA.hpp"
 #include <torch/torch.h>
@@ -180,7 +181,11 @@ class CG: public NSL::LinAlg::Solver<Type> {
         
     private:
         void CG_iteration_();
-        void CG_batch_();
+        std::function<void()> CG_batch_ = std::bind(&CG::CG_batch_CPU_,this);
+        void CG_batch_CPU_();
+
+        std::once_flag init_flag_;
+        void optimize_(const NSL::Tensor<Type> & b);
         
         NSL::Tensor<Type> alpha_; 
         NSL::Tensor<typename NSL::RT_extractor<Type>::type> beta_;
@@ -204,6 +209,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
 
         #ifdef USE_CUDA
         // cuda graph for GPU optimization
+        void CG_batch_GPU_();
         at::cuda::CUDAGraph graph_;
         void optimize_for_GPU(const NSL::Tensor<Type> & b);
         #endif

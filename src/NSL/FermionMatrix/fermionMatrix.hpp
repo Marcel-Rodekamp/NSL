@@ -109,6 +109,10 @@ class FermionMatrix {
         return M;
     }
 
+    NSL::Device device(){
+        return this->Lat.device();
+    }
+
     protected:
     //! An object of Lattice type (Ring, square, etc.).
     LatticeType & Lat;

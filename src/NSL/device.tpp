@@ -100,6 +100,10 @@ class Device {
         return repr_;  
     }
 
+    const bool is_cuda() const {
+        return dev_.device().is_cuda();
+    }
+
     protected:
     Device(torch::TensorOptions * dev):
         dev_(*dev),
