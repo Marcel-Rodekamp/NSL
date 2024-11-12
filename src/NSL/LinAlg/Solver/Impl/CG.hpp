@@ -21,13 +21,13 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * \param M
          *        Matrix times vector application for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param eps
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          *
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
@@ -51,13 +51,13 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
          *        a fermion matrix for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param eps
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
          *                   This template defines the type of Fermion Matrix, as any fermion 
@@ -105,11 +105,11 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
          *        a fermion matrix for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param function_ptr
          *        this specifies which application of the 
          *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
-         *        solved. You can use explesstions like
+         *        solved. You can use expressions like
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::Mdagger 
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
@@ -118,8 +118,8 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
          *                   This template defines the type of Fermion Matrix, as any fermion 
@@ -132,7 +132,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *                   It is checked that it derives from NSL::Lattice::SpatialLattice as to
          *                   ensure that the required interface is given.
          *
-         * This default case uses the application of ther fermion matrix
+         * This default case uses the application of the fermion matrix
          * ```
          *      M = *function_ptr 
          * ```
@@ -190,7 +190,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
         
         // precision at which the algorithm is stopped
         const typename NSL::RT_extractor<Type>::type errSq_;
-        // maximum of iterations as fall back in case we don't converge
+        // maximum of iterations as fallback in case we don't converge
         const NSL::size_t maxIter_;
 
         // vector to store intermediate solution
