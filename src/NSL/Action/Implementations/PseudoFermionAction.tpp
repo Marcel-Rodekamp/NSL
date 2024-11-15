@@ -63,8 +63,8 @@ class PseudoFermionAction: public BaseAction<Type,Type>{
     bool computePseudoFermion(const NSL::Configuration<Type> & config) {
         // sqrt(0.5) = 0.707... is used to remove the factor 1/2 from the 
         // normal distribution. chi_ ~ exp(-Chi^+ Chi)
-        chi_ = NSL::randn_like(config.at(this->configKey_), 0., 0.7071067811865476 );
-        //chi_ = NSL::randn_like(config.at(this->configKey_));
+        //chi_ = NSL::randn_like(config.at(this->configKey_), 0., 0.7071067811865476 );
+        chi_ = NSL::randn_like(config.at(this->configKey_));
 
         // populate the fermion matrix 
         FM_->populate(config.at(this->configKey_));
@@ -96,7 +96,7 @@ Type PseudoFermionAction<Type,LatticeType,FermionMatrixType>::eval(const Tensor<
     // and populates the fermion matrix
     FM_->populate(phi);
 
-    // compute MMdagger * pseudoFermion
+    // compute (MMdagger)^{-1} * pseudoFermion
     if (useCache){
         pseudoFermionInv_ = (*cg_)(pseudoFermion_, pseudoFermionInv_);
     } else {
