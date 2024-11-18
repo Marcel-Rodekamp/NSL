@@ -127,6 +127,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
     NSL::size_t tsrcStep = Nt/NumberTimeSources;
+    if (Nt%NumberTimeSources != 0) {
+       tsrcStep += 1;  // The +1 ensures the correct number of measurements
+    }
 
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
         // Define a point source
@@ -181,6 +184,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
     NSL::size_t tsrcStep = Nt/NumberTimeSources;
+    if (Nt%NumberTimeSources != 0) {
+       tsrcStep += 1;  // The +1 ensures the correct number of measurements
+    }
     
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
     	// Define a wall source
