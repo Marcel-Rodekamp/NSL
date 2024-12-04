@@ -15,7 +15,24 @@ include(FetchContent)
 # At current version of CUDA and Torch the population of the C++20 standard 
 # results in cmake errors. Moving the find_package call before seeting the 
 # standard is a hack which circumvents the problem.
-find_package(Torch REQUIRED)
+find_package(Torch QUIET)
+if(NOT Torch_FOUND)
+    find_package(Python3 QUIET)
+    if(NOT Python3_FOUND)
+        find_package(Torch REQUIRED)
+    endif()
+    message(WARNING "Torch not found in system path, querying pip for pytorch")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m pip show torch
+        OUTPUT_VARIABLE PIP_TORCH_INFO
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    string(REGEX MATCH "Location: ([^\n]*)" _ "${PIP_TORCH_INFO}")
+    set(Torch_DIR "${CMAKE_MATCH_1}/torch/share/cmake/Torch")
+    message(STATUS "Adding Torch CMake module path: ${Torch_DIR}")
+    find_package(Torch REQUIRED)
+endif()
 
 # set come C++ variables.
 # ToDo: Do this dynamically
