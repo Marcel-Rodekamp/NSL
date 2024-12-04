@@ -38,6 +38,8 @@ mkdir build && cd build
 ``` 
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
+To enforce a CPU/GPU specific build, add `-DUSE_CPU=ON` or `-DUSE_CUDA=ON` respectively, otherwise GPU support is automatically detected.
+
 4. Build the directory (add `-j 4` for parallel build on 4 cores)
 ```
 make
