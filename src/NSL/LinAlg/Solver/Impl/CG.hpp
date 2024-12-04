@@ -180,11 +180,21 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
         
     private:
-        void CG_iteration_();
+        void CG_iteration_();       // single iteration of the CG algorithm
+        void CG_batch_CPU_();       // batch of iterations of the CG algorithm
+        // function pointer to the unoptimized version. This allows us to easily switch in the optimized version
         std::function<void()> CG_batch_ = std::bind(&CG::CG_batch_CPU_,this);
-        void CG_batch_CPU_();
+        #ifdef USE_CUDA
+        // cuda graph for GPU optimization
+        void CG_batch_GPU_();
+        at::cuda::CUDAGraph graph_;
+        void optimize_for_GPU(const NSL::Tensor<Type> & b);
+        #endif
+        // batch size for sequential iterations without abortion check
+        const NSL::size_t batchsize_;
 
-        std::once_flag init_flag_;
+        std::once_flag init_flag_;  // flag to ensure that the optimization is only done once
+        // function that optimizes the CG algorithm both for CPU and GPU (currently only GPU)
         void optimize_(const NSL::Tensor<Type> & b);
         
         NSL::Tensor<Type> alpha_; 
@@ -206,15 +216,6 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<Type> r_;
         // gradient vector
         NSL::Tensor<Type> p_;
-
-        #ifdef USE_CUDA
-        // cuda graph for GPU optimization
-        void CG_batch_GPU_();
-        at::cuda::CUDAGraph graph_;
-        void optimize_for_GPU(const NSL::Tensor<Type> & b);
-        #endif
-        // batch size for sequential iterations without abortion check
-        const NSL::size_t batchsize_ = 1;
 }; // class CG
         
 } //namespace NSL::LinAlg
