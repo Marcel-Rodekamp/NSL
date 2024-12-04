@@ -114,28 +114,15 @@ void CG<Type>::CG_iteration_(){
 }
 
 template<NSL::Concept::isNumber Type >
-NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
-    // If no initial guess is provided, we use the b vector as the initial guess
-    return (*this)(b, b);
-} // operator()
-
-template<NSL::Concept::isNumber Type >
-NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0 ){
+NSL::Tensor<Type> CG<Type>::solve_(const NSL::Tensor<Type> & b){
     // This algorithm can be found at e.g.: https://en.wikipedia.org/wiki/Conjugate_gradient_method#The_resulting_algorithm
 
     // The graph is captured only once
     std::call_once(init_flag_, &CG<Type>::optimize_, this, std::ref(b));
     
-    // Initialize the solution vector x_ which after convergence 
-    // stores the approximate result x = M^{-1} @ b.
-    // Multiple initializations are possible and can enhance the convergence
-    // see e.g. Preconditioning. Here we just choose a simple start vector
-    // which is an arbitrary choice.
-    x_ = x0;
-
     // Compute the initial matrix-vector product and store it in the 
     // corresponding vector t
-    t_ = this->M_(x0);
+    t_ = this->M_(x_);
 
     // This initial matrix-vector product defines the initial residual vector 
     r_ = b - t_;
@@ -185,7 +172,25 @@ NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b, const NSL::T
     // This should never be reached but put it just in case something goes wrong.
     return x_;
 
-} // operator()
+} // solve_
+
+template<NSL::Concept::isNumber Type >
+NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b ){
+    // initialize the solution vector x_ = b which after convergence 
+    // stores the approximate result x = M^{-1} @ b.
+    x_ = b;//NSL::randn_like(b);
+    return solve_(b);
+}
+
+template<NSL::Concept::isNumber Type >
+NSL::Tensor<Type> CG<Type>::operator()(const NSL::Tensor<Type> & b , const NSL::Tensor<Type> & x0 ){
+    // initialize the solution vector x_ = x0 which after convergence 
+    // stores the approximate result x = M^{-1} @ b.
+    // Multiple initializations are possible and can enhance the convergence
+    // see e.g. Preconditioning.
+    x_ = x0;    
+    return solve_(b);
+}
 
 } // namespace NSL::LinAlg
 

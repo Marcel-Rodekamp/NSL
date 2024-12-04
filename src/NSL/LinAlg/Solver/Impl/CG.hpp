@@ -34,7 +34,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
         CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -88,7 +88,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -150,7 +150,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
         CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
                NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000, const NSL::size_t batchsize = 100) : 
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, const NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             errSq_(eps*eps),
             maxIter_(maxIter),
@@ -204,8 +204,8 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<typename NSL::RT_extractor<Type>::type> rsqr_prev_; 
         
         // precision at which the algorithm is stopped
-        const typename NSL::RT_extractor<Type>::type errSq_;
-        // maximum of iterations as fallback in case we don't converge
+        const NSL::RealTypeOf<Type> errSq_;
+        // maximum of iterations as fall back in case we don't converge
         const NSL::size_t maxIter_;
 
         // vector to store intermediate solution
@@ -216,6 +216,22 @@ class CG: public NSL::LinAlg::Solver<Type> {
         NSL::Tensor<Type> r_;
         // gradient vector
         NSL::Tensor<Type> p_;
+
+        //! Apply CG
+        /*!
+         *  \param b, NSL::Tensor, RHS of the equation to be solved
+         *
+         * This operator performs the solve of 
+         * \f[
+         *      M x = b
+         * \f]
+         * It returns an NSL::Tensor being the (approximate) solution
+         * \f[
+         *      x = M^{-1} b
+         * \f]
+         * for the stored fermion matrix M.
+         * */
+        NSL::Tensor<Type> solve_(const NSL::Tensor<Type> & b );
 }; // class CG
         
 } //namespace NSL::LinAlg
