@@ -189,7 +189,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     
-    NSL::size_t tsrcStep = Nt/NumberTimeSources;
+    NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
 
     int kDim = params_["wallSources"].shape(0);
     int bDim = params_["wallSources"].shape(1);
