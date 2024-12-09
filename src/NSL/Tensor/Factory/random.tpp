@@ -67,6 +67,15 @@ Type randn(NSL::RealTypeOf<Type> mean, NSL::RealTypeOf<Type> std){
     return t();
 }
 
+template<NSL::Concept::isNumber Type>
+Type lognormal(NSL::RealTypeOf<Type> mean, NSL::RealTypeOf<Type> std){
+    NSL::Tensor<Type> t(1);
+    
+    t.lognormal(mean,std);
+
+    return t();
+}
+
 } //namespace Random
 
 } // namespace NSL
