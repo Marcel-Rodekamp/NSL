@@ -21,8 +21,9 @@ target_link_libraries(example_MCMC NSL)
 
 add_executable(example_autotune_MCMC example_autotune_MCMC.cpp)
 target_link_libraries(example_autotune_MCMC NSL)
-add_executable(example_RadialMCMC example_RadialMCMC.cpp)
-target_link_libraries(example_RadialMCMC NSL)
+
+add_executable(RadialMCMC RadialMCMC.cpp)
+target_link_libraries(RadialMCMC NSL)
 
 #add_executable(example_GPU_Tensor example_GPU_Tensor.cpp)
 #target_link_libraries(example_GPU_Tensor NSL)
@@ -57,3 +58,4 @@ target_link_libraries(example_cli NSL)
 # Copy the example parameter file to the binary so that one can execute the 
 # code without specifying a full path to the src folder.
 file(COPY example_param.yml DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY RadialMCMC_example_param.yml DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
