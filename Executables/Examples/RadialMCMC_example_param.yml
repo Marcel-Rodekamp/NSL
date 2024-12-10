@@ -9,11 +9,11 @@ HMC:
   Nradial: 1
   radial scale: 1.0
 fileIO:
-  h5file: "2Site_radial_test.h5"
+  h5file: "RadialHMC_2Site.h5"
 measurements:
   Number Time Sources: 4
 system:
-  name: "RadialMCMC"
+  name: ""
   nions: 2
   Nt: 1
   beta: 1.0
