@@ -68,6 +68,16 @@ class TensorFactories:
         this->data_ = torch::randint_like(this->data_,high);
         return NSL::Tensor<Type>(this);
     }
+
+    //! Fill the tensor with pseudo-random numbers
+    /*!
+    * Fills the Tensor with pseudo-random numbers from the lognormal[mean, std] distribution; 
+    * Mean and Std define the underlying normal distribution
+    */
+    NSL::Tensor<NSL::RealTypeOf<Type>> lognormal(NSL::RealTypeOf<Type> mean, NSL::RealTypeOf<Type> std){
+        this->data_.log_normal_(mean,std);
+        return NSL::Tensor<NSL::RealTypeOf<Type>>(this);
+    }
 };
 
 } // namespace NSL::TensorImpl
