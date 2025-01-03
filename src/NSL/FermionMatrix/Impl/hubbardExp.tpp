@@ -146,7 +146,8 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
         sausage.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
     }
     
-    return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(device,Nx) + sausage);
+    //return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(device,Nx) + sausage);
+    return NSL::LinAlg::logdet1plusF(sausage);
 } 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
