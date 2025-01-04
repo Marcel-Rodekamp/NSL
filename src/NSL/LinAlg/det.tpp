@@ -21,9 +21,8 @@ Type logdet(const NSL::Tensor<Type> & t){
 
 template <typename Type> 
 Type logdet1plusF(const NSL::Tensor<Type> & t){
-    //! \todo Need to mod the imaginary part back into the interval (-2pi,2pi)
     
-    NSL::Tensor<Type> ev = torch::linalg::eigvals(t);  // eigenvalues of the sausage
+    NSL::Tensor<Type> ev = torch::linalg::eigvals(t);  // eigenvalues of the sausage (slowest part of the calculation, but what can we do?)
     NSL::Tensor<Type> log1plusF=torch::log(1.0+ev);    // logarithm of 1+eigenvalues
 
     NSL::complex<double> logdet1pF = log1plusF.sum(); // sum the elements, which gives logdet
