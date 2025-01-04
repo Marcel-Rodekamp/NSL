@@ -26,8 +26,8 @@ Type logdet1plusF(const NSL::Tensor<Type> & t){
     NSL::Tensor<Type> ev = torch::linalg::eigvals(t);  // eigenvalues of the sausage
     NSL::Tensor<Type> log1plusF=torch::log(1.0+ev);    // logarithm of 1+eigenvalues
 
-    auto answer=log1plusF.sum(); // sum the elements, which gives logdet
-    //answer.imag() = std::remainder(answer.imag(), 6.28318530717959);
+    NSL::complex<double> answer=log1plusF.sum(); // sum the elements, which gives logdet
+    answer = std::complex<double> (answer.real(), std::remainder(answer.imag(), 6.28318530717959));
 
     return answer;  
 }
