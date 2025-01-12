@@ -13,7 +13,7 @@ template <typename Type> NSL::Tensor<Type> mat_exp(const NSL::Tensor<Type> & t){
                                                   // (there is probably a better way to make the array complex)
      torch::Tensor expL = torch::diag(L.exp());   // take exponential of eigenvalues and make matrix with these elements as diagonal
      expL = torch::matmul(expL,torch::transpose(Q,0,1).conj());
-     expL = torch::matmul(Q,expL);                // expK = Q @ expL @Q.T.conj()
+     expL = torch::matmul(Q,expL);                // expK = Q @ expL @ Q.T.conj()
      return NSL::Tensor<Type>  (expL,true);
      //return NSL::Tensor<Type>(t,true).mat_exp(); // this was the old way of doing it. . .
 }
