@@ -1,5 +1,6 @@
 '''
-Author: Philippos Papaphilipou
+Author: Philippos Papaphilipou (original version for CNS)
+        Petar Sinilkov new version adapted for NSL
 
 Notes: 
 - If numpy, scipy or matplotlib are not available in the nodes, a local install
@@ -61,6 +62,8 @@ args = parser.parse_args()
 
 with open(args.yaml) as stream:
     ymlFile = yaml.safe_load(stream)
+
+base_name = ymlFile["system"]["name"]
 
 binary, conffile = args.executable, args.yaml
 
