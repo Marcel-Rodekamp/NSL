@@ -11,7 +11,6 @@ measurements:
   Number Time Sources: 4
 system:
   name: "Perylene"
-  Nt: 64
   nions: 20
   Nt: 16
   beta: 2.0
