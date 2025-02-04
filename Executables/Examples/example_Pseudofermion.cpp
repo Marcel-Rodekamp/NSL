@@ -23,11 +23,12 @@ int main(){
 
     // test dMdPhi function of fermion matrix by printing each element
     NSL::Tensor<cd> phi(NT,2);
-    // phi[1] = 1.0;
-    // phi[2] = 2.0;
-    // phi[3] = 3.0;
     FM.populate(phi);
 
+    /* 
+       This code snippet below is for debugging.  It shows derivatives of the fermion matrix M, as this can be
+       a useful sign to diagnose when pseudofermions are failing.
+    */
     // for (int u = 0; u < NT; u++){
     //     for (int z = 0; z < 2; z++){
     //         std::cout << std::endl << "derivative of M with respect to phi(" << u << "," << z << "):" << std::endl;
@@ -48,6 +49,7 @@ int main(){
     //         }
     //     }
     // }
+    /* Code snippet ends here */
 
     NSL::Action::Action S = NSL::Action::HubbardGaugeAction<cd>(params)
                             + NSL::Action::PseudoFermionAction<
@@ -89,7 +91,11 @@ int main(){
       std::cout << Nmd << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << std::endl;
     }
 
-    /*
+/* 
+The lines below, when copied into a shell, can be used to immediately plot
+the results of this example, showing the leapfrog convergence.
+*/
+/*
 ./Executables/Examples/example_Pseudofermion | python3 -c "
 import sys
 import matplotlib.pyplot as plt
@@ -104,6 +110,6 @@ plt.ylabel('$|\\\\frac{H_f-H_i}{H_i}|$')
 plt.title('Trajectory-Length $=2$')
 plt.show()"
     */
-	return EXIT_SUCCESS;
+   return EXIT_SUCCESS;
 
 }
