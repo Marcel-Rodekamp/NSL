@@ -128,7 +128,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(con
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     const int Nt = this->phi_.shape(0);
-    const int Nx = this->phi_.shape(1); 
+    const int Nx = this->phi_.shape(1);
+    std::vector<int> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109,
+    		     	       113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271,
+    			       277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449,
+    			       457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}; 
+    int NtFactor;
+    int primeIndex;
 
     // having a batch dimension requires a bit more work and refactoring of 
     // this algorithm for now we don't implement it here
@@ -141,12 +147,26 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     
     prod = this->Lat.exp_hopping_matrix(sgn_*this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
-    //Computing F_{Nt-1}.F_{Nt-2}.....F_0
-    for(int t = Nt-1;  t >= 0; t--){
-        sausage.mat_mul(prod(t,NSL::Slice(),NSL::Slice())); 
+    // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision
+    primeIndex = 0;
+    NtFactor = Nt;
+    while (NtFactor > 1) {
+        if (NtFactor%primes[primeIndex] == 0) {
+	   for (int t = 0; t < NtFactor; t += primes[primeIndex]) {
+	       for (int tt = 1; tt < primes[primeIndex]; tt++) {
+	       	   //prod(Nt-1-t,NSL::Slice(),NSL::Slice()) = prod(Nt-1-t,NSL::Slice(),NSL::Slice()).mat_mul(prod(Nt-1-(t+tt),NSL::Slice(),NSL::Slice()));
+		   prod(Nt-1-t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(prod(Nt-1-t,NSL::Slice(),NSL::Slice()), prod(Nt-1-(t+tt),NSL::Slice(),NSL::Slice()));
+	       }
+	       prod(Nt-1-t/primes[primeIndex],NSL::Slice(),NSL::Slice()) = prod(Nt-1-t,NSL::Slice(),NSL::Slice());
+	   }
+	   NtFactor /= primes[primeIndex];
+	} else {
+	   primeIndex += 1;
+	}
     }
+    sausage = prod(Nt-1,NSL::Slice(),NSL::Slice());
     
-    return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(device,Nx) + sausage);
+    return NSL::LinAlg::logdet1plusF(sausage);
 } 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
