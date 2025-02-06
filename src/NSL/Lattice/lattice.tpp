@@ -52,7 +52,8 @@ template <typename Type>
 NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type delta){
     if(! exp_hopping_matrix_.contains(delta)){
         // compute if it's not in exp_hopping_matrix_ already
-        this->exp_hopping_matrix_[delta] = NSL::LinAlg::mat_exp(this->hopping_matrix(delta));
+	// here we assume that the matrix is Hermitian or real symmetric!!!  Otherwise need to call mat_exp()
+        this->exp_hopping_matrix_[delta] = NSL::LinAlg::mat_exph(this->hopping_matrix(delta));
     }
     return this->exp_hopping_matrix_[delta];
 }

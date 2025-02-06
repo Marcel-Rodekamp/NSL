@@ -33,13 +33,7 @@ import matplotlib as mpl
 mpl.use('Agg') # To work without Xserver
 from matplotlib import pyplot as pl
 
-
 graph_dir = "./autotune-graphs/"
-out_dir = "./stdout/"
-meas_dir, conf_dir, base_name = "", "", ""
-
-base_name = ""
-conf_dir = "thermal"
 
 optimal_acceptance = 0.75
 significance_interval = 0.25
@@ -64,6 +58,7 @@ with open(args.yaml) as stream:
     ymlFile = yaml.safe_load(stream)
 
 base_name = ymlFile["system"]["name"]
+conf_dir = "thermal"
 
 binary, conffile = args.executable, args.yaml
 

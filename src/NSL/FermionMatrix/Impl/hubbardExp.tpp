@@ -147,11 +147,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     
     prod = this->Lat.exp_hopping_matrix(sgn_*this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
-    //Computing F_{Nt-1}.F_{Nt-2}.....F_0
-    //    for(int t = Nt-1;  t >= 0; t--){
-    //       sausage.mat_mul(prod(t,NSL::Slice(),NSL::Slice()));
-    //    }
-
+    // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision
     primeIndex = 0;
     NtFactor = Nt;
     while (NtFactor > 1) {
@@ -170,7 +166,6 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     }
     sausage = prod(Nt-1,NSL::Slice(),NSL::Slice());
     
-    //return NSL::LinAlg::logdet(NSL::Matrix::Identity<Type>(device,Nx) + sausage);
     return NSL::LinAlg::logdet1plusF(sausage);
 } 
 
