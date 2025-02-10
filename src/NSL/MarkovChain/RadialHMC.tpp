@@ -99,7 +99,17 @@ class RadialHMC{
             if (nstart > 0){
                 // this reader looks for the most recent markov state and reads it into the state
                 MC[nstart] = state;
-                h5_.read(MC[nstart], baseNode);
+                // h5_.read(MC[nstart], baseNode);
+                try {
+                    h5_.read(MC[nstart], baseNode);
+                }
+                catch(...) {
+                // in case the last markov state is corrupted try again
+                    h5_.deleteData(fmt::format("{}/{}",baseNode,nstart));
+                    nstart--;
+                    MC[nstart] = state;
+                    h5_.read(MC[nstart], baseNode, nstart);
+                }
 
             } else{
                 MC[nstart] = state;
