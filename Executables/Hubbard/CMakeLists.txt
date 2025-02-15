@@ -15,4 +15,4 @@ target_link_libraries(PseudoHMC NSL)
 
 # Copy the example parameter file to the binary so that one can execute the 
 # code without specifying a full path to the src folder.
-file(COPY example_param.yml DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY . DESTINATION ${CMAKE_CURRENT_BINARY_DIR} FILES_MATCHING PATTERN "*.yml")
