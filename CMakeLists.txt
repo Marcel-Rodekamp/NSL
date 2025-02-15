@@ -32,6 +32,12 @@ if(NOT Torch_FOUND)
     set(Torch_DIR "${CMAKE_MATCH_1}/torch/share/cmake/Torch")
     message(STATUS "Adding Torch CMake module path: ${Torch_DIR}")
     find_package(Torch REQUIRED)
+
+    execute_process(
+        COMMAND python3 -c "import torch; print(torch.version.cuda)"
+        OUTPUT_VARIABLE Torch_CUDA_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 endif()
 
 # set come C++ variables.
