@@ -37,6 +37,12 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::F_(const NSL
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::M(const NSL::Tensor<Type> & psi){
+    // We want to compute 
+    //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
+    // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
+    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    //        |---shift---> |---mat mul---> |--- element-wise mul ---|
+
     NSL::Tensor<Type> Fpsi = NSL::LinAlg::mat_mul(
         psi*this->phiExp_,
         this->Lat.exp_hopping_matrix(sgn_*delta_)
