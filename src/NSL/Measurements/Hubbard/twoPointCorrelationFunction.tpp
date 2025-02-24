@@ -43,6 +43,7 @@ class TwoPointCorrelator: public Measurement {
             ),
 	    srcVecK_(
                 params["device"].to<NSL::Device>(),
+                params["Number Time Sources"].to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].to<NSL::size_t>(),
@@ -185,28 +186,33 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
     
+    NSL::size_t t = 0;
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
     	// Define a wall source
-	    srcVecK_(NSL::Slice(),NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(NSL::Slice(),NSL::Slice(),NSL::Slice());
+	    srcVecK_(t,NSL::Slice(),NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(NSL::Slice(),NSL::Slice(),NSL::Slice());
+        t++;
+    }
 
-        // invert MM^dagger
-        NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
+    // invert MM^dagger
+    NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
 
-        // back multiply M^dagger to obtain M^{-1}
-        // invM is of shape Nx x Nt x Nx
-        NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
+    // back multiply M^dagger to obtain M^{-1}
+    // invM is of shape Nx x Nt x Nx
+    NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
 
-        // Using a point sink allows to just copy invM as corr(t,y,x)
-        // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
-        // boundary conditions
-        // shift t -> t - tsrc
-        invM.shift( -tsrc, -2, -Type(1) );
-
+    // Using a point sink allows to just copy invM as corr(t,y,x)
+    // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
+    // boundary conditions
+    // shift t -> t - tsrc
+    t = 0;
+    for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
+        invM(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()).shift( -tsrc, -2, -Type(1) );
         // Average over all source times
-        corrK_ += invM; // I changed something here!!!!!
+        corrK_ += invM(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()); // I changed something here!!!!!
 
-        srcVecK_ = Type(0);
+        t++;
     } // tsrc
+    srcVecK_ = Type(0);
 
     corrK_ /= Type(NumberTimeSources);
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
