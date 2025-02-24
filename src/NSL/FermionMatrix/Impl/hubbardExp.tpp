@@ -6,6 +6,7 @@
 #include "hubbardExp.hpp"
 #include "../../Matrix.hpp"
 #include "sliceObj.tpp"
+#include <tuple>
 
 namespace NSL::FermionMatrix {
 
@@ -175,6 +176,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
     const NSL::Device device = this->phi_.device();
+    NSL::Tensor<Type> L,V,invV,Lmat;
 
     // having a batch dimension requires a bit more work and refactoring of 
     // this algorithm for now we don't implement it here
@@ -197,8 +199,17 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     }
 
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    std::tie( L , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+    invV = NSL::LinAlg::mat_inv(V);
+    L += 1.;
+    L = 1./L;
+    Lmat = torch::diag(L);
+    invAp1F_ = NSL::LinAlg::mat_mul( V , NSL::LinAlg::mat_mul( Lmat , invV ) );
+
+    /*  The old way
     invAp1F_ = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(device,Nx) 
              + FkFkFk_(0,NSL::Slice(),NSL::Slice()));  
+    */
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
