@@ -23,14 +23,16 @@ class TwoPointCorrelator: public Measurement {
             species_(species),
 	    corrKblock_(
                 params["device"].to<NSL::Device>(),
-		params["Nt"].to<NSL::size_t>(),
-		params["wallSources"].shape(1).to<NSL::size_t>(),
-		params["wallSources"].shape(1).to<NSL::size_t>()
+                params["wallSources"].shape(0).to<NSL::size_t>(), // momenta
+                params["Nt"].to<NSL::size_t>(),
+                params["wallSources"].shape(1).to<NSL::size_t>(), // bands
+                params["wallSources"].shape(1).to<NSL::size_t>()  // bands
             ),
 	    corrK_(
                 params["device"].to<NSL::Device>(),
-                params["wallSources"].shape(1).to<NSL::size_t>(),
-		params["Nt"].to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(1).to<NSL::size_t>(), // bands
+		        params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
             corr_(
@@ -41,7 +43,8 @@ class TwoPointCorrelator: public Measurement {
             ),
 	    srcVecK_(
                 params["device"].to<NSL::Device>(),
-                params["wallSources"].shape(1).to<NSL::size_t>(),
+                params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
@@ -76,7 +79,7 @@ class TwoPointCorrelator: public Measurement {
     void measure(NSL::size_t NumberTimeSources);
 
     void measureK();
-    void measureK(NSL::size_t k, NSL::size_t NumberTimeSources);
+    void measureK(NSL::size_t NumberTimeSources);
 
     protected:
     bool skip_(bool overwrite, std::string node){
@@ -166,7 +169,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t k, NSL::size_t NumberTimeSources){
+void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
     hfm_.populate(phi_,species_);
 
@@ -184,7 +187,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
     	// Define a wall source
-	    srcVecK_(NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,NSL::Slice(),NSL::Slice());
+	    srcVecK_(NSL::Slice(),NSL::Slice(),tsrc,NSL::Slice()) = NSL::Tensor<Type> (params_["wallSources"])(NSL::Slice(),NSL::Slice(),NSL::Slice());
 
         // invert MM^dagger
         NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
@@ -206,15 +209,18 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     } // tsrc
 
     corrK_ /= Type(NumberTimeSources);
-    int uDim = params_["wallSources"].shape(1);
+    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
+    int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
 
     // for (int t = 0;t< Nt;t++){
-        for(int sigma1=0; sigma1<uDim; sigma1++){
-            NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(k,sigma1,NSL::Slice()).expand(Nt, 0);
-            for(int sigma2=0; sigma2<uDim; sigma2++){
-     	        corrKblock_(NSL::Slice(),sigma1,sigma2) = NSL::LinAlg::inner_product(wallSource, corrK_(sigma2,NSL::Slice(),NSL::Slice()), 1);
+    for (int k=0; k<kDim; k++) {
+        for(int sigmaSink=0; sigmaSink<bDim; sigmaSink++){
+            NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(k,sigmaSink,NSL::Slice()).expand(Nt, 0);
+            for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+     	        corrKblock_(k,NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product(wallSource, corrK_(k,sigmaSrc,NSL::Slice(),NSL::Slice()), 1);
 	        }
         }
+    }
 //	 corrKblock_(t,0,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,0,NSL::Slice()),corrK_(1,t,NSL::Slice()));
 //	 corrKblock_(t,1,0) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(0,t,NSL::Slice()));
 //	 corrKblock_(t,1,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(1,t,NSL::Slice()));
@@ -322,6 +328,8 @@ template<
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
     NSL::Logger::info("Start Measuring Hubbard::TwoPointCorrelator");
 
+    NSL::Tensor<Type> temp; // Fixes referencing weirdness when writing out
+
     // This is the default basenode we used so far
     // ToDo: this should go into the const
 
@@ -332,24 +340,28 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
     } else {
           node = "/NonInteracting/correlators/single/hole";
     }
+    
+    int uDim = params_["wallSources"].shape(0).template to<NSL::size_t>();;
+
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],node)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
 
-    // measure the non-interacting theory
-    // U = 0 <=> phi = 0
-    phi_ = Type(0);
-
-    int uDim = params_["wallSources"].shape(0);
-
-    for (int k=0; k< uDim; k++ ){
-    	if(!skip_(this->params_["overwrite"], std::string(basenode_)+node+"/k"+std::to_string(k))) {
-       	    // this stores the result in corrKblock_
-            measureK(k,1);
+        // this stores the result in corrKblock_
+        measureK(1);
+        
+        for (int k=0; k< uDim; k++ ){
+            temp = corrKblock_(k, NSL::Slice(), NSL::Slice(), NSL::Slice());
 
             // write the calculated correlator to file
-       	    h5_.write(corrKblock_,std::string(basenode_)+node+"/k"+std::to_string(k));
-	}
-    } 
+            h5_.write(temp,std::string(basenode_)+node+"/k"+std::to_string(k));
+        }
+    } else {
+        NSL::Logger::info("Non-interacting correlators already exist");
+    }
 
 
     // Interacting Correlators
@@ -362,6 +374,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
         minCfg, maxCfg, saveFreq
     );
 
+    bool trimFlag = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
@@ -376,21 +389,26 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
         if (skip_(this->params_["overwrite"],node)) {
             NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
 	        continue;
-	    } 
+	    }
+
+        if (trimFlag) {
+            this->h5_.deleteData(node);
+            trimFlag = false;
+        }
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
         // read configuration 
         this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
-	for (int k=0; k< uDim; k++ ){
-    	  if(!skip_(this->params_["overwrite"], std::string(basenode_)+node+"/k"+std::to_string(k))) {
-       	    // compute the correlator. The result is stored in corrKblock_
-            measureK(k,this->params_["Number Time Sources"]);
+        // compute the correlator. The result is stored in corrKblock_
+        measureK(this->params_["Number Time Sources"]);
+	
+        for (int k=0; k< uDim; k++ ){
+            temp = corrKblock_(k, NSL::Slice(), NSL::Slice(), NSL::Slice());
 
             // write the calculated correlator to file
-       	    this->h5_.write(corrKblock_,std::string(basenode_)+node+"/k"+std::to_string(k));
-	  }
+            this->h5_.write(temp,std::string(basenode_)+node+"/k"+std::to_string(k));
         } // for k
     } // for cfgI
 
