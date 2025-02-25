@@ -55,8 +55,8 @@ template<NSL::Concept::isNumber Type>
 Type WilsonGaugeAction<Type>::eval(const Tensor<Type>& phi){
     Type S = 0;
 
-    for( NSL::size_t mu = 0; mu < params_["dim"].to<NSL::size_t>(); ++mu){
-        for( NSL::size_t nu = mu+1; nu < params_["dim"].to<NSL::size_t>(); ++nu){
+    for( NSL::size_t mu = 0; mu < params_["dim"].template to<NSL::size_t>(); ++mu){
+        for( NSL::size_t nu = mu+1; nu < params_["dim"].template to<NSL::size_t>(); ++nu){
             NSL::Tensor<Type> P = NSL::U1::plaquette(phi,mu,nu);
             //sum_{x} P_mu,nu + P_mu,nu^{-1}
             S += ( 1 - 0.5*(P + 1./P)  ).sum();
