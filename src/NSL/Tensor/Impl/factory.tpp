@@ -37,7 +37,6 @@ class TensorFactories:
     */
     NSL::Tensor<Type> randn(){
         this->data_.normal_(0.0,1.414213562373095048801689);
-        //this->data_.normal_();
         return NSL::Tensor<Type>(this);
     }
 
