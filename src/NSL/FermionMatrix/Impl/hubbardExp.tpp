@@ -175,12 +175,12 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     //ToDo: implement
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
-    const NSL::Device device = this->phi_.device();
-    NSL::Tensor<Type> invAp1,V;
 
     // having a batch dimension requires a bit more work and refactoring of 
     // this algorithm for now we don't implement it here
     assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
+
+    const NSL::Device device = this->phi_.device();
 
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
@@ -198,11 +198,39 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         );
     }
 
+    // NSL::Tensor<Type> invAp1(device, Nx);
+    // NSL::Tensor<Type> V(device, Nx, Nx);
+
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-    std::tie( invAp1 , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
-    invAp1 += 1.;
-    invAp1 = 1./invAp1;
-    invAp1F_ = NSL::LinAlg::mat_mul( V , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1) , NSL::LinAlg::mat_inv(V) ) );  // V * (1/(1+A^{-1})) * V^{-1}
+    // std::tie( invAp1 , V ) = NSL::LinAlg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+    // invAp1 += 1.;
+    // invAp1 = 1./invAp1;
+    // invAp1F_ = NSL::LinAlg::mat_mul( V , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1) , NSL::LinAlg::mat_inv(V) ) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+    // NSL::Tensor<Type> Q(device, Nx, Nx);
+    // NSL::Tensor<Type> R(device, Nx, Nx);
+
+    // std::tie( Q , R ) = NSL::LinAlg::qr(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+    // NSL::Tensor<Type> invAp1 = NSL::LinAlg::diag(R);
+    // NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(1./invAp1), R);
+    // invAp1 += 1.;
+    // invAp1 = 1./invAp1;
+    
+    // invAp1F_ = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_inv(V) , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1) , NSL::LinAlg::adjoint(Q) ) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+    NSL::Tensor<Type> Q(device, Nx, Nx);
+    NSL::Tensor<Type> D(device, Nx);
+    NSL::Tensor<Type> V(device, Nx, Nx);
+
+    std::tie( Q , D , V ) = NSL::LinAlg::udt(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+
+    NSL::Tensor<Type> Qnew(device, Nx, Nx);
+    NSL::Tensor<Type> Dnew(device, Nx);
+    NSL::Tensor<Type> Vnew(device, Nx, Nx);
+    std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Q) , NSL::LinAlg::mat_inv(V) ) + NSL::LinAlg::diag(D) );
+    
+    invAp1F_ = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( NSL::LinAlg::mat_inv(NSL::LinAlg::mat_mul( Vnew,V )) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::mat_inv(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )

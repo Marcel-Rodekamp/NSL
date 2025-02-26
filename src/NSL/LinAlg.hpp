@@ -19,6 +19,8 @@
 #include "LinAlg/shift.tpp"
 #include "LinAlg/mat_inv.tpp"
 #include "LinAlg/eigh.tpp"
+#include "LinAlg/eig.tpp"
+#include "LinAlg/qr.tpp"
 #include "LinAlg/tensordot.tpp"
 #include "LinAlg/sqrt.tpp"
 
