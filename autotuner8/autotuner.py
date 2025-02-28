@@ -34,12 +34,17 @@ mpl.use('Agg') # To work without Xserver
 from matplotlib import pyplot as pl
 
 graph_dir = "./autotune-graphs/"
+out_dir = "./stdout/"
+meas_dir, conf_dir, base_name = "", "", ""
+
+base_name = "C60"
+conf_dir = "thermal"
 
 optimal_acceptance = 0.75
 significance_interval = 0.25
 
-min_trajectories = 5
-max_trajectories = 30
+min_trajectories = 10
+max_trajectories = 50
 
 max_counter = 2500
 
@@ -52,6 +57,7 @@ parser = argparse.ArgumentParser() #help='Process data down to a manageable size
 parser.add_argument("yaml", type=str, help="Initialization YAML file")
 parser.add_argument("executable", type=str, help="NSL Executable")
 parser.add_argument("--GPU", default=False, action='store_true', help="Using GPU")
+parser.add_argument("--steps", type=int, default=200, help="Number of steps")
 args = parser.parse_args()
 
 with open(args.yaml) as stream:
@@ -75,7 +81,7 @@ last_guess = None
 
 graph_counter = 0
 counter_stopping_condition = 0
-steps = 200
+steps = args.steps
 all_steps = []
 last_counter = 0
 all_accept_rates = dict()
@@ -115,8 +121,8 @@ if tuneFlag == 0:
 
         # Run
         # p.cpu_affinity(cpuList)
-        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
-        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
+        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
+        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
         print(result)
 
         # os.system(f"./{binary} --file {args.yaml}")

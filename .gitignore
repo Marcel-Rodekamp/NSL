@@ -47,4 +47,8 @@ build
 # Log files
 *.log
 
+# Hidden files and directories
 .*
+
+# Python cache files
+*.pyc

@@ -203,7 +203,7 @@ int main(int argc, char* argv[]){
         NSL::size_t n = 2;
         if (h5.exist(fmt::format("{}/thermal",BASENODE))) {
             auto [minConfigID, maxConfigID] = h5.getMinMaxConfigs(fmt::format("{}/thermal",BASENODE));
-            n = maxConfigID + 2;
+            n = maxConfigID + 20;
             // h5.read(start_state, BASENODE+"/thermal"); // We might not need this line because it is read again in generate()
         }
 
