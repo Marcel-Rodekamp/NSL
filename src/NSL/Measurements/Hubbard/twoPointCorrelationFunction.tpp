@@ -206,9 +206,8 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     // shift t -> t - tsrc
     t = 0;
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
-        invM(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()).shift( -tsrc, -2, -Type(1) );
         // Average over all source times
-        corrK_ += invM(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()); // I changed something here!!!!!
+        corrK_ += NSL::LinAlg::shift(invM(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()), -tsrc, -2, -Type(1));
 
         t++;
     } // tsrc
