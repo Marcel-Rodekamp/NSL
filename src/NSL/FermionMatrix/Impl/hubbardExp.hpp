@@ -61,6 +61,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites()),
 	    invAp1_(lat.device(), lat.sites(), lat.sites()),
 	    V_(lat.device(), lat.sites(), lat.sites())
+	    invAp1_(lat.device(), lat.sites()),
+	    V_(lat.device(), lat.sites(), lat.sites())
     {
         if (init_populate) {
             phi_ = 0;
@@ -83,12 +85,14 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         pi_dot_(lat.device(), Nt, lat.sites()),
         invAp1_(lat.device(), lat.sites(), lat.sites()),
         V_(lat.device(), lat.sites(), lat.sites())
-        {
-            if (init_populate) {
-                phi_ = 0;
-                this->populate(phi_);
-            }
+	    invAp1_(lat.device(), lat.sites()),
+	    V_(lat.device(), lat.sites(), lat.sites())
+    {
+        if (init_populate) {
+            phi_ = 0;
+            this->populate(phi_);
         }
+    }
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
         HubbardExp(species,lat, params["Nt"], params["beta"], params["mu"])
