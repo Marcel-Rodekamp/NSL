@@ -170,8 +170,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     }
 
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-    invAp1F_ = NSL::LinAlg::mat_inv(NSL::Matrix::Identity<Type>(device,Nx) 
-             + FkFkFk_(0,NSL::Slice(),NSL::Slice()));  
+    std::tie( invAp1_ , V_ ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+    invAp1_ += 1.;
+    invAp1_ = 1./invAp1_;
+    invAp1F_ = NSL::LinAlg::mat_mul( V_ , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1_) , NSL::LinAlg::mat_inv(V_) ) );  // V * (1/(1+A^{-1})) * V^{-1}
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
