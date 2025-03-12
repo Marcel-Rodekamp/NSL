@@ -182,20 +182,21 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     const NSL::Device device = this->phi_.device();
 
-    NSL::Tensor<Type> Q(device, Nx, Nx);
-    NSL::Tensor<Type> D(device, Nx);
-    NSL::Tensor<Type> V(device, Nx, Nx);
-    NSL::Tensor<Type> Qprime(device, Nx, Nx);
-    NSL::Tensor<Type> Dprime(device, Nx);
-    NSL::Tensor<Type> Vprime(device, Nx, Nx);
-    NSL::Tensor<Type> Qnew(device, Nx, Nx);
-    NSL::Tensor<Type> Dnew(device, Nx);
-    NSL::Tensor<Type> Vnew(device, Nx, Nx);
+    // NSL::Tensor<Type> Q(device, Nx, Nx);
+    // NSL::Tensor<Type> D(device, Nx);
+    // NSL::Tensor<Type> V(device, Nx, Nx);
+    // NSL::Tensor<Type> Qprime(device, Nx, Nx);
+    // NSL::Tensor<Type> Dprime(device, Nx);
+    // NSL::Tensor<Type> Vprime(device, Nx, Nx);
+    // NSL::Tensor<Type> Qnew(device, Nx, Nx);
+    // NSL::Tensor<Type> Dnew(device, Nx);
+    // NSL::Tensor<Type> Vnew(device, Nx, Nx);
 
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
 
     // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
     Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_);
+    // Fk_ =  this->Lat.exp_hopping_matrix(sgn_*this->delta_) * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
     // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
     // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
@@ -208,18 +209,44 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
                 FkFkFk_(t+1,NSL::Slice(),NSL::Slice())
             );
         } else {
-        
-            std::tie( Q, D, V ) = NSL::LinAlg::udt( Fk_(t,NSL::Slice(),NSL::Slice()) );
-            std::tie( Qprime, Dprime, Vprime ) = NSL::LinAlg::udt( FkFkFk_(t+1,NSL::Slice(),NSL::Slice()) );
-            std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt(  NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D),NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( V,Qprime ),NSL::LinAlg::diag(Dprime) ) )  );
+            FkFkFk_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul_stab(
+                Fk_(t,NSL::Slice(),NSL::Slice()),
+                FkFkFk_(t+1,NSL::Slice(),NSL::Slice())
+            )
 
-            Qprime = NSL::LinAlg::mat_mul( Q,Qnew );
-            Dprime = Dnew;
-            Vprime = NSL::LinAlg::mat_mul( Vnew,Vprime );
-            FkFkFk_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul( Qprime,NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Dprime),Vprime ) );
+            // std::tie( Q, D, V ) = NSL::LinAlg::udt( Fk_(t,NSL::Slice(),NSL::Slice()) );
+            // std::tie( Qprime, Dprime, Vprime ) = NSL::LinAlg::udt( FkFkFk_(t+1,NSL::Slice(),NSL::Slice()) );
+            // std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt(  NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D),NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( V,Qprime ),NSL::LinAlg::diag(Dprime) ) )  );
+
+            // Qprime = NSL::LinAlg::mat_mul( Q,Qnew );
+            // Dprime = Dnew;
+            // Vprime = NSL::LinAlg::mat_mul( Vnew,Vprime );
+            // FkFkFk_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul( Qprime,NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Dprime),Vprime ) );
         }
+    }
 
-	    
+    FkFkFk0_(0,NSL::Slice(),NSL::Slice()) = Fk_(0,NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    for(int t = 1;  t <=Nt-1; t++){
+        if (t%(Nt/4) != 0){
+            FkFkFk0_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(
+                FkFkFk0_(t-1,NSL::Slice(),NSL::Slice()),
+                Fk_(t,NSL::Slice(),NSL::Slice())
+            );
+        } else {
+            FkFkFk0_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul_stab(
+                FkFkFk0_(t-1,NSL::Slice(),NSL::Slice()),
+                Fk_(t,NSL::Slice(),NSL::Slice())
+            );
+
+            // std::tie( Q, D, V ) = NSL::LinAlg::udt( Fk_(t,NSL::Slice(),NSL::Slice()) );
+            // std::tie( Qprime, Dprime, Vprime ) = NSL::LinAlg::udt( FkFkFk0_(t-1,NSL::Slice(),NSL::Slice()) );
+            // std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt(  NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D),NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( V,Qprime ),NSL::LinAlg::diag(Dprime) ) )  );
+
+            // Qprime = NSL::LinAlg::mat_mul( Q,Qnew );
+            // Dprime = Dnew;
+            // Vprime = NSL::LinAlg::mat_mul( Vnew,Vprime );
+            // FkFkFk0_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul( Qprime,NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Dprime),Vprime ) );
+        }
     }
 
     // NSL::Tensor<Type> invAp1(device, Nx);
@@ -245,7 +272,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     std::tie( Q , D , V ) = NSL::LinAlg::udt(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
     std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Q) , NSL::LinAlg::mat_inv(V) ) + NSL::LinAlg::diag(D) );
     
-    invAp1F_ = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( NSL::LinAlg::mat_inv(NSL::LinAlg::mat_mul( Vnew,V )) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::mat_inv(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+    invAp1F_ = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( NSL::LinAlg::mat_inv(NSL::LinAlg::mat_mul( Vnew,V )) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
 
 
     /**
@@ -267,13 +294,48 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     // now do the other timeslices
     for (int t=0; t < Nt-1; t++) {
-        // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
-    	invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
-    	
-        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
-            NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
-        );
+        if (t%(Nt/4) != 0){
+            // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+            invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
+            
+            pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
+                NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
+            );
+        } else{
+            std::tie( Q, D, V ) = NSL::LinAlg::udt( invAp1F_ );
+            std::tie( Qprime, Dprime, Vprime ) = NSL::LinAlg::udt( Fk_(t,NSL::Slice(),NSL::Slice()) );
+            std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt(  NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D),NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( V,Qprime ),NSL::LinAlg::diag(Dprime) ) )  );
+
+            Qprime = NSL::LinAlg::mat_mul( Q,Qnew );
+            Dprime = Dnew;
+            Vprime = NSL::LinAlg::mat_mul( Vnew,Vprime );
+            // invAp1F_ = NSL::LinAlg::mat_mul( Qprime,NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Dprime),Vprime ) );
+
+            std::tie( Q, D, V ) = NSL::LinAlg::udt( FkFkFk_(t+1,NSL::Slice(),NSL::Slice()) );
+            // std::tie( Qprime, Dprime, Vprime ) = NSL::LinAlg::udt( invAp1F_ );
+            std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt(  NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D),NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul( V,Qprime ),NSL::LinAlg::diag(Dprime) ) )  );
+
+            Qprime = NSL::LinAlg::mat_mul( Q,Qnew );
+            Dprime = Dnew;
+            Vprime = NSL::LinAlg::mat_mul( Vnew,Vprime );
+            pi_dot_(t,NSL::Slice()) = II * NSL::LinAlg::diag(
+                NSL::LinAlg::mat_mul( Qprime,NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Dprime),Vprime ) ) );
+        }
     }
+
+    // pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+    //     NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+    // );
+
+    // // now do the other timeslices
+    // for (int t=0; t < Nt-1; t++) {
+    //     // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+    // 	invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
+    	
+    //     pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
+    //         NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
+    //     );
+    // }
 
     return pi_dot_;
 }

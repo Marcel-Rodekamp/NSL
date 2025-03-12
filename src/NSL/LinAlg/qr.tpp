@@ -16,8 +16,8 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> qr(const NSL::Tensor<Type> & t){
 //! eigenvalues and corresponding eigenvectors are sorted
 template <NSL::Concept::isNumber Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udt(const NSL::Tensor<Type> & t){
-    NSL::Tensor<Type> Q;
-    NSL::Tensor<Type> R;
+    NSL::Tensor<Type> Q = NSL::zeros_like(t);
+    NSL::Tensor<Type> R = NSL::zeros_like(t);
     std::tie( Q , R ) = NSL::LinAlg::qr( t );
     NSL::Tensor<Type> D = NSL::LinAlg::diag(R);
     NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(1./D), R);
