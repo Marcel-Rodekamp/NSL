@@ -133,15 +133,15 @@ int main(int argc, char* argv[]){
         }
     };
 
+    NSL::setSeed(1234);
+
     //! \todo: we really need a proper random interface...
-    // config["phi"].randn()/10.0;
-    config["phi"].real() = 1.0;
+    config["phi"].randn();
     // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = 0.0;
 
     //! \todo: we really need a proper random interface...
-    // momentum["phi"].randn();
-    momentum["phi"].real() = 1.0;
+    momentum["phi"].randn();
     // momentum["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     momentum["phi"].imag() = 0.0;
 
