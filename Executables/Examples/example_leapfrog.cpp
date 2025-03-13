@@ -111,21 +111,39 @@ int main(int argc, char* argv[]){
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
-    NSL::Tensor<Type> phi(Nt,Nx); phi.randn(); 
-    NSL::Tensor<Type> pi(Nt,Nx); pi.randn();
-    
-    phi.imag() = 0;
-    pi.imag() = 0;
-   
-    // define configuration
+
+
     NSL::Configuration<Type> config{
-		{"phi",phi}, 
+        {"phi",
+            NSL::Tensor<Type>(
+                NSL::Device(params["device"]),
+                NSL::size_t(params["Nt"]),
+                NSL::size_t(params["Nx"])
+            )
+        }
     };
 
-    // define momentum
     NSL::Configuration<Type> momentum{
-		{"phi",pi}, 
-	};
+        {"phi",
+            NSL::Tensor<Type>(
+                NSL::Device(params["device"]),
+                NSL::size_t(params["Nt"]),
+                NSL::size_t(params["Nx"])
+            )
+        }
+    };
+
+    NSL::setSeed(1234);
+
+    //! \todo: we really need a proper random interface...
+    config["phi"].randn();
+    // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    config["phi"].imag() = 0.0;
+
+    //! \todo: we really need a proper random interface...
+    momentum["phi"].randn();
+    // momentum["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    momentum["phi"].imag() = 0.0;
 
     Type Hi, Hf;
 
