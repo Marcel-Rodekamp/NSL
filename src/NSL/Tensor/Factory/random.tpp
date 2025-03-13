@@ -3,6 +3,10 @@
 
 namespace NSL {
 
+inline void setSeed(NSL::size_t seed) {
+    torch::manual_seed(seed);
+}
+
 template<NSL::Concept::isNumber Type, typename ... TensorArgs>
 NSL::Tensor<Type> rand(TensorArgs ... args){
     NSL::Tensor<Type> t(args...);
