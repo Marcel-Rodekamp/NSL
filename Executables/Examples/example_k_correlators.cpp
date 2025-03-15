@@ -84,6 +84,7 @@ int main(int argc, char** argv){
       params["momenta"]=mblocks;
     }
     if (yml["measurements"]["wallSources"]){
+      std::cout << "Found wall sources" << std::endl;
       kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
       NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
       NSL::Logger::info( "Measuring {} momentum block(s), each with {} band(s) of length {}",kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());

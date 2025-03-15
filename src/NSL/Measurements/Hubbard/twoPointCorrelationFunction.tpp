@@ -21,30 +21,30 @@ class TwoPointCorrelator: public Measurement {
             hfm_(new FermionMatrixType(lattice, params)),
             cg_(new NSL::LinAlg::CG<Type>(hfm_, NSL::FermionMatrix::MMdagger)),
             species_(species),
-	    corrKblock_(
-                params["device"].to<NSL::Device>(),
-		params["Nt"].to<NSL::size_t>(),
-		params["wallSources"].shape(1).to<NSL::size_t>(),
-		params["wallSources"].shape(1).to<NSL::size_t>()
-            ),
-	    corrK_(
-                params["device"].to<NSL::Device>(),
-                params["wallSources"].shape(1).to<NSL::size_t>(),
-		params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>()
-            ),
+	    // corrKblock_(
+        //         params["device"].to<NSL::Device>(),
+		// params["Nt"].to<NSL::size_t>(),
+		// params["wallSources"].shape(1).to<NSL::size_t>(),
+		// params["wallSources"].shape(1).to<NSL::size_t>()
+        //     ),
+	    // corrK_(
+        //         params["device"].to<NSL::Device>(),
+        //         params["wallSources"].shape(1).to<NSL::size_t>(),
+		// params["Nt"].to<NSL::size_t>(),
+        //         params["Nx"].to<NSL::size_t>()
+        //     ),
             corr_(
                 params["device"].to<NSL::Device>(),
                 params["Nt"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
-	    srcVecK_(
-                params["device"].to<NSL::Device>(),
-                params["wallSources"].shape(1).to<NSL::size_t>(),
-                params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>()
-            ),
+	    // srcVecK_(
+        //         params["device"].to<NSL::Device>(),
+        //         params["wallSources"].shape(1).to<NSL::size_t>(),
+        //         params["Nt"].to<NSL::size_t>(),
+        //         params["Nx"].to<NSL::size_t>()
+        //     ),
             srcVec_(
                 params["device"].to<NSL::Device>(),
                 params["Nx"].to<NSL::size_t>(),

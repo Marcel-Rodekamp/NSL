@@ -56,8 +56,12 @@ int main(int argc, char* argv[]){
     // The trajectory length
     params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    // params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
-    params["Nmd"]               = (NSL::size_t) 200;
+    if (yml["Leapfrog"]["Nmd"]){
+        params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    } else {
+        // DEFAULT: Nmd = 200
+        params["Nmd"] = 200;
+    }
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
     // The offset: tangent plane/NLO plane
@@ -199,11 +203,11 @@ int main(int argc, char* argv[]){
     auto therm_time =  NSL::Logger::start_profile("Thermalization");
     NSL::MCMC::MarkovState<Type> start_state;
     if (_tuneFlag == 0) {
-        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 1, params["Nradial"], params["Nhmc"], params["radial scale"]);
-        NSL::size_t n = 2;
+        start_state = hmc.generate<NSL::MCMC::Chain::LastState>(config, 5, params["Nradial"], params["Nhmc"], params["radial scale"]);
+        NSL::size_t n = 10;
         if (h5.exist(fmt::format("{}/thermal",BASENODE))) {
             auto [minConfigID, maxConfigID] = h5.getMinMaxConfigs(fmt::format("{}/thermal",BASENODE));
-            n = maxConfigID + 20;
+            n = maxConfigID + 26;
             // h5.read(start_state, BASENODE+"/thermal"); // We might not need this line because it is read again in generate()
         }
 

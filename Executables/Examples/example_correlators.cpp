@@ -56,20 +56,20 @@ int main(int argc, char** argv){
         // DEFAULT: Number Time Sources = Nt
         params["Number Time Sources"] = params["Nt"];
     }
-
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
     // - value is a ParameterEntry * which is a wrapper around the actual 
     //   value of interest, we can use ParameterEntry::repr() to get a string
     //   representation of the stored value
     for(auto [key, value]: params){
+        std::cout << key << std::endl;
         // skip these keys as they are logged in init already
         if (key == "device" || key == "file") {continue;}
         NSL::Logger::info( "{}: {}", key, value );
     }
 
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"], params["overwrite"]);
+    NSL::H5IO h5(params["h5file"], params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate);
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
@@ -80,6 +80,7 @@ int main(int argc, char** argv){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
 
+    std::cout << "Initializing the measurement" << std::endl;
     // initialize 2 point correlation function <p^+_x p_y> 
     NSL::Measure::Hubbard::TwoPointCorrelator<
         Type,
@@ -94,6 +95,7 @@ int main(int argc, char** argv){
     //
     // configurations from the data file specified under params["file"].
     // Then 
+    std::cout << "Performing the measurement" << std::endl;
     C2pt_sp.measure();
 
     // initialize 2 point correlation function <h^+_x h_y> 

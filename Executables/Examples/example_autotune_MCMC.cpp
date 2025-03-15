@@ -42,8 +42,12 @@ int main(int argc, char* argv[]){
     // The trajectory length
     params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    // params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
-    params["Nmd"]               = (NSL::size_t) 200;
+    if (yml["Leapfrog"]["Nmd"]){
+        params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    } else {
+        // DEFAULT: Nmd = 200
+        params["Nmd"] = 200;
+    }
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
     // The offset: tangent plane/NLO plane

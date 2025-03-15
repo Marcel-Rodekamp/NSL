@@ -101,46 +101,46 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(con
 //return type
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
-    const int Nt = this->phi_.shape(0);
-    const int Nx = this->phi_.shape(1);
-    std::vector<int> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109,
-    		     	       113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271,
-    			       277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449,
-    			       457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541}; 
-    int NtFactor;
-    int primeIndex;
-
-    // having a batch dimension requires a bit more work and refactoring of 
-    // this algorithm for now we don't implement it here
-    assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
-
     NSL::Device device = this->phi_.device();
-
-    NSL::Tensor<Type> prod(device,Nt,Nx,Nx);
-    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(device,Nx);
     
-    prod = this->Lat.exp_hopping_matrix(sgn_*this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
-
-    // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision
-    primeIndex = 0;
-    NtFactor = Nt;
-    while (NtFactor > 1) {
-        if (NtFactor%primes[primeIndex] == 0) {
-	   for (int t = 0; t < NtFactor; t += primes[primeIndex]) {
-	       for (int tt = 1; tt < primes[primeIndex]; tt++) {
-	       	   //prod(Nt-1-t,NSL::Slice(),NSL::Slice()) = prod(Nt-1-t,NSL::Slice(),NSL::Slice()).mat_mul(prod(Nt-1-(t+tt),NSL::Slice(),NSL::Slice()));
-		   prod(Nt-1-t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(prod(Nt-1-t,NSL::Slice(),NSL::Slice()), prod(Nt-1-(t+tt),NSL::Slice(),NSL::Slice()));
-	       }
-	       prod(Nt-1-t/primes[primeIndex],NSL::Slice(),NSL::Slice()) = prod(Nt-1-t,NSL::Slice(),NSL::Slice());
-	   }
-	   NtFactor /= primes[primeIndex];
-	} else {
-	   primeIndex += 1;
-	}
+    NSL::Tensor<Type> prod(device, this->Nt_, this->Nx_, this->Nx_);
+    NSL::Tensor<Type> temp_storage(device, this->Nt_, this->Nx_, this->Nx_);
+    
+    // Initialize first matrix
+    prod = this->Lat.exp_hopping_matrix(sgn_*this->delta_) * 
+           NSL::LinAlg::shift(this->phiExp_, -1).expand(this->Nx_).transpose(1,2);
+    
+    // Build binary tree level by level
+    int current_size = this->Nt_;
+    for(int level = 0; level < num_levels; ++level) {
+        const int stride = 1 << level;
+        const int pairs = current_size / 2;
+        
+        // Process pairs in parallel
+        #pragma omp parallel for
+        for(int i = 0; i < pairs; ++i) {
+            const int idx1 = (2 * i + 1) * stride - 1;
+            const int idx2 = (2 * i + 2) * stride - 1;
+            
+            temp_storage(idx1, NSL::Slice(), NSL::Slice()) = 
+                NSL::LinAlg::mat_mul(
+                    prod(idx1, NSL::Slice(), NSL::Slice()),
+                    prod(idx2, NSL::Slice(), NSL::Slice())
+                );
+        }
+        
+        // Copy results back
+        #pragma omp parallel for
+        for(int i = 0; i < pairs; ++i) {
+            const int idx1 = (2 * i + 1) * stride - 1;
+            prod(idx1, NSL::Slice(), NSL::Slice()) = 
+                temp_storage(idx1, NSL::Slice(), NSL::Slice());
+        }
+        
+        current_size = pairs;
     }
-    sausage = prod(Nt-1,NSL::Slice(),NSL::Slice());
     
-    return NSL::LinAlg::logdet1plusF(sausage);
+    return NSL::LinAlg::logdet1plusF(prod(0, NSL::Slice(), NSL::Slice()));
 } 
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
@@ -163,6 +163,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
     // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
     // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    // std::cout << this->phiExpInv_ << std::endl;
     FkFkFk_(Nt-1,NSL::Slice(),NSL::Slice()) = Fk_(Nt-1,NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     for(int t = Nt-2;  t >=0; t--){
 	    FkFkFk_(t,NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(
@@ -170,7 +171,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
             FkFkFk_(t+1,NSL::Slice(),NSL::Slice())
         );
     }
-
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
     std::tie( invAp1 , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
     invAp1 += 1.;

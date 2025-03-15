@@ -82,8 +82,8 @@ def model_to_fit(a, x):
             return 0.0
 
 
-def function(a, x, y):
-    return model_to_fit(a, x) - y
+def function(a, x, y, dy):
+    return (model_to_fit(a, x) - y)/dy**2
 
 
 '''

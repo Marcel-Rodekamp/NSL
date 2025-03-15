@@ -49,6 +49,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FermionMatrix<Type,LatticeType>(lat),
         species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
+        Nt_(Nt),
+        Nx_(lat.sites()),
+        num_levels(static_cast<int>(std::ceil(std::log2(Nt)))),
         mu_( (beta/Nt)*mu ),
         sgn_( +1 ),
         phi_( lat.device(), Nt, lat.sites() ),
@@ -57,10 +60,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
-        pi_dot_(lat.device(), Nt, lat.sites())
         pi_dot_(lat.device(), Nt, lat.sites()),
-	    invAp1_(lat.device(), lat.sites(), lat.sites()),
-	    V_(lat.device(), lat.sites(), lat.sites())
 	    invAp1_(lat.device(), lat.sites()),
 	    V_(lat.device(), lat.sites(), lat.sites())
     {
@@ -74,6 +74,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FermionMatrix<Type,LatticeType>(lat),
         species_(species),
         delta_( beta/Nt ),
+        Nt_(Nt),
+        Nx_(lat.sites()),
+        num_levels(static_cast<int>(std::ceil(std::log2(Nt)))),
         mu_( (beta/Nt)*mu ),
         sgn_( (species == NSL::Hubbard::Particle) ? +1:-1 ),
         phi_( lat.device(), Nt, lat.sites() ),
@@ -83,8 +86,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites()),
-        invAp1_(lat.device(), lat.sites(), lat.sites()),
-        V_(lat.device(), lat.sites(), lat.sites())
 	    invAp1_(lat.device(), lat.sites()),
 	    V_(lat.device(), lat.sites(), lat.sites())
     {
@@ -192,6 +193,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     **/
     NSL::Tensor<Type> MdaggerM(const NSL::Tensor<Type> & psi) override;
 
+    const int num_levels;
+
     /*!
     *  \returns log of determinant of M.
     **/
@@ -218,6 +221,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     //! delta = beta/N_t
     Type delta_;
+    const NSL::size_t Nt_;
+    const NSL::size_t Nx_;
 
     //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
     Type mu_;
