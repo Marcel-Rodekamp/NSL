@@ -20,9 +20,9 @@ class TwoBodyCorrelator: public Measurement {
     public:
         TwoBodyCorrelator(LatticeType & lattice, NSL::Parameter params, NSL::H5IO & h5, std::string basenode_):
             Measurement(params, h5),
-            hfm_(lattice, params),
-            cg_(hfm_, NSL::FermionMatrix::MMdagger),
-            cgDag_(hfm_, NSL::FermionMatrix::MdaggerM),
+            hfm_(new FermionMatrixType(lattice, params)),
+            cg_(new NSL::LinAlg::CG<Type>(hfm_, NSL::FermionMatrix::MMdagger)),
+            cgDag_(new NSL::LinAlg::CG<Type>(hfm_, NSL::FermionMatrix::MdaggerM)),
             corrK_(
                 params["device"].template to<NSL::Device>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
@@ -132,9 +132,9 @@ class TwoBodyCorrelator: public Measurement {
             // return false;
         }
 
-        FermionMatrixType hfm_;
-        NSL::LinAlg::CG<Type> cg_;
-        NSL::LinAlg::CG<Type> cgDag_;
+        std::shared_ptr<FermionMatrixType> hfm_;
+        std::shared_ptr<NSL::LinAlg::CG<Type>> cg_;
+        std::shared_ptr<NSL::LinAlg::CG<Type>> cgDag_;
 
         NSL::Tensor<Type> corrK_;
         NSL::Tensor<Type> corrKDag_;
@@ -247,17 +247,17 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
         
         for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
             // populate the fermion matrix using the free configuration
-            hfm_.populate(phi_,species);
+            hfm_->populate(phi_,species);
 
             // invert MM^dagger
-            NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
+            NSL::Tensor<Type> invMMdag = (*cg_)(srcVecK_);
             // invert M^daggerM
-            NSL::Tensor<Type> invMdagM = cgDag_(NSL::LinAlg::conj(srcVecK_));
+            NSL::Tensor<Type> invMdagM = (*cgDag_)(NSL::LinAlg::conj(srcVecK_));
 
             // back multiply M^dagger to obtain M^{-1}
             // invM is of shape kDim x bDim x Nt x Nx
-            corrK_ = hfm_.Mdagger(invMMdag);
-            corrKDag_ = hfm_.M(invMdagM);
+            corrK_ = hfm_->Mdagger(invMMdag);
+            corrKDag_ = hfm_->M(invMdagM);
 
             // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
             // boundary conditions

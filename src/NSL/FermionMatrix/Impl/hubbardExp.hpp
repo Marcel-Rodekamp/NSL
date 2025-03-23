@@ -45,7 +45,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     *  \param beta  a floating point number where delta=beta/N_t.
     **/
     
-    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+    HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0, const bool init_populate = true ):
         FermionMatrix<Type,LatticeType>(lat),
         species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
@@ -58,9 +58,14 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        if (init_populate) {
+            phi_ = 0;
+            this->populate(phi_);
+        }
+    }
 
-    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
+    HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0, const bool init_populate = true ):
         FermionMatrix<Type,LatticeType>(lat),
         species_(species),
         delta_( beta/Nt ),
@@ -73,7 +78,13 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
-    {}
+    {
+        if (init_populate) {
+            phi_ = 0;
+            this->populate(phi_);
+        }
+    }
+
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
         HubbardExp(species,lat, params["Nt"], params["beta"], params["mu"])
@@ -121,9 +132,13 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->phiExp_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
         );
-        // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
+        // calculate exp(+/- i phi)^{-1} = exp(-/+ i phi)
         this->phiExpInv_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
+        );
+        // calculate exp(+/- i phi)^{*} = exp(-/+ i phi^{*})
+        this->phiExpCon_ = NSL::LinAlg::exp(
+            NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * NSL::LinAlg::conj(phi) + sgn_*NSL::LinAlg::conj(mu_)
         );
     }
 
@@ -179,6 +194,10 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
      **/
     NSL::Tensor<Type> gradLogDetM() override;
 
+    NSL::Tensor<Type> dMdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+
+    NSL::Tensor<Type> dMdaggerdPhi(const NSL::Tensor<Type> & left, const NSL::Tensor<Type> & right);
+
     //! Query the current species of the fermion matrix. To change the species please use populate(phi, species).
     NSL::Hubbard::Species species() {
         return species_;
@@ -204,6 +223,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> phiExp_;
     //! Inverse Exponential of phi
     NSL::Tensor<Type> phiExpInv_;
+    //! Conjugate of Exponential of phi
+    NSL::Tensor<Type> phiExpCon_;
 
     //! Memory used for the implementation of the force
     NSL::Tensor<Type> Fk_;

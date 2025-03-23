@@ -18,18 +18,18 @@ namespace NSL::LinAlg {
  *      \f[ 
  *          M x = b
  *      \f]
- *  for x, where M is a (fermion-)matrix and x,b are vectors.
+ *  for x, where M is a (fermion-)matrix and x, b are vectors.
  *  
  *  There are two versions of this interface, one specialized for fermion
  *  matrices defined via `NSL::FermionMatrix::FermionMatrix` and one for a
- *  general dense matrix
+ *  general dense matrix.
  *
  *  The actual algorithms can be found in `src/NSL/LinAlg/Solver/Impl`.
  *
  * */
 // These templates are automatically deduced by the compiler!
 template<
-    // The number type used for the solve, e.g. float,double, NSL::complex<float> ...
+    // The number type used for the solve, e.g. float, double, NSL::complex<float> ...
     NSL::Concept::isNumber Type
 >
 class Solver{
@@ -44,7 +44,7 @@ class Solver{
          * \param M
          *        Matrix times vector application for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * */
         Solver(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M) : M_(M){}
 
@@ -54,50 +54,45 @@ class Solver{
          *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
          *        a fermion matrix for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
-         * \param function_ptr
+         *        is solved for x.
+         * \param matrixCombination
          *        this specifies which application of the 
-         *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
-         *        solved. You can use explesstions like
-         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
-         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::Mdagger 
-         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
-         *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MMdagger 
+         *        fermion matrix `M`, `Mdagger`, `MdaggerM`, `MMdagger` shall
+         *        be solved. You can use expressions like
+         *          * &NSL::FermionMatrix::FermionMatrix<Type, NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
+         *          * &NSL::FermionMatrix::FermionMatrix<Type, NSL::Lattice::SpatialLattice<Type>>::Mdagger 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type, NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
+         *          * &NSL::FermionMatrix::FermionMatrix<Type, NSL::Lattice::SpatialLattice<Type>>::MMdagger 
          *
-         * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
+         * \tparam `FermionMatrix<TypeHelper, LatticeHelper>`
          *                   This template defines the type of Fermion Matrix, as any fermion 
          *                   matrix derived from NS::FermionMatrix::FermionMatrix requires two
-         *                   template arguments (Type,Lattice) we have to give a template as template argument.
-         *                   Hereby the usage is: FermionMatrix<Type,LatticeType>
+         *                   template arguments (Type, Lattice) we have to give a template as a template argument.
+         *                   Hereby the usage is: FermionMatrix<Type, LatticeType>
          *                   defining the final type used throughout the classes.
-         * \param `LatticeType`(Template)
+         * \tparam `LatticeType`
          *                   This defines the LatticeType used for the FermionMatrix template template argument.
-         *                   It is checked that it derives from NSL::Lattice::SpatialLattice as to
+         *                   It is checked that it derives from NSL::Lattice::SpatialLattice to
          *                   ensure that the required interface is given.
          * */
         template<
             template<typename TypeHelper, typename LatticeHelper> class FermionMatrix,
             NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType
         >
-            // Check that the given FermionMatrix<Type,LatticeType> is
-            // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
+            // Check that the given FermionMatrix<Type, LatticeType> is
+            // deriving from NSL::FermionMatrix::FermionMatrix<Type, LatticeType> 
             // to ensure that the required interface is given.
-            requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        Solver(FermionMatrix<Type,LatticeType> & M, 
+        Solver(std::shared_ptr<FermionMatrix<Type, LatticeType>> M, 
                NSL::FermionMatrix::MatrixCombination matrixCombination = NSL::FermionMatrix::M
         ) {
             switch(matrixCombination){
-                case NSL::FermionMatrix::M        : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.M(psi);} ); break;
-                case NSL::FermionMatrix::Mdagger  : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.Mdagger(psi);} ); break;
-                case NSL::FermionMatrix::MdaggerM : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.MdaggerM(psi);} ); break;
-                case NSL::FermionMatrix::MMdagger : M_ = ( [&M](const NSL::Tensor<Type> & psi){ return M.MMdagger(psi);} ); break;
-                default: throw std::runtime_error("NSL::Solver: Could not identify fermion matrix combination pass either NSL:FermionMatrix::(M,Mdagger,MdaggerM or MMdagger)!");
+                case NSL::FermionMatrix::M        : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->M(psi);} ); break;
+                case NSL::FermionMatrix::Mdagger  : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->Mdagger(psi);} ); break;
+                case NSL::FermionMatrix::MdaggerM : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->MdaggerM(psi);} ); break;
+                case NSL::FermionMatrix::MMdagger : M_ = ( [M](const NSL::Tensor<Type> & psi){ return M->MMdagger(psi);} ); break;
+            default: throw std::runtime_error("NSL::Solver: Could not identify fermion matrix combination. Pass either NSL::FermionMatrix::(M, Mdagger, MdaggerM or MMdagger)!");
             }
         }
-
-        //       NSL::Tensor<Type> (FermionMatrix<Type,LatticeType>::* function_ptr)(const NSL::Tensor<Type> &)) : 
-        //    M_(std::bind_front( function_ptr,&M ))
-        //{}
 
         //! Apply Solver
         /*!

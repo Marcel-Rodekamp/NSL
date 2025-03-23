@@ -59,6 +59,7 @@ class Configuration : public std::unordered_map<std::string, NSL::Tensor<Type>> 
             return *this;
         }
 
+
         //! Subtract a configuration in place
         /*! 
          * If this contains field from other: add
@@ -88,7 +89,18 @@ class Configuration : public std::unordered_map<std::string, NSL::Tensor<Type>> 
             return *this;
         }
 
+        template<NSL::Concept::isNumber OtherType>
+        auto & operator *= ( const Configuration<OtherType> & other ){
+            for(auto &[key,field]: other){
+                if(this->contains(key)){
+                    this->operator[](key) *= field;
+                } else {
+                    this->operator[](key) = field;
+                }
+            } 
 
+            return *this;
+        }
 
         //! Streaming operator
         friend std::ostream & operator<<(std::ostream & os, const Configuration<Type> & conf){

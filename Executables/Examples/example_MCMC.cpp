@@ -128,6 +128,7 @@ int main(int argc, char* argv[]){
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     

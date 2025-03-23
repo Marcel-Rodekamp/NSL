@@ -52,7 +52,6 @@ class TensorRandomAccess:
         //return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
     }
 
-
     //! Linear Random Access Operator
     /*!
      *  \param index0 Index of the first dimension

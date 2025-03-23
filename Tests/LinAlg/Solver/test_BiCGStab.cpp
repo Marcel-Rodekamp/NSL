@@ -189,12 +189,12 @@ void test_BiCGStab_randomMatrix(const typename NSL::RT_extractor<Type>::type eps
 template<typename Type, class FermionMatrix>
 void test_BiCGStab_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extractor<Type>::type eps, NSL::size_t Nt, NSL::size_t Nx){
     NSL::Tensor<Type> b(Nt,Nx);b.rand();
-
+    std::shared_ptr<FermionMatrix> M_ptr = std::make_shared<FermionMatrix>(M);
     // MdaggerM =========================================================
     {
     // for now we just test the default case of bicgstab:
     // maxIter = 10000
-    NSL::LinAlg::BiCGStab<Type> bicgstab(M,NSL::FermionMatrix::MdaggerM,eps);
+    NSL::LinAlg::BiCGStab<Type> bicgstab(M_ptr,NSL::FermionMatrix::MdaggerM,eps);
 
     NSL::Tensor<Type> res = bicgstab(b);
 
@@ -213,7 +213,7 @@ void test_BiCGStab_fermionMatrix(FermionMatrix & M,const typename NSL::RT_extrac
     {
     // for now we just test the default case of bicgstab:
     // maxIter = 10000
-    NSL::LinAlg::BiCGStab<Type> bicgstab(M,NSL::FermionMatrix::MMdagger,eps);
+    NSL::LinAlg::BiCGStab<Type> bicgstab(M_ptr,NSL::FermionMatrix::MMdagger,eps);
 
     NSL::Tensor<Type> res = bicgstab(b);
 

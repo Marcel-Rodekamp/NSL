@@ -15,7 +15,30 @@ include(FetchContent)
 # At current version of CUDA and Torch the population of the C++20 standard 
 # results in cmake errors. Moving the find_package call before seeting the 
 # standard is a hack which circumvents the problem.
-find_package(Torch REQUIRED)
+find_package(Torch QUIET)
+if(NOT Torch_FOUND)
+    find_package(Python3 QUIET)
+    if(NOT Python3_FOUND)
+        find_package(Torch REQUIRED)
+    endif()
+    message(WARNING "Torch not found in system path, querying pip for pytorch")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m pip show torch
+        OUTPUT_VARIABLE PIP_TORCH_INFO
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    string(REGEX MATCH "Location: ([^\n]*)" _ "${PIP_TORCH_INFO}")
+    set(Torch_DIR "${CMAKE_MATCH_1}/torch/share/cmake/Torch")
+    message(STATUS "Adding Torch CMake module path: ${Torch_DIR}")
+    find_package(Torch REQUIRED)
+
+    execute_process(
+        COMMAND python3 -c "import torch; print(torch.version.cuda)"
+        OUTPUT_VARIABLE Torch_CUDA_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endif()
 
 # set come C++ variables.
 # ToDo: Do this dynamically
@@ -26,7 +49,7 @@ set(CMAKE_CXX_FLAGS_DEBUG_INIT "-g -Wall -pedantic ${CMAKE_CXX_FLAGS_DEBUG_INIT}
 # to avoid warning we put -Wno-narrowing
 # ToDo: There should be a better way to circumvent this problem!!!
 set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -Wno-narrowing" )
-set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC" )
+set( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -g" )
 
 
 # Create main library to include in C++
@@ -53,6 +76,7 @@ include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 include(cmake/yamlcpp.cmake)
 include(cmake/CLIUtils.cmake)
+include(cmake/NVTX.cmake)
 
 add_subdirectory(src/NSL)
 

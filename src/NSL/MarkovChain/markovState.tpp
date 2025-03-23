@@ -46,6 +46,42 @@ class MarkovState{
         accepted(1)
     {}
 
+    template<std::convertible_to<std::pair<std::string, Type>> ... WeightType>
+    MarkovState(
+        NSL::Configuration<Type> config,
+        NSL::Configuration<Type> pseudoFermion,
+        const Type & actionValue,
+        const NSL::RealTypeOf<Type> & acceptanceProbability,
+        NSL::size_t markovTime,
+        bool accepted,
+        WeightType ... weights
+    ): 
+        configuration(config),
+        pseudoFermion(pseudoFermion),
+        actionValue(actionValue),
+        weights({weights...}),
+        acceptanceProbability(acceptanceProbability),
+        markovTime(markovTime),
+        accepted(accepted)
+    {}
+
+    template<std::convertible_to<std::pair<std::string, Type>> ... WeightType>
+    MarkovState(
+        NSL::Configuration<Type> config,
+        NSL::Configuration<Type> pseudoFermion,
+        const Type & actionValue,
+        const NSL::RealTypeOf<Type> & acceptanceProbability,
+        WeightType ... weights
+    ): 
+        configuration(config),
+        pseudoFermion(pseudoFermion),
+        actionValue(actionValue),
+        weights({weights...}),
+        acceptanceProbability(acceptanceProbability),
+        markovTime(1),
+        accepted(1)
+    {}
+
     MarkovState() = default;
 
     MarkovState( const MarkovState<Type> & ) = default;
@@ -56,6 +92,9 @@ class MarkovState{
 
     //! Store the configuration associated with the Markov State
     NSL::Configuration<Type> configuration;
+
+    //! Store pseudo fermion fields if required
+    NSL::Configuration<Type> pseudoFermion;
 
     //! Store the associated action value
     Type actionValue;

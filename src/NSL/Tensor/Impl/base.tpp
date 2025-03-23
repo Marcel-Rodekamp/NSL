@@ -186,8 +186,8 @@ class TensorBase {
     template<NSL::Concept::isIntegral ... SizeTypes>
     NSL::size_t linearIndex_(const SizeTypes &... indices) const{
         // check that the number of arguments in indices matches the dimension of the tensor
-        assertm(!(sizeof...(indices) < data_.dim()), "operator()(const SizeType &... indices) called with to little indices");
-        assertm(!(sizeof...(indices) > data_.dim()), "operator()(const SizeType &... indices) called with to many indices");
+        assertm(!(sizeof...(indices) < data_.dim()), "operator()(const SizeType &... indices) called with too few indices");
+        assertm(!(sizeof...(indices) > data_.dim()), "operator()(const SizeType &... indices) called with too many indices");
 
         // unpack the parameter pack
         std::array<size_t, sizeof...(indices)> a_indices = {indices...};

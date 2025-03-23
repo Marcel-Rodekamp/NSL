@@ -96,6 +96,9 @@ class Tensor:
         return *this;
     }
 
+    //! Checks if the tensor is initializaed
+    bool defined(){return this->data_.defined();}
+
     //! assignement operator
     template<NSL::Concept::isNumber OtherType>
     NSL::Tensor<Type> & operator=(const NSL::Tensor<OtherType> & other){
@@ -259,5 +262,6 @@ class Tensor:
 // factory
 #include "Factory/like.tpp"
 #include "Factory/eye.tpp"
+#include "Factory/random.tpp"
 
 #endif //NSL_TENSOR_HPP

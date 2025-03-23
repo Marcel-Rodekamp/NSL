@@ -10,6 +10,9 @@
 #include "IO.hpp"
 #include "logger.hpp"
 
+#define USE_NVTX
+#include "profiling.hpp"
+
 namespace NSL::MCMC{
 
 enum Chain{ AllStates, LastState };
@@ -67,6 +70,8 @@ class HMC{
             logFrequency = static_cast<NSL::size_t>( 0.01*Nconf );
         }
 
+        double runningAcceptance = 0.;
+
         if constexpr(chain == Chain::AllStates) {
             // prepare some memory to all states
             std::vector<NSL::MCMC::MarkovState<Type>> MC(Nconf);
@@ -107,6 +112,7 @@ class HMC{
             // generate Nconf-1 configurations
             auto mc_time = NSL::Logger::start_profile("HMC");
             for(NSL::size_t n = nstart+1; n < Nconf; ++n){
+                PUSH_RANGE("generate-step", 0);
                 auto tmp = MC[n-1];
                 
                 // between each configuration generate saveFrequency which 
@@ -128,6 +134,7 @@ class HMC{
                     NSL::Logger::info("HMC: {}/{}; Running Acceptance Rate: {:.6}%", n, Nconf, runningAcceptance/* *100. / backWindow (n-nstart) */ );
                     NSL::Logger::elapsed_profile(mc_time);
                 }
+                POP_RANGE;  // generate-step
             }
             NSL::Logger::stop_profile(mc_time);
 
@@ -142,11 +149,13 @@ class HMC{
             // generate Nconf-1 configurations
             // As none is returned we just multiply the number of configurations
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
+                PUSH_RANGE("thermalize-step", 0);
                 newState = this->generate_(newState);
 
                 if (n % logFrequency == 0){
                     NSL::Logger::info("HMC: {}/{}", n, Nconf);
                 }
+                POP_RANGE;  // thermalize-step
             }
 
             // return the Markov Chain
@@ -184,25 +193,47 @@ class HMC{
     //! Implementation of the HMC
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
-
         // sample momentum 
+        PUSH_RANGE("HMC-iteration", 1);
+        PUSH_RANGE("momentum", 2);
         NSL::Configuration<Type> momentum;
         for(auto & [key,field]: state.configuration){
             NSL::Tensor<Type> p = NSL::zeros_like(field);
             p.randn();
-	    p.imag()=0;
+	        p.imag()=0;
             momentum[key] = p; 
         }
+        POP_RANGE;  // Iteration::momentum
 
+        PUSH_RANGE("action", 3);
+        // update pseudo fermions (if no PF exist in the sum action this line does nothing)
+        bool hasPF = this->action_.computePseudoFermion(state.configuration);
+
+        // if pseudo fermions are used we have to recompute the action involving
+        // the new pseudo fermion field. Otherwise we can just reuse the 
+        // previously computed one.
+        Type previous_S = 0;
+        if(hasPF){
+            previous_S = this->action_(state.configuration);
+        } else {
+            previous_S = state.actionValue;
+        }
+        POP_RANGE;  // Iteration::action
+
+        PUSH_RANGE("integrator", 4);
         // use integrator to generate proposal 
         auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+        POP_RANGE;  // Iteration::integrator
 
+        PUSH_RANGE("action", 3);
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
+        POP_RANGE;  // Iteration::action
 
+        PUSH_RANGE("acceptance", 5);
         // compute the Hamiltonian H = p^2/2 + S
         // Starting point of the trajectory
-        Type starting_H = state.actionValue;
+        Type starting_H = previous_S;
         for( const auto& [key,field]: momentum){
             starting_H += 0.5*(field * field).sum();
         }
@@ -217,12 +248,15 @@ class HMC{
         // We always assume real part of the action, i.e. automatic reweighting
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
-
-
+        
+        POP_RANGE;  // Iteration::acceptance
+        POP_RANGE;  // HMC::generate_
         // accept reject
 	    if ( r_.rand()[0] <= acceptanceProb ){
+
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
+                this->action_.pseudoFermion(),
                 proposal_S,
                 acceptanceProb,
                 state.markovTime+1,
@@ -232,7 +266,8 @@ class HMC{
         } else {
             return NSL::MCMC::MarkovState<Type>(
                 state.configuration,
-                state.actionValue,
+                this->action_.pseudoFermion(),
+                previous_S,
                 acceptanceProb,
                 state.markovTime+1,
                 false
@@ -253,4 +288,5 @@ class HMC{
 
 } // namespace NSL::MCMC
 
+#undef USE_NVTX
 #endif //NSL_HMC_TPP

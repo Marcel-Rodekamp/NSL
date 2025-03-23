@@ -1,8 +1,8 @@
 #ifndef NSL_IO_TO_STRING_TPP
 #define NSL_IO_TO_STRING_TPP
 #include "../complex.hpp"
-#include "../realImag.tpp"
 #include "../concepts.hpp"
+#include "../realImag.tpp"
 
 namespace NSL {
 template <NSL::Concept::isNumber Type>

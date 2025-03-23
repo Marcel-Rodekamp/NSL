@@ -106,6 +106,8 @@ class NewDim: public Indexer {
     operator torch::indexing::TensorIndex () const override {
         return torch::indexing::None;
     }
+
+
 };
 
 class Range: public Indexer {

@@ -39,17 +39,10 @@ int main(int argc, char ** argv){
  
     NSL::Logger::info("Running CG to compute MM†@x = b.");
 
-    //NSL::LinAlg::CGpreconditioned<NSL::complex<double>> cg(
-    //    [&M](const NSL::Tensor<NSL::complex<double>> & psi      ) { return M.MMdagger(psi); },
-    //    [&MnonInt](const NSL::Tensor<NSL::complex<double>> & psi) { return MnonInt.MMdagger(psi); },
-    //    1e-12,
-    //    20000
-    //);
-    NSL::LinAlg::CG<NSL::complex<double>> cg(
-        [&M](const NSL::Tensor<NSL::complex<double>> & psi      ) { return M.MMdagger(psi); },
-        1e-12,
-        20000
-    );
+    //get types
+    typedef NSL::complex<double> Type;
+    typedef decltype(lat) LatticeType;
+    NSL::LinAlg::CG<NSL::complex<double>> cg(std::make_shared<NSL::FermionMatrix::HubbardExp<Type,LatticeType>>(M),NSL::FermionMatrix::MMdagger);
 
     NSL::Tensor<NSL::complex<double>> b(params["device"].template to<NSL::Device>(),Nt,Nx); //b.rand();
     b(0,NSL::Slice(0,Nx)) = 1;

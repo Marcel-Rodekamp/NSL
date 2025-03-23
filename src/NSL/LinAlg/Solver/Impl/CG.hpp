@@ -2,8 +2,13 @@
 #define NSL_CG_HPP
 
 #include "../Solver.hpp" 
+#include "realImag.tpp"
 #include "complex.hpp"
 #include "types.hpp"
+#include <mutex>
+
+#include "CUDA.hpp"
+#include <torch/torch.h>
 
 namespace NSL::LinAlg {
 
@@ -17,22 +22,24 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * \param M
          *        Matrix times vector application for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param eps
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          *
          * This Solver implementation uses the conjugate gradient (CG) algorithm.
          * */
         CG(std::function<NSL::Tensor<Type>(const NSL::Tensor<Type> &)> M,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M),
             errSq_(eps*eps),
             maxIter_(maxIter),
+            batchsize_(batchsize),
+            alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
@@ -45,13 +52,13 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
          *        a fermion matrix for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param eps
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
          *                   This template defines the type of Fermion Matrix, as any fermion 
@@ -80,11 +87,13 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+        CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
             maxIter_(maxIter),
+            batchsize_(batchsize),
+            alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
@@ -97,11 +106,11 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        derived object of `NSL::FermionMatrix::FermionMatrix`, 
          *        a fermion matrix for which the equation 
          *          \f[ M x = b \f]
-         *        is sovled for x.
+         *        is solved for x.
          * \param function_ptr
          *        this specifies which application of the 
          *        fermion matrix `M`,`Mdagger`,`MdaggerM`,`MMdagger` shall
-         *        solved. You can use explesstions like
+         *        solved. You can use expressions like
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::M (default if not provided)
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::Mdagger 
          *          * &NSL::FermionMatrix::FermionMatrix<Type,NSL::Lattice::SpatialLattice<Type>>::MdaggerM 
@@ -110,8 +119,8 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *        Error at which the CG is stopped as 
          *          \f[ \vert\vert Mx_i - b\vert\vert^2 < \texttt{eps} \f]
          * \param maxIter
-         *        In case the CG doesn't converge this is a fall back to 
-         *        exit. If the iteration count exeeds this number a runtime
+         *        In case the CG doesn't converge this is a fallback to 
+         *        exit. If the iteration count exceeds this number a runtime
          *        error is raised.
          * \param `FermionMatrix<TypeHelper,LatticeHelper>`(Template)
          *                   This template defines the type of Fermion Matrix, as any fermion 
@@ -124,7 +133,7 @@ class CG: public NSL::LinAlg::Solver<Type> {
          *                   It is checked that it derives from NSL::Lattice::SpatialLattice as to
          *                   ensure that the required interface is given.
          *
-         * This default case uses the application of ther fermion matrix
+         * This default case uses the application of the fermion matrix
          * ```
          *      M = *function_ptr 
          * ```
@@ -139,12 +148,14 @@ class CG: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        CG(FermionMatrix<Type,LatticeType> & M, 
+        CG(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
                NSL::FermionMatrix::MatrixCombination matrixCombination,
-               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000) : 
+               const NSL::RealTypeOf<Type> eps = 1e-12, const NSL::size_t maxIter = 10000, const NSL::size_t batchsize = 100) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),
             errSq_(eps*eps),
             maxIter_(maxIter),
+            batchsize_(batchsize),
+            alpha_(), beta_(), rsqr_curr_(), rsqr_prev_(),
             x_(),
             t_(),
             r_(),
@@ -166,27 +177,32 @@ class CG: public NSL::LinAlg::Solver<Type> {
          * for the stored fermion matrix M.
          * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b);
-
-        //! Apply CG
-        /*!
-         *  \param b, NSL::Tensor, RHS of the equation to be solved
-         *
-         *  \param x0, NSL::Tensor, Initial guess for x
-         *
-         * This operator performs the solve of 
-         * \f[
-         *      M x = b
-         * \f]
-         * It returns an NSL::Tensor being the (approximate) solution
-         * \f[
-         *      x = M^{-1} b
-         * \f]
-         * for the stored fermion matrix M.
-         * */
         NSL::Tensor<Type> operator()(const NSL::Tensor<Type> & b, const NSL::Tensor<Type> & x0);
-
+        
     private:
+        void CG_iteration_();       // single iteration of the CG algorithm
+        void CG_batch_CPU_();       // batch of iterations of the CG algorithm
+        // function pointer to the unoptimized version. This allows us to easily switch in the optimized version
+        std::function<void()> CG_batch_ = std::bind(&CG::CG_batch_CPU_,this);
+        #ifdef USE_CUDA
+        // cuda graph for GPU optimization
+        void CG_batch_GPU_();
+        at::cuda::CUDAGraph graph_;
+        void optimize_for_GPU(const NSL::Tensor<Type> & b);
+        #endif
+        // batch size for sequential iterations without abortion check
+        const NSL::size_t batchsize_;
 
+        std::once_flag init_flag_;  // flag to ensure that the optimization is only done once
+        // function that optimizes the CG algorithm both for CPU and GPU (currently only GPU)
+        void optimize_(const NSL::Tensor<Type> & b);
+        
+        NSL::Tensor<Type> alpha_; 
+        NSL::Tensor<typename NSL::RT_extractor<Type>::type> beta_;
+        
+        NSL::Tensor<typename NSL::RT_extractor<Type>::type> rsqr_curr_; 
+        NSL::Tensor<typename NSL::RT_extractor<Type>::type> rsqr_prev_; 
+        
         // precision at which the algorithm is stopped
         const NSL::RealTypeOf<Type> errSq_;
         // maximum of iterations as fall back in case we don't converge

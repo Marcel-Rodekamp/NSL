@@ -2,6 +2,7 @@
 #define NSL_BICGSTAB_HPP
 
 #include "../Solver.hpp" 
+#include "realImag.tpp"
 #include "complex.hpp"
 #include "types.hpp"
 
@@ -84,7 +85,7 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        BiCGStab(FermionMatrix<Type,LatticeType> & M,
+        BiCGStab(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M, NSL::FermionMatrix::M),
             errSq_(eps*eps),
@@ -148,7 +149,7 @@ class BiCGStab: public NSL::LinAlg::Solver<Type> {
             // deriving from NSL::FermionMatrix::FermionMatrix<Type,LatticeType> 
             // to ensure that the required interface is given.
             requires( NSL::Concept::isDerived<FermionMatrix<Type,LatticeType>,NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> )
-        BiCGStab(FermionMatrix<Type,LatticeType> & M, 
+        BiCGStab(std::shared_ptr<FermionMatrix<Type,LatticeType>> M,
                NSL::FermionMatrix::MatrixCombination matrixCombination,
                const typename NSL::RT_extractor<Type>::type eps = 1e-12, const NSL::size_t maxIter = 10000) : 
             NSL::LinAlg::Solver<Type>(M,matrixCombination),

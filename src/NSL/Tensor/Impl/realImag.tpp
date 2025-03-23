@@ -2,6 +2,7 @@
 #define NSL_TENSOR_IMPL_REAL_IMAG_TPP
 
 #include "base.tpp"
+#include "../Factory/like.tpp"
 
 namespace NSL::TensorImpl{
 
@@ -18,6 +19,14 @@ class TensorReal:
      * and is simply returned.
      * */
     NSL::Tensor<typename RT_extractor<Type>::type> real(){
+        if constexpr(NSL::is_complex<Type>()){
+            return NSL::Tensor<typename RT_extractor<Type>::type>(torch::real(this->data_));
+        } else {
+            return NSL::Tensor<Type>(this);
+        }
+    }
+
+    NSL::Tensor<typename RT_extractor<Type>::type> real() const {
         if constexpr(NSL::is_complex<Type>()){
             return NSL::Tensor<typename RT_extractor<Type>::type>(torch::real(this->data_));
         } else {
@@ -44,8 +53,17 @@ class TensorImag:
                 return Tensor<typename RT_extractor<Type>::type>(torch::zeros_like(this->data_));
             }
         }
+
+        Tensor<typename RT_extractor<Type>::type> imag() const {
+            if constexpr(NSL::is_complex<Type>()){
+                return Tensor<typename RT_extractor<Type>::type>(torch::imag(this->data_));
+            } else {
+                return Tensor<typename RT_extractor<Type>::type>(torch::zeros_like(this->data_));
+            }
+        }
 };
 
 } // namespace NSL::TensorImpl
+
 
 #endif //NSL_TENSOR_IMPL_REAL_IMAG_TPP

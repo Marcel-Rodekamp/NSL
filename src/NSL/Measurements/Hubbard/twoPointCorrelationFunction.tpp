@@ -18,8 +18,8 @@ class TwoPointCorrelator: public Measurement {
     public:
         TwoPointCorrelator(LatticeType & lattice, NSL::Parameter params, NSL::H5IO & h5, NSL::Hubbard::Species species, std::string basenode_):
             Measurement(params, h5),
-            hfm_(lattice, params),
-            cg_(hfm_, NSL::FermionMatrix::MMdagger),
+            hfm_(new FermionMatrixType(lattice, params)),
+            cg_(new NSL::LinAlg::CG<Type>(hfm_, NSL::FermionMatrix::MMdagger)),
             species_(species),
 	    corrKblock_(
                 params["device"].to<NSL::Device>(),
@@ -97,8 +97,8 @@ class TwoPointCorrelator: public Measurement {
         return true;
     }
 
-    FermionMatrixType hfm_;
-    NSL::LinAlg::CG<Type> cg_;
+    std::shared_ptr<FermionMatrixType> hfm_;
+    std::shared_ptr<NSL::LinAlg::CG<Type>> cg_;
     NSL::Hubbard::Species species_;
 
     NSL::Tensor<Type> corr_;
@@ -119,7 +119,7 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_,species_);
+    hfm_->populate(phi_,species_);
 
     // Reset memory
     // - Result correlator
@@ -140,11 +140,11 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
         srcVec_.index_fill(Type(1), NSL::Range(Nx), tsrc, NSL::Range(Nx));
 
         // invert MM^dagger
-        NSL::Tensor<Type> invMMdag = cg_(srcVec_);
+        NSL::Tensor<Type> invMMdag = (*cg_)(srcVec_);
 
         // back multiply M^dagger to obtain M^{-1}
         // invM is of shape Nx x Nt x Nx
-        NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
+        NSL::Tensor<Type> invM = hfm_->Mdagger(invMMdag);
 
         // Using a point sink allows to just copy invM as corr(t,y,x)
         // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
@@ -172,7 +172,7 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_,species_);
+    hfm_->populate(phi_,species_);
 
     // Reset memory
     // - Result correlator
@@ -194,11 +194,11 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     }
 
     // invert MM^dagger
-    NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
+    NSL::Tensor<Type> invMMdag = (*cg_)(srcVecK_);
 
     // back multiply M^dagger to obtain M^{-1}
     // invM is of shape Nx x Nt x Nx
-    NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
+    NSL::Tensor<Type> invM = hfm_->Mdagger(invMMdag);
 
     // Using a point sink allows to just copy invM as corr(t,y,x)
     // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 

@@ -16,6 +16,11 @@ class TensorReductions:
     }
 
     //! Reduction: +
+    NSL::Tensor<Type> tensor_sum(){
+        return this->data_.sum();
+    }
+
+    //! Reduction: +
     Type sum(){
         return this->data_.sum().template item<Type>();
     }
@@ -42,12 +47,32 @@ class TensorReductions:
 
     //! Reduction: || (logical or)
     NSL::Tensor<Type> any(const NSL::size_t & dim){
-        return this->data_.any(dim);
+        return this->data_.any(int(dim));
     }
 
     //! Reduction: || (logical or)
     Type any(){
         return this->data_.any().template item<Type>();
+    }
+
+    //! Reduction: mean
+    NSL::Tensor<Type> mean(const NSL::size_t & dim){
+        return this->data_.mean(dim);
+    }
+
+    //! Reduction: mean
+    Type mean(){
+        return this->data_.mean().template item<Type>();
+    }
+
+    //! Reduction: var
+    NSL::Tensor<Type> var(const NSL::size_t & dim){
+        return this->data_.var( at::OptionalIntArrayRef(dim) );
+    }
+
+    //! Reduction: var
+    Type var(){
+        return this->data_.var().template item<Type>();
     }
 
 };

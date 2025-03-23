@@ -4,11 +4,13 @@
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include "../logger.hpp"
+#include "../realImag.tpp"
 #include <iostream>
 #include <vector>
 #include "device.tpp"
 #include "highfive/H5File.hpp"
 #include "MarkovChain/markovState.tpp"
+
 
 namespace NSL {
 
@@ -154,8 +156,8 @@ class H5IO {
                     );
 	                dataset.write(field);
 	            }
-
-	            // write out the markovTime
+	            
+                // write out the markovTime
 	            dataset = h5f_.createDataSet<int>(
                     baseNode+"/markovTime",
                     HighFive::DataSpace::From(markovstate.markovTime)

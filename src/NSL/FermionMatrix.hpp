@@ -10,4 +10,8 @@
 #include "FermionMatrix/Impl/hubbardExp.hpp"
 #include "FermionMatrix/Impl/hubbardExp.tpp"
 
+// U1 Theory
+#include "FermionMatrix/Impl/U1WilsonFermion.hpp"
+#include "FermionMatrix/Impl/U1WilsonFermion.tpp"
+
 #endif
