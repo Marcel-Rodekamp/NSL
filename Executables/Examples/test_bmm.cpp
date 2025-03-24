@@ -138,7 +138,7 @@ int main(int argc, char* argv[]){
 
 
     Type act_val_pre = S_fermion.eval(config["phi"]);
-    int N = params["test_N"];
+    NSL::size_t N = params["test_N"];
     double delta = 1./static_cast<double>(N);
     
     NSL::Configuration<Type> grad_val;
