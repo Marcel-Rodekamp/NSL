@@ -205,7 +205,7 @@ int main(int argc, char* argv[]){
         config["phi"] -= delta;
     }
     auto t6 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> t_bmm2 = t5-t6;
+    std::chrono::duration<double> t_bmm2 = t6-t5;
     double t_bmm_val2 = t_bmm2.count();
     std::cout << "Time: " << t_bmm_val2 << std::endl;
 
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]){
         config["phi"] -= delta;
     }
     auto t8 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> tdur2 = t8 - t2;
+    std::chrono::duration<double> tdur2 = t8 - t7;
     double t_val2 = tdur2.count();
     std::cout << "Time: " << t_val2 << std::endl;
     double speed_up2 = t_val2/t_bmm_val2;
