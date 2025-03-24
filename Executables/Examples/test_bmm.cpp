@@ -78,6 +78,8 @@ int main(int argc, char* argv[]){
     if (params["radial scale"].to<double>()==0.0){
         params["Nradial"] = 0;
     }
+
+    params["test_N"] = yml["systen"]["test_N"].as<NSL::size_t>();
     // std::cout << params["Nx"] << std::endl;
 
     // Now we want to log the found parameters
@@ -136,7 +138,7 @@ int main(int argc, char* argv[]){
 
 
     Type act_val_pre = S_fermion.eval(config["phi"]);
-    int N = 10;
+    int N = params["test_N"];
     double delta = 1./static_cast<double>(N);
     
     NSL::Configuration<Type> grad_val;

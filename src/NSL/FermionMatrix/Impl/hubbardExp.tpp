@@ -180,7 +180,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmlogDetM(){
     for (int i=0; i<N; i++) {
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i+1), 1), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
-        prod(NSL::Slice(0, Nt/std::pow(2,i+1)), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()));
+        prod(NSL::Slice(0, Nt/std::pow(2,i+1)), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul(prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()));
     }
 
 
@@ -296,7 +296,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     int N = static_cast<int>(std::ceil(std::log2(Nt)));
     FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     for(int t = 0;  t < N; t++){
-	    FkFkFk_(NSL::Slice(0, Nt-std::pow(2,t)),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+	    FkFkFk_(NSL::Slice(0, Nt-std::pow(2,t)),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::mat_mul(
             FkFkFk_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
             FkFkFk_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
         );
