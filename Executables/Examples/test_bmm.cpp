@@ -201,8 +201,7 @@ int main(int argc, char* argv[]){
     // config["phi"].randn();
 
     std::cout << "Forward bmm evaluation" << std::endl;
-    CUDAStream stream = getCurrentCUDAStream();
-    AT_CUDA_CHECK(cudaStreamSynchronize(stream));
+    torch::cuda::synchronize();
     auto t5 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         Type act_val = S_fermion.bmmeval(config["phi"]);
@@ -215,10 +214,12 @@ int main(int argc, char* argv[]){
     }
     auto t6 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> t_bmm2 = t6-t5;
+    torch::cuda::synchronize();
     double t_bmm_val2 = t_bmm2.count();
     std::cout << "Time: " << t_bmm_val2 << std::endl;
 
     std::cout << "Forward standard evaluation" << std::endl;
+    torch::cuda::synchronize();
     auto t7 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         Type act_val2 = S_fermion.eval(config["phi"]);
@@ -231,8 +232,7 @@ int main(int argc, char* argv[]){
     }
     auto t8 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tdur2 = t8 - t7;
-    CUDAStream stream = getCurrentCUDAStream();
-    AT_CUDA_CHECK(cudaStreamSynchronize(stream));
+    torch::cuda::synchronize();
     double t_val2 = tdur2.count();
     std::cout << "Time: " << t_val2 << std::endl;
     double speed_up2 = t_val2/t_bmm_val2;
