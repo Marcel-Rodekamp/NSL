@@ -156,9 +156,7 @@ int main(int argc, char* argv[]){
 
     // Gradient test
     std::cout << "Forward bmm evaluation" << std::endl;
-    CUDAStream stream = getCurrentCUDAStream();
-    AT_CUDA_CHECK(cudaStreamSynchronize(stream));
-
+    torch::cuda::synchronize();
     auto t3 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         NSL::Configuration<Type> grad_val = S_fermion.bmmgrad(config["phi"]);
@@ -169,6 +167,7 @@ int main(int argc, char* argv[]){
         NSL::Configuration<Type> grad_val = S_fermion.bmmgrad(config["phi"]);
         config["phi"] -= delta;
     }
+    torch::cuda::synchronize();
     auto t4 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> t_bmm = t4-t3;
     double t_bmm_val = t_bmm.count();
@@ -187,8 +186,7 @@ int main(int argc, char* argv[]){
     }
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> t = t2 - t1;
-    CUDAStream stream = getCurrentCUDAStream();
-    AT_CUDA_CHECK(cudaStreamSynchronize(stream));
+    torch::cuda::synchronize();
     double t_val = t.count();
     std::cout << "Time: " << t.count() << std::endl;
     double speed_up = t_val/t_bmm_val;
@@ -214,12 +212,10 @@ int main(int argc, char* argv[]){
     }
     auto t6 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> t_bmm2 = t6-t5;
-    torch::cuda::synchronize();
     double t_bmm_val2 = t_bmm2.count();
     std::cout << "Time: " << t_bmm_val2 << std::endl;
 
     std::cout << "Forward standard evaluation" << std::endl;
-    torch::cuda::synchronize();
     auto t7 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         Type act_val2 = S_fermion.eval(config["phi"]);
