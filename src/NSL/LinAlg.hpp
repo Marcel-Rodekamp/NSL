@@ -21,6 +21,7 @@
 #include "LinAlg/eigh.tpp"
 #include "LinAlg/tensordot.tpp"
 #include "LinAlg/sqrt.tpp"
+#include "LinAlg/solve.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp
