@@ -177,10 +177,37 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmlogDetM(){
     // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision
     // Do we have to worry about odd number of time slices as the formulation is incorrect anyway?   
     int N = static_cast<int>(std::ceil(std::log2(Nt))); 
+    // for (int i=0; i<N; i++) {
+    //     //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
+    //     //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i+1), 1), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
+    //     prod(
+    //         NSL::Slice(0, Nt/std::pow(2,i+1)), 
+    //         NSL::Slice(), 
+    //         NSL::Slice()
+    //     ) = NSL::LinAlg::mat_mul(
+    //             prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), 
+    //             prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice())
+    //         );
+    // }
+    int mod_el = 0;
+    int new_el = Nt/2;
+    int stop, p2, p21, tmp;
     for (int i=0; i<N; i++) {
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i+1), 1), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
-        prod(NSL::Slice(0, Nt/std::pow(2,i+1)), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul(prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()));
+        p21 = std::pow(2, i+1);
+        stop = new_el*p21;
+        prod(
+            NSL::Slice(0, stop, p21), 
+            NSL::Slice(), 
+            NSL::Slice()
+        ) = NSL::LinAlg::mat_mul(
+                prod(NSL::Slice(0, stop, p21), NSL::Slice(), NSL::Slice()), 
+                prod(NSL::Slice(std::pow(2, i), stop, p21), NSL::Slice(), NSL::Slice())
+            );
+        tmp = new_el + mod_el;
+        new_el = tmp/2;
+        mod_el = tmp%2;
     }
 
 
