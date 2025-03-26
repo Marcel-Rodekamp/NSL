@@ -189,9 +189,11 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmlogDetM(){
     //             prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice())
     //         );
     // }
+
+    // Finn: We could pre-compute this when constructing the fermion matrix. Same for primes approach. 
     int mod_el = 0;
     int new_el = Nt/2;
-    int stop, p2, p21, tmp;
+    int stop, p21, tmp;
     for (int i=0; i<N; i++) {
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
         //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i+1), 1), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
@@ -353,13 +355,18 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     );
 
     // now do the other timeslices
+    NSL::Tensor<Type> tempT = NSL::zeros_like(invAp1F_);
+    tempT = invAp1F_;
+    tempT = NSL::LinAlg::bmm(
+                NSL::LinAlg::bmm(
+                    FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()),
+                    tempT.expand(Nt-1).transpose(1,2).transpose(0,1)
+                ),
+                FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())
+            );
+
     for (int t=0; t < Nt-1; t++) {
-        // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
-    	invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
-    	
-        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
-            NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
-        );
+        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(tempT(t,NSL::Ellipsis()));
     }
 
     return pi_dot_;
