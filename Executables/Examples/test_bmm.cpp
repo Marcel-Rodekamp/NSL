@@ -136,34 +136,23 @@ int main(int argc, char* argv[]){
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = NSL::RealTypeOf<Type>(0.0);
 
-
-    Type act_val_pre = S_fermion.eval(config["phi"]);
     NSL::size_t N = params["test_N"];
     double delta = 1./static_cast<double>(N);
     
-    NSL::Configuration<Type> grad_val;
-    NSL::Configuration<Type> grad2;
+    NSL::Configuration<Type> grad_val, grad2;
     Type act_val, act_val2;
-
-    // grad_val = S_fermion.bmmgrad(config["phi"]);
-    // grad2 = S_fermion.grad(config["phi"]);
-    // int loop_N = static_cast<int>(params["Nt"])*static_cast<int>(params["Nx"]);
-
-    // for (int i=0; i<loop_N; i++) {
-    //     std::cout << config["phi"][i] << " ; " << grad_val["phi"][i] << " ; " << grad2["phi"][i] << std::endl;
-    // }
 
 
     // Gradient test
     std::cout << "Forward bmm evaluation" << std::endl;
     auto t3 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
-        NSL::Configuration<Type> grad_val = S_fermion.bmmgrad(config["phi"]);
+        grad_val = S_fermion.bmmgrad(config["phi"]);
         config["phi"] += delta;
     }
     std::cout << "Backward bmm evaluation" << std::endl;
     for (int i=0; i < N; i++){
-        NSL::Configuration<Type> grad_val = S_fermion.bmmgrad(config["phi"]);
+        grad_val = S_fermion.bmmgrad(config["phi"]);
         config["phi"] -= delta;
     }
     auto t4 = std::chrono::high_resolution_clock::now();
@@ -174,12 +163,12 @@ int main(int argc, char* argv[]){
     std::cout << "Forward standard evaluation" << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
-        NSL::Configuration<Type> grad2 = S_fermion.grad(config["phi"]);
+        grad2 = S_fermion.grad(config["phi"]);
         config["phi"] += delta;
     }
     std::cout << "Backward standard evaluation" << std::endl;
     for (int i=0; i < N; i++){
-        NSL::Configuration<Type> grad2 = S_fermion.grad(config["phi"]);
+        grad2 = S_fermion.grad(config["phi"]);
         config["phi"] -= delta;
     }
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -188,22 +177,36 @@ int main(int argc, char* argv[]){
     std::cout << "Time: " << t.count() << std::endl;
     double speed_up = t_val/t_bmm_val;
     std::cout << "Speed up: " << speed_up << std::endl;
-    // std::cout << grad2["phi"][0] << std::endl;
-    // std::cout << grad_val["phi"][0] << std::endl;
 
+    // Custom implementation of allclose
+    NSL::size_t Nt = params["Nt"];
+    NSL::size_t Nx = params["Nx"];
 
-    // // logdetM test
-    // config["phi"].randn();
+    const double atol = 0.00000001;
+    const double rtol = 0.00001;
+    for (NSL::size_t i=0; i<Nt; i++) {
+        for (NSL::size_t j=0; j<Nx; j++) {
+                if (
+                    std::abs(grad_val["phi"](i,j) - grad2["phi"](i,j)) > (atol + rtol * std::abs(grad2["phi"](i,j)))
+                    ) {
+                    std::cout << "Error; Tensors are not the same." << std::endl;
+                    std::cout << grad_val["phi"](i,j) << " and " << grad2["phi"](i,j) << std::endl;
+                    break; 
+            }
+        }
+    }
+
+    // Testing the action and logdetM
 
     std::cout << "Forward bmm evaluation" << std::endl;
     auto t5 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
-        Type act_val = S_fermion.bmmeval(config["phi"]);
+        act_val = S_fermion.bmmeval(config["phi"]);
         config["phi"] += delta;
     }
     std::cout << "Backward bmm evaluation" << std::endl;
     for (int i=0; i < N; i++){
-        Type act_val = S_fermion.bmmeval(config["phi"]);
+        act_val = S_fermion.bmmeval(config["phi"]);
         config["phi"] -= delta;
     }
     auto t6 = std::chrono::high_resolution_clock::now();
@@ -214,12 +217,12 @@ int main(int argc, char* argv[]){
     std::cout << "Forward standard evaluation" << std::endl;
     auto t7 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
-        Type act_val2 = S_fermion.eval(config["phi"]);
+        act_val2 = S_fermion.eval(config["phi"]);
         config["phi"] += delta;
     }
     std::cout << "Backward standard evaluation" << std::endl;
     for (int i=0; i < N; i++){
-        Type act_val2 = S_fermion.eval(config["phi"]);
+        act_val2 = S_fermion.eval(config["phi"]);
         config["phi"] -= delta;
     }
     auto t8 = std::chrono::high_resolution_clock::now();
@@ -228,8 +231,8 @@ int main(int argc, char* argv[]){
     std::cout << "Time: " << t_val2 << std::endl;
     double speed_up2 = t_val2/t_bmm_val2;
     std::cout << "Speed up: " << speed_up2 << std::endl;
-
-
+    std::cout << "First action val: " << act_val << std::endl;
+    std::cout << "Second action val: " << act_val2 << std::endl;
 
     // auto t3 = std::chrono::high_resolution_clock::now();
     // Type act_val2 = S_fermion.bmmeval(config["phi"]);
