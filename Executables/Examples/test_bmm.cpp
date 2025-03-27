@@ -182,20 +182,6 @@ int main(int argc, char* argv[]){
     NSL::size_t Nt = params["Nt"];
     NSL::size_t Nx = params["Nx"];
 
-    const double atol = 0.00000001;
-    const double rtol = 0.00001;
-    for (NSL::size_t i=0; i<Nt; i++) {
-        for (NSL::size_t j=0; j<Nx; j++) {
-                if (
-                    std::abs(grad_val["phi"](i,j) - grad2["phi"](i,j)) > (atol + rtol * std::abs(grad2["phi"](i,j)))
-                    ) {
-                    std::cout << "Error; Tensors are not the same." << std::endl;
-                    std::cout << grad_val["phi"](i,j) << " and " << grad2["phi"](i,j) << std::endl;
-                    break; 
-            }
-        }
-    }
-
     // Testing the action and logdetM
 
     std::cout << "Forward bmm evaluation" << std::endl;
@@ -249,6 +235,42 @@ int main(int argc, char* argv[]){
     // std::cout << "Time: " << t.count() << std::endl;
 
 
+    const double atol = 0.00000001;
+    const double rtol = 0.00001;
+
+    // Type cval1;
+    NSL::RealTypeOf<Type> cval1, cval2;
+
+    NSL::Tensor<Type> grad_cpu;
+    grad_cpu = grad_val["phi"].to(NSL::CPU());
+
+    NSL::Tensor<Type> grad2_cpu;
+    grad2_cpu = grad2["phi"].to(NSL::CPU());
+
+    for (NSL::size_t i=0; i<Nt; i++) {
+        for (NSL::size_t j=0; j<Nx; j++) {
+                cval1 = NSL::real(grad_cpu(i,j));
+                cval2 = NSL::real(grad2_cpu(i,j));
+                if (
+                    std::abs(cval1 - cval2) > (atol + rtol * std::abs(cval2))
+                    ) {
+                    std::cout << "Error; gradient tensors are not the same." << std::endl;
+                    std::cout << cval1 << " and " << cval2 << std::endl;
+                    break; 
+            }
+        }
+    }
+
+
+    // NSL::size_t numel_N = grad_val["phi"].numel();
+    // for (NSL::size_t i=0; i<numel_N; i++) {
+    //     cval1 = grad_val["phi"][i];
+    //     cval2 = NSL::real(grad2["phi"][i]);
+    //     std::cout << cval1 << " " << cval2 << std::endl;
+    //     break;
+
+    // }
+    
     
     // // Initialize the integrator defining the equation of motion via the 
     // // real part of the force (real part of the action)
