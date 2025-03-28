@@ -333,17 +333,31 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
 
     // Petar's method
     // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
+    // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    // for(int t = 0;  t < N; t++){
+    //     FkFkFk_(NSL::Slice(0, Nt-std::pow(2,t)),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+    //         FkFkFk_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
+    //         FkFkFk_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
+    //     );
+
+    //     FkFkFk0_(NSL::Slice(std::pow(2, t), Nt),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+    //         FkFkFk0_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
+    //         FkFkFk0_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
+    //     );
+    // }
+
     FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     for(int t = 0;  t < N; t++){
-        FkFkFk_(NSL::Slice(0, Nt-std::pow(2,t)),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-            FkFkFk_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
-            FkFkFk_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
+        FkFkFk_.slice_3D(0, Nt-std::pow(2,t)) = NSL::LinAlg::bmm(
+            FkFkFk_.slice_3D(0, Nt - std::pow(2, t)),
+            FkFkFk_.slice_3D(std::pow(2, t), Nt)
         );
 
-        FkFkFk0_(NSL::Slice(std::pow(2, t), Nt),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-            FkFkFk0_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
-            FkFkFk0_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
+        FkFkFk0_.slice_3D(std::pow(2, t), Nt) = NSL::LinAlg::bmm(
+            FkFkFk0_.slice_3D(0, Nt - std::pow(2, t)),
+            FkFkFk0_.slice_3D(std::pow(2, t), Nt)
         );
     }
 

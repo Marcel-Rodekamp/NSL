@@ -27,6 +27,10 @@ class TensorSlice:
         return at::slice(this->data_,dim,start,end,step);
     }
 
+    NSL::Tensor<Type> slice_3D(const NSL::size_t start0, const NSL::size_t end0) {
+        return this->data_.slice(0, start0, end0);
+    }
+
 };
 
 } // namespace NSL::TensorImpl
