@@ -57,7 +57,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
@@ -73,7 +73,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
