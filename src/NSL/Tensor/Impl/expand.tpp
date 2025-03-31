@@ -22,20 +22,19 @@ class TensorExpand:
         return NSL::Tensor<Type>(this);
     }
 
-    // NSL::Tensor<Type> expand(const NSL::size_t & newSize, const NSL::size_t & newDim) {
-    //     std::vector<NSL::size_t> sizes = this->data_.sizes().vec();
-    //     sizes.push_back(newSize);
+    //! Expanding the Tensor by adding a dimension of size `newSize` at the specified `dim`
+    NSL::Tensor<Type> expand(const NSL::size_t &newSize, const int &dim) {
+        std::vector<NSL::size_t> sizes = this->data_.sizes().vec();
 
-    //     this->data_ = this->data_.unsqueeze(newDim).expand(
-    //         torch::IntArrayRef(sizes)
-    //     ).clone();
+        // Insert newSize at the chosen dimension position.
+        sizes.insert(sizes.begin() + dim, newSize);
 
-    //     return NSL::Tensor<Type>(this);
-    // }
+        // Unsqueeze at the chosen dimension instead of always at the end.
+        this->data_ = this->data_.unsqueeze(dim).expand(
+            torch::IntArrayRef(sizes)
+        ).clone();
 
-    // Maybe there is a better way of doing this but this was quickly coded
-    NSL::Tensor<Type> expand(const NSL::size_t & newSize, const NSL::size_t & newDim) {
-        return this->expand(newSize).transpose(newDim, -1);
+        return NSL::Tensor<Type>(this);
     }
 
 };
