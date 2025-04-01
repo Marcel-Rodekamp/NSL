@@ -12,6 +12,12 @@ Type log(Type number){
     return std::log(number);
 }
 
+//! log(Type)
+template<NSL::Concept::isNumber Type>
+Type log2(Type number){
+    return std::log2(number);
+}
+
 //! log(Tensor) - element wise 
 template<NSL::Concept::isNumber Type>
 NSL::Tensor<Type> log(const Tensor<Type> & t) {

@@ -56,7 +56,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExpInv_( lat.device(), Nt, lat.sites() ),
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
@@ -71,7 +72,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExpInv_( lat.device(), Nt, lat.sites() ),
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_(lat.device(), lat.sites(), lat.sites()),
+        FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
+        invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
@@ -208,6 +210,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! Memory used for the implementation of the force
     NSL::Tensor<Type> Fk_;
     NSL::Tensor<Type> FkFkFk_;
+    NSL::Tensor<Type> FkFkFk0_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
 
@@ -227,6 +230,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExpInv_.expand(1);
         Fk_.expand(1);
         FkFkFk_.expand(1);
+        FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
     }
