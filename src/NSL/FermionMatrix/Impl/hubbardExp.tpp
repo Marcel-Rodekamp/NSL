@@ -331,7 +331,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     //     );
     // }
 
-    // Petar's method
+    // // Petar's method
     // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
     // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
@@ -347,19 +347,50 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     //     );
     // }
 
+
+    // Blelloch Scan
+    // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
     FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
-    for(int t = 0;  t < N; t++){
-        FkFkFk_.slice_3D(0, Nt-std::pow(2,t)) = NSL::LinAlg::bmm(
-            FkFkFk_.slice_3D(0, Nt - std::pow(2, t)),
-            FkFkFk_.slice_3D(std::pow(2, t), Nt)
-        );
-
-        FkFkFk0_.slice_3D(std::pow(2, t), Nt) = NSL::LinAlg::bmm(
-            FkFkFk0_.slice_3D(0, Nt - std::pow(2, t)),
-            FkFkFk0_.slice_3D(std::pow(2, t), Nt)
+    NSL::size_t pow2p1;
+    NSL::size_t pow2;
+    // Up-sweep
+    for (int t = 0; t < N; t++){
+        pow2p1 = std::pow(2, t+1);
+        pow2 = std::pow(2, t);
+        FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
+            FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
         );
     }
+
+
+    // Down-sweep
+    FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()) = NSL::eye<Type>(device, Nx);
+    tmp_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice());
+    for(NSL::size_t t = N-1;  t >= 0; t--){
+        pow2p1 = static_cast<NSL::size_t>(std::pow(2, t+1));
+        pow2 = static_cast<NSL::size_t>(std::pow(2, t));
+        tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+            tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+        );
+        FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+    }
+    // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    // for(int t = 0;  t < N; t++){
+    //     FkFkFk_.slice_3D(0, Nt-std::pow(2,t)) = NSL::LinAlg::bmm(
+    //         FkFkFk_.slice_3D(0, Nt - std::pow(2, t)),
+    //         FkFkFk_.slice_3D(std::pow(2, t), Nt)
+    //     );
+
+    //     FkFkFk0_.slice_3D(std::pow(2, t), Nt) = NSL::LinAlg::bmm(
+    //         FkFkFk0_.slice_3D(0, Nt - std::pow(2, t)),
+    //         FkFkFk0_.slice_3D(std::pow(2, t), Nt)
+    //     );
+    // }
 
 
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)

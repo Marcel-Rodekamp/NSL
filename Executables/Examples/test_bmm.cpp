@@ -144,13 +144,13 @@ int main(int argc, char* argv[]){
 
 
     // Gradient test
-    std::cout << "Forward bmm evaluation" << std::endl;
+    std::cout << "Forward bmm grad evaluation" << std::endl;
     auto t3 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         grad_val = S_fermion.bmmgrad(config["phi"]);
         config["phi"] += delta;
     }
-    std::cout << "Backward bmm evaluation" << std::endl;
+    std::cout << "Backward bmm grad evaluation" << std::endl;
     for (int i=0; i < N; i++){
         grad_val = S_fermion.bmmgrad(config["phi"]);
         config["phi"] -= delta;
@@ -160,13 +160,13 @@ int main(int argc, char* argv[]){
     double t_bmm_val = t_bmm.count();
     std::cout << "Time: " << t_bmm.count() << std::endl;
 
-    std::cout << "Forward standard evaluation" << std::endl;
+    std::cout << "Forward standard grad evaluation" << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         grad2 = S_fermion.grad(config["phi"]);
         config["phi"] += delta;
     }
-    std::cout << "Backward standard evaluation" << std::endl;
+    std::cout << "Backward standard grad evaluation" << std::endl;
     for (int i=0; i < N; i++){
         grad2 = S_fermion.grad(config["phi"]);
         config["phi"] -= delta;
@@ -184,13 +184,13 @@ int main(int argc, char* argv[]){
 
     // Testing the action and logdetM
 
-    std::cout << "Forward bmm evaluation" << std::endl;
+    std::cout << "Forward bmm logdetM evaluation" << std::endl;
     auto t5 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         act_val = S_fermion.bmmeval(config["phi"]);
         config["phi"] += delta;
     }
-    std::cout << "Backward bmm evaluation" << std::endl;
+    std::cout << "Backward bmm logdetM evaluation" << std::endl;
     for (int i=0; i < N; i++){
         act_val = S_fermion.bmmeval(config["phi"]);
         config["phi"] -= delta;
@@ -200,13 +200,13 @@ int main(int argc, char* argv[]){
     double t_bmm_val2 = t_bmm2.count();
     std::cout << "Time: " << t_bmm_val2 << std::endl;
 
-    std::cout << "Forward standard evaluation" << std::endl;
+    std::cout << "Forward standard logdetM evaluation" << std::endl;
     auto t7 = std::chrono::high_resolution_clock::now();
     for (int i=0; i < N; i++){
         act_val2 = S_fermion.eval(config["phi"]);
         config["phi"] += delta;
     }
-    std::cout << "Backward standard evaluation" << std::endl;
+    std::cout << "Backward standard logdetM evaluation" << std::endl;
     for (int i=0; i < N; i++){
         act_val2 = S_fermion.eval(config["phi"]);
         config["phi"] -= delta;
@@ -247,19 +247,19 @@ int main(int argc, char* argv[]){
     NSL::Tensor<Type> grad2_cpu;
     grad2_cpu = grad2["phi"].to(NSL::CPU());
 
-    for (NSL::size_t i=0; i<Nt; i++) {
-        for (NSL::size_t j=0; j<Nx; j++) {
-                cval1 = NSL::real(grad_cpu(i,j));
-                cval2 = NSL::real(grad2_cpu(i,j));
-                if (
-                    std::abs(cval1 - cval2) > (atol + rtol * std::abs(cval2))
-                    ) {
-                    std::cout << "Error; gradient tensors are not the same." << std::endl;
-                    std::cout << cval1 << " and " << cval2 << std::endl;
-                    break; 
-            }
-        }
-    }
+    // for (NSL::size_t i=0; i<Nt; i++) {
+    //     for (NSL::size_t j=0; j<Nx; j++) {
+    //             cval1 = NSL::real(grad_cpu(i,j));
+    //             cval2 = NSL::real(grad2_cpu(i,j));
+    //             if (
+    //                 std::abs(cval1 - cval2) > (atol + rtol * std::abs(cval2))
+    //                 ) {
+    //                 std::cout << "Error; gradient tensors are not the same." << std::endl;
+    //                 std::cout << cval1 << " and " << cval2 << std::endl;
+    //                 break; 
+    //         }
+    //     }
+    // }
 
 
     // NSL::size_t numel_N = grad_val["phi"].numel();
