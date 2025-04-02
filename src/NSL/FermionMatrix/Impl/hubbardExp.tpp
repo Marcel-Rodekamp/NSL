@@ -359,16 +359,16 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
         pow2p1 = std::pow(2, t+1);
         pow2 = std::pow(2, t);
         // Standard Blelloch
-        // FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
-        //     FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
-        //     FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
-        // );
-
-        // Mirrored Blelloch
-        FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
-            FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
-            FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
+        FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
+            FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
         );
+
+        // // Mirrored Blelloch
+        // FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
+        //     FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
+        //     FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
+        // );
     }
 
     // tmp_stack_ = FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()); // For standard Blelloch
@@ -384,29 +384,29 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
         pow2p1 = static_cast<NSL::size_t>(std::pow(2, t+1));
         pow2 = static_cast<NSL::size_t>(std::pow(2, t));
         // Standard Blelloch
-        // FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
-        // tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-        //     FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
-        //     tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
-        // );
-        // tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
-    
-        // Mirrored Blelloch
-        FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
-        tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-            tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
-            FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+        FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+            tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
         );
-        tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+    
+        // // Mirrored Blelloch
+        // FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        // tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+        //     tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+        //     FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+        // );
+        // tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
     }
 
     // Standard Blelloch
-    // FkFkFk_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
-    // FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    FkFkFk_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
+    FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
     
-    // Mirrored Blelloch
-    FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
-    FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
+    // // Mirrored Blelloch
+    // FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    // FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
     
     
     // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
