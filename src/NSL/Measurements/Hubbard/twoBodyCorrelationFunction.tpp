@@ -25,7 +25,7 @@ class TwoBodyCorrelator: public Measurement {
             cgDag_(hfm_, NSL::FermionMatrix::MdaggerM),
             corrK_(
                 params["device"].template to<NSL::Device>(),
-                params["Number Time Sources"].to<NSL::size_t>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
@@ -33,7 +33,7 @@ class TwoBodyCorrelator: public Measurement {
                 ),
             corrKDag_(
                 params["device"].template to<NSL::Device>(),
-                params["Number Time Sources"].to<NSL::size_t>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
@@ -41,7 +41,7 @@ class TwoBodyCorrelator: public Measurement {
                 ),
             corrKPool_(
                 params["device"].template to<NSL::Device>(),
-                params["Number Time Sources"].to<NSL::size_t>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(0).template to<NSL::size_t>(), //momenta
                 params["Nt"].template to<NSL::size_t>(),
@@ -50,7 +50,7 @@ class TwoBodyCorrelator: public Measurement {
                 ),
             corrKPoolDag_(
                 params["device"].template to<NSL::Device>(),
-                params["Number Time Sources"].to<NSL::size_t>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["Nt"].template to<NSL::size_t>(),
@@ -59,7 +59,7 @@ class TwoBodyCorrelator: public Measurement {
                 ),
 	        srcVecK_(
                 params["device"].template to<NSL::Device>(),
-                params["Number Time Sources"].to<NSL::size_t>(),
+                params["Number Time Sources"].template to<NSL::size_t>(),
                 params["wallSources"].shape(0).template to<NSL::size_t>(), // momenta
                 params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
                 params["Nt"].template to<NSL::size_t>(),
@@ -225,10 +225,10 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             }
         }
     }
-    corrPool_[NSL::Hubbard::Particle]    = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
-    corrPool_[NSL::Hubbard::Hole]        = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
-    corrPoolDag_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
-    corrPoolDag_[NSL::Hubbard::Hole]     = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
+    corrPool_[NSL::Hubbard::Particle]    = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].template to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
+    corrPool_[NSL::Hubbard::Hole]        = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].template to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
+    corrPoolDag_[NSL::Hubbard::Particle] = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].template to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
+    corrPoolDag_[NSL::Hubbard::Hole]     = NSL::Tensor<Type> (params_["device"].template to<NSL::Device>(), params_["Number Time Sources"].template to<NSL::size_t>(), kDim, kDim, Nt, bDim, bDim);
 
     /*
     We need to calculate 
