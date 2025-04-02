@@ -238,14 +238,14 @@ int main(int argc, char* argv[]){
     const double atol = 0.00000001;
     const double rtol = 0.00001;
 
-    // Type cval1;
-    NSL::RealTypeOf<Type> cval1, cval2;
+    // // Type cval1;
+    // NSL::RealTypeOf<Type> cval1, cval2;
 
-    NSL::Tensor<Type> grad_cpu;
-    grad_cpu = grad_val["phi"].to(NSL::CPU());
+    // NSL::Tensor<Type> grad_cpu;
+    // grad_cpu = grad_val["phi"].to(NSL::CPU());
 
-    NSL::Tensor<Type> grad2_cpu;
-    grad2_cpu = grad2["phi"].to(NSL::CPU());
+    // NSL::Tensor<Type> grad2_cpu;
+    // grad2_cpu = grad2["phi"].to(NSL::CPU());
 
     // for (NSL::size_t i=0; i<Nt; i++) {
     //     for (NSL::size_t j=0; j<Nx; j++) {

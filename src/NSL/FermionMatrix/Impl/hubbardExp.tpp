@@ -332,7 +332,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     // }
 
     // // Petar's method
-    // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
+    // // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
     // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     // for(int t = 0;  t < N; t++){
@@ -347,11 +347,28 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     //     );
     // }
 
+    // NSL::RealTypeOf<Type> cval1, cval2;
+
+    // NSL::Tensor<Type> grad_cpu;
+    // grad_cpu = FkFkFk0_.to(NSL::CPU());
+
+    // NSL::Tensor<Type> grad2_cpu;
+
+    // std::cout << "New iteration" << std::endl;
+    // for (NSL::size_t i=0; i<Nt; i++) {
+    //     for (NSL::size_t j=0; j<Nx; j++) {
+    //         for (NSL::size_t k=0; j<Nx; j++) {
+    //             cval1 = NSL::real(grad_cpu(i,j,k));
+    //             // cval2 = NSL::real(grad2_cpu(i,j));
+    //             std::cout << cval1 << std::endl;
+    //         }
+    //     }
+    // }
 
     // Blelloch Scan
     // NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
     FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
-    // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
     NSL::size_t pow2p1;
     NSL::size_t pow2;
     // Up-sweep
@@ -359,70 +376,67 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
         pow2p1 = std::pow(2, t+1);
         pow2 = std::pow(2, t);
         // Standard Blelloch
-        FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
-            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
-            FkFkFk_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
+        FkFkFk0_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
+            FkFkFk0_(NSL::Slice(pow2p1-1, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
         );
 
-        // // Mirrored Blelloch
-        // FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
-        //     FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
-        //     FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
-        // );
+        // Mirrored Blelloch
+        FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(NSL::None, NSL::None, pow2p1), NSL::Slice(), NSL::Slice()),
+            FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1), NSL::Slice(), NSL::Slice())
+        );
     }
 
-    // tmp_stack_ = FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()); // For standard Blelloch
+    // tmp_stack_ = FkFkFk0_(Nt-1, NSL::Slice(), NSL::Slice()); // For standard Blelloch
     tmp_stack_ = FkFkFk_(0, NSL::Slice(), NSL::Slice()); // For mirrored Blelloch
-
     // Down-sweep
 
-    // FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()) = NSL::eye<Type>(device, Nx); // For standard Blelloch
+    FkFkFk0_(Nt-1, NSL::Slice(), NSL::Slice()) = NSL::eye<Type>(device, Nx); // For standard Blelloch
     FkFkFk_(0, NSL::Slice(), NSL::Slice()) = NSL::eye<Type>(device, Nx); // For mirrored Blelloch
-
     tmp_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice());
+    tmp2_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice());
     for(NSL::size_t t = N-1;  t >= 0; t--){
         pow2p1 = static_cast<NSL::size_t>(std::pow(2, t+1));
         pow2 = static_cast<NSL::size_t>(std::pow(2, t));
         // Standard Blelloch
-        FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
-        tmp_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-            FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
-            tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+        FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp2_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        tmp2_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+            tmp2_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+            FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
         );
-        tmp_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        tmp2_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
     
-        // // Mirrored Blelloch
-        // FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
-        // tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-        //     tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
-        //     FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
-        // );
-        // tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        // Mirrored Blelloch
+        FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        tmp_(NSL::Slice(NSL::None, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+            tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+            FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+        );
+        tmp_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk_(NSL::Slice(pow2, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
+        
     }
 
     // Standard Blelloch
-    FkFkFk_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
-    FkFkFk_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    FkFkFk0_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp2_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
+    FkFkFk0_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
     
-    // // Mirrored Blelloch
-    // FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
-    // FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
-    
-    
-    // FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
-    // FkFkFk0_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
-    // for(int t = 0;  t < N; t++){
-    //     FkFkFk_.slice_3D(0, Nt-std::pow(2,t)) = NSL::LinAlg::bmm(
-    //         FkFkFk_.slice_3D(0, Nt - std::pow(2, t)),
-    //         FkFkFk_.slice_3D(std::pow(2, t), Nt)
-    //     );
-
-    //     FkFkFk0_.slice_3D(std::pow(2, t), Nt) = NSL::LinAlg::bmm(
-    //         FkFkFk0_.slice_3D(0, Nt - std::pow(2, t)),
-    //         FkFkFk0_.slice_3D(std::pow(2, t), Nt)
-    //     );
+    // std::cout << "Blelloch for comparison" << std::endl;
+    // grad_cpu = FkFkFk0_.to(NSL::CPU());
+    // for (NSL::size_t i=0; i<Nt; i++) {
+    //     for (NSL::size_t j=0; j<Nx; j++) {
+    //         for (NSL::size_t k=0; j<Nx; j++) {
+    //             cval1 = NSL::real(grad_cpu(i,j,k));
+    //             // cval2 = NSL::real(grad2_cpu(i,j));
+    //             std::cout << cval1 << std::endl;
+    //         }
+    //     }
     // }
 
+
+    // Mirrored Blelloch
+    FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
 
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
     std::tie( invAp1 , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
@@ -442,10 +456,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
       * (Note:  there is no sum over x)
       **/
 
-    // // first do t=Nt-1 case
-    // pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
-    //     NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
-    // );
+    // first do t=Nt-1 case
+    pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+        NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+    );
 
     // // now do the other timeslices
     // for (int t=0; t < Nt-1; t++) {
@@ -457,30 +471,36 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     //     );
     // }
 
-    // // now do the other timeslices with petars method
-    // NSL::Tensor<Type> tempT = NSL::zeros_like(invAp1F_);
-    // tempT = invAp1F_;
-    // tempT = NSL::LinAlg::bmm(NSL::LinAlg::bmm(FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()),tempT.expand(Nt-1).transpose(1,2).transpose(0,1)),FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis()));
-
-    // for (int t=0; t < Nt-1; t++) {
-    //     pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(tempT(t,NSL::Ellipsis()));
-    // }
-
-    // Standard adapted to Blelloch scan
-    // first do t=Nt-1 case
-    pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
-        NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+    // now do the other timeslices with petars method
+    NSL::Tensor<Type> tempT = NSL::zeros_like(invAp1F_);
+    tempT = invAp1F_;
+    tempT = NSL::LinAlg::bmm(
+        NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()), 
+            tempT.expand(Nt-1).transpose(1,2).transpose(0,1)
+        ), 
+        FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())
     );
 
-    // now do the other timeslices
     for (int t=0; t < Nt-1; t++) {
-        // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
-        invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
-        
-        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
-            NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
-        );
+        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(tempT(t,NSL::Ellipsis()));
     }
+
+    // // Standard adapted to Blelloch scan
+    // // first do t=Nt-1 case
+    // pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+    //     NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+    // );
+
+    // // now do the other timeslices
+    // for (int t=0; t < Nt-1; t++) {
+    //     // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+    //     invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
+        
+    //     pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
+    //         NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
+    //     );
+    // }
     return pi_dot_;
 }
 
