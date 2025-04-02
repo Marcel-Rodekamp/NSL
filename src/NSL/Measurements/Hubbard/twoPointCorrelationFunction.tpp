@@ -258,9 +258,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     // write the non interacting correlator 
     std::string node;
     if (species_ == NSL::Hubbard::Particle){
-          node = "/NonInteracting/correlators/single/particle";
+          node = "/NonInteracting/correlators/onebody/particle";
     } else {
-          node = "/NonInteracting/correlators/single/hole";
+          node = "/NonInteracting/correlators/onebody/hole";
     }
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
@@ -295,9 +295,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         // data
 
         if (species_ == NSL::Hubbard::Particle){
-            node = fmt::format("/markovChain/{}/correlators/single/particle",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/particle",cfgID);
         } else {
-            node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/hole",cfgID);
         }
 
         if (skip_(this->params_["overwrite"],node)) {
@@ -341,9 +341,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
     // write the non interacting correlator 
     std::string node;
     if (species_ == NSL::Hubbard::Particle){
-          node = "/NonInteracting/correlators/single/particle";
+          node = "/NonInteracting/correlators/onebody/particle";
     } else {
-          node = "/NonInteracting/correlators/single/hole";
+          node = "/NonInteracting/correlators/onebody/hole";
     }
     
     int uDim = params_["wallSources"].shape(0).template to<NSL::size_t>();;
@@ -386,9 +386,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
         // data
 
         if (species_ == NSL::Hubbard::Particle){
-            node = fmt::format("/markovChain/{}/correlators/single/particle",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/particle",cfgID);
         } else {
-            node = fmt::format("/markovChain/{}/correlators/single/hole",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/hole",cfgID);
         }
 
         if (skip_(this->params_["overwrite"],node)) {
