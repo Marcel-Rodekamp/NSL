@@ -251,15 +251,23 @@ int main(int argc, char* argv[]){
     //     for (NSL::size_t j=0; j<Nx; j++) {
     //             cval1 = NSL::real(grad_cpu(i,j));
     //             cval2 = NSL::real(grad2_cpu(i,j));
-    //             if (
-    //                 std::abs(cval1 - cval2) > (atol + rtol * std::abs(cval2))
-    //                 ) {
-    //                 std::cout << "Error; gradient tensors are not the same." << std::endl;
-    //                 std::cout << cval1 << " and " << cval2 << std::endl;
-    //                 break; 
-    //         }
+    //             std::cout << cval1 << " and " << cval2 << std::endl;
     //     }
     // }
+
+    for (NSL::size_t i=0; i<Nt; i++) {
+        for (NSL::size_t j=0; j<Nx; j++) {
+                cval1 = NSL::real(grad_cpu(i,j));
+                cval2 = NSL::real(grad2_cpu(i,j));
+                if (
+                    std::abs(cval1 - cval2) > (atol + rtol * std::abs(cval2))
+                    ) {
+                    std::cout << "Error; gradient tensors are not the same." << std::endl;
+                    std::cout << cval1 << " and " << cval2 << std::endl;
+                    break; 
+            }
+        }
+    }
 
 
     // NSL::size_t numel_N = grad_val["phi"].numel();
