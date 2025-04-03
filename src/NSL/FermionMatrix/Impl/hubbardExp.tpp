@@ -442,7 +442,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     std::tie( invAp1 , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
     invAp1 += 1.;
     invAp1 = 1./invAp1;
-    invAp1F_ = NSL::LinAlg::mat_mul( V , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1) , NSL::LinAlg::mat_inv(V) ) );  // V * (1/(1+A^{-1})) * V^{-1}
+    invAp1F_ = NSL::LinAlg::mat_mul( 
+                    V , 
+                    NSL::LinAlg::mat_mul( 
+                        NSL::LinAlg::diag(invAp1), 
+                        NSL::LinAlg::mat_inv(V) 
+                    ) 
+                );  // V * (1/(1+A^{-1})) * V^{-1}
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
@@ -458,7 +464,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
 
     // first do t=Nt-1 case
     pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
-        NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+        NSL::LinAlg::mat_mul(
+            FkFkFk_(0, NSL::Slice(), NSL::Slice()), 
+            invAp1F_
+        )
     );
 
     // // now do the other timeslices
@@ -476,10 +485,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     tempT = invAp1F_;
     tempT = NSL::LinAlg::bmm(
         NSL::LinAlg::bmm(
-            FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()), 
+            FkFkFk_(NSL::Slice(1, NSL::None),NSL::Ellipsis()), 
             tempT.expand(Nt-1).transpose(1,2).transpose(0,1)
         ), 
-        FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())
+        FkFkFk0_(NSL::Slice(0, Nt-1),NSL::Ellipsis())
     );
 
     for (int t=0; t < Nt-1; t++) {
