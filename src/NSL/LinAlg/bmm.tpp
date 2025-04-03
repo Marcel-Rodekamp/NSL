@@ -6,15 +6,9 @@
 namespace NSL::LinAlg{
 
 
-<<<<<<< HEAD
 //! matrix @ matrix / tensor @ tensor
 /*!
  * Implementation is the same as `NSL::LinAlg::mat_vec` 
-=======
-//! tensor @ tensor
-/*!
- * Batch matrix multiplication
->>>>>>> 3eb6c0b (Added bmm sausage computation, bmmeval, bmmgrad, bmmlogdetM for hubbardexp and test executable)
  * */
 
 template<NSL::Concept::isNumber Type>

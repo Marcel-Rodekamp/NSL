@@ -16,12 +16,9 @@
 #include "LinAlg/mat_exp.tpp"
 #include "LinAlg/mat_mul.tpp"
 #include "LinAlg/bmm.tpp"
-<<<<<<< HEAD
 #include "LinAlg/qr.tpp"
 #include "LinAlg/svd.tpp"
 #include "LinAlg/mat_mul_stab.tpp"
-=======
->>>>>>> 3eb6c0b (Added bmm sausage computation, bmmeval, bmmgrad, bmmlogdetM for hubbardexp and test executable)
 #include "LinAlg/mat_vec.tpp"
 #include "LinAlg/minMax.tpp"
 #include "LinAlg/shift.tpp"
