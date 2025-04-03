@@ -46,12 +46,16 @@ class HubbardFermionAction :
     // We don't understand why this is not automatically done, probably due 
     // to BaseAction being an abstract base class
     using BaseAction<Type,TensorType>::eval;
+    using BaseAction<Type,TensorType>::bmmeval;
     using BaseAction<Type,TensorType>::grad;
+    using BaseAction<Type,TensorType>::bmmgrad;
     using BaseAction<Type,TensorType>::force;
 
 	Configuration<TensorType> force(const Tensor<TensorType>& phi);
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
+	Configuration<TensorType> bmmgrad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
+	Type bmmeval(const Tensor<TensorType>& phi);
 
     protected:
     NSL::Parameter params_;
@@ -75,6 +79,27 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
     // hole contribution
     hfm_.populate(phi, NSL::Hubbard::Species::Hole);
     logDetMpMh+= hfm_.logDetM();
+
+    // The Fermi action has an additional - sign
+    return -logDetMpMh;
+}
+
+template<
+    NSL::Concept::isNumber Type, 
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
+    NSL::Concept::isNumber TensorType
+>
+Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::bmmeval(const Tensor<TensorType>& phi){
+    Type logDetMpMh = 0;
+
+    // particle contribution
+    hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+    logDetMpMh+= hfm_.bmmlogDetM();
+
+    // hole contribution
+    hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+    logDetMpMh+= hfm_.bmmlogDetM();
 
     // The Fermi action has an additional - sign
     return -logDetMpMh;
@@ -108,6 +133,27 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
     // hole contribution
     hfm_.populate(phi, NSL::Hubbard::Species::Hole);
     dS[this->configKey_]-= hfm_.gradLogDetM();
+
+    return dS;
+}
+
+template<
+    NSL::Concept::isNumber Type, 
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType, 
+    NSL::Concept::isNumber TensorType
+>
+Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::bmmgrad(const Tensor<TensorType>& phi){
+
+    NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
+
+    // particle contribution
+    hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+    dS[this->configKey_]+= hfm_.bmmgradLogDetM();
+
+    // hole contribution
+    hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+    dS[this->configKey_]-= hfm_.bmmgradLogDetM();
 
     return dS;
 }

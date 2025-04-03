@@ -36,7 +36,9 @@ class BaseAction{
 
 	virtual Configuration<TensorType> force(const Tensor<TensorType>& fields) = 0;
 	virtual Configuration<TensorType> grad(const Tensor<TensorType>& fields) = 0;
+	virtual Configuration<TensorType> bmmgrad(const Tensor<TensorType>& fields) = 0;
 	virtual ActionValueType eval(const Tensor<TensorType>& fields) = 0;
+	virtual ActionValueType bmmeval(const Tensor<TensorType>& fields) = 0;
 
 	inline Configuration<TensorType> force(Configuration<TensorType> & config){
 		return Configuration<TensorType>{{configKey_, force(config[configKey_])[configKey_]}};
@@ -46,8 +48,16 @@ class BaseAction{
 		return Configuration<TensorType>({{configKey_, grad(config[configKey_])[configKey_]}});
 	}
 
+    inline Configuration<TensorType> bmmgrad(Configuration<TensorType> & config){
+		return Configuration<TensorType>({{configKey_, bmmgrad(config[configKey_])[configKey_]}});
+	}
+
 	inline Type eval(Configuration<TensorType>& config){ 
 		return eval(config[configKey_]); 
+	}
+
+    inline Type bmmeval(Configuration<TensorType>& config){ 
+		return bmmeval(config[configKey_]); 
 	}
 
 	BaseAction(const std::string & configKey) : 
@@ -100,6 +110,18 @@ public:
     };
 
     template<NSL::Concept::isNumber TensorType>
+	Configuration<TensorType> bmmgrad(Configuration<TensorType> & config){
+        Configuration<TensorType> sum;
+        std::apply(
+            [&sum, &config](auto & ... terms) {
+                (sum += ... += terms.bmmgrad(config));
+            },
+            summands_
+        );
+        return sum;
+    };
+
+    template<NSL::Concept::isNumber TensorType>
 	auto eval(Configuration<TensorType> & config){
 
         if constexpr (sizeof...(SingleActions)!=1){
@@ -120,6 +142,39 @@ public:
             std::apply(
                 [&sum, &config](auto & ... terms) {
                     (sum += ... += terms.eval(config));
+                },
+                summands_
+            );
+
+            return sum;
+
+        }
+
+
+    }
+
+
+    template<NSL::Concept::isNumber TensorType>
+	auto bmmeval(Configuration<TensorType> & config){
+
+        if constexpr (sizeof...(SingleActions)!=1){
+            typedef CommonTypeOfPack<typename SingleActions::ActionValueType ...> ReturnTypeProposal;
+            ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+            std::apply(
+                [&sum, &config](auto & ... terms) {
+                    (sum += ... += terms.bmmeval(config));
+                },
+                summands_
+            );
+
+            return sum;
+
+        } else {
+            typedef TensorType ReturnTypeProposal;
+            ReturnTypeProposal sum = static_cast<ReturnTypeProposal>(0);
+            std::apply(
+                [&sum, &config](auto & ... terms) {
+                    (sum += ... += terms.bmmeval(config));
                 },
                 summands_
             );

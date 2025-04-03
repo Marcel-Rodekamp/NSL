@@ -127,6 +127,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::MdaggerM(con
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
+    // std::cout << "Using logdetM" << std::endl;
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
 
@@ -153,6 +154,41 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     
     return NSL::LinAlg::logdet1plusF(sausage);
 }
+
+
+//return type
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmlogDetM(){
+    // std::cout << "Using bmm logdetM" << std::endl;
+    const int Nt = this->phi_.shape(0);
+    const int Nx = this->phi_.shape(1);
+
+    // having a batch dimension requires a bit more work and refactoring of 
+    // this algorithm for now we don't implement it here
+    assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
+
+    NSL::Device device = this->phi_.device();
+
+    NSL::Tensor<Type> prod(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(device,Nx);
+    
+    prod = this->Lat.exp_hopping_matrix(sgn_*this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+
+    // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision
+    // Do we have to worry about odd number of time slices as the formulation is incorrect anyway?   
+    int N = static_cast<int>(std::ceil(std::log2(Nt))); 
+    for (int i=0; i<N; i++) {
+        //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
+        //std::cout << prod(NSL::Slice(0, Nt/std::pow(2,i+1), 1), NSL::Slice(), NSL::Slice()).shape(0) << std::endl;
+        prod(NSL::Slice(0, Nt/std::pow(2,i+1)), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(prod(NSL::Slice(0, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), prod(NSL::Slice(1, Nt/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()));
+    }
+
+
+    sausage = prod(0,NSL::Slice(),NSL::Slice());
+    
+    return NSL::LinAlg::logdet1plusF(sausage);
+}
+
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
@@ -234,6 +270,74 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     return pi_dot_;
 }
+
+
+template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
+NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDetM(){
+    //ToDo: implement
+    const int Nt = this->phi_.shape(0);
+    const int Nx = this->phi_.shape(1);
+    const NSL::Device device = this->phi_.device();
+    NSL::Tensor<Type> invAp1,V;
+
+    // having a batch dimension requires a bit more work and refactoring of 
+    // this algorithm for now we don't implement it here
+    assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
+
+    NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
+
+    // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
+    Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_);
+
+    // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
+    // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
+    // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    
+    int N = static_cast<int>(std::ceil(std::log2(Nt)));
+    FkFkFk_(NSL::Slice(),NSL::Slice(),NSL::Slice()) = Fk_(NSL::Slice(),NSL::Slice(),NSL::Slice());  // initialize FkFkFk
+    for(int t = 0;  t < N; t++){
+	    FkFkFk_(NSL::Slice(0, Nt-std::pow(2,t)),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
+            FkFkFk_(NSL::Slice(0, Nt - std::pow(2, t)), NSL::Slice(), NSL::Slice()),
+            FkFkFk_(NSL::Slice(std::pow(2, t), Nt), NSL::Slice(), NSL::Slice())
+        );
+    }
+
+    // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
+    std::tie( invAp1 , V ) = torch::linalg::eig(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+    invAp1 += 1.;
+    invAp1 = 1./invAp1;
+    invAp1F_ = NSL::LinAlg::mat_mul( V , NSL::LinAlg::mat_mul( NSL::LinAlg::diag(invAp1) , NSL::LinAlg::mat_inv(V) ) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+    /**
+      * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
+      * This is equal to Tr((1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} ) * i
+      * Under the trace we can move the terms cyclicly (is that a real word?)
+      *                = Tr( δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} ) * i
+      *                = [ F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1}) ]_{x,x} * i
+      *
+      *                = [FkFkFk(t+1).invAp1.Fk(0).Fk(1)...Fk(t)]_{x,x} * i
+      *
+      * (Note:  there is no sum over x)
+      **/
+
+    // first do t=Nt-1 case
+    pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+        NSL::LinAlg::mat_mul(FkFkFk_(0,NSL::Slice(),NSL::Slice()),invAp1F_)
+    );
+
+    // now do the other timeslices
+    for (int t=0; t < Nt-1; t++) {
+        // (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})
+    	invAp1F_.mat_mul(Fk_(t,NSL::Slice(),NSL::Slice()));                 
+    	
+        pi_dot_(t,NSL::Slice()) =  II * NSL::LinAlg::diag(
+            NSL::LinAlg::mat_mul(FkFkFk_(t+1,NSL::Slice(),NSL::Slice()),invAp1F_)
+        );
+    }
+
+    return pi_dot_;
+}
+
 
 } // namespace FermionMatrix
 

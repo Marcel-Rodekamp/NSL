@@ -177,9 +177,15 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     Type logDetM() override;
 
     /*!
+    *  \returns log of determinant of M determined with batch matrix multiplication.
+    **/
+    Type bmmlogDetM() override;
+
+    /*!
      * \returns the gradient of log of determinant of M
      **/
     NSL::Tensor<Type> gradLogDetM() override;
+    NSL::Tensor<Type> bmmgradLogDetM() override;
 
     //! Query the current species of the fermion matrix. To change the species please use populate(phi, species).
     NSL::Hubbard::Species species() {
