@@ -249,6 +249,24 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
             Fkt(NSL::Slice(std::pow(2, t), Nt+std::pow(2,t+1)-1),NSL::Ellipsis())
         );
     }
+
+    // NSL::Tensor<Type> tmp_cpu;
+    // tmp_cpu = Fkt.to(NSL::CPU());
+
+    // double cval1;
+    // int tmp_int = 2*Nt-1;
+    // std::cout << "Fkt from PFS" << std::endl;
+    // for (NSL::size_t i=0; i<tmp_int; i++) {
+    //     for (NSL::size_t j=0; j<Nx; j++) {
+    //         for (NSL::size_t k=0; k<Nx; k++) {
+    //             cval1 = NSL::real(tmp_cpu(i,j, k));
+    //             std::cout << cval1 << std::endl;
+    //         }
+    //     }
+    // }
+
+
+
     // if we are smart about slicing and copying, we can remove this assignment but I spent too long on other improvements.
     // This is left for the reader
     // FkFkFk0_ = Fkt(NSL::Slice(0,Nt),NSL::Ellipsis());
@@ -317,11 +335,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
 
     // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
     Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx).transpose(1,2).transpose() * this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_);
+    Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_);
 
-    // Computing F_{0}^{-1}.F_{1}^{-1}.....F_{Nt-1}^{-1}
-    // FkFkFk(t) = Fk(t).Fk(t+1)....Fk(Nt-1)
-    // FkFkFk(t=0) gives A^-1 (see eq. 2.32 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-    
+
     int N = static_cast<int>(std::ceil(std::log2(Nt)));
 
     NSL::Tensor<Type> Fkt = NSL::eye<Type>(device,Nx);
@@ -364,8 +380,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
         // Standard Blelloch
         FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = tmp2_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
         tmp2_(NSL::Slice(pow2p1-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::bmm(
-            tmp2_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
-            FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
+            FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()), 
+            tmp2_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice())
         );
         tmp2_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice()) = FkFkFk0_(NSL::Slice(pow2-1, NSL::None, pow2p1),NSL::Slice(),NSL::Slice());
     
@@ -379,17 +395,43 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
         
     }
 
-    // Standard Blelloch
-    FkFkFk0_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp2_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
-    FkFkFk0_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
 
-    // Mirrored Blelloch
-    FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
-    FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
+    // // For reader
+    // // Standard Blelloch
+    // FkFkFk0_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice()) = tmp2_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
+    // FkFkFk0_(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
 
-    Fkt(NSL::Slice(0,Nt-1), NSL::Slice(), NSL::Slice()) = FkFkFk0_(NSL::Slice(0, Nt-1), NSL::Slice(), NSL::Slice());
+    // // Mirrored Blelloch
+    // FkFkFk_(0, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    // FkFkFk_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
+
+    // Fkt(NSL::Slice(0,Nt-1), NSL::Slice(), NSL::Slice()) = FkFkFk0_(NSL::Slice(0, Nt-1), NSL::Slice(), NSL::Slice());
+    // Fkt(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
+    // Fkt(NSL::Slice(Nt, NSL::None), NSL::Slice(), NSL::Slice()) = FkFkFk_(NSL::Slice(1, Nt), NSL::Slice(), NSL::Slice());
+
+
+    Fkt(NSL::Slice(0,Nt-1), NSL::Slice(), NSL::Slice()) = tmp2_(NSL::Slice(1, Nt),NSL::Slice(),NSL::Slice());
     Fkt(Nt-1, NSL::Slice(), NSL::Slice()) = tmp_stack_;
-    Fkt(NSL::Slice(Nt, NSL::None), NSL::Slice(), NSL::Slice()) = FkFkFk_(NSL::Slice(1, Nt), NSL::Slice(), NSL::Slice());
+    Fkt(NSL::Slice(Nt, NSL::None), NSL::Slice(), NSL::Slice()) = tmp_(NSL::Slice(0, Nt-1),NSL::Slice(),NSL::Slice());
+
+
+
+    // NSL::Tensor<Type> tmp_cpu;
+    // tmp_cpu = Fkt.to(NSL::CPU());
+
+    // double cval1;
+    // int tmp_int = 2*Nt-1;
+    // std::cout << "Fkt from Blelloch" << std::endl;
+    // for (NSL::size_t i=0; i<tmp_int; i++) {
+    //     for (NSL::size_t j=0; j<Nx; j++) {
+    //         for (NSL::size_t k=0; k<Nx; k++) {
+    //             cval1 = NSL::real(tmp_cpu(i,j, k));
+    //             std::cout << cval1 << std::endl;
+    //         }
+    //     }
+    // }
+
+
 
     NSL::Tensor<Type> Q(device, Nx, Nx);
     NSL::Tensor<Type> D(device, Nx);
@@ -407,19 +449,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::bmmgradLogDe
     );
     
     invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul( Vnew,V ) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
-
-    /**
-      * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
-      * This is equal to Tr((1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} ) * i
-      * Under the trace we can move the terms cyclicly (is that a real word?)
-      *                = Tr( δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} ) * i
-      *                = [ F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1}) ]_{x,x} * i
-      *
-      *                = [FkFkFk(t+1).invAp1.Fk(0).Fk(1)...Fk(t)]_{x,x} * i
-      *
-      * (Note:  there is no sum over x)
-      **/
-
     // first do t=Nt-1 case
     pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
         // NSL::LinAlg::mat_mul( FkFkFk_(0,NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )

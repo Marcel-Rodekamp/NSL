@@ -140,6 +140,7 @@ int main(int argc, char* argv[]){
     double delta = 1./static_cast<double>(N);
     
     NSL::Configuration<Type> grad_val, grad2;
+    grad_val = S_fermion.bmmgrad(config["phi"]);
     Type act_val, act_val2;
 
 
