@@ -304,7 +304,11 @@ class RadialHMC{
         NSL::RealTypeOf<Type> rscale_ = rscaleTensor_.lognormal(0., radialScale)[0];
         // compute the Action
         NSL::Configuration<Type> proposal_config (state.configuration,true);
-        proposal_config = static_cast<Type>(rscale_) * proposal_config; 
+	NSL::Configuration<Type> config_imag (state.configuration.imag(),true);
+	NSL::Configuration<Type> config_real (state.configuration.real(),true);
+	
+        //proposal_config = static_cast<Type>(rscale_) * proposal_config;
+	proposal_config = static_cast<Type>(rscale_) * config_real + config_imag;
         Type proposal_S = this->action_(proposal_config);
 
         // Starting point of the trajectory
