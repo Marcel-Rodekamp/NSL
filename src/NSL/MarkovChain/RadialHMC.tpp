@@ -303,12 +303,15 @@ class RadialHMC{
     NSL::MCMC::MarkovState<Type> radialgenerate_(const NSL::MCMC::MarkovState<Type> & state, NSL::RealTypeOf<Type> volume, NSL::RealTypeOf<Type> radialScale){
         NSL::RealTypeOf<Type> rscale_ = rscaleTensor_.lognormal(0., radialScale)[0];
         // compute the Action
-        NSL::Configuration<Type> proposal_config (state.configuration,true);
-	NSL::Configuration<Type> config_imag (state.configuration.imag(),true);
-	NSL::Configuration<Type> config_real (state.configuration.real(),true);
-	
-        //proposal_config = static_cast<Type>(rscale_) * proposal_config;
-	proposal_config = static_cast<Type>(rscale_) * config_real + config_imag;
+	NSL::Configuration<Type> config_imag (state.configuration,true);
+        NSL::Configuration<Type> config_real (state.configuration,true);
+        for(auto & [key,field]: state.configuration){
+            config_imag[key].real() = 0;
+            config_real[key].imag() = 0;
+        }
+
+        // we only want to scale the real part of the configuration
+        NSL::Configuration<Type> proposal_config = static_cast<Type>(rscale_) * config_real + config_imag;
         Type proposal_S = this->action_(proposal_config);
 
         // Starting point of the trajectory
