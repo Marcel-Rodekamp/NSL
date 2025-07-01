@@ -258,9 +258,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
     // write the non interacting correlator 
     std::string node;
     if (species_ == NSL::Hubbard::Particle){
-          node = "/NonInteracting/correlators/onebody/particle";
+          node = "/NonInteracting/correlators/onebody/particle/xy";
     } else {
-          node = "/NonInteracting/correlators/onebody/hole";
+          node = "/NonInteracting/correlators/onebody/hole/xy";
     }
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
@@ -295,9 +295,9 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(){
         // data
 
         if (species_ == NSL::Hubbard::Particle){
-            node = fmt::format("/markovChain/{}/correlators/onebody/particle",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/particle/xy",cfgID);
         } else {
-            node = fmt::format("/markovChain/{}/correlators/onebody/hole",cfgID);
+            node = fmt::format("/markovChain/{}/correlators/onebody/hole/xy",cfgID);
         }
 
         if (skip_(this->params_["overwrite"],node)) {

@@ -68,8 +68,48 @@ int main(int argc, char** argv){
         NSL::Logger::info( "{}: {}", key, value );
     }
 
+    std::vector<std::vector<std::vector<std::vector<double>>>> kblocks2d;
+    std::vector<std::vector<double>> momenta;
+   
+
+    // Load momentum blocks if they exist
+    if (yml["measurements"]["momenta"]){
+      momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
+      NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
+      for (int i=0;i<momenta.size(); i++){
+	for (int j=0;j<momenta[0].size();j++){
+	  mblocks(i,j) = momenta[i][j];
+	}
+      }
+      params["momenta"]=mblocks;
+    }
+    if (yml["measurements"]["wallSources"]){
+      kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
+      NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+      NSL::Logger::info( "Measuring {} momentum block(s), each with {} band(s) of length {}",kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+
+      // now populate the momentum blocks with proper complex variables
+      for (int i=0; i<kblocks2d.size(); i++){
+	for (int j=0; j<kblocks2d[0].size(); j++) {
+	  for (int k=0; k<kblocks2d[0][0].size(); k++) {
+	    kblocks(i,j,k) = NSL::complex<double> (kblocks2d[i][j][k][0], kblocks2d[i][j][k][1]);
+	  }
+	}
+      }
+      params["wallSources"]=kblocks.to(params["device"]);
+    } else {
+      // DEFAULT: raise an exception
+      // currently don't know how to do this, will do later
+    }
+
+    
+    //    exit(0);
+    
     // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"], params["overwrite"]);
+    NSL::H5IO h5(
+        params["h5file"].to<std::string>(), 
+        params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
+    );
 
     // define the basenode for the h5file, everything is stored in 
     // params["h5Filename"]/BASENODE/
@@ -98,11 +138,11 @@ int main(int argc, char** argv){
 
     // initialize 2 point correlation function <h^+_x h_y> 
     NSL::Measure::Hubbard::TwoPointCorrelator<
-        Type,
-        decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<
-            Type,decltype(lattice)
-        >
+      Type,
+      decltype(lattice),
+      NSL::FermionMatrix::HubbardExp<
+      Type,decltype(lattice)
+      >
     > C2pt_sh(lattice, params, h5, NSL::Hubbard::Hole);
 
     // Perform the measurement.
