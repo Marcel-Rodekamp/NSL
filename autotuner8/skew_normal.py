@@ -41,9 +41,9 @@ try:
     ginving owens.so
     http://people.sc.fsu.edu/~jburkardt/f_src/owens/owens.f90
     """
-    owens = None
-    #import owens
+    import owens
 except:
+    owens=False
     print('owens not found')
 
 
@@ -126,6 +126,7 @@ def T_Owen(h, a):
     Try to use owens.f90 version else python version
     owens.f90 is approximately a factor 100 faster
     """
+    
     if owens:
         """Owen's T using owens.f90 by Patefield and Brown
             http://www.jstatsoft.org/v05/a05/paper
