@@ -177,3 +177,20 @@ This should install an Ubuntu 20.04 kernel, hence further prerequisites can be f
 
 * [Pytorch](https://pytorch.org/)
 * [Catch 2](https://github.com/catchorg/Catch2)
+
+## Autotuner
+
+The autotuner in the base directory **autotuner8** will run out of the box w/o any extra compilation.
+However, it will use an in-house pythone routine for calculating the skew-normal distribution at the upper tail end of the distribution.
+The reason for this is that scipy's implementation of the skew-normal distribution is buggy in this regime! See [here](https://github.com/scipy/scipy/issues/7746).
+
+However, even the in-house python code is buggy, and this can in rare cases cause an issue with the autotuning procedure.  The best way
+to avoid this issue is to make a python bind to the owens.f90 routine (included now in this repo), which seems to work amazingly. See [here](https://people.math.sc.edu/Burkardt/f_src/owens/owens.html)
+
+To install this code, do the following:
+
+* go to the directory NSL/autotuner8
+* run > f2py owens.f90
+
+That should make the binding!
+
