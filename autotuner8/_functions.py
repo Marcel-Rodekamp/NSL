@@ -21,6 +21,18 @@ https://www.medcalc.org/manual/values_of_the_normal_distribution.php
 http://slideplayer.com/slide/5055000/
 '''
 
+try:
+    """
+    Try to use owen.f90 compiled into python module with
+    f2py -c -m owens owens.f90
+    ginving owens.so
+    http://people.sc.fsu.edu/~jburkardt/f_src/owens/owens.f90
+    """
+    import owens
+except:
+    owens=False
+    print('owens not found')
+
 
 def wald_interval(accepted, total, quantile_prob):
     x = float(accepted)
@@ -68,14 +80,20 @@ def model_to_fit(a, x):
     x_ = np.asarray(x)
     if x_.ndim > 0:
         for x0 in x_:
-            value = max(0, cdf_skewnormal((x0+a[0])*a[1], shape=a[2])[0])
+            if owens:
+                value = max(0, cdf_skewnormal((x0+a[0])*a[1], shape=a[2]))
+            else:
+                value = max(0, cdf_skewnormal((x0+a[0])*a[1], shape=a[2])[0])
             if not math.isnan(value):
                 values.append(value)
             else:
                 values.append(0.0)
         return np.array(values)
     else:
-        value = max(0, cdf_skewnormal((x+a[0])*a[1], shape=a[2])[0])
+        if owens:
+            value = max(0, cdf_skewnormal((x+a[0])*a[1], shape=a[2]))
+        else:
+            value = max(0, cdf_skewnormal((x+a[0])*a[1], shape=a[2])[0])
         if not math.isnan(value):
             return value
         else:
