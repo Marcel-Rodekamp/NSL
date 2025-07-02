@@ -380,40 +380,43 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
     );
 
     bool trimFlag = false;
+    bool readConfig = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
         // data
+	for (int k=0; k< uDim; k++ ){
+            if (species_ == NSL::Hubbard::Particle){
+              node = fmt::format("/markovChain/{}/correlators/onebody/particle/k{}",cfgID,k);
+            } else {
+              node = fmt::format("/markovChain/{}/correlators/onebody/hole/k{}",cfgID,k);
+            }
 
-        if (species_ == NSL::Hubbard::Particle){
-            node = fmt::format("/markovChain/{}/correlators/onebody/particle",cfgID);
-        } else {
-            node = fmt::format("/markovChain/{}/correlators/onebody/hole",cfgID);
-        }
-
-        if (skip_(this->params_["overwrite"],node)) {
-            NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+            if (skip_(this->params_["overwrite"],node)) {
+               NSL::Logger::info("Config #{} and k{} already has correlators, skipping... ", cfgID,k);
 	        continue;
 	    }
 
-        if (trimFlag) {
-            this->h5_.deleteData(node);
-            trimFlag = false;
-        }
+           if (trimFlag) {
+               this->h5_.deleteData(node);
+               trimFlag = false;
+           }
 
-        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
+           NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
-        // read configuration 
-        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+           // read configuration
+	   if (readConfig == false){
+              this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+	      readConfig = true;
+	   }
 
-        // compute the correlator. The result is stored in corrKblock_
-        measureK(this->params_["Number Time Sources"]);
-	
-        for (int k=0; k< uDim; k++ ){
-            temp = corrKblock_(k, NSL::Slice(), NSL::Slice(), NSL::Slice());
+           // compute the correlator. The result is stored in corrKblock_
+           measureK(this->params_["Number Time Sources"]);
+	   
+           temp = corrKblock_(k, NSL::Slice(), NSL::Slice(), NSL::Slice());
 
-            // write the calculated correlator to file
-            this->h5_.write(temp,std::string(basenode_)+node+"/k"+std::to_string(k));
+           // write the calculated correlator to file
+           this->h5_.write(temp,std::string(basenode_)+node);
         } // for k
     } // for cfgI
 
