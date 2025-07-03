@@ -190,7 +190,10 @@ to avoid this issue is to make a python bind to the owens.f90 routine (included 
 To install this code, do the following:
 
 * go to the directory NSL/autotuner8
-* run > f2py owens.f90
+* then run
+```
+f2py -c -m owens owens.f90
+```
 
 That should make the binding!
 
