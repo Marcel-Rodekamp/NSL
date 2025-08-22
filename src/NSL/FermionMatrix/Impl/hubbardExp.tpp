@@ -157,20 +157,19 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(){
     //ToDo: implement
+    // Define things common to all stability methods
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
+    const NSL::Device device = this->phi_.device();
+    //std::cout << this->stabilityMethod << std::endl;
 
     assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
 
-    const NSL::Device device = this->phi_.device();
-
-    NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
-
     NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
-
     // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
     Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_);
 
+    NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
     NSL::Tensor<Type> Fkt = NSL::eye<Type>(device,Nx);
     Fkt.expand(Nt+std::pow(2,N)-1, 0);
     Fkt(NSL::Slice(0,Nt), NSL::Ellipsis()) = Fk_;
@@ -183,33 +182,45 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
             Fkt(NSL::Slice(0, Nt+std::pow(2,t)-1),NSL::Ellipsis()),
             Fkt(NSL::Slice(std::pow(2, t), Nt+std::pow(2,t+1)-1),NSL::Ellipsis())
         );
-    }
+    } /* I assume that the above multiplication scheme of Petar's and Finn's is correct */
+
+
     // if we are smart about slicing and copying, we can remove this assignment but I spent too long on other improvements.
     // This is left for the reader
     // FkFkFk0_ = Fkt(NSL::Slice(0,Nt),NSL::Ellipsis());
     // FkFkFk_ = Fkt(NSL::Slice(std::pow(2,N)-1,NSL::None),NSL::Ellipsis());
 
-    // NSL::Tensor<Type> invAp1(device, Nx);
-    // NSL::Tensor<Type> V(device, Nx, Nx);
+    if (!this->stabilityMethod.compare("DIRECTINVERSE")) {
+
+       NSL::Tensor<Type> invAp1(device, Nx);
+       NSL::Tensor<Type> V(device, Nx, Nx);
 
     // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
-    // std::tie( invAp1 , V ) = NSL::LinAlg::eig(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
-    // invAp1 += 1.;
-    // invAp1 = 1./invAp1;
-    // invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}
+       std::tie( invAp1 , V ) = NSL::LinAlg::eig(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
+       invAp1 += 1.;
+       invAp1 = 1./invAp1;
+       invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}
+    }
+    else if (!this->stabilityMethod.compare("UDT")) {
 
-    NSL::Tensor<Type> Q(device, Nx, Nx);
-    NSL::Tensor<Type> D(device, Nx);
-    NSL::Tensor<Type> V(device, Nx, Nx);
-    NSL::Tensor<Type> Qnew(device, Nx, Nx);
-    NSL::Tensor<Type> Dnew(device, Nx);
-    NSL::Tensor<Type> Vnew(device, Nx, Nx);
+      NSL::Tensor<Type> Q(device, Nx, Nx);
+      NSL::Tensor<Type> D(device, Nx);
+      NSL::Tensor<Type> V(device, Nx, Nx);
+      NSL::Tensor<Type> Qnew(device, Nx, Nx);
+      NSL::Tensor<Type> Dnew(device, Nx);
+      NSL::Tensor<Type> Vnew(device, Nx, Nx);
 
-    // std::tie( Q , D , V ) = NSL::LinAlg::udt(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
-    std::tie( Q , D , V ) = NSL::LinAlg::udt(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
-    std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular( V, NSL::LinAlg::adjoint(Q), false ) + NSL::LinAlg::diag(D) );
+      // std::tie( Q , D , V ) = NSL::LinAlg::udt(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+      std::tie( Q , D , V ) = NSL::LinAlg::udt(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
+      std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular( V, NSL::LinAlg::adjoint(Q), false ) + NSL::LinAlg::diag(D) );
     
-    invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul( Vnew,V ) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul( Vnew,V ) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+    }
+    else {
+      std::cout << "No valid stability method!!!" << std::endl;
+      exit(1);
+    }
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
@@ -223,12 +234,16 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       * (Note:  there is no sum over x)
       **/
 
+
+    // the remaining part should not depend on the type of stability method
+
     // first do t=Nt-1 case
     pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
         // NSL::LinAlg::mat_mul( FkFkFk_(0,NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
         NSL::LinAlg::mat_mul( Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
     );
 
+    // now do the other timeslices
     // pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()),invAp1F_),FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
     pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt(NSL::Slice(std::pow(2,N),NSL::None),NSL::Ellipsis()),invAp1F_),Fkt(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
 

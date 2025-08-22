@@ -103,7 +103,9 @@ int main(int argc, char* argv[]){
     //
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-    > S_fermion(lattice,params);
+      > S_fermion(lattice,params);
+
+    S_fermion.hfm_.stabilityMethod = "UDT";// "UDT", "DIRECTINVERSE"
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;

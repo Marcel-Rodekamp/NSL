@@ -53,10 +53,11 @@ class HubbardFermionAction :
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
 
+    FermionMatrixType hfm_;
+
     protected:
     NSL::Parameter params_;
 
-    FermionMatrixType hfm_;
 }; // class HubbardFermiAction
 
 template<

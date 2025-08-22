@@ -33,6 +33,7 @@ namespace NSL::FermionMatrix {
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType >
 class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
+  
     public:
         //  No default constructor
         /*  There is no default constructor. */
@@ -84,6 +85,10 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     HubbardExp(LatticeType & lat, NSL::Parameter & params):
         HubbardExp(lat, params["Nt"], params["beta"], params["mu"])
     {}
+
+
+    // flag for defining which stability method to use
+    std::string stabilityMethod = "UDT";  // options are (will be) "QR", "DIRECTINVERSE", . . .
 
     //! Populates the fermion matrix with a new configuration phi using species
     /*!
