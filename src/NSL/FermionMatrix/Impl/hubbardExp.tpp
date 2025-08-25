@@ -190,6 +190,8 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     // FkFkFk0_ = Fkt(NSL::Slice(0,Nt),NSL::Ellipsis());
     // FkFkFk_ = Fkt(NSL::Slice(std::pow(2,N)-1,NSL::None),NSL::Ellipsis());
 
+   
+    // Now come the specific stability method parts 
     if (!this->stabilityMethod.compare("DIRECTINVERSE")) {
 
        NSL::Tensor<Type> invAp1(device, Nx);
