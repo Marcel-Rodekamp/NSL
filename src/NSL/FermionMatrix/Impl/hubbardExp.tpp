@@ -182,7 +182,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
             Fkt(NSL::Slice(0, Nt+std::pow(2,t)-1),NSL::Ellipsis()),
             Fkt(NSL::Slice(std::pow(2, t), Nt+std::pow(2,t+1)-1),NSL::Ellipsis())
         );
-    } /* I assume that the above multiplication scheme of Petar's and Finn's is correct */
+    } /* I assume that the above multiplication scheme of Petar's and Finn's is correct--T.L. */
 
 
     // if we are smart about slicing and copying, we can remove this assignment but I spent too long on other improvements.
