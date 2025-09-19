@@ -95,7 +95,7 @@ int main(int argc, char* argv[]){
     lattice.to(params["device"]);
 
     // define a hubbard gauge action
-    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    NSL::Action::HubbardGaugeAction<Type> Sg(params);
 
     // define a hubbard fermion action, the discretization (HubbardExp) is
     // hard wired in the meta data if you change this here, also change the
@@ -103,19 +103,24 @@ int main(int argc, char* argv[]){
     //
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > S_fermion(lattice,params);
+      > Sf_direct(lattice,params);
 
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > S2_fermion(lattice,params);
+      > Sf_UDT(lattice,params);
 
-    S_fermion.hfm_.stabilityMethod = "UDT";// "UDT", "DIRECTINVERSE"
-    S2_fermion.hfm_.stabilityMethod = "DIRECTINVERSE";
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_SVD(lattice,params);
+
+    Sf_UDT.hfm_.stabilityMethod = "UDT";// "UDT", "DIRECTINVERSE"
+    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
+    Sf_SVD.hfm_.stabilityMethod = "SVD";
 
     // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S = S_gauge + S_fermion;
-    NSL::Action::Action S2 = S_gauge + S2_fermion;
-
+    NSL::Action::Action S_direct = Sg + Sf_direct;
+    NSL::Action::Action S_UDT = Sg + Sf_UDT;
+    NSL::Action::Action S_SVD = Sg + Sf_SVD;
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
@@ -147,43 +152,67 @@ int main(int argc, char* argv[]){
     config["phi"].randn();
     // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = 0.0;
+    config["phi"].real() = 0.0;
 
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
     // momentum["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     momentum["phi"].imag() = 0.0;
 
-    Type Hi, Hf;
-    Type Hi2, Hf2;
+    S_direct(config);
+    S_UDT(config);
+    S_SVD(config);
 
-    Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
-    Hi2 = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S2(config);
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_UDT.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    std::cout << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_UDT.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_UDT.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    std::cout << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_UDT.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
 
-    std::cout << "# H_i/Nx :: " << std::setprecision(15) << Hi/lattice.sites() << "\t" << Hi2/lattice.sites() << std::endl; 
+    double beta = params["beta"];
+    std::cout << log(1+exp(3.*beta))+log(1+exp(1.*beta))+log(1+exp(-1.*beta))+log(1+exp(-3.*beta)) << std::endl;
+    
+    exit(0);
+    
+    Type Hi_direct, Hf_direct;
+    Type Hi_UDT, Hf_UDT;
+    Type Hi_SVD, Hf_SVD;
 
+    Hi_direct = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_direct(config);
+    Hi_UDT    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_UDT(config);
+    Hi_SVD    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_SVD(config);
+
+    std::cout << "# H_/Nx :: " << std::setprecision(15) << Hi_direct/lattice.sites() << "\t" << Hi_UDT/lattice.sites() << "\t" << Hi_SVD/lattice.sites() << std::endl; 
+   
+
+    /*
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
       NSL::Integrator::Leapfrog LF(
-        /*action=*/ S,
-        /*trajectoryLength=*/ 1,
-        /*numberSteps=*/ Nmd,
-        /*backward*/ false // optional
+       S, // action
+       1, // trajectoryLength
+       Nmd, // numberSteps
+       false // optional
       );
       NSL::Integrator::Leapfrog LF2(
-        /*action=*/ S2,
-        /*trajectoryLength=*/ 1,
-        /*numberSteps=*/ Nmd,
-        /*backward*/ false // optional
+         S2,
+         1,
+         Nmd,
+         false // optional
       );
 
       // integrate eom
-      auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
-      auto [config_proposal2,momentum_proposal2] = LF2(/*q=*/config,/*p*/ momentum);
+      auto [config_proposal,momentum_proposal] = LF(config, momentum);
+      auto [config_proposal2,momentum_proposal2] = LF2(config, momentum);
  
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
       Hf2 = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S2(config_proposal2);
       std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << "\t" << NSL::LinAlg::abs((Hf2-Hi2).real()/Hi2.real()) << std::endl;
     }
+    */
 
     return EXIT_SUCCESS;
 }

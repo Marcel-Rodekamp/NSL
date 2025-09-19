@@ -7,6 +7,8 @@
 #include "../../Matrix.hpp"
 #include "sliceObj.tpp"
 #include <tuple>
+#include <iterator>
+#include <algorithm>
 
 namespace NSL::FermionMatrix {
 
@@ -144,14 +146,95 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
     NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(device,Nx);
     prod(NSL::Slice(0,Nt),NSL::Ellipsis()) = this->Lat.exp_hopping_matrix(sgn_*this->delta_)* NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
+    if (!this->stabilityMethod.compare("SVD")) {
+      // use SVD for the stability decomposition
+
+      int primes[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
+
+      NSL::Tensor<Type> U(device,full_N,Nx,Nx); // stores U of M = U.D.V
+      NSL::Tensor<Type> D(device,full_N,Nx); // stores D of M = U.D.V
+      NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
+
+      NSL::Tensor<Type> expKdiag, Uk;
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+      expKdiag = sgn_*expKdiag;
+      expKdiag.exp();
+
+      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(Uk, NSL::LinAlg::mat_mul(this->Lat.exp_hopping_matrix(sgn_*this->delta_),NSL::LinAlg::transpose(Uk)))) << std::endl;
+      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(NSL::LinAlg::transpose(Uk),Uk)) << std::endl;
+      //std::cout << std::endl;
+      //std::cout << expKdiag << std::endl;
+
+      // initial SVD of B_t
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
+      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+
+      //int t = 15;
+      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(U(t,NSL::Slice(),NSL::Slice()),NSL::LinAlg::mat_mul(D(t,NSL::Slice(),NSL::Slice()),V(t,NSL::Slice(),NSL::Slice())))).imag() << std::endl;
+      //std::cout << std::endl;
+      //std::cout<< NSL::LinAlg::diag(prod(t,NSL::Slice(),NSL::Slice())).imag() << std::endl;
+
+      //int t = 15;
+      //NSL::Tensor<Type> uu(device, Nx, Nx);
+      //NSL::Tensor<Type> dd(device, Nx);
+      //NSL::Tensor<Type> vv(device, Nx, Nx);
+      //std::tie( uu, dd, vv ) = NSL::LinAlg::svd(prod(t,NSL::Slice(),NSL::Slice()));
+      //std::cout << NSL::LinAlg::diag(  NSL::LinAlg::mat_mul(U(t,NSL::Slice(),NSL::Slice()), NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D(t,NSL::Slice())), V(t,NSL::Slice(),NSL::Slice())) ) ).real() << std::endl;
+      //std::cout << std::endl;
+      //std::cout << NSL::LinAlg::diag(prod(t,NSL::Slice(),NSL::Slice())).real() << std::endl;
+      //std::cout << std::endl;
+
+      int nnt = Nt;
+      int p=0;
+      int prime;
+      NSL::Tensor<Type> uu(device, Nx, Nx);
+      NSL::Tensor<Type> dd(device, Nx);
+      NSL::Tensor<Type> vv(device, Nx, Nx);
+      NSL::Tensor<Type> udv(device, Nx, Nx);
+      while (nnt>1){
+        if (nnt%primes[p] == 0) {
+	   prime=primes[p];
+           nnt /= prime;
+	   for (int tt=0;tt<nnt;tt++) {
+	      udv = NSL::LinAlg::diag(D(prime*tt, NSL::Slice()));
+	      //std::cout << "D(" << prime*tt << ") ";
+	      for (int pr=0;pr<prime-1;pr++){
+                 udv = NSL::LinAlg::mat_mul(udv , V(prime*tt+pr, NSL::Slice(), NSL::Slice()));
+	         udv = NSL::LinAlg::mat_mul(udv , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
+		 //std::cout << "V(" << prime*tt+pr << ") U(" << prime*tt+pr+1<< ") D(" << prime*tt+pr+1 << ") ";
+	      }
+	      //std::cout << std::endl;
+	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice()));
+	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
+	      D(tt, NSL::Slice()) = dd;
+	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
+	      //std::cout << "# U(" << tt << ") D(" << tt << ") V(" << tt << ")" << std::endl;
+           }
+	} else {
+	  p += 1;
+	}
+      }
+      
+      sausage = NSL::LinAlg::mat_mul(U(0,NSL::Slice(),NSL::Slice()),
+                                     NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D(0,NSL::Slice())), V(0,NSL::Slice(),NSL::Slice())));
+      return NSL::LinAlg::logdet(NSL::LinAlg::mat_mul(U(0,NSL::Slice(),NSL::Slice()).transpose(),V(0,NSL::Slice(),NSL::Slice()).transpose())
+                                 + NSL::LinAlg::diag(D(0,NSL::Slice()))) ;
+
+    } else {
+
     // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision    
     for (NSL::size_t i=0; i<N; i++) {
         prod(NSL::Slice(0, full_N/std::pow(2,i+1)), NSL::Slice(), NSL::Slice()) = NSL::LinAlg::bmm(prod(NSL::Slice(0, full_N/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()), prod(NSL::Slice(1, full_N/std::pow(2,i), 2), NSL::Slice(), NSL::Slice()));
     }
 
-    sausage = prod(0,NSL::Slice(),NSL::Slice());
-    
-    return NSL::LinAlg::logdet1plusF(sausage);
+      sausage = prod(0,NSL::Slice(),NSL::Slice());
+      return NSL::LinAlg::logdet1plusF(sausage);
+    }
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
