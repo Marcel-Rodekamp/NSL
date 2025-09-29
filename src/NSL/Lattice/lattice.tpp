@@ -61,10 +61,14 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
 template <typename Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::eigh_hopping(Type delta){
     if(!this->ee_.defined()) {
-       std::tie(this->ee_, this->ev_) = NSL::LinAlg::eigh((-1)*this->hopping_matrix(delta)); 
-       this->ev_.transpose(); // in place transposition
-    } // note the various minus signs (-1) -- this is to ensure that the D in the SVD is ordered correctly
-    return {(-1)*this->ee_, this->ev_};
+       NSL::Tensor<Type> evtemp;
+       std::tie(this->ee_, evtemp) = NSL::LinAlg::eigh(this->hopping_matrix(delta));
+       this->ev_=evtemp;
+       for (int x=0;x<this->sites();x++) {
+	 this->ev_( NSL::Slice() , x  )=evtemp( NSL::Slice() , this->sites()-1-x );
+       }
+    } 
+    return {(-1)*this->ee_, this->ev_}; // minus sign is to ensure that the order of eigenvalues is correct for SVD
 }
 
 template <typename Type>

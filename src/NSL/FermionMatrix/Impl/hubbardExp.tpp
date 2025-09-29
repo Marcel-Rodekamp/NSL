@@ -158,35 +158,20 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> D(device,full_N,Nx); // stores D of M = U.D.V
       NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
 
-      NSL::Tensor<Type> expKdiag, Uk;
+      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
       std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
-      expKdiag = sgn_*expKdiag;
       expKdiag.exp();
-
-      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(Uk, NSL::LinAlg::mat_mul(this->Lat.exp_hopping_matrix(sgn_*this->delta_),NSL::LinAlg::transpose(Uk)))) << std::endl;
-      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(NSL::LinAlg::transpose(Uk),Uk)) << std::endl;
-      //std::cout << std::endl;
-      //std::cout << expKdiag << std::endl;
-
+      if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
+        Uktemp = Uk;
+	for (int i=0;i<Nx;i++) {
+          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
+        }	
+      }
+      
       // initial SVD of B_t
       V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
       D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
       U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
-
-      //int t = 15;
-      //std::cout << NSL::LinAlg::diag(NSL::LinAlg::mat_mul(U(t,NSL::Slice(),NSL::Slice()),NSL::LinAlg::mat_mul(D(t,NSL::Slice(),NSL::Slice()),V(t,NSL::Slice(),NSL::Slice())))).imag() << std::endl;
-      //std::cout << std::endl;
-      //std::cout<< NSL::LinAlg::diag(prod(t,NSL::Slice(),NSL::Slice())).imag() << std::endl;
-
-      //int t = 15;
-      //NSL::Tensor<Type> uu(device, Nx, Nx);
-      //NSL::Tensor<Type> dd(device, Nx);
-      //NSL::Tensor<Type> vv(device, Nx, Nx);
-      //std::tie( uu, dd, vv ) = NSL::LinAlg::svd(prod(t,NSL::Slice(),NSL::Slice()));
-      //std::cout << NSL::LinAlg::diag(  NSL::LinAlg::mat_mul(U(t,NSL::Slice(),NSL::Slice()), NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D(t,NSL::Slice())), V(t,NSL::Slice(),NSL::Slice())) ) ).real() << std::endl;
-      //std::cout << std::endl;
-      //std::cout << NSL::LinAlg::diag(prod(t,NSL::Slice(),NSL::Slice())).real() << std::endl;
-      //std::cout << std::endl;
 
       int nnt = Nt;
       int p=0;
@@ -195,35 +180,38 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> dd(device, Nx);
       NSL::Tensor<Type> vv(device, Nx, Nx);
       NSL::Tensor<Type> udv(device, Nx, Nx);
+      NSL::Tensor<Type> vu(device, Nx, Nx);      
       while (nnt>1){
         if (nnt%primes[p] == 0) {
 	   prime=primes[p];
            nnt /= prime;
 	   for (int tt=0;tt<nnt;tt++) {
 	      udv = NSL::LinAlg::diag(D(prime*tt, NSL::Slice()));
-	      //std::cout << "D(" << prime*tt << ") ";
 	      for (int pr=0;pr<prime-1;pr++){
-                 udv = NSL::LinAlg::mat_mul(udv , V(prime*tt+pr, NSL::Slice(), NSL::Slice()));
-	         udv = NSL::LinAlg::mat_mul(udv , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+	         vu = NSL::LinAlg::mat_mul(V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+		 udv = NSL::LinAlg::mat_mul( udv, vu );
 		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
-		 //std::cout << "V(" << prime*tt+pr << ") U(" << prime*tt+pr+1<< ") D(" << prime*tt+pr+1 << ") ";
 	      }
-	      //std::cout << std::endl;
 	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice()));
 	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
 	      D(tt, NSL::Slice()) = dd;
 	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
-	      //std::cout << "# U(" << tt << ") D(" << tt << ") V(" << tt << ")" << std::endl;
            }
 	} else {
 	  p += 1;
 	}
       }
+
+      // I express logdet(1+U.D.V)=logdet(U)+logdet(V)+logdet(U^T.V^T+D)
+      // I then perform a QR decomposition on U^T.V^T+D (which is very stable)
+      std::tie( uu, vv ) = NSL::LinAlg::qr(NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(U(0,NSL::Slice(),NSL::Slice())),NSL::LinAlg::adjoint(V(0,NSL::Slice(),NSL::Slice())))
+                                 + NSL::LinAlg::diag(D(0,NSL::Slice()))); // QR decomposition here
+				 
+      Type answer = NSL::LinAlg::logdet(U(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(V(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(uu)+(NSL::LinAlg::log(NSL::LinAlg::diag(vv))).sum();
       
-      sausage = NSL::LinAlg::mat_mul(U(0,NSL::Slice(),NSL::Slice()),
-                                     NSL::LinAlg::mat_mul( NSL::LinAlg::diag(D(0,NSL::Slice())), V(0,NSL::Slice(),NSL::Slice())));
-      return NSL::LinAlg::logdet(NSL::LinAlg::mat_mul(U(0,NSL::Slice(),NSL::Slice()).transpose(),V(0,NSL::Slice(),NSL::Slice()).transpose())
-                                 + NSL::LinAlg::diag(D(0,NSL::Slice()))) ;
+      answer = Type (answer.real(), std::remainder(answer.imag(), 6.28318530717959));
+      
+      return answer;
 
     } else {
 
