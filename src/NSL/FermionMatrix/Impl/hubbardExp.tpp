@@ -216,7 +216,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 
     } else
 
-    if (!this->stabilityMethod.compare("UDT")) {
+    if (!this->stabilityMethod.compare("QR")) {
       // use UDT (QR) for the stability decomposition
 
       int primes[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
@@ -344,7 +344,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
        invAp1 = 1./invAp1;
        invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}
     }
-    else if (!this->stabilityMethod.compare("UDT")) {
+    else if (!this->stabilityMethod.compare("QR")) {
 
       NSL::Tensor<Type> Q(device, Nx, Nx);
       NSL::Tensor<Type> D(device, Nx);

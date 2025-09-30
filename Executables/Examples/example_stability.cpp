@@ -107,19 +107,19 @@ int main(int argc, char* argv[]){
 
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > Sf_UDT(lattice,params);
+      > Sf_QR(lattice,params);
 
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
       > Sf_SVD(lattice,params);
 
-    Sf_UDT.hfm_.stabilityMethod = "UDT";// "UDT", "DIRECTINVERSE"
+    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
     Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
     Sf_SVD.hfm_.stabilityMethod = "SVD";
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S_direct = Sg + Sf_direct;
-    NSL::Action::Action S_UDT = Sg + Sf_UDT;
+    NSL::Action::Action S_QR = Sg + Sf_QR;
     NSL::Action::Action S_SVD = Sg + Sf_SVD;
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
@@ -160,34 +160,32 @@ int main(int argc, char* argv[]){
     momentum["phi"].imag() = 0.0;
 
     S_direct(config);
-    S_UDT(config);
+    S_QR(config);
     S_SVD(config);
 
     Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    Sf_UDT.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     //std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_UDT.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
     Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    Sf_UDT.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
     Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_UDT.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
     //std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
 
     double beta = params["beta"];
     std::cout << std::setprecision(15) << log(1.+exp(3.*beta))+log(1.+exp(1.*beta))+log(1.+exp(-1.*beta))+log(1.+exp(-3.*beta)) << std::endl;
     
     Type Hi_direct, Hf_direct;
-    Type Hi_UDT, Hf_UDT;
+    Type Hi_QR, Hf_QR;
     Type Hi_SVD, Hf_SVD;
 
     Hi_direct = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_direct(config);
-    Hi_UDT    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_UDT(config);
+    Hi_QR    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_QR(config);
     Hi_SVD    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_SVD(config);
 
-    std::cout << "# H_/Nx :: " << std::setprecision(15) << Hi_direct/lattice.sites() << "\t" << Hi_UDT/lattice.sites() << "\t" << Hi_SVD/lattice.sites() << std::endl; 
-   
-
+    std::cout << "# H_/Nx :: " << std::setprecision(15) << Hi_direct/lattice.sites() << "\t" << Hi_QR/lattice.sites() << "\t" << Hi_SVD/lattice.sites() << std::endl; 
     
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
@@ -197,8 +195,8 @@ int main(int argc, char* argv[]){
        Nmd, // numberSteps
        false // optional
       );
-      NSL::Integrator::Leapfrog LF_UDT(
-         S_UDT,
+      NSL::Integrator::Leapfrog LF_QR(
+         S_QR,
          1,
          Nmd,
          false // optional
@@ -212,14 +210,14 @@ int main(int argc, char* argv[]){
 
       // integrate eom
       auto [config_proposal,momentum_proposal] = LF_direct(config, momentum);
-      auto [config_proposal2,momentum_proposal2] = LF_UDT(config, momentum);
+      auto [config_proposal2,momentum_proposal2] = LF_QR(config, momentum);
       auto [config_proposal3,momentum_proposal3] = LF_SVD(config, momentum);
  
       Hf_direct = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S_direct(config_proposal);
-      Hf_UDT = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_UDT(config_proposal2);
+      Hf_QR = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_QR(config_proposal2);
       Hf_SVD = (momentum_proposal3["phi"] * momentum_proposal3["phi"]).sum()/2.0 + S_SVD(config_proposal2);
       std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()/Hi_direct.real()) << "\t"
-		<< NSL::LinAlg::abs((Hf_UDT-Hi_UDT).real()/Hi_UDT.real()) << "\t"
+		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()/Hi_QR.real()) << "\t"
 		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()/Hi_SVD.real()) << std::endl;
     }
     

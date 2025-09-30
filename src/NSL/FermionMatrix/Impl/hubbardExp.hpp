@@ -88,7 +88,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
 
     // flag for defining which stability method to use
-    std::string stabilityMethod = "UDT";  // options are (will be) "QR", "DIRECTINVERSE", . . .
+    std::string stabilityMethod = "QR";  // options are "QR", "DIRECTINVERSE", "SVD"
 
     //! Populates the fermion matrix with a new configuration phi using species
     /*!
