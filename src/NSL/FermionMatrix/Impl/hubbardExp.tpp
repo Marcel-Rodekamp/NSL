@@ -192,7 +192,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 		 udv = NSL::LinAlg::mat_mul( udv, vu );
 		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
 	      }
-	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice()));
+	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice())); // note that svd returns tuple (U, D, V^\dag)
 	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
 	      D(tt, NSL::Slice()) = dd;
 	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
@@ -202,14 +202,84 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	}
       }
 
-      // I express logdet(1+U.D.V)=logdet(U)+logdet(V)+logdet(U^T.V^T+D)
+      // I express LogDet(1+U.D.V)=LogDet(U)+LogDet(V)+LogDet(U^T.V^T+D)
       // I then perform a QR decomposition on U^T.V^T+D (which is very stable)
       std::tie( uu, vv ) = NSL::LinAlg::qr(NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(U(0,NSL::Slice(),NSL::Slice())),NSL::LinAlg::adjoint(V(0,NSL::Slice(),NSL::Slice())))
                                  + NSL::LinAlg::diag(D(0,NSL::Slice()))); // QR decomposition here
-				 
+
+      // The final result is LogDet(U)+LogDet(V)+LogDet(Q)+TrLogDiag(R)  (recall that R is upper triangular)
       Type answer = NSL::LinAlg::logdet(U(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(V(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(uu)+(NSL::LinAlg::log(NSL::LinAlg::diag(vv))).sum();
       
-      answer = Type (answer.real(), std::remainder(answer.imag(), 6.28318530717959));
+      answer = Type (answer.real(), std::remainder(answer.imag(), 6.28318530717959));  // mod the imaginary part back to (-pi,pi)
+      
+      return answer;
+
+    } else
+
+    if (!this->stabilityMethod.compare("UDT")) {
+      // use UDT (QR) for the stability decomposition
+
+      int primes[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
+
+      NSL::Tensor<Type> U(device,full_N,Nx,Nx); // stores U of M = U.D.V
+      NSL::Tensor<Type> D(device,full_N,Nx); // stores D of M = U.D.V
+      NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
+
+      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+      expKdiag.exp();
+      if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
+        Uktemp = Uk;
+	for (int i=0;i<Nx;i++) {
+          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
+        }	
+      }
+      
+      // initial SVD of B_t
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
+      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+
+      int nnt = Nt;
+      int p=0;
+      int prime;
+      NSL::Tensor<Type> uu(device, Nx, Nx);
+      NSL::Tensor<Type> dd(device, Nx);
+      NSL::Tensor<Type> vv(device, Nx, Nx);
+      NSL::Tensor<Type> udv(device, Nx, Nx);
+      NSL::Tensor<Type> vu(device, Nx, Nx);      
+      while (nnt>1){
+        if (nnt%primes[p] == 0) {
+	   prime=primes[p];
+           nnt /= prime;
+	   for (int tt=0;tt<nnt;tt++) {
+	      udv = NSL::LinAlg::diag(D(prime*tt, NSL::Slice()));
+	      for (int pr=0;pr<prime-1;pr++){
+	         vu = NSL::LinAlg::mat_mul(V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+		 udv = NSL::LinAlg::mat_mul( udv, vu );
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
+	      }
+	      std::tie( uu, dd, vv ) = NSL::LinAlg::udt(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
+	      D(tt, NSL::Slice()) = dd;
+	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
+           }
+	} else {
+	  p += 1;
+	}
+      }
+
+      // I express LogDet(1+U.D.V)=LogDet(U)+LogDet(V)+LogDet(U^T.V^-1+D)
+      // I then perform a QR decomposition on U^T.V^-1+D (which is very stable)
+      std::tie( uu, vv ) = NSL::LinAlg::qr( NSL::LinAlg::solve( V(0,NSL::Slice(),NSL::Slice()), NSL::LinAlg::adjoint(U(0,NSL::Slice(),NSL::Slice())), false ) + NSL::LinAlg::diag(D(0,NSL::Slice()))); // QR decomposition here
+
+      // The final result is LogDet(U)+TrLogDiag(V)+LogDet(Q)+TrLogDiag(R)  (recall that R and V are upper triangular)
+      Type answer = NSL::LinAlg::logdet(U(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(V(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(uu)+(NSL::LinAlg::log(NSL::LinAlg::diag(vv))).sum();
+      
+      answer = Type (answer.real(), std::remainder(answer.imag(), 6.28318530717959));  // mod the imaginary part back to (-pi,pi)
       
       return answer;
 
@@ -288,6 +358,22 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular( V, NSL::LinAlg::adjoint(Q), false ) + NSL::LinAlg::diag(D) );
     
       invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul( Vnew,V ) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+    }
+    else if (!this->stabilityMethod.compare("SVD")) {
+
+      NSL::Tensor<Type> Q(device, Nx, Nx);
+      NSL::Tensor<Type> D(device, Nx);
+      NSL::Tensor<Type> V(device, Nx, Nx);
+      NSL::Tensor<Type> Qnew(device, Nx, Nx);
+      NSL::Tensor<Type> Dnew(device, Nx);
+      NSL::Tensor<Type> Vnew(device, Nx, Nx);
+
+      // std::tie( Q , D , V ) = NSL::LinAlg::svd(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
+      std::tie( Q , D , V ) = NSL::LinAlg::svd(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
+      std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul( NSL::LinAlg::adjoint(Q), NSL::LinAlg::adjoint(V) ) + NSL::LinAlg::diag(D) );
+    
+      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul(NSL::LinAlg::solve_triangular(Vnew, NSL::LinAlg::adjoint(V), false) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
 
     }
     else {
