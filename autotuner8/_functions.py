@@ -29,6 +29,7 @@ try:
     http://people.sc.fsu.edu/~jburkardt/f_src/owens/owens.f90
     """
     import owens
+    print('owens found')
 except:
     owens=False
     print('owens not found')
