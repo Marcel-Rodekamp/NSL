@@ -176,6 +176,8 @@ int main(int argc, char* argv[]){
 
     double beta = params["beta"];
     std::cout << std::setprecision(15) << log(1.+exp(3.*beta))+log(1.+exp(1.*beta))+log(1.+exp(-1.*beta))+log(1.+exp(-3.*beta)) << std::endl;
+
+    exit(0);
     
     Type Hi_direct, Hf_direct;
     Type Hi_QR, Hf_QR;

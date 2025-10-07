@@ -159,7 +159,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
 
       NSL::Tensor<Type> expKdiag, Uk, Uktemp;
-      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  transpose(Uk).K.Uk = Kdiag, or Uk.expKdiag.transpose(Uk) = expK
       expKdiag.exp();
       if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
         Uktemp = Uk;
@@ -169,9 +169,9 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       }
       
       // initial SVD of B_t
-      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk) * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
       D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
-      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk;
 
       int nnt = Nt;
       int p=0;
@@ -229,7 +229,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
 
       NSL::Tensor<Type> expKdiag, Uk, Uktemp;
-      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  transpose(Uk).K.Uk = Kdiag, or Uk.expKdiag.transpose(Uk) = expK
       expKdiag.exp();
       if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
         Uktemp = Uk;
@@ -239,9 +239,9 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       }
       
       // initial SVD of B_t
-      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk) * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
       D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
-      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+      U(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk;
 
       int nnt = Nt;
       int p=0;
@@ -302,7 +302,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     const int Nt = this->phi_.shape(0);
     const int Nx = this->phi_.shape(1);
     const NSL::Device device = this->phi_.device();
-    //std::cout << this->stabilityMethod << std::endl;
 
     assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExp::logDetM; phi must be a 2D tensor" );
 
@@ -343,37 +342,210 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
        invAp1 += 1.;
        invAp1 = 1./invAp1;
        invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+       //std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).real() << std::endl;
+       //std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).imag() << std::endl;
+
+    // first do t=Nt-1 case
+       pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+           // NSL::LinAlg::mat_mul( FkFkFk_(0,NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
+           NSL::LinAlg::mat_mul( Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
+       );
+
+    // pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()),invAp1F_),FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
+       pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt(NSL::Slice(std::pow(2,N),NSL::None),NSL::Ellipsis()),invAp1F_),Fkt(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
+
+      return pi_dot_;
+      
     }
     else if (!this->stabilityMethod.compare("QR")) {
 
-      NSL::Tensor<Type> Q(device, Nx, Nx);
-      NSL::Tensor<Type> D(device, Nx);
-      NSL::Tensor<Type> V(device, Nx, Nx);
+     int primes[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
+
+      NSL::Tensor<Type> Fkt_U(device,Nt+std::pow(2,N),Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+      NSL::Tensor<Type> Fkt_D(device,Nt+std::pow(2,N),Nx);    // stores D of M = U.D.V
+      NSL::Tensor<Type> Fkt_V(device,Nt+std::pow(2,N),Nx,Nx); // stores V of M = U.D.V
+
+      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+
+      //if (sgn_ == 1) expKdiag *= -1;
+      expKdiag.exp();
+      if(sgn_ == 1) { // need to reverse order of unitary matrix Uk for this sign
+        Uktemp = Uk;
+	for (int i=0;i<Nx;i++) {
+          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
+        }	
+      }
+
+      // initial SVD of Bt^{-1}
+      Fkt_U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * Uk;
+      Fkt_D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
+      Fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+
+      /*
+      std::cout << "My Fk(0)" << std::endl;
+      std::cout << std::setprecision(25) << NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt_U(0,NSL::Ellipsis()),NSL::LinAlg::diag(Fkt_D(0,NSL::Ellipsis()))), Fkt_V(0,NSL::Ellipsis())).real() << std::endl;
+      std::cout << std::setprecision(25) << NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt_U(0,NSL::Ellipsis()),NSL::LinAlg::diag(Fkt_D(0,NSL::Ellipsis()))), Fkt_V(0,NSL::Ellipsis())).imag() << std::endl;
+      std::cout << "My Fk(1)" << std::endl;
+      std::cout << std::setprecision(25) << NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt_U(1,NSL::Ellipsis()),NSL::LinAlg::diag(Fkt_D(1,NSL::Ellipsis()))), Fkt_V(1,NSL::Ellipsis())).real() << std::endl;
+      std::cout << std::setprecision(25) << NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt_U(1,NSL::Ellipsis()),NSL::LinAlg::diag(Fkt_D(1,NSL::Ellipsis()))), Fkt_V(1,NSL::Ellipsis())).imag() << std::endl;
+      std::cout << std::endl;
+      */
+
+      int nnt = Nt;
+      int p=0;
+      int prime;
+      NSL::Tensor<Type> uu(device, Nx, Nx);
+      NSL::Tensor<Type> dd(device, Nx);
+      NSL::Tensor<Type> vv(device, Nx, Nx);
+      NSL::Tensor<Type> udv(device, Nx, Nx);
+      NSL::Tensor<Type> vu(device, Nx, Nx);      
+      while (nnt>1){
+        if (nnt%primes[p] == 0) {
+	   prime=primes[p];
+           nnt /= prime;
+	   for (int tt=0;tt<nnt;tt++) {
+	      udv = NSL::LinAlg::diag(Fkt_D(prime*tt, NSL::Slice()));
+	      for (int pr=0;pr<prime-1;pr++){
+	         vu = NSL::LinAlg::mat_mul(Fkt_V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , Fkt_U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+		 udv = NSL::LinAlg::mat_mul( udv, vu );
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(Fkt_D(prime*tt+pr+1, NSL::Slice())));
+	      }
+	      std::tie( uu, dd, vv ) = NSL::LinAlg::udt(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+	      Fkt_U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( Fkt_U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
+	      Fkt_D(tt, NSL::Slice()) = dd;
+	      Fkt_V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, Fkt_V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
+           }
+	} else {
+	  p += 1;
+	}
+      }
+
       NSL::Tensor<Type> Qnew(device, Nx, Nx);
       NSL::Tensor<Type> Dnew(device, Nx);
       NSL::Tensor<Type> Vnew(device, Nx, Nx);
 
-      // std::tie( Q , D , V ) = NSL::LinAlg::udt(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
-      std::tie( Q , D , V ) = NSL::LinAlg::udt(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
-      std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular( V, NSL::LinAlg::adjoint(Q), false ) + NSL::LinAlg::diag(D) );
-    
-      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul( Vnew,V ) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+      std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fkt_V(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(Fkt_U(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fkt_D(0,NSL::Ellipsis())));
+
+      invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew, Fkt_V(0,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+      invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew;
+      invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(0,NSL::Ellipsis()), Qnew ));
+
+      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),invAp1F_T_(0,NSL::Ellipsis()));
+
+      //invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew, Fkt_V(0,NSL::Ellipsis())) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(0,NSL::Ellipsis()) , Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+      std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).imag() << std::endl;
+
+      std::cout << std::setprecision(25) << invAp1F_U_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_U_(0,NSL::Ellipsis()).imag() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_D_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_D_(0,NSL::Ellipsis()).imag() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_T_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_T_(0,NSL::Ellipsis()).imag() << std::endl;
+
 
     }
     else if (!this->stabilityMethod.compare("SVD")) {
 
-      NSL::Tensor<Type> Q(device, Nx, Nx);
-      NSL::Tensor<Type> D(device, Nx);
-      NSL::Tensor<Type> V(device, Nx, Nx);
+         int primes[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
+
+      NSL::Tensor<Type> Fkt_U(device,Nt+std::pow(2,N),Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+      NSL::Tensor<Type> Fkt_D(device,Nt+std::pow(2,N),Nx);    // stores D of M = U.D.V
+      NSL::Tensor<Type> Fkt_V(device,Nt+std::pow(2,N),Nx,Nx); // stores V of M = U.D.V
+
+      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
+      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  Uk.K.transpose(Uk) = Kdiag, or transpose(Uk).expKdiag.Uk = expK
+      expKdiag.exp();
+      if(sgn_ == 1) { // need to reverse order of unitary matrix Uk for this sign
+        Uktemp = Uk;
+	for (int i=0;i<Nx;i++) {
+          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
+        }	
+      }
+      
+      // initial SVD of Bt^{-1}
+      Fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk);
+      Fkt_D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
+      Fkt_U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * Uk;
+
+      int nnt = Nt;
+      int p=0;
+      int prime;
+      NSL::Tensor<Type> uu(device, Nx, Nx);
+      NSL::Tensor<Type> dd(device, Nx);
+      NSL::Tensor<Type> vv(device, Nx, Nx);
+      NSL::Tensor<Type> udv(device, Nx, Nx);
+      NSL::Tensor<Type> vu(device, Nx, Nx);      
+      while (nnt>1){
+        if (nnt%primes[p] == 0) {
+	   prime=primes[p];
+           nnt /= prime;
+	   for (int tt=0;tt<nnt;tt++) {
+	      udv = NSL::LinAlg::diag(Fkt_D(prime*tt, NSL::Slice()));
+	      for (int pr=0;pr<prime-1;pr++){
+	         vu = NSL::LinAlg::mat_mul(Fkt_V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , Fkt_U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
+		 udv = NSL::LinAlg::mat_mul( udv, vu );
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(Fkt_D(prime*tt+pr+1, NSL::Slice())));
+	      }
+	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+	      Fkt_U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( Fkt_U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
+	      Fkt_D(tt, NSL::Slice()) = dd;
+	      Fkt_V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, Fkt_V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
+           }
+	} else {
+	  p += 1;
+	}
+      }
+
       NSL::Tensor<Type> Qnew(device, Nx, Nx);
       NSL::Tensor<Type> Dnew(device, Nx);
       NSL::Tensor<Type> Vnew(device, Nx, Nx);
+      
+      std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt(
+      		NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Fkt_U(0,NSL::Ellipsis())), NSL::LinAlg::adjoint(Fkt_V(0,NSL::Ellipsis())) )
+		+ NSL::LinAlg::diag(Fkt_D(0,NSL::Ellipsis())) );  // Note: I still use QR to stabilize the inverse, even though this is the "SVD" stabilizer routine
 
-      // std::tie( Q , D , V ) = NSL::LinAlg::svd(FkFkFk_(0,NSL::Slice(),NSL::Slice()));  // calculate eigenvalue decomposition of A^{-1}
-      std::tie( Q , D , V ) = NSL::LinAlg::svd(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
-      std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul( NSL::LinAlg::adjoint(Q), NSL::LinAlg::adjoint(V) ) + NSL::LinAlg::diag(D) );
-    
-      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul(NSL::LinAlg::solve_triangular(Vnew, NSL::LinAlg::adjoint(V), false) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Q,Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+
+      invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve_triangular( Vnew, NSL::LinAlg::adjoint(Fkt_V(0,NSL::Ellipsis())) , false);
+      invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew;
+      invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(0,NSL::Ellipsis()), Qnew ));
+
+      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),invAp1F_T_(0,NSL::Ellipsis()));
+
+      //invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul( NSL::LinAlg::solve_triangular( Vnew, NSL::LinAlg::adjoint(Fkt_V(0,NSL::Ellipsis())) , false),
+      //				    NSL::LinAlg::diag(1./Dnew)),NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(0,NSL::Ellipsis()), Qnew )));
+
+      std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_(0,NSL::Ellipsis()).imag() << std::endl;
+
+      std::cout << std::setprecision(25) << invAp1F_U_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_U_(0,NSL::Ellipsis()).imag() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_D_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_D_(0,NSL::Ellipsis()).imag() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_T_(0,NSL::Ellipsis()).real() << std::endl;
+      std::cout << std::setprecision(25) << invAp1F_T_(0,NSL::Ellipsis()).imag() << std::endl;
+
+
+      /*
+       * note the line below would be appropriate if we had used SVD to stabilize the inverse
+
+       std::tie( Qnew , Dnew , Vnew ) = NSL::LinAlg::svd(
+      		NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Fkt_U(0,NSL::Ellipsis())), NSL::LinAlg::adjoint(Fkt_V(0,NSL::Ellipsis())) )
+		+ NSL::LinAlg::diag(Fkt_D(0,NSL::Ellipsis())) );
+
+      
+      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Fkt_V(0,NSL::Ellipsis()) ), Vnew) , NSL::LinAlg::diag(1./Dnew) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(0,NSL::Ellipsis()), Qnew )) );  // V * (1/(1+A^{-1})) * V^{-1}
+      */
+
 
     }
     else {
@@ -402,7 +574,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         NSL::LinAlg::mat_mul( Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
     );
 
-    // now do the other timeslices
     // pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(FkFkFk_(NSL::Slice(1,NSL::None),NSL::Ellipsis()),invAp1F_),FkFkFk0_(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
     pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt(NSL::Slice(std::pow(2,N),NSL::None),NSL::Ellipsis()),invAp1F_),Fkt(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
 

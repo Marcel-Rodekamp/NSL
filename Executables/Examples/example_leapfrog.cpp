@@ -105,7 +105,8 @@ int main(int argc, char* argv[]){
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
       > S_fermion(lattice,params);
 
-    S_fermion.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE", "SVD"
+    // uncomment the next line if you want to choose a specific stabilizer.  default is "QR"
+    S_fermion.hfm_.stabilityMethod = "DIRECTINVERSE";// "QR", "DIRECTINVERSE", "SVD"
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -139,23 +140,27 @@ int main(int argc, char* argv[]){
 
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
-    // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = 0.0;
+    config["phi"].real() = 0.0;
 
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
-    // momentum["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     momentum["phi"].imag() = 0.0;
 
     Type Hi, Hf;
+    double U = params["U"];
+    double beta = params["beta"];
+    double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
+    std::cout << "traj. length = " << trajLength << std::endl;
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
-    for (int Nmd = 10; Nmd < 210; Nmd += 10){
+    for (int Nmd = 2; Nmd < 210; Nmd += 10000){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
-        /*trajectoryLength=*/ 1,
+        /*trajectoryLength=*/ trajLength,
         /*numberSteps=*/ Nmd,
         /*backward*/ false // optional
       );
@@ -164,7 +169,7 @@ int main(int argc, char* argv[]){
       auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
  
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-      std::cout << Nmd << "\t" << NSL::LinAlg::abs((Hf-Hi).real()/Hi.real()) << std::endl;
+      std::cout << Nmd << "\t (Hf,Hi) = (" << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi)) << std::endl;
     }
 
     return EXIT_SUCCESS;

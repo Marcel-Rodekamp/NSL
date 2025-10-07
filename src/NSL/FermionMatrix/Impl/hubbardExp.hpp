@@ -59,6 +59,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_D_(lat.device(), 1, lat.sites()),
+	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
@@ -75,6 +78,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_D_(lat.device(), 1, lat.sites()),
+	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites())
     {}
 
@@ -218,6 +224,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> FkFkFk0_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
+    NSL::Tensor<Type> invAp1F_U_;
+    NSL::Tensor<Type> invAp1F_D_;
+    NSL::Tensor<Type> invAp1F_T_;
 
     /*!
      * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by
@@ -238,6 +247,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
+	invAp1F_U_.expand(1);
+	invAp1F_D_.expand(1);
+	invAp1F_T_.expand(1);
     }
 };
 } // namespace FermionMatrix
