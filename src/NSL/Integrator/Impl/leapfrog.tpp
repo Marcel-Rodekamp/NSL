@@ -42,18 +42,73 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         // first half step 
         p += static_cast<TensorType>(0.5*stepSize_)* this->action_.force(q);
-
+	/*
+	std::cout << "Pi half" << std::endl;
+	for (int t = 0; t< 64; t++) {
+	    std::cout << "{" << p["phi"][t*4+0].real() << ", " << p["phi"][t*4+0].imag() << " I, "
+	                     << p["phi"][t*4+1].real() << ", " << p["phi"][t*4+1].imag() << " I, "
+			     << p["phi"][t*4+2].real() << ", " << p["phi"][t*4+2].imag() << " I, "
+			     << p["phi"][t*4+3].real() << ", " << p["phi"][t*4+3].imag() << " I}, "
+	    << std::endl;
+	 }
+	 std::cout << std::endl;
+	 */
+			     
         // a bunch of full steps
         q += static_cast<TensorType>(stepSize_) * p;
+	/*
+	std::cout << "Q full" << std::endl;
+	for (int t = 0; t< 64; t++) {
+	    std::cout << "{" << q["phi"][t*4+0].real() << ", " << q["phi"][t*4+0].imag() << " I, "
+	                     << q["phi"][t*4+1].real() << ", " << q["phi"][t*4+1].imag() << " I, "
+			     << q["phi"][t*4+2].real() << ", " << q["phi"][t*4+2].imag() << " I, "
+			     << q["phi"][t*4+3].real() << ", " << q["phi"][t*4+3].imag() << " I}, "
+	    << std::endl;
+	 }
+	 std::cout << std::endl;
+	 */
 
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
             p += static_cast<TensorType>(stepSize_) * this->action_.force(q);
+	    /*
+	    	std::cout << "Pi full" << std::endl;
+	for (int t = 0; t< 64; t++) {
+	    std::cout << "{" << p["phi"][t*4+0].real() << ", " << p["phi"][t*4+0].imag() << " I, "
+	                     << p["phi"][t*4+1].real() << ", " << p["phi"][t*4+1].imag() << " I, "
+			     << p["phi"][t*4+2].real() << ", " << p["phi"][t*4+2].imag() << " I, "
+			     << p["phi"][t*4+3].real() << ", " << p["phi"][t*4+3].imag() << " I}, "
+	    << std::endl;
+	 }
+	 std::cout << std::endl;
+	 */
             q += static_cast<TensorType>(stepSize_) * p;
+	    /*
+	    	std::cout << "Q full" << std::endl;
+	for (int t = 0; t< 64; t++) {
+	    std::cout << "{" << q["phi"][t*4+0].real() << ", " << q["phi"][t*4+0].imag() << " I, "
+	                     << q["phi"][t*4+1].real() << ", " << q["phi"][t*4+1].imag() << " I, "
+			     << q["phi"][t*4+2].real() << ", " << q["phi"][t*4+2].imag() << " I, "
+			     << q["phi"][t*4+3].real() << ", " << q["phi"][t*4+3].imag() << " I}, "
+	    << std::endl;
+	 }
+	 std::cout << std::endl;
+	 */
         }
 
         // final half step
         p += static_cast<TensorType>(0.5*stepSize_) * this->action_.force(q);
 
+/*
+	std::cout << "Pi half" << std::endl;
+	for (int t = 0; t< 64; t++) {
+	    std::cout << "{" << p["phi"][t*4+0].real() << ", " << p["phi"][t*4+0].imag() << " I, "
+	                     << p["phi"][t*4+1].real() << ", " << p["phi"][t*4+1].imag() << " I, "
+			     << p["phi"][t*4+2].real() << ", " << p["phi"][t*4+2].imag() << " I, "
+			     << p["phi"][t*4+3].real() << ", " << p["phi"][t*4+3].imag() << " I}, "
+	    << std::endl;
+	 }
+	 std::cout << std::endl;
+*/
         return {q,p};
     }
 

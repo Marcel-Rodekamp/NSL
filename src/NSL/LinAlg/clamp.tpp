@@ -9,7 +9,7 @@ namespace NSL::LinAlg{
  * If Type is complex a runtime error is thrown. 
  * */
 template<NSL::Concept::isNumber Type>
-NSL::Tensor<Type> clamp(const NSL::Tensor<Type>& tensor, NSL:RealTypeOf<Type> min_value, NSL:RealTypeOf<Type> max_value) {
+NSL::Tensor<Type> clamp(const NSL::Tensor<Type>& tensor, NSL::RealTypeOf<Type> min_value, NSL::RealTypeOf<Type> max_value) {
     return torch::clamp(NSL::Tensor<NSL:RealTypeOf<Type>>(tensor), min_value, max_value);
 }
 

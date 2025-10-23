@@ -128,8 +128,26 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi){
         // Reassign phi
-        phi_ = phi; 
+        phi_ = phi;
 
+	/*
+	std::cout << "phi in populate routine" << std::endl;
+	std::cout << "{" << std::endl;
+	for (int t=0;t<64;t++) {
+	  std::cout << std::setprecision(15) << "{ " << phi[t*4+0].real() << "+ " << phi[t*4+0].imag() << " I"
+	    << ", "
+		    << phi[t*4+1].real() << "+ " << phi[t*4+1].imag() << " I"
+	    << ", "
+	    << phi[t*4+2].real() << "+ " << phi[t*4+2].imag() << " I"
+	    << ", "
+	    << phi[t*4+3].real() << "+ " << phi[t*4+3].imag() << " I"
+	    << "} ," << std::endl;
+	}
+	std::cout << "}" << std::endl;
+	std::cout << std::endl;
+	std::cout << "sgn*mu = " << sgn_*mu_ << std::endl;
+	*/
+	
         // calculate exp(+/- i phi)
         this->phiExp_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
@@ -138,7 +156,25 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->phiExpInv_ = NSL::LinAlg::exp(
             NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
         );
+	/*
+	std::cout << "exp(iphi) in populate routine" << std::endl;
+	std::cout << "{" << std::endl;
+	for (int t=0;t<64;t++) {
+	    std::cout << std::setprecision(15) << "{ " << this->phiExpInv_[t*4+0].real() << "+ "<< this->phiExpInv_[t*4+0].imag() <<" I"
+	    << ", "
+	    << this->phiExpInv_[t*4+1].real() << "+ " << this->phiExpInv_[t*4+1].imag() <<" I"
+	    << ", "
+	    << this->phiExpInv_[t*4+2].real() << "+ " << this->phiExpInv_[t*4+2].imag() <<" I"
+	    << ", "
+	    << this->phiExpInv_[t*4+3].real() << "+ " << this->phiExpInv_[t*4+3].imag() <<" I"
+	    << "} ," << std::endl;
+	}
+      std::cout << "}" << std::endl;
+      std::cout << std::endl;
+	*/
+
     }
+      
 
     //! Populates the fermion matrix with a new configuration phi
     /*!
@@ -196,6 +232,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Hubbard::Species species() {
         return species_;
     }
+
+    //! Routine for printing out a matrix (for debugging purposes only!) 
+    void printMatrix(const NSL::Tensor<Type> & psi, std::string name, int prec) ;
 
     protected:
     //! species{Particle or Hole} of the fermion matrix

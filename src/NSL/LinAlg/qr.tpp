@@ -8,7 +8,7 @@ namespace NSL::LinAlg {
 //! returns QR decomposition of matrix M (see https://docs.pytorch.org/cppdocs/api/function_namespaceat_1a4bcb45636b68191bccfe624ba0e97166.html  (though this won't tell you much!) )
 template <NSL::Concept::isNumber Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> qr(const NSL::Tensor<Type> & t){
-    return torch::linalg::qr( t, "reduced" ); 
+    return torch::linalg_qr( t, "reduced" ); //linalg::qr( t, "reduced" ); 
 }
 
 //! returns QDV decomposition of matrix M, where D is diagonal (R = DV)

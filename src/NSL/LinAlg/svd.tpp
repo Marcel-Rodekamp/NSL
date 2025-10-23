@@ -5,11 +5,11 @@
 
 namespace NSL::LinAlg {
 
-//! returns eigenvalues and eigenvectors of symmetrix matrix M (assumes matrix is symmetric, and does NOT check for this)
-//! eigenvalues and corresponding eigenvectors are sorted
+//! performs SVD decomposition
 template <NSL::Concept::isNumber Type>
-std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> svd(const NSL::Tensor<Type> & t){
-    return torch::linalg::svd( t, true, "gesvd" ); 
+std::tuple< NSL::Tensor<Type>, NSL::Tensor<Type>, NSL::Tensor<Type> > svd(const NSL::Tensor<Type> & t){
+    return torch::linalg_svd( t, "gesvd" );
+//    return torch::linalg_svd( t, true, "gesvd" ); //linalg::svd( t, true, "gesvd" );
 }
 
 } // namespace NSL::LinAlg

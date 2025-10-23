@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
       > S_fermion(lattice,params);
 
     // uncomment the next line if you want to choose a specific stabilizer.  default is "QR"
-    S_fermion.hfm_.stabilityMethod = "DIRECTINVERSE";// "QR", "DIRECTINVERSE", "SVD"
+    S_fermion.hfm_.stabilityMethod = "SVD";// "QR", "DIRECTINVERSE", "SVD"
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]){
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = 0.0;
-    config["phi"].real() = 0.0;
+    //config["phi"].real() = 0.0;
 
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]){
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
-    for (int Nmd = 2; Nmd < 210; Nmd += 10000){
+    for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,

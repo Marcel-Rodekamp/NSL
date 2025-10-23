@@ -6,6 +6,7 @@
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
 #include "../LinAlg/eigh.tpp"
+#include "../LinAlg/svd.tpp"
 
 namespace NSL::Lattice {
 
@@ -56,6 +57,15 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
         this->exp_hopping_matrix_[delta] = NSL::LinAlg::mat_exph(this->hopping_matrix(delta));
     }
     return this->exp_hopping_matrix_[delta];
+}
+
+template <typename Type>
+std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::svd_hopping(Type delta){
+    if(! svd_hopping_matrix_.contains(delta)){
+        // compute if it's not in svd_hopping_matrix_ already
+        this->svd_hopping_matrix_[delta] = NSL::LinAlg::svd(this->exp_hopping_matrix(delta));
+    }
+    return this->svd_hopping_matrix_[delta];
 }
 
 template <typename Type>

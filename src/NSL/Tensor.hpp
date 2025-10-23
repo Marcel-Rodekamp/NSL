@@ -8,5 +8,6 @@
 #include "Tensor/Factory/like.tpp"
 #include "Tensor/Factory/eye.tpp"
 #include "Tensor/Factory/random.tpp"
+#include "Tensor/Factory/zeros.tpp"
 
 #endif // NSL_TENSOR_MAIN_HPP

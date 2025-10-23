@@ -10,7 +10,7 @@ namespace NSL::LinAlg {
 template <NSL::Concept::isNumber Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eig(const NSL::Tensor<Type> & t){
     //! \todo: add eigh as a Tensor member
-    return torch::linalg::eig( t ); 
+    return torch::linalg_eig( t ); //linalg::eig( t ); 
 }
 
 } // namespace NSL::LinAlg

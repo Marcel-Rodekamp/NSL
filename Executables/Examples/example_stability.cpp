@@ -174,10 +174,8 @@ int main(int argc, char* argv[]){
     std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
     //std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
 
-    double beta = params["beta"];
-    std::cout << std::setprecision(15) << log(1.+exp(3.*beta))+log(1.+exp(1.*beta))+log(1.+exp(-1.*beta))+log(1.+exp(-3.*beta)) << std::endl;
-
-    exit(0);
+    //double beta = params["beta"];
+    //std::cout << std::setprecision(15) << log(1.+exp(3.*beta))+log(1.+exp(1.*beta))+log(1.+exp(-1.*beta))+log(1.+exp(-3.*beta)) << std::endl;
     
     Type Hi_direct, Hf_direct;
     Type Hi_QR, Hf_QR;
@@ -188,24 +186,29 @@ int main(int argc, char* argv[]){
     Hi_SVD    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_SVD(config);
 
     std::cout << "# H_/Nx :: " << std::setprecision(15) << Hi_direct/lattice.sites() << "\t" << Hi_QR/lattice.sites() << "\t" << Hi_SVD/lattice.sites() << std::endl; 
+
+    double U = params["U"];
+    double beta = params["beta"];
+    double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
+    std::cout << "traj. length = " << trajLength << std::endl;
     
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
       NSL::Integrator::Leapfrog LF_direct(
        S_direct, // action
-       1, // trajectoryLength
+       trajLength, // trajectoryLength
        Nmd, // numberSteps
        false // optional
       );
       NSL::Integrator::Leapfrog LF_QR(
          S_QR,
-         1,
+         trajLength,
          Nmd,
          false // optional
       );
       NSL::Integrator::Leapfrog LF_SVD(
          S_SVD,
-         1,
+         trajLength,
          Nmd,
          false // optional
       );
@@ -218,9 +221,9 @@ int main(int argc, char* argv[]){
       Hf_direct = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S_direct(config_proposal);
       Hf_QR = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_QR(config_proposal2);
       Hf_SVD = (momentum_proposal3["phi"] * momentum_proposal3["phi"]).sum()/2.0 + S_SVD(config_proposal2);
-      std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()/Hi_direct.real()) << "\t"
-		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()/Hi_QR.real()) << "\t"
-		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()/Hi_SVD.real()) << std::endl;
+      std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()) << "\t"
+		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()) << "\t"
+		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()) << std::endl;
     }
     
 

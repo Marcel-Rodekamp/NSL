@@ -89,6 +89,9 @@ class SpatialLattice {
         //! A string that describes the lattice.
         const std::string & name() { return name_; };
 
+        //! Returns the SVD of the hopping matrix.
+        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> svd_hopping(Type delta=1.);
+
         //! Returns the eigenenergies and unitary matrix (ie eigenvectors) of the hopping matrix.
         std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_hopping(Type delta=1.);
 
@@ -131,6 +134,9 @@ class SpatialLattice {
         bool bipartite_is_initialized_ = false;
         // Maybe the right thing is to have wrapper that can hold
         // a value or be Uninitialized
+
+        //! store svd of hopping matrix
+        NSL::map<Type,std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>> svd_hopping_matrix_;
 
         //! holds eigenenergies of the hopping matrix
         NSL::Tensor<Type> ee_;
