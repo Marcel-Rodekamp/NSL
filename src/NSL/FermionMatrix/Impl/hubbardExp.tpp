@@ -346,10 +346,14 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
     NSL::Tensor<Type> expKdiag, Uk, Vk, Uktemp;
 
+    NSL::Tensor<Type> Fk_U(device,Nx,Nx);
+    NSL::Tensor<Type> Fk_D(device,Nx);   
+    NSL::Tensor<Type> Fk_V(device,Nx,Nx);
+
     NSL::Tensor<Type> uu(device, Nx, Nx);
     NSL::Tensor<Type> dd(device, Nx);
     NSL::Tensor<Type> vv(device, Nx, Nx);
-    NSL::Tensor<Type> udv(device, Nx, Nx);
+    //NSL::Tensor<Type> udv(device, Nx, Nx);
     NSL::Tensor<Type> vu(device, Nx, Nx);
 
     NSL::Tensor<Type> Qnew(device, Nx, Nx);
@@ -422,7 +426,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       
     }
     else if (!this->stabilityMethod.compare("QR")) {
-
+/*
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
       std::tie(Uk, expKdiag, Vk) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       Fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::chop(Vk,tol) * NSL::LinAlg::shift((this->phiExpInv_).conj(),+1).expand(Nx).transpose(1,2);
@@ -460,8 +464,77 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 				         invAp1F_T_(0,NSL::Ellipsis())));
       }
 
-      //printMatrix(pi_dot_,"pi_dot_",15);
-      //exit(0);
+
+      printMatrix(pi_dot_,"pi_dot_ slow",15);
+*/
+      // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
+      std::tie(Uk, expKdiag, Vk) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      Fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::chop(Vk,tol) * NSL::LinAlg::shift((this->phiExpInv_).conj(),+1).expand(Nx).transpose(1,2);
+      Fkt_D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
+      Fkt_U(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::chop(Uk,tol);
+
+      fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis())=Fkt_V(NSL::Slice(0,Nt),NSL::Ellipsis());
+      fkt_D(NSL::Slice(0,Nt),NSL::Ellipsis())=Fkt_D(NSL::Slice(0,Nt),NSL::Ellipsis());
+      fkt_U(NSL::Slice(0,Nt),NSL::Ellipsis())=Fkt_U(NSL::Slice(0,Nt),NSL::Ellipsis());
+
+      for (int t=1;t<Nt;t++) {
+      	  // Fkt(t)=Fk(t)...Fk(0)
+      	  vu = NSL::LinAlg::mat_mul(Fkt_V(t,NSL::Ellipsis()),Fkt_U(t-1,NSL::Ellipsis()));
+      	  vu = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(Fkt_D(t,NSL::Ellipsis())),vu);
+      	  vu = NSL::LinAlg::mat_mul(vu,NSL::LinAlg::diag(Fkt_D(t-1,NSL::Ellipsis())));
+      	  std::tie( uu,dd,vv ) = NSL::LinAlg::udt(vu);
+      	  Fkt_U(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U(t,NSL::Ellipsis()),uu);
+	  Fkt_D(t,NSL::Ellipsis()) = dd;
+	  Fkt_V(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv,Fkt_V(t-1,NSL::Ellipsis()));
+
+	  // fk(t)=Fk(Nt-1)...Fk(t)
+	  vu = NSL::LinAlg::mat_mul(fkt_V(Nt-t,NSL::Ellipsis()),fkt_U(Nt-1-t,NSL::Ellipsis()));
+	  vu = NSL::LinAlg::mat_mul(vu,NSL::LinAlg::diag(fkt_D(Nt-1-t,NSL::Ellipsis())));
+	  vu = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(fkt_D(Nt-t,NSL::Ellipsis())),vu);
+	  std::tie( uu,dd,vv ) = NSL::LinAlg::udt(vu);
+	  fkt_U(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(fkt_U(Nt-t,NSL::Ellipsis()),uu);
+	  fkt_D(Nt-1-t,NSL::Ellipsis()) = dd;
+	  fkt_V(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv,fkt_V(Nt-1-t,NSL::Ellipsis()));
+      }
+
+      // calculation of forces
+      for(int t=0;t<Nt-1;t++) {
+
+          vu = NSL::LinAlg::mat_mul(Fkt_V(t,NSL::Ellipsis()),fkt_U(t+1,NSL::Ellipsis()));
+	  vu = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(Fkt_D(t,NSL::Ellipsis())),vu);
+	  vu = NSL::LinAlg::mat_mul(vu,NSL::LinAlg::diag(fkt_D(t+1,NSL::Ellipsis())));
+	  std::tie( uu,dd,vv ) = NSL::LinAlg::udt(vu);
+      	  Fk_U(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U(t,NSL::Ellipsis()),uu);
+	  Fk_D(NSL::Ellipsis()) = dd;
+	  Fk_V(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv,fkt_V(t+1,NSL::Ellipsis()));
+
+	  std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_V(NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_U(NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fk_D(NSL::Ellipsis())));
+
+          invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew, Fk_V(NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+      	  invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew;
+      	  invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_U(NSL::Ellipsis()), Qnew ));
+
+	  pi_dot_(t,NSL::Slice()) = II * NSL::LinAlg::diag(
+	                                 NSL::LinAlg::mat_mul(
+      		                         NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				         invAp1F_T_(0,NSL::Ellipsis())));
+
+      }
+      // Nt-1 timeslice (last timeslice)
+      std::tie( Qnew, Dnew, Vnew ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fkt_V(Nt-1,NSL::Ellipsis()), NSL::LinAlg::adjoint(Fkt_U(Nt-1,NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fkt_D(Nt-1,NSL::Ellipsis())));
+
+      invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew, Fkt_V(Nt-1,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+      invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew;
+      invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U(Nt-1,NSL::Ellipsis()), Qnew ));
+
+      pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+	                             NSL::LinAlg::mat_mul(
+      		                     NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				         invAp1F_T_(0,NSL::Ellipsis())));
+      
+
+//      printMatrix(pi_dot_,"pi_dot_ fast",15);
+//      exit(0);      
 
       return pi_dot_;	
 
