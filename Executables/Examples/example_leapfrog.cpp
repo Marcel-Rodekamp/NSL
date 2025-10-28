@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
       > S_fermion(lattice,params);
 
     // uncomment the next line if you want to choose a specific stabilizer.  default is "QR"
-    S_fermion.hfm_.stabilityMethod = "SVD";// "QR", "DIRECTINVERSE", "SVD"
+    S_fermion.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE", "SVD"
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]){
       auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
  
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-      std::cout << Nmd << "\t (Hf,Hi) = (" << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi)) << std::endl;
+      std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi)) << std::endl;
     }
 
     return EXIT_SUCCESS;

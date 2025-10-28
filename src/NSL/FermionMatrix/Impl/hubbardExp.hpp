@@ -48,6 +48,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     
     HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
+	bipartite_(lat.bipartite()),
         species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
         mu_( (beta/Nt)*mu ),
@@ -67,6 +68,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
+	bipartite_(lat.bipartite()),
         species_(species),
         delta_( beta/Nt ),
         mu_( (beta/Nt)*mu ),
@@ -236,6 +238,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! Routine for printing out a matrix (for debugging purposes only!) 
     void printMatrix(const NSL::Tensor<Type> & psi, std::string name, int prec) ;
 
+    //! Bool to state if lattice is bipartite or not
+    bool bipartite_;
+
+    //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
+    Type mu_;
+
     protected:
     //! species{Particle or Hole} of the fermion matrix
     NSL::Hubbard::Species species_;
@@ -243,9 +251,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     //! delta = beta/N_t
     Type delta_;
-
-    //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
-    Type mu_;
 
     // Sign of exp( +/- kappa), is assigned in populate
     int sgn_;
