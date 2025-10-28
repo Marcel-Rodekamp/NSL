@@ -110,24 +110,6 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
     hfm_.populate(phi, NSL::Hubbard::Species::Hole);
     dS[this->configKey_]-= hfm_.gradLogDetM();
 
-
-/*
-    std::cout << "pi_dot in force routine" << std::endl;
-	std::cout << "{" << std::endl;
-	for (int t=0;t<64;t++) {
-	    std::cout << std::setprecision(15) << "{ " << dS["phi"][t*4+0].real() << "+" << dS["phi"][t*4+0].imag() << " I"
-	    << ", "
-	    << dS["phi"][t*4+1].real()<< "+" << dS["phi"][t*4+1].imag() << " I"
-	    << ", "
-	    << dS["phi"][t*4+2].real()<< "+" << dS["phi"][t*4+2].imag() << " I"
-	    << ", "
-	    << dS["phi"][t*4+3].real()<< "+" << dS["phi"][t*4+3].imag() << " I"
-	    << "} ," << std::endl;
-	}
-	std::cout << "}" << std::endl;
-	std::cout << std::endl;
-*/
-
     return dS;
 }
 
