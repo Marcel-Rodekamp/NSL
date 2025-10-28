@@ -158,18 +158,11 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> D(device,full_N,Nx); // stores D of M = U.D.V
       NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
 
-      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
-      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  transpose(Uk).K.Uk = Kdiag, or Uk.expKdiag.transpose(Uk) = expK
-      expKdiag.exp();
-      if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
-        Uktemp = Uk;
-	for (int i=0;i<Nx;i++) {
-          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
-        }	
-      }
+      NSL::Tensor<Type> expKdiag, Uk, Vk;
+      std::tie(Uk, expKdiag, Vk) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
-      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk) * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
       D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
       U(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk;
 
@@ -186,16 +179,19 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	   prime=primes[p];
            nnt /= prime;
 	   for (int tt=0;tt<nnt;tt++) {
-	      udv = NSL::LinAlg::diag(D(prime*tt, NSL::Slice()));
+	      U(tt, NSL::Ellipsis()) = U(prime*tt, NSL::Ellipsis());
+	      dd = D(prime*tt, NSL::Ellipsis());
+	      vv = V(prime*tt, NSL::Ellipsis());
 	      for (int pr=0;pr<prime-1;pr++){
-	         vu = NSL::LinAlg::mat_mul(V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
-		 udv = NSL::LinAlg::mat_mul( udv, vu );
-		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
+	         vu = NSL::LinAlg::mat_mul(vv , U(prime*tt+pr+1, NSL::Ellipsis()));
+		 udv = NSL::LinAlg::mat_mul( NSL::LinAlg::diag(dd), vu );
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Ellipsis())));
+		 std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+		 U(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(U(tt, NSL::Ellipsis()), uu);
+		 vv = NSL::LinAlg::mat_mul(vv,V(prime*tt+pr+1,NSL::Ellipsis()));
+		 D(tt, NSL::Ellipsis()) = dd;
+	      	 V(tt, NSL::Ellipsis()) = vv;
 	      }
-	      std::tie( uu, dd, vv ) = NSL::LinAlg::svd(udv(NSL::Slice(),NSL::Slice())); // note that svd returns tuple (U, D, V^\dag)
-	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
-	      D(tt, NSL::Slice()) = dd;
-	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
            }
 	} else {
 	  p += 1;
@@ -228,18 +224,11 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       NSL::Tensor<Type> D(device,full_N,Nx); // stores D of M = U.D.V
       NSL::Tensor<Type> V(device,full_N,Nx,Nx); // stores V of M = U.D.V
 
-      NSL::Tensor<Type> expKdiag, Uk, Uktemp;
-      std::tie(expKdiag, Uk) = this->Lat.eigh_hopping(delta_);  // note, Uk.transpose(Uk) = 1 ::  transpose(Uk).K.Uk = Kdiag, or Uk.expKdiag.transpose(Uk) = expK
-      expKdiag.exp();
-      if(sgn_ == -1) { // need to reverse order of unitary matrix Uk for holes
-        Uktemp = Uk;
-	for (int i=0;i<Nx;i++) {
-          Uk(NSL::Slice(), i ) = Uktemp(NSL::Slice(), Nx-1-i );
-        }	
-      }
+      NSL::Tensor<Type> expKdiag, Uk, Vk;
+      std::tie(Uk, expKdiag, Vk) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
-      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = NSL::LinAlg::transpose(Uk) * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      V(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
       D(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag;
       U(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk;
 
@@ -256,16 +245,19 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	   prime=primes[p];
            nnt /= prime;
 	   for (int tt=0;tt<nnt;tt++) {
-	      udv = NSL::LinAlg::diag(D(prime*tt, NSL::Slice()));
+	      U(tt, NSL::Ellipsis()) = U(prime*tt, NSL::Ellipsis());
+	      dd = D(prime*tt, NSL::Ellipsis());
+	      vv = V(prime*tt, NSL::Ellipsis());
 	      for (int pr=0;pr<prime-1;pr++){
-	         vu = NSL::LinAlg::mat_mul(V(prime*tt+pr, NSL::Slice(), NSL::Slice()) , U(prime*tt+pr+1, NSL::Slice(), NSL::Slice()));
-		 udv = NSL::LinAlg::mat_mul( udv, vu );
-		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Slice())));
+	         vu = NSL::LinAlg::mat_mul(vv , U(prime*tt+pr+1, NSL::Ellipsis()));
+		 udv = NSL::LinAlg::mat_mul( NSL::LinAlg::diag(dd), vu );
+		 udv = NSL::LinAlg::mat_mul(udv , NSL::LinAlg::diag(D(prime*tt+pr+1, NSL::Ellipsis())));
+		 std::tie( uu, dd, vv ) = NSL::LinAlg::udt(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+		 U(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(U(tt, NSL::Ellipsis()), uu);
+		 vv = NSL::LinAlg::mat_mul(vv,V(prime*tt+pr+1,NSL::Ellipsis()));
+		 D(tt, NSL::Ellipsis()) = dd;
+	      	 V(tt, NSL::Ellipsis()) = vv;
 	      }
-	      std::tie( uu, dd, vv ) = NSL::LinAlg::udt(udv(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
-	      U(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( U(prime*tt, NSL::Slice(), NSL::Slice()) , uu );
-	      D(tt, NSL::Slice()) = dd;
-	      V(tt, NSL::Slice(), NSL::Slice()) = NSL::LinAlg::mat_mul( vv, V(prime*tt+1, NSL::Slice(), NSL::Slice()) );
            }
 	} else {
 	  p += 1;
