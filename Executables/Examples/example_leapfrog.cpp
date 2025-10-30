@@ -72,6 +72,10 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
+    if (yml["stability"] ) {
+      params["stability"]    = yml["stability"].as<std::string>();
+    }
+    
     // Standard deviation of proposal lognormal distribution in radial udpate
     if (yml["HMC"]["radial scale"]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();
@@ -106,7 +110,10 @@ int main(int argc, char* argv[]){
       > S_fermion(lattice,params);
 
     // uncomment the next line if you want to choose a specific stabilizer.  default is "QR"
-    S_fermion.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE", "SVD"
+    if (yml["stability"] ) {
+      std::string stabilityMethod = params["stability"];
+      S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
+    }
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;

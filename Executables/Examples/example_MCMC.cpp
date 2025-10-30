@@ -60,6 +60,11 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
+    // Stability method
+    if (yml["stability"] ) {
+      params["stability"]    = yml["stability"].as<std::string>();
+    }
+
     // Now we want to log the found parameters
     // - key is a std::string name,beta,...
     // - value is a ParameterEntry * which is a wrapper around the actual 
@@ -110,6 +115,12 @@ int main(int argc, char* argv[]){
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
     > S_fermion(lattice,params);
+
+    // set stability method if defined in yml file, otherwise default is "QR"
+    if (yml["stability"] ) {
+      std::string stabilityMethod = params["stability"];
+      S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
+    }
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;

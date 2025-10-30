@@ -150,7 +150,7 @@ int main(int argc, char* argv[]){
 
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
-    // config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     config["phi"].imag() = 0.0;
     //config["phi"].real() = 0.0;
 
