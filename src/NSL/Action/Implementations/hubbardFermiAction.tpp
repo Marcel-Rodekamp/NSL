@@ -104,12 +104,13 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     if(hfm_.bipartite_ && hfm_.mu_.real() == 0 && hfm_.mu_.imag() == 0) {;
        // 2x real part of particle contribution
+
        hfm_.populate(phi, NSL::Hubbard::Species::Particle);
        dS[this->configKey_]+= 2*hfm_.gradLogDetM().real();
        return dS;
 
     } else {
-    
+
       // particle contribution
       hfm_.populate(phi, NSL::Hubbard::Species::Particle);
       dS[this->configKey_]+= hfm_.gradLogDetM();

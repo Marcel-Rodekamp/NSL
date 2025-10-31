@@ -151,32 +151,28 @@ int main(int argc, char* argv[]){
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    config["phi"].imag() = 0.0;
+    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
     //config["phi"].real() = 0.0;
 
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
-    // momentum["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
     momentum["phi"].imag() = 0.0;
 
     S_direct(config);
     S_QR(config);
     S_SVD(config);
 
+
+    std::cout << "# DIRECTINVERSE \t QR \t SVD" << std::endl;
     Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    //std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
     std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
     Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
     Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
     Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
     std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    //std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
 
-    //double beta = params["beta"];
-    //std::cout << std::setprecision(15) << log(1.+exp(3.*beta))+log(1.+exp(1.*beta))+log(1.+exp(-1.*beta))+log(1.+exp(-3.*beta)) << std::endl;
-    
     Type Hi_direct, Hf_direct;
     Type Hi_QR, Hf_QR;
     Type Hi_SVD, Hf_SVD;
