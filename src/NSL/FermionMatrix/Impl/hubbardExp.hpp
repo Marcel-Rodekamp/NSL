@@ -63,7 +63,27 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
 	invAp1F_D_(lat.device(), 1, lat.sites()),
 	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
-        pi_dot_(lat.device(), Nt, lat.sites())
+        pi_dot_(lat.device(), Nt, lat.sites()),
+	expKdiag_(lat.device(), lat.sites()),
+	Uk_(lat.device(), lat.sites(), lat.sites()),
+	Vk_(lat.device(), lat.sites(), lat.sites()),
+	Fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fkt_D_(lat.device(),Nt,lat.sites()),
+        Fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_D_(lat.device(),Nt,lat.sites()),
+        fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fk_U_(lat.device(),lat.sites(),lat.sites()),
+        Fk_D_(lat.device(),lat.sites()),   
+	Fk_V_(lat.device(),lat.sites(),lat.sites()),
+	uu_(lat.device(), lat.sites(), lat.sites()),
+	dd_(lat.device(), lat.sites()),
+	vv_(lat.device(), lat.sites(), lat.sites()),
+	vu_(lat.device(), lat.sites(), lat.sites()),
+	udv_(lat.device(), lat.sites(), lat.sites()),
+	Qnew_(lat.device(), lat.sites(), lat.sites()),
+	Dnew_(lat.device(), lat.sites()),
+	Vnew_(lat.device(), lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
@@ -83,7 +103,27 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
 	invAp1F_D_(lat.device(), 1, lat.sites()),
 	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
-        pi_dot_(lat.device(), Nt, lat.sites())
+        pi_dot_(lat.device(), Nt, lat.sites()),
+	expKdiag_(lat.device(), lat.sites()),
+	Uk_(lat.device(), lat.sites(), lat.sites()),
+	Vk_(lat.device(), lat.sites(), lat.sites()),
+	Fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fkt_D_(lat.device(),Nt,lat.sites()),
+        Fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_D_(lat.device(),Nt,lat.sites()),
+        fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fk_U_(lat.device(),lat.sites(),lat.sites()),
+        Fk_D_(lat.device(),lat.sites()),   
+	Fk_V_(lat.device(),lat.sites(),lat.sites()),
+	uu_(lat.device(), lat.sites(), lat.sites()),
+	dd_(lat.device(), lat.sites()),
+	vv_(lat.device(), lat.sites(), lat.sites()),
+	vu_(lat.device(), lat.sites(), lat.sites()),
+	udv_(lat.device(), lat.sites(), lat.sites()),
+	Qnew_(lat.device(), lat.sites(), lat.sites()),
+	Dnew_(lat.device(), lat.sites()),
+	Vnew_(lat.device(), lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
@@ -233,6 +273,30 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> invAp1F_U_;
     NSL::Tensor<Type> invAp1F_D_;
     NSL::Tensor<Type> invAp1F_T_;
+    NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
+    NSL::Tensor<Type> Fkt_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+    NSL::Tensor<Type> Fkt_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
+    NSL::Tensor<Type> Fkt_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
+    NSL::Tensor<Type> fkt_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+    NSL::Tensor<Type> fkt_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
+    NSL::Tensor<Type> fkt_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
+    NSL::Tensor<Type> Fk_U_; //(device,Nx,Nx);
+    NSL::Tensor<Type> Fk_D_; //(device,Nx);   
+    NSL::Tensor<Type> Fk_V_; //(device,Nx,Nx);
+    NSL::Tensor<Type> uu_; //(device, Nx, Nx);
+    NSL::Tensor<Type> dd_; //(device, Nx);
+    NSL::Tensor<Type> vv_; //(device, Nx, Nx);
+    NSL::Tensor<Type> vu_; //(device, Nx, Nx);
+    NSL::Tensor<Type> udv_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Qnew_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Dnew_; //(device, Nx);
+    NSL::Tensor<Type> Vnew_; //(device, Nx, Nx);
+
+    //!  prime numbers used in the recursive tree calculation of loddet
+    int primes_[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
 
     /*!
      * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by

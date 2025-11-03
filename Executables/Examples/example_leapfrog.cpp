@@ -2,6 +2,7 @@
 #include "Action/Implementations/hubbardFermiAction.tpp"
 #include "Integrator/Impl/leapfrog.tpp"
 #include "NSL.hpp"
+#include <ctime>
 
 int main(int argc, char* argv[]){
 
@@ -72,6 +73,7 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
+    // Stability method
     if (yml["stability"] ) {
       params["stability"]    = yml["stability"].as<std::string>();
     }
@@ -109,7 +111,7 @@ int main(int argc, char* argv[]){
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
       > S_fermion(lattice,params);
 
-    // uncomment the next line if you want to choose a specific stabilizer.  default is "QR"
+    // set stability method if defined in yml file, otherwise default is "QR"
     if (yml["stability"] ) {
       std::string stabilityMethod = params["stability"];
       S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
@@ -163,7 +165,8 @@ int main(int argc, char* argv[]){
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
-    for (int Nmd = 10; Nmd < 210; Nmd += 10){
+    clock_t ti = clock();
+    for (int Nmd = 20; Nmd < 210; Nmd += 1000){
       // define integrator
       NSL::Integrator::Leapfrog LF(
         /*action=*/ S,
@@ -178,6 +181,10 @@ int main(int argc, char* argv[]){
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
       std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi)) << std::endl;
     }
+    clock_t tf = clock();
 
+    std::cout << "# Routine ran in " << (float)(tf-ti) / CLOCKS_PER_SEC << " seconds" << std::endl;
+
+    
     return EXIT_SUCCESS;
 }
