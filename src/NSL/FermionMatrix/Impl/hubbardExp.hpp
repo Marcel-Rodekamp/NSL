@@ -167,6 +167,19 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->populate(phi);
     }
 
+    //! Populates the fermion matrix with a new configuration phi, adding the chemical potential as well
+    void populate_w_mu(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
+        this->species_ = species;
+
+        if(this->species_ == NSL::Hubbard::Particle){
+            this->sgn_ = +1;
+        } else {
+            this->sgn_ = -1;
+        }
+
+        this->populate_w_mu(phi);
+    }
+
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi){
         // Reassign phi
@@ -176,6 +189,18 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi);// + sgn_*mu_);
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
         this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi);// - sgn_*mu_);
+
+    }
+
+    //! Populates the fermion matrix with a new configuration phi, adding the chemical potential as well
+    void populate_w_mu(const NSL::Tensor<Type> & phi){
+        // Reassign phi
+        phi_ = phi;
+	
+        // calculate exp(+/- i phi)
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_);
+        // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_);
 
     }
       

@@ -36,39 +36,30 @@ class LeapfrogRealForce: Integrator<ActionTermTypes...> {
     std::tuple<NSL::Configuration<TensorType>, NSL::Configuration<TensorType> > operator()(
         const NSL::Configuration<TensorType> & q_, const NSL::Configuration<TensorType> & p_
     ){
-        
         // deep copy to generate a new configuration
         NSL::Configuration<TensorType> q (q_,true);
         NSL::Configuration<TensorType> p (p_,true);
 
         // first half step
 	auto tmp = this->action_.force(q);
-	for(auto & [key,field]: tmp){
-		 field.imag() = 0; // ??
-	}
+	tmp["phi"].imag()=0;  // we only want the real part of the force
 	p += static_cast<TensorType>(0.5*stepSize_)*tmp;
-        //p += static_cast<TensorType>(0.5*stepSize_)* NSL::real(this->action_.force(q));
+
 
         // a bunch of full steps
         q += static_cast<TensorType>(stepSize_) * p;
 
         for(NSL::size_t n = 0; n < numSteps_-1; ++n){
 	    tmp = this->action_.force(q);
-	    for(auto & [key,field]: tmp){
-		 field.imag() = 0; // ??
-	    }
+	    tmp["phi"].imag()=0;
 	    p += static_cast<TensorType>(stepSize_)*tmp;
-            //p += static_cast<TensorType>(stepSize_) * NSL::real(this->action_.force(q));
             q += static_cast<TensorType>(stepSize_) * p;
         }
 
         // final half step
 	tmp = this->action_.force(q);
-	for(auto & [key,field]: tmp){
-		 field.imag() = 0; // ??
-	}
+	tmp["phi"].imag()=0;
 	p += static_cast<TensorType>(0.5*stepSize_)*tmp;
-        //p += static_cast<TensorType>(0.5*stepSize_) * NSL::real(this->action_.force(q));
 
         return {q,p};
     }

@@ -255,7 +255,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     
     for (NSL::Hubbard::Species species : {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
         // populate the fermion matrix using the free configuration
-        hfm_.populate(phi_,species);
+        hfm_.populate_w_mu(phi_,species);
 
         // invert MM^dagger
         NSL::Tensor<Type> invMMdag = cg_(srcVecK_);
