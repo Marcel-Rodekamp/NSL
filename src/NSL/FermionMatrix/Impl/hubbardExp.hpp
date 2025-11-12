@@ -186,9 +186,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phi_ = phi;
 	
         // calculate exp(+/- i phi)
-        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi);// + sgn_*mu_);
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi);
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi);// - sgn_*mu_);
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi);
 
     }
 
