@@ -24,8 +24,7 @@ Type logdet(const NSL::Tensor<Type> & t){
 template <typename Type> 
 Type logdet(const NSL::Tensor<Type> & t){
     
-    NSL::Tensor<Type> ev = torch::linalg_eigvals(t); //linalg::eigvals(t);  // eigenvalues of the sausage (slowest part of the calculation, but what can we do?)
-//    std::cout << ev << std::endl;
+    NSL::Tensor<Type> ev = torch::linalg_eigvals(t); // eigenvalues of the sausage (slowest part of the calculation, but what can we do?)
     NSL::Tensor<Type> logev=torch::log(ev);    // logarithm of eigenvalues
 
     Type logevsum = logev.sum(); // sum the elements, which gives logdet
@@ -37,7 +36,7 @@ Type logdet(const NSL::Tensor<Type> & t){
 template <typename Type> 
 Type logdet1plusF(const NSL::Tensor<Type> & t){
     
-    NSL::Tensor<Type> ev = torch::linalg_eigvals(t); //linalg::eigvals(t);  // eigenvalues of the sausage (slowest part of the calculation, but what can we do?)
+    NSL::Tensor<Type> ev = torch::linalg_eigvals(t);   // eigenvalues of the sausage (slowest part of the calculation, but what can we do?)
     NSL::Tensor<Type> log1plusF=torch::log(1.0+ev);    // logarithm of 1+eigenvalues
 
     Type logdet1pF = log1plusF.sum(); // sum the elements, which gives logdet

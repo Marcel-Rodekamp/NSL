@@ -7,7 +7,7 @@ namespace NSL::LinAlg {
 
 template <typename Type> NSL::Tensor<Type> mat_exph(const NSL::Tensor<Type> & t){
      torch::Tensor L, Q;
-     std::tie(L,Q) = torch::linalg_eigh(t,"L"); //torch::linalg::eigh(t,"L");  // eigh returns a tuple L, Q, where L is the list of eigenvalues and Q the unitary transformation
+     std::tie(L,Q) = torch::linalg_eigh(t,"L");   // eigh returns a tuple L, Q, where L is the list of eigenvalues and Q the unitary transformation
                                                   // use the std::tie function to receive the tuple
 						  // we assume that the tensor is hermitian or real symmetric!! (thus the call to eigh)
      L = torch::complex(L,torch::zeros_like(L));  // torch returns L as a tensor of doubles, but we need the tensor to be complex
