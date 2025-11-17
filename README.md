@@ -202,7 +202,7 @@ NSL can now simulate at room temperature!!!  To perform such simulations, one ne
 * SVD
 * QR
 
-**DIRECTINVERSE** has been the standard method up to now, and is really only good with $\beta$ up to 15 (max!). Both **QR** and **SVD** are good to $\beta=90$ and above (this assumes a nearest neighbor connectivity of 3). To specify which stability method to simulate with, add the following example (chnage to suit your desired stability method) into the input yaml file:
+**DIRECTINVERSE** has been the standard method up to now, and is really only good with $\beta$ up to 15 (max!). Both **QR** and **SVD** are good to $\beta=90$ and above (this assumes a nearest neighbor connectivity of 3). To specify which stability method to simulate with, add the following example (change to suit your desired stability method) into the input yaml file:
 ```
 stability: QR
 ```
