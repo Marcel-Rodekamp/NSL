@@ -214,4 +214,4 @@ stability: QR
 If no stability flag is given in the yaml file, then the default stability method will be **QR**.
 Note that the **QR** method is a factor of 7-8 slower than *DIRECTINVERSE*.  
 **SVD** is even slower.
-When in doubt, it is recommended to always use *QR*.
+When in doubt, it is recommended to always use **QR**.
