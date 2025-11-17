@@ -205,13 +205,13 @@ The possible choices are
 * QR
 
 *DIRECTINVERSE* has been the standard method up to now, and is really only good with $\beta$ up to 15 (max!).
-Both *QR* and *SVD* are good to $\beta=90$ and above.  
+Both **QR** and **SVD** are good to $\beta=90$ and above.  
 This assumes a nearest neighbor connectivity of 3.
 To specify which stability method to simulate with, add the following example (chnage to suit your desired stability method) into the input yaml file:
 ```
 stability: QR
 ```
-If no stability flag is given in the yaml file, then the default stability method will be *QR*.
-Note that the *QR* method is a factor of 7-8 slower than *DIRECTINVERSE*.  
-*SVD* is even slower.
+If no stability flag is given in the yaml file, then the default stability method will be **QR**.
+Note that the **QR** method is a factor of 7-8 slower than *DIRECTINVERSE*.  
+**SVD** is even slower.
 When in doubt, it is recommended to always use *QR*.
