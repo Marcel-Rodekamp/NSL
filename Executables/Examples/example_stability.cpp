@@ -1,6 +1,5 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
-#include "Integrator/Impl/leapfrog.tpp"
 #include "NSL.hpp"
 
 int main(int argc, char* argv[]){
@@ -151,9 +150,12 @@ int main(int argc, char* argv[]){
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
-    //config["phi"].real() = 0.0;
-
+    if (yml["system"]["offset"]){
+      config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
+    } else {
+    config["phi"].real() = 0.0;
+    }
+    
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
     momentum["phi"].imag() = 0.0;
@@ -162,8 +164,7 @@ int main(int argc, char* argv[]){
     S_QR(config);
     S_SVD(config);
 
-
-    std::cout << "# DIRECTINVERSE \t QR \t SVD" << std::endl;
+    std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
     Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
     Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
@@ -186,23 +187,23 @@ int main(int argc, char* argv[]){
     double U = params["U"];
     double beta = params["beta"];
     double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
-    std::cout << "traj. length = " << trajLength << std::endl;
-    
+    std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
+
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
-      NSL::Integrator::Leapfrog LF_direct(
+      NSL::Integrator::LeapfrogRealForce LF_direct(
        S_direct, // action
        trajLength, // trajectoryLength
        Nmd, // numberSteps
        false // optional
       );
-      NSL::Integrator::Leapfrog LF_QR(
+      NSL::Integrator::LeapfrogRealForce LF_QR(
          S_QR,
          trajLength,
          Nmd,
          false // optional
       );
-      NSL::Integrator::Leapfrog LF_SVD(
+      NSL::Integrator::LeapfrogRealForce LF_SVD(
          S_SVD,
          trajLength,
          Nmd,
@@ -213,10 +214,10 @@ int main(int argc, char* argv[]){
       auto [config_proposal,momentum_proposal] = LF_direct(config, momentum);
       auto [config_proposal2,momentum_proposal2] = LF_QR(config, momentum);
       auto [config_proposal3,momentum_proposal3] = LF_SVD(config, momentum);
- 
+
       Hf_direct = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S_direct(config_proposal);
       Hf_QR = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_QR(config_proposal2);
-      Hf_SVD = (momentum_proposal3["phi"] * momentum_proposal3["phi"]).sum()/2.0 + S_SVD(config_proposal2);
+      Hf_SVD = (momentum_proposal3["phi"] * momentum_proposal3["phi"]).sum()/2.0 + S_SVD(config_proposal3);
       std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()) << "\t"
 		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()) << "\t"
 		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()) << std::endl;

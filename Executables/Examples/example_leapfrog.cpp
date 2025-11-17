@@ -1,6 +1,7 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
-#include "Integrator/Impl/leapfrog.tpp"
+//#include "Integrator/Impl/leapfrog.tpp"
+//#include "Integrator/Impl/leapfrogRealForce.tpp"
 #include "NSL.hpp"
 #include <ctime>
 
@@ -150,9 +151,12 @@ int main(int argc, char* argv[]){
     //! \todo: we really need a proper random interface...
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    config["phi"].imag() = 0.0;
-    //config["phi"].real() = 0.0;
-
+    if (yml["system"]["offset"]){
+      config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
+    } else {
+    config["phi"].real() = 0.0;
+    }
+    
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
     momentum["phi"].imag() = 0.0;
@@ -161,14 +165,14 @@ int main(int argc, char* argv[]){
     double U = params["U"];
     double beta = params["beta"];
     double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
-    std::cout << "traj. length = " << trajLength << std::endl;
+    std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
 
     Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
 
     clock_t ti = clock();
-    for (int Nmd = 20; Nmd < 210; Nmd += 1000){
+    for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
-      NSL::Integrator::Leapfrog LF(
+      NSL::Integrator::LeapfrogRealForce LF(
         /*action=*/ S,
         /*trajectoryLength=*/ trajLength,
         /*numberSteps=*/ Nmd,
@@ -177,9 +181,10 @@ int main(int argc, char* argv[]){
 
       // integrate eom
       auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
+
  
       Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-      std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi)) << std::endl;
+      std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi).real()) << std::endl;
     }
     clock_t tf = clock();
 
