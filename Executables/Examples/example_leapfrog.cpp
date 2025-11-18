@@ -154,7 +154,7 @@ int main(int argc, char* argv[]){
     if (yml["system"]["offset"]){
       config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
     } else {
-    config["phi"].real() = 0.0;
+    config["phi"].imag() = 0.0;
     }
     
     //! \todo: we really need a proper random interface...
