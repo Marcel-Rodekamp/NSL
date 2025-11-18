@@ -6,6 +6,7 @@
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
 #include "../LinAlg/eigh.tpp"
+#include "../LinAlg/svd.tpp"
 
 namespace NSL::Lattice {
 
@@ -59,12 +60,25 @@ NSL::Tensor<Type> NSL::Lattice::SpatialLattice<Type>::exp_hopping_matrix(Type de
 }
 
 template <typename Type>
+std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::svd_hopping(Type delta){
+    if(! svd_hopping_matrix_.contains(delta)){
+        // compute if it's not in svd_hopping_matrix_ already
+        this->svd_hopping_matrix_[delta] = NSL::LinAlg::svd(this->exp_hopping_matrix(delta));
+    }
+    return this->svd_hopping_matrix_[delta];
+}
+
+template <typename Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::eigh_hopping(Type delta){
     if(!this->ee_.defined()) {
-       std::tie(this->ee_, this->ev_) = NSL::LinAlg::eigh(this->hopping_matrix(delta));
-       this->ev_.transpose(); // in place transposition
-    }
-    return {this->ee_, this->ev_};
+       NSL::Tensor<Type> evtemp;
+       std::tie(this->ee_, evtemp) = NSL::LinAlg::eigh(this->hopping_matrix(delta));
+       this->ev_=evtemp;
+       for (int x=0;x<this->sites();x++) {
+	 this->ev_( NSL::Slice() , x  )=evtemp( NSL::Slice() , this->sites()-1-x );
+       }
+    } 
+    return {(-1)*this->ee_, this->ev_}; // minus sign is to ensure that the order of eigenvalues is correct for SVD
 }
 
 template <typename Type>

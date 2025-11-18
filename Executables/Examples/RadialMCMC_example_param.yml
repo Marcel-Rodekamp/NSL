@@ -12,6 +12,7 @@ fileIO:
   h5file: "RadialHMC_2Site.h5"
 measurements:
   Number Time Sources: 4
+stability: DIRECTINVERSE
 system:
   name: ""
   nions: 2

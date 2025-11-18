@@ -42,7 +42,7 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         // first half step 
         p += static_cast<TensorType>(0.5*stepSize_)* this->action_.force(q);
-
+			     
         // a bunch of full steps
         q += static_cast<TensorType>(stepSize_) * p;
 

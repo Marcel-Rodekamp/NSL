@@ -119,7 +119,7 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_,species_);
+    hfm_.populate_w_mu(phi_,species_);
 
     // Reset memory
     // - Result correlator
@@ -172,7 +172,7 @@ template<
 >
 void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources){
     // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_,species_);
+    hfm_.populate_w_mu(phi_,species_);
 
     // Reset memory
     // - Result correlator
@@ -201,7 +201,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     NSL::Tensor<Type> invM = hfm_.Mdagger(invMMdag);
 
     // Using a point sink allows to just copy invM as corr(t,y,x)
-    // We shift the 1st axis (time-axis) if invM by tsrc and apply anti periodic 
+    // We shift the 1st axis (time-axis) of invM by tsrc and apply anti periodic 
     // boundary conditions
     // shift t -> t - tsrc
     t = 0;
@@ -226,20 +226,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
 	        }
         }
     }
-//	 corrKblock_(t,0,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,0,NSL::Slice()),corrK_(1,t,NSL::Slice()));
-//	 corrKblock_(t,1,0) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(0,t,NSL::Slice()));
-//	 corrKblock_(t,1,1) = NSL::LinAlg::inner_product( NSL::Tensor<NSL::complex<double>> (params_["wallSources"])(k,1,NSL::Slice()),corrK_(1,t,NSL::Slice()));
-    // }
-
-     /*
-     for (int t=0;t<Nt;t++) {
-     std::cout << "(" << NSL::real(corrKblock_(t,0,0)) << "," << NSL::imag(corrKblock_(t,0,0))<< ")  "
-               << "(" << NSL::real(corrKblock_(t,0,1)) << "," << NSL::imag(corrKblock_(t,0,1))<< ")  "
-               << "(" << NSL::real(corrKblock_(t,1,0)) << "," << NSL::imag(corrKblock_(t,1,0))<< ")  "
-               << "(" << NSL::real(corrKblock_(t,1,1)) << "," << NSL::imag(corrKblock_(t,1,1))<< ")  "
-	       << std::endl;
-     }
-     */
       
 } // measureK(k, Ntsrc);
 
@@ -380,7 +366,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
     );
 
     bool trimFlag = false;
-    bool readConfig = false;
     // Determine the number of time sources:
     for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
         // this is a shortcut, we don't need to invert if we don't overwrite
@@ -394,7 +379,8 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
 
             if (skip_(this->params_["overwrite"],node)) {
                NSL::Logger::info("Config #{} and k{} already has correlators, skipping... ", cfgID,k);
-	        continue;
+	       trimFlag = true;
+	       continue;
 	    }
 
            if (trimFlag) {
@@ -405,10 +391,7 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(){
            NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
            // read configuration
-	   if (readConfig == false){
-              this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
-	      readConfig = true;
-	   }
+           this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
            // compute the correlator. The result is stored in corrKblock_
            measureK(this->params_["Number Time Sources"]);

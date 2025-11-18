@@ -53,10 +53,11 @@ class HubbardFermionAction :
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
 
+    FermionMatrixType hfm_;
+
     protected:
     NSL::Parameter params_;
 
-    FermionMatrixType hfm_;
 }; // class HubbardFermiAction
 
 template<
@@ -101,15 +102,25 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
 
-    // particle contribution
-    hfm_.populate(phi, NSL::Hubbard::Species::Particle);
-    dS[this->configKey_]+= hfm_.gradLogDetM();
+    if(hfm_.bipartite_ && hfm_.mu_.real() == 0 && hfm_.mu_.imag() == 0) {;
+       // 2x real part of particle contribution
 
-    // hole contribution
-    hfm_.populate(phi, NSL::Hubbard::Species::Hole);
-    dS[this->configKey_]-= hfm_.gradLogDetM();
+       hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+       dS[this->configKey_]+= 2*hfm_.gradLogDetM().real();
+       return dS;
 
-    return dS;
+    } else {
+
+      // particle contribution
+      hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+      dS[this->configKey_]+= hfm_.gradLogDetM();
+
+      // hole contribution
+      hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+      dS[this->configKey_]-= hfm_.gradLogDetM();
+
+      return dS;
+    }
 }
 
 } // namespace NSL::Action

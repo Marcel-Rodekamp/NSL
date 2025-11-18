@@ -30,6 +30,7 @@
 #include "LinAlg/sqrt.tpp"
 #include "LinAlg/solve.tpp"
 #include "LinAlg/einsum.tpp"
+#include "LinAlg/chop.tpp"
 
 #include "LinAlg/Solver/Solver.hpp"
 // includes CG.hpp

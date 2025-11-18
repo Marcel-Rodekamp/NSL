@@ -1,9 +1,6 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
-//#include "Integrator/Impl/leapfrog.tpp"
-//#include "Integrator/Impl/leapfrogRealForce.tpp"
 #include "NSL.hpp"
-#include <ctime>
 
 int main(int argc, char* argv[]){
 
@@ -74,11 +71,6 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
-    // Stability method
-    if (yml["stability"] ) {
-      params["stability"]    = yml["stability"].as<std::string>();
-    }
-    
     // Standard deviation of proposal lognormal distribution in radial udpate
     if (yml["HMC"]["radial scale"]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();
@@ -102,7 +94,7 @@ int main(int argc, char* argv[]){
     lattice.to(params["device"]);
 
     // define a hubbard gauge action
-    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    NSL::Action::HubbardGaugeAction<Type> Sg(params);
 
     // define a hubbard fermion action, the discretization (HubbardExp) is
     // hard wired in the meta data if you change this here, also change the
@@ -110,17 +102,24 @@ int main(int argc, char* argv[]){
     //
     NSL::Action::HubbardFermionAction<
         Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > S_fermion(lattice,params);
+      > Sf_direct(lattice,params);
 
-    // set stability method if defined in yml file, otherwise default is "QR"
-    if (yml["stability"] ) {
-      std::string stabilityMethod = params["stability"];
-      S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
-    }
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_QR(lattice,params);
+
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_SVD(lattice,params);
+
+    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
+    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
+    Sf_SVD.hfm_.stabilityMethod = "SVD";
 
     // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S = S_gauge + S_fermion;
-
+    NSL::Action::Action S_direct = Sg + Sf_direct;
+    NSL::Action::Action S_QR = Sg + Sf_QR;
+    NSL::Action::Action S_SVD = Sg + Sf_SVD;
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
@@ -154,42 +153,76 @@ int main(int argc, char* argv[]){
     if (yml["system"]["offset"]){
       config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
     } else {
-    config["phi"].imag() = 0.0;
+    config["phi"].real() = 0.0;
     }
     
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
     momentum["phi"].imag() = 0.0;
 
-    Type Hi, Hf;
+    S_direct(config);
+    S_QR(config);
+    S_SVD(config);
+
+    std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+
+    Type Hi_direct, Hf_direct;
+    Type Hi_QR, Hf_QR;
+    Type Hi_SVD, Hf_SVD;
+
+    Hi_direct = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_direct(config);
+    Hi_QR    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_QR(config);
+    Hi_SVD    = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S_SVD(config);
+
+    std::cout << "# H_/Nx :: " << std::setprecision(15) << Hi_direct/lattice.sites() << "\t" << Hi_QR/lattice.sites() << "\t" << Hi_SVD/lattice.sites() << std::endl; 
+
     double U = params["U"];
     double beta = params["beta"];
     double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
     std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
 
-    Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
-
-    clock_t ti = clock();
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
-      NSL::Integrator::LeapfrogRealForce LF(
-        /*action=*/ S,
-        /*trajectoryLength=*/ trajLength,
-        /*numberSteps=*/ Nmd,
-        /*backward*/ false // optional
+      NSL::Integrator::LeapfrogRealForce LF_direct(
+       S_direct, // action
+       trajLength, // trajectoryLength
+       Nmd, // numberSteps
+       false // optional
+      );
+      NSL::Integrator::LeapfrogRealForce LF_QR(
+         S_QR,
+         trajLength,
+         Nmd,
+         false // optional
+      );
+      NSL::Integrator::LeapfrogRealForce LF_SVD(
+         S_SVD,
+         trajLength,
+         Nmd,
+         false // optional
       );
 
       // integrate eom
-      auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
+      auto [config_proposal,momentum_proposal] = LF_direct(config, momentum);
+      auto [config_proposal2,momentum_proposal2] = LF_QR(config, momentum);
+      auto [config_proposal3,momentum_proposal3] = LF_SVD(config, momentum);
 
- 
-      Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-      std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi).real()) << std::endl;
+      Hf_direct = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S_direct(config_proposal);
+      Hf_QR = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_QR(config_proposal2);
+      Hf_SVD = (momentum_proposal3["phi"] * momentum_proposal3["phi"]).sum()/2.0 + S_SVD(config_proposal3);
+      std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()) << "\t"
+		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()) << "\t"
+		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()) << std::endl;
     }
-    clock_t tf = clock();
-
-    std::cout << "# Routine ran in " << (float)(tf-ti) / CLOCKS_PER_SEC << " seconds" << std::endl;
-
     
+
     return EXIT_SUCCESS;
 }

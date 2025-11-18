@@ -33,6 +33,7 @@ namespace NSL::FermionMatrix {
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType >
 class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
+  
     public:
         //  No default constructor
         /*  There is no default constructor. */
@@ -47,6 +48,7 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     
     HubbardExp(LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
+	bipartite_(lat.bipartite()),
         species_(NSL::Hubbard::Species::Particle),
         delta_( beta/Nt ),
         mu_( (beta/Nt)*mu ),
@@ -58,11 +60,35 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
-        pi_dot_(lat.device(), Nt, lat.sites())
+	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_D_(lat.device(), 1, lat.sites()),
+	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
+        pi_dot_(lat.device(), Nt, lat.sites()),
+	expKdiag_(lat.device(), lat.sites()),
+	Uk_(lat.device(), lat.sites(), lat.sites()),
+	Vk_(lat.device(), lat.sites(), lat.sites()),
+	Fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fkt_D_(lat.device(),Nt,lat.sites()),
+        Fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_D_(lat.device(),Nt,lat.sites()),
+        fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fk_U_(lat.device(),lat.sites(),lat.sites()),
+        Fk_D_(lat.device(),lat.sites()),   
+	Fk_V_(lat.device(),lat.sites(),lat.sites()),
+	uu_(lat.device(), lat.sites(), lat.sites()),
+	dd_(lat.device(), lat.sites()),
+	vv_(lat.device(), lat.sites(), lat.sites()),
+	vu_(lat.device(), lat.sites(), lat.sites()),
+	udv_(lat.device(), lat.sites(), lat.sites()),
+	Qnew_(lat.device(), lat.sites(), lat.sites()),
+	Dnew_(lat.device(), lat.sites()),
+	Vnew_(lat.device(), lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
         FermionMatrix<Type,LatticeType>(lat),
+	bipartite_(lat.bipartite()),
         species_(species),
         delta_( beta/Nt ),
         mu_( (beta/Nt)*mu ),
@@ -74,7 +100,30 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         FkFkFk0_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
-        pi_dot_(lat.device(), Nt, lat.sites())
+	invAp1F_U_(lat.device(), 1, lat.sites(), lat.sites()),
+	invAp1F_D_(lat.device(), 1, lat.sites()),
+	invAp1F_T_(lat.device(), 1, lat.sites(), lat.sites()),
+        pi_dot_(lat.device(), Nt, lat.sites()),
+	expKdiag_(lat.device(), lat.sites()),
+	Uk_(lat.device(), lat.sites(), lat.sites()),
+	Vk_(lat.device(), lat.sites(), lat.sites()),
+	Fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fkt_D_(lat.device(),Nt,lat.sites()),
+        Fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_U_(lat.device(),Nt,lat.sites(),lat.sites()),
+        fkt_D_(lat.device(),Nt,lat.sites()),
+        fkt_V_(lat.device(),Nt,lat.sites(),lat.sites()),
+        Fk_U_(lat.device(),lat.sites(),lat.sites()),
+        Fk_D_(lat.device(),lat.sites()),   
+	Fk_V_(lat.device(),lat.sites(),lat.sites()),
+	uu_(lat.device(), lat.sites(), lat.sites()),
+	dd_(lat.device(), lat.sites()),
+	vv_(lat.device(), lat.sites(), lat.sites()),
+	vu_(lat.device(), lat.sites(), lat.sites()),
+	udv_(lat.device(), lat.sites(), lat.sites()),
+	Qnew_(lat.device(), lat.sites(), lat.sites()),
+	Dnew_(lat.device(), lat.sites()),
+	Vnew_(lat.device(), lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
@@ -84,6 +133,10 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     HubbardExp(LatticeType & lat, NSL::Parameter & params):
         HubbardExp(lat, params["Nt"], params["beta"], params["mu"])
     {}
+
+
+    // flag for defining which stability method to use
+    std::string stabilityMethod = "QR";  // options are "QR", "DIRECTINVERSE", "SVD"
 
     //! Populates the fermion matrix with a new configuration phi using species
     /*!
@@ -114,20 +167,43 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         this->populate(phi);
     }
 
+    //! Populates the fermion matrix with a new configuration phi, adding the chemical potential as well
+    void populate_w_mu(const NSL::Tensor<Type> & phi, const NSL::Hubbard::Species & species){
+        this->species_ = species;
+
+        if(this->species_ == NSL::Hubbard::Particle){
+            this->sgn_ = +1;
+        } else {
+            this->sgn_ = -1;
+        }
+
+        this->populate_w_mu(phi);
+    }
+
     //! Populates the fermion matrix with a new configuration phi
     void populate(const NSL::Tensor<Type> & phi){
         // Reassign phi
-        phi_ = phi; 
-
+        phi_ = phi;
+	
         // calculate exp(+/- i phi)
-        this->phiExp_ = NSL::LinAlg::exp(
-            NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_
-        );
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi);
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        this->phiExpInv_ = NSL::LinAlg::exp(
-            NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_
-        );
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi);
+
     }
+
+    //! Populates the fermion matrix with a new configuration phi, adding the chemical potential as well
+    void populate_w_mu(const NSL::Tensor<Type> & phi){
+        // Reassign phi
+        phi_ = phi;
+	
+        // calculate exp(+/- i phi)
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_);
+        // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_);
+
+    }
+      
 
     //! Populates the fermion matrix with a new configuration phi
     /*!
@@ -186,6 +262,15 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         return species_;
     }
 
+    //! Routine for printing out a matrix (for debugging purposes only!) 
+    void printMatrix(const NSL::Tensor<Type> & psi, std::string name, int prec) ;
+
+    //! Bool to state if lattice is bipartite or not
+    bool bipartite_;
+
+    //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
+    Type mu_;
+
     protected:
     //! species{Particle or Hole} of the fermion matrix
     NSL::Hubbard::Species species_;
@@ -193,9 +278,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     //! delta = beta/N_t
     Type delta_;
-
-    //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
-    Type mu_;
 
     // Sign of exp( +/- kappa), is assigned in populate
     int sgn_;
@@ -213,6 +295,33 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> FkFkFk0_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
+    NSL::Tensor<Type> invAp1F_U_;
+    NSL::Tensor<Type> invAp1F_D_;
+    NSL::Tensor<Type> invAp1F_T_;
+    NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
+    NSL::Tensor<Type> Fkt_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+    NSL::Tensor<Type> Fkt_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
+    NSL::Tensor<Type> Fkt_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
+    NSL::Tensor<Type> fkt_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
+    NSL::Tensor<Type> fkt_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
+    NSL::Tensor<Type> fkt_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
+    NSL::Tensor<Type> Fk_U_; //(device,Nx,Nx);
+    NSL::Tensor<Type> Fk_D_; //(device,Nx);   
+    NSL::Tensor<Type> Fk_V_; //(device,Nx,Nx);
+    NSL::Tensor<Type> uu_; //(device, Nx, Nx);
+    NSL::Tensor<Type> dd_; //(device, Nx);
+    NSL::Tensor<Type> vv_; //(device, Nx, Nx);
+    NSL::Tensor<Type> vu_; //(device, Nx, Nx);
+    NSL::Tensor<Type> udv_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Qnew_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Dnew_; //(device, Nx);
+    NSL::Tensor<Type> Vnew_; //(device, Nx, Nx);
+
+    //!  prime numbers used in the recursive tree calculation of loddet
+    int primes_[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+                        67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
+			139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211,
+			223, 227, 229};
 
     /*!
      * F_(psi) returns a vector the same shape as \f$\psi\f$ that is given by
@@ -233,6 +342,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
+	invAp1F_U_.expand(1);
+	invAp1F_D_.expand(1);
+	invAp1F_T_.expand(1);
     }
 };
 } // namespace FermionMatrix

@@ -25,7 +25,7 @@ try:
     """
     Try to use owen.f90 compiled into python module with
     f2py -c -m owens owens.f90
-    ginving owens.so
+    giving owens.so
     http://people.sc.fsu.edu/~jburkardt/f_src/owens/owens.f90
     """
     import owens
