@@ -17,8 +17,8 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udt(const NSL:
     NSL::Tensor<Type> Q = NSL::zeros_like(t);
     NSL::Tensor<Type> R = NSL::zeros_like(t);
     std::tie( Q , R ) = NSL::LinAlg::qr( t );
-    NSL::Tensor<Type> D = NSL::LinAlg::diag(R);
-    NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(1./D), R);
+    NSL::Tensor<Type> D = NSL::LinAlg::diagonal(R);
+    NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(1./D), R);
     return std::tie( Q, D, V ); 
 }
 

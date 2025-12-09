@@ -80,10 +80,23 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	dd_(lat.device(), lat.sites()),
 	vv_(lat.device(), lat.sites(), lat.sites()),
 	vu_(lat.device(), lat.sites(), lat.sites()),
+    vut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+    uut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	ddt_(lat.device(), Nt-1, lat.sites()),
+	vvt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
 	udv_(lat.device(), lat.sites(), lat.sites()),
 	Qnew_(lat.device(), lat.sites(), lat.sites()),
 	Dnew_(lat.device(), lat.sites()),
-	Vnew_(lat.device(), lat.sites(), lat.sites())
+	Vnew_(lat.device(), lat.sites(), lat.sites()),
+    Qnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	Dnewt_(lat.device(), Nt-1, lat.sites()),
+	Vnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+    Fk_Ut_(lat.device(), Nt-1,lat.sites(),lat.sites()),
+    Fk_Dt_(lat.device(), Nt-1,lat.sites()),   
+	Fk_Vt_(lat.device(), Nt-1,lat.sites(),lat.sites()),
+    invAp1F_Ut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	invAp1F_Dt_(lat.device(), Nt-1, lat.sites()),
+	invAp1F_Tt_(lat.device(), Nt-1, lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
@@ -120,10 +133,23 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	dd_(lat.device(), lat.sites()),
 	vv_(lat.device(), lat.sites(), lat.sites()),
 	vu_(lat.device(), lat.sites(), lat.sites()),
+    vut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+    uut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	ddt_(lat.device(), Nt-1, lat.sites()),
+	vvt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
 	udv_(lat.device(), lat.sites(), lat.sites()),
 	Qnew_(lat.device(), lat.sites(), lat.sites()),
 	Dnew_(lat.device(), lat.sites()),
-	Vnew_(lat.device(), lat.sites(), lat.sites())
+	Vnew_(lat.device(), lat.sites(), lat.sites()),
+    Qnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	Dnewt_(lat.device(), Nt-1, lat.sites()),
+	Vnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+    Fk_Ut_(lat.device(), Nt-1,lat.sites(),lat.sites()),
+    Fk_Dt_(lat.device(), Nt-1,lat.sites()),   
+	Fk_Vt_(lat.device(), Nt-1,lat.sites(),lat.sites()),
+    invAp1F_Ut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+	invAp1F_Dt_(lat.device(), Nt-1, lat.sites()),
+	invAp1F_Tt_(lat.device(), Nt-1, lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
@@ -312,10 +338,23 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> dd_; //(device, Nx);
     NSL::Tensor<Type> vv_; //(device, Nx, Nx);
     NSL::Tensor<Type> vu_; //(device, Nx, Nx);
+    NSL::Tensor<Type> vut_; //(device, Nt-1, Nx, Nx);
+    NSL::Tensor<Type> uut_; //(device, Nx, Nx);
+    NSL::Tensor<Type> ddt_; //(device, Nx);
+    NSL::Tensor<Type> vvt_; //(device, Nx, Nx);
     NSL::Tensor<Type> udv_; //(device, Nx, Nx);
     NSL::Tensor<Type> Qnew_; //(device, Nx, Nx);
     NSL::Tensor<Type> Dnew_; //(device, Nx);
     NSL::Tensor<Type> Vnew_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Qnewt_; 
+	NSL::Tensor<Type> Dnewt_;
+	NSL::Tensor<Type> Vnewt_; 
+    NSL::Tensor<Type> Fk_Ut_;
+    NSL::Tensor<Type> Fk_Dt_;   
+	NSL::Tensor<Type> Fk_Vt_;
+    NSL::Tensor<Type> invAp1F_Ut_;
+	NSL::Tensor<Type> invAp1F_Dt_;
+	NSL::Tensor<Type> invAp1F_Tt_;
 
     //!  prime numbers used in the recursive tree calculation of loddet
     int primes_[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
