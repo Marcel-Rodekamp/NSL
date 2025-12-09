@@ -88,15 +88,15 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	Qnew_(lat.device(), lat.sites(), lat.sites()),
 	Dnew_(lat.device(), lat.sites()),
 	Vnew_(lat.device(), lat.sites(), lat.sites()),
-    Qnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-	Dnewt_(lat.device(), Nt-1, lat.sites()),
-	Vnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-    Fk_Ut_(lat.device(), Nt-1,lat.sites(),lat.sites()),
-    Fk_Dt_(lat.device(), Nt-1,lat.sites()),   
-	Fk_Vt_(lat.device(), Nt-1,lat.sites(),lat.sites()),
-    invAp1F_Ut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-	invAp1F_Dt_(lat.device(), Nt-1, lat.sites()),
-	invAp1F_Tt_(lat.device(), Nt-1, lat.sites(), lat.sites())
+    Qnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+	Dnewt_(lat.device(), Nt, lat.sites()),
+	Vnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+    Fk_Ut_(lat.device(), Nt, lat.sites(),lat.sites()),
+    Fk_Dt_(lat.device(), Nt, lat.sites()),   
+	Fk_Vt_(lat.device(), Nt, lat.sites(),lat.sites()),
+    invAp1F_Ut_(lat.device(), Nt, lat.sites(), lat.sites()),
+	invAp1F_Dt_(lat.device(), Nt, lat.sites()),
+	invAp1F_Tt_(lat.device(), Nt, lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
@@ -141,15 +141,15 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 	Qnew_(lat.device(), lat.sites(), lat.sites()),
 	Dnew_(lat.device(), lat.sites()),
 	Vnew_(lat.device(), lat.sites(), lat.sites()),
-    Qnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-	Dnewt_(lat.device(), Nt-1, lat.sites()),
-	Vnewt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-    Fk_Ut_(lat.device(), Nt-1,lat.sites(),lat.sites()),
-    Fk_Dt_(lat.device(), Nt-1,lat.sites()),   
-	Fk_Vt_(lat.device(), Nt-1,lat.sites(),lat.sites()),
-    invAp1F_Ut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-	invAp1F_Dt_(lat.device(), Nt-1, lat.sites()),
-	invAp1F_Tt_(lat.device(), Nt-1, lat.sites(), lat.sites())
+    Qnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+	Dnewt_(lat.device(), Nt, lat.sites()),
+	Vnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+    Fk_Ut_(lat.device(), Nt,lat.sites(),lat.sites()),
+    Fk_Dt_(lat.device(), Nt,lat.sites()),   
+	Fk_Vt_(lat.device(), Nt,lat.sites(),lat.sites()),
+    invAp1F_Ut_(lat.device(), Nt, lat.sites(), lat.sites()),
+	invAp1F_Dt_(lat.device(), Nt, lat.sites()),
+	invAp1F_Tt_(lat.device(), Nt, lat.sites(), lat.sites())
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):

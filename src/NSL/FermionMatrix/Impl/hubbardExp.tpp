@@ -393,44 +393,28 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         fkt_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
         fkt_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,fkt_V_(Nt-1-t,NSL::Ellipsis()));
       }
-      // std::cout << "gets to here 1" <<std::endl;
+
       vut_ = NSL::LinAlg::mat_mul(Fkt_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),fkt_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
-      // vut_ = NSL::LinAlg::mat_mul(
-      //     NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),vut_), NSL::LinAlg::diag_embed(fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis())) );
+      
       std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(
           NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),vut_), NSL::LinAlg::diag_embed(fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis())) )
       );
 
-      // std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt( vut_);
-      Fk_Ut_ = NSL::LinAlg::mat_mul(Fkt_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_);
-      Fk_Dt_ = ddt_;
-      Fk_Vt_ = NSL::LinAlg::mat_mul(vvt_,fkt_V_(NSL::Slice(1,Nt),NSL::Ellipsis()));
+      Fk_Ut_(NSL::Slice(0,Nt-1),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_);
+      Fk_Dt_(NSL::Slice(0,Nt-1),NSL::Ellipsis()) = ddt_;
+      Fk_Vt_(NSL::Slice(0,Nt-1),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vvt_,fkt_V_(NSL::Slice(1,Nt),NSL::Ellipsis()));
+      Fk_Ut_(Nt-1,NSL::Ellipsis()) = Fkt_U_(Nt-1,NSL::Ellipsis());
+      Fk_Dt_(Nt-1,NSL::Ellipsis()) = Fkt_D_(Nt-1,NSL::Ellipsis());
+      Fk_Vt_(Nt-1,NSL::Ellipsis()) = Fkt_V_(Nt-1,NSL::Ellipsis());
 
       std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_Vt_, NSL::LinAlg::adjoint(Fk_Ut_),false ) + NSL::LinAlg::diag_embed(Fk_Dt_));
 
-      // std::cout << "gets to here 3" <<std::endl;
-      // std::cout << NSL::eye<Type>(device,Nx).expand(Nt,0);
-      invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::eye<Type>(device,Nx).expand(Nt-1,0));
-      invAp1F_Dt_ = 1./Dnewt_;
+      invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
-      // std::cout << "gets to here 4" <<std::endl;
-      pi_dot_(NSL::Slice(0,Nt-1),NSL::Slice()) = II * NSL::LinAlg::diagonal(
-                                  NSL::LinAlg::mat_mul(
-                                  NSL::LinAlg::mat_mul(invAp1F_Ut_,NSL::LinAlg::diag_embed(invAp1F_Dt_)),
-				                          invAp1F_Tt_));
-
-      // Nt-1 timeslice (last timeslice)
-      std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fkt_V_(Nt-1,NSL::Ellipsis()), NSL::LinAlg::adjoint(Fkt_U_(Nt-1,NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fkt_D_(Nt-1,NSL::Ellipsis())));
-
-      invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, Fkt_V_(Nt-1,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
-      invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
-      invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U_(Nt-1,NSL::Ellipsis()), Qnew_ ));
-
-      pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
-                                  NSL::LinAlg::mat_mul(
-                                  NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
-                                  invAp1F_T_(0,NSL::Ellipsis())));
+      pi_dot_ = II * NSL::LinAlg::diagonal(
+                                  NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
+                                );
 
       return pi_dot_;	
 
