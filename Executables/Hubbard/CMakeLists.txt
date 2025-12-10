@@ -4,8 +4,5 @@ target_link_libraries(flowForTrain_keepLast NSL)
 add_executable(flowForTrain_keepProbable flowForTrain_keepProbable.cpp)
 target_link_libraries(flowForTrain_keepProbable NSL)
 
-add_executable(sausageCorrelator sausageCorrelator.cpp)
-target_link_libraries(sausageCorrelator NSL)
-
 add_executable(propagator propagator.cpp)
 target_link_libraries(propagator NSL)
