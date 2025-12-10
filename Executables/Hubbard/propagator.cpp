@@ -74,6 +74,13 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
+    if (yml["measurements"]["Number Time Sources"]){
+        params["Number Time Sources"] = yml["measurements"]["Number Time Sources"].as<NSL::size_t>();
+    } else {
+        // DEFAULT: Number Time Sources = Nt
+        params["Number Time Sources"] = 1;
+    }
+
     // Standard deviation of proposal lognormal distribution in radial udpate
     if (yml["HMC"]["radial scale"]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();

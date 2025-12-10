@@ -73,8 +73,8 @@ class FermionPropagator: public Measurement {
     void measure(NSL::size_t NumberTimeSources, NSL::size_t config);
     
     void measureDiagonal();
-    void measureRow();
-    void measureColumn();
+    void measureRow(NSL::size_t tsrc);
+    void measureColumn(NSL::size_t tsrc);
 
     void calcPiSigma(NSL::size_t tsrc);
 
@@ -164,8 +164,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
 	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	   }
-	   measureColumn();
-	   //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
+	   measureColumn(tsrc);
+	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
 	}
 	
 	// calculate row
@@ -177,8 +177,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
 	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	   }
-	   measureRow();
-	   //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
+	   measureRow(tsrc);
+	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
 	}
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
@@ -191,7 +191,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      	 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	      }
 	      measureDiagonal();
-	      //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
+	      this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
 	  }
 	}
 
@@ -212,8 +212,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
 	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	   }
-	   measureColumn();
-	   //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
+	   measureColumn(tsrc);
+	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
 	}
 
 	// calculate row
@@ -225,8 +225,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
 	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	   }
-	   measureRow();
-	   //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
+	   measureRow(tsrc);
+	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
 	}
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
@@ -239,7 +239,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      	 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
 	      }
 	      measureDiagonal();
-	      //this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
+	      this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
 	   }
       }
 
@@ -312,28 +312,6 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureDiagonal(){
-
-    // do something and store in corr_
-
-} // measureDiagonal()
-
-template<
-    NSL::Concept::isNumber Type,
-    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
-    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
->
-void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureRow(){
-
-    // do something and store in corr_
-
-} // measureRow()
-
-template<
-    NSL::Concept::isNumber Type,
-    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
-    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
->
-void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureColumn(){
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
     const NSL::Device device = this->phi_.device();
@@ -349,17 +327,182 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureColumn(){
       		                      NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
 				          invAp1F_T_(0,NSL::Ellipsis()));
 
-    for (int t=1;t<Nt;t++){ // t>0 terms
-      if (t<=Nt/2){
+    for (int t=1;t<Nt;t++) {
 
-      } else {
+        vu_ = NSL::LinAlg::mat_mul(PI_V_(t-1,NSL::Ellipsis()),SIGMA_U_(t,NSL::Ellipsis()));
+	vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())),vu_);
+	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(t,NSL::Ellipsis())));
+	
+	if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
+	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+	   std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::svd(vu_);
+	}
+	
+      	Fk_U_(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t-1,NSL::Ellipsis()),uu_);
+	Fk_D_(NSL::Ellipsis()) = dd_;
+	Fk_V_(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(t,NSL::Ellipsis()));
 
-      }
+	std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_V_(NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_U_(NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fk_D_(NSL::Ellipsis())));
+
+        invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, Fk_V_(NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+      	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+      	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_U_(NSL::Ellipsis()), Qnew_ ));
+
+	corr_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+      		                         NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				         invAp1F_T_(0,NSL::Ellipsis()));
 
     }
 
 
-} // measureColumn()
+} // measureDiagonal()
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureRow(NSL::size_t tsrc){
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
+    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+    const NSL::Device device = this->phi_.device();
+
+    // t=0 term
+    std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag(SIGMA_D_(0,NSL::Ellipsis())));
+
+    invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+    invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
+
+    corr_(tsrc,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+      		                      NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				          invAp1F_T_(0,NSL::Ellipsis()));
+
+    for (int t=1;t<Nt;t++){ // t>0 terms
+      if (t>Nt/2){
+
+        vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::solve(SIGMA_V_(t,NSL::Ellipsis()), NSL::LinAlg::adjoint(PI_U_(t-1,NSL::Ellipsis())), false ),NSL::LinAlg::diag(1./SIGMA_D_(t,NSL::Ellipsis())));
+	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::solve(PI_V_(t-1,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(t,NSL::Ellipsis())), false ));
+	vu_ = vu_+ NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis()));
+	
+	if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt(vu_);
+	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::svd(vu_);
+	}
+	
+      	invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, PI_V_(t-1,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+    	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( PI_U_(t-1,NSL::Ellipsis()), Qnew_ ));
+
+      } else {
+
+        vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
+	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
+	vu_ = NSL::LinAlg::mat_mul(vu_,PI_V_(t-1,NSL::Ellipsis()));
+	vu_ = NSL::LinAlg::mat_mul(vu_,SIGMA_U_(t,NSL::Ellipsis()));
+	vu_ = vu_+ NSL::LinAlg::diag(1./SIGMA_D_(t,NSL::Ellipsis()));
+	
+	if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt(vu_);
+	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::svd(vu_);
+	}
+	
+      	invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(Vnew_, SIGMA_U_(t,NSL::Ellipsis()), false);
+    	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Qnew_), SIGMA_V_(t,NSL::Ellipsis()));
+
+      }
+
+      if((t+tsrc)%Nt > tsrc ) {
+        corr_((t+tsrc)%Nt,NSL::Ellipsis()) = -NSL::LinAlg::mat_mul(
+      		                              NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				                                   invAp1F_T_(0,NSL::Ellipsis()));
+      } else {
+        corr_((t+tsrc)%Nt,NSL::Ellipsis()) =  NSL::LinAlg::mat_mul(
+      		                              NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				                                   invAp1F_T_(0,NSL::Ellipsis()));
+      }
+
+    }
+    // do something and store in corr_
+
+} // measureRow(tsrc)
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureColumn(NSL::size_t tsrc){
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
+    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+    const NSL::Device device = this->phi_.device();
+
+    // t=0 term
+    std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())), false ) + NSL::LinAlg::diag(SIGMA_D_(0,NSL::Ellipsis())));
+
+    invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+    invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
+
+    corr_(tsrc,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+      		                      NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				          invAp1F_T_(0,NSL::Ellipsis()));
+
+    for (int t=1;t<Nt;t++){ // t>0 terms
+      if (t<Nt/2){
+
+        vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::solve(PI_V_(t-1,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(t,NSL::Ellipsis())), false ),NSL::LinAlg::diag(1./PI_D_(t-1,NSL::Ellipsis())));
+	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::solve(SIGMA_V_(t,NSL::Ellipsis()), NSL::LinAlg::adjoint(PI_U_(t-1,NSL::Ellipsis())), false ));
+	vu_ = vu_+ NSL::LinAlg::diag(SIGMA_D_(t,NSL::Ellipsis()));
+	
+	if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt(vu_);
+	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::svd(vu_);
+	}
+	
+      	invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(t,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
+    	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(t,NSL::Ellipsis()), Qnew_ ));
+
+      } else {
+
+        vu_ = NSL::LinAlg::mat_mul(PI_V_(t-1,NSL::Ellipsis()),SIGMA_U_(t,NSL::Ellipsis()));
+	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(t,NSL::Ellipsis())));
+	vu_ = NSL::LinAlg::mat_mul(vu_,SIGMA_V_(t,NSL::Ellipsis()));
+	vu_ = NSL::LinAlg::mat_mul(vu_,PI_U_(t-1,NSL::Ellipsis()));
+	vu_ = vu_+ NSL::LinAlg::diag(1./PI_D_(t-1,NSL::Ellipsis()));
+	
+	if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt(vu_);
+	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+	   std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::svd(vu_);
+	}
+	
+      	invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(Vnew_, PI_U_(t-1,NSL::Ellipsis()), false);
+    	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
+    	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Qnew_), PI_V_(t-1,NSL::Ellipsis()));
+
+      }
+
+      if((t+tsrc)%Nt > tsrc){
+        corr_((t+tsrc)%Nt,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+      		                             NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				                                  invAp1F_T_(0,NSL::Ellipsis()));
+      } else {
+        corr_((t+tsrc)%Nt,NSL::Ellipsis()) = -NSL::LinAlg::mat_mul(
+      		                              NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
+				                                   invAp1F_T_(0,NSL::Ellipsis()));
+     }
+     
+    }
+
+
+} // measureColumn(tsrc)
 
 template<
     NSL::Concept::isNumber Type,
