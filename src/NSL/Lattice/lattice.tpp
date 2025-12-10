@@ -7,6 +7,10 @@
 #include "../LinAlg/mat_exp.tpp"
 #include "../LinAlg/eigh.tpp"
 #include "../LinAlg/svd.tpp"
+#include "../LinAlg/diag.tpp"
+#include "../LinAlg/mat_mul.tpp"
+#include "../LinAlg/qr.tpp"
+// #include "../LinAlg.hpp"
 
 namespace NSL::Lattice {
 
@@ -66,6 +70,15 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice:
         this->svd_hopping_matrix_[delta] = NSL::LinAlg::svd(this->exp_hopping_matrix(delta));
     }
     return this->svd_hopping_matrix_[delta];
+}
+
+template <typename Type>
+std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>  NSL::Lattice::SpatialLattice<Type>::qr_hopping(Type delta){
+    if(! qr_hopping_matrix_.contains(delta)){
+        // compute if it's not in qr_hopping_matrix_ already
+        this->qr_hopping_matrix_[delta] = NSL::LinAlg::udt(this->exp_hopping_matrix(delta));
+    }
+    return this->qr_hopping_matrix_[delta];
 }
 
 template <typename Type>

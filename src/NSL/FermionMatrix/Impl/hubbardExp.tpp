@@ -365,10 +365,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     else if (!this->stabilityMethod.compare("QR")) {
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
-      std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
       Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
-      Fkt_U_ = Uk_;
 
       fkt_V_=Fkt_V_;
       fkt_D_=Fkt_D_;
@@ -376,19 +375,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
       for (int t=1;t<Nt;t++) {
         // Fkt(t)=Fk(t)...Fk(0)
-        vu_ = NSL::LinAlg::mat_mul(Fkt_V_(t,NSL::Ellipsis()),Fkt_U_(t-1,NSL::Ellipsis()));
-        vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(Fkt_D_(t,NSL::Ellipsis())),vu_);
-        vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(Fkt_D_(t-1,NSL::Ellipsis())));
-        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
+        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul( NSL::LinAlg::diag(Fkt_D_(t,NSL::Ellipsis())),NSL::LinAlg::mat_mul( Fkt_V_(t,NSL::Ellipsis()),Fkt_U_(t-1,NSL::Ellipsis()) ) ),NSL::LinAlg::diag(Fkt_D_(t-1,NSL::Ellipsis()))) );
         Fkt_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(t,NSL::Ellipsis()),uu_);
         Fkt_D_(t,NSL::Ellipsis()) = dd_;
         Fkt_V_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,Fkt_V_(t-1,NSL::Ellipsis()));
 
         // fk(t)=Fk(Nt-1)...Fk(t)
-        vu_ = NSL::LinAlg::mat_mul(fkt_V_(Nt-t,NSL::Ellipsis()),fkt_U_(Nt-1-t,NSL::Ellipsis()));
-        vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(fkt_D_(Nt-1-t,NSL::Ellipsis())));
-        vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(fkt_D_(Nt-t,NSL::Ellipsis())),vu_);
-        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
+        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(NSL::LinAlg::diag(fkt_D_(Nt-t,NSL::Ellipsis())),NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(fkt_V_(Nt-t,NSL::Ellipsis()),fkt_U_(Nt-1-t,NSL::Ellipsis())),NSL::LinAlg::diag(fkt_D_(Nt-1-t,NSL::Ellipsis())))));
         fkt_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(fkt_U_(Nt-t,NSL::Ellipsis()),uu_);
         fkt_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
         fkt_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,fkt_V_(Nt-1-t,NSL::Ellipsis()));
