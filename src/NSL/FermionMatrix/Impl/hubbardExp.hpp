@@ -320,9 +320,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     NSL::Tensor<Type> Vnewt_; //(device, Nx, Nx);
     NSL::Tensor<Type> Fk_Ut_;
     NSL::Tensor<Type> Fk_Dt_;   
-	NSL::Tensor<Type> Fk_Vt_;
+    NSL::Tensor<Type> Fk_Vt_;
     NSL::Tensor<Type> invAp1F_Ut_;
-	NSL::Tensor<Type> invAp1F_Tt_;
+    NSL::Tensor<Type> invAp1F_Tt_;
 
     //!  prime numbers used in the recursive tree calculation of loddet
     int primes_[50] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
@@ -349,9 +349,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
-	invAp1F_U_.expand(1);
-	invAp1F_D_.expand(1);
-	invAp1F_T_.expand(1);
+	invAp1F_Ut_.expand(1);
+	invAp1F_Tt_.expand(1);
     }
 };
 } // namespace FermionMatrix
