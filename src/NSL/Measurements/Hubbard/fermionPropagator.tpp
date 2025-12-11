@@ -31,11 +31,9 @@ class FermionPropagator: public Measurement {
                 params["Nx"].to<NSL::size_t>()
             ),
             basenode_(basenode_),
-	    invAp1F_(lattice.device(), 1, lattice.sites(), lattice.sites()),
 	invAp1F_U_(lattice.device(), 1, lattice.sites(), lattice.sites()),
 	invAp1F_D_(lattice.device(), 1, lattice.sites()),
 	invAp1F_T_(lattice.device(), 1, lattice.sites(), lattice.sites()),
-        pi_dot_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
 	expKdiag_(lattice.device(), lattice.sites()),
 	Uk_(lattice.device(), lattice.sites(), lattice.sites()),
 	Vk_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -52,7 +50,6 @@ class FermionPropagator: public Measurement {
 	dd_(lattice.device(), lattice.sites()),
 	vv_(lattice.device(), lattice.sites(), lattice.sites()),
 	vu_(lattice.device(), lattice.sites(), lattice.sites()),
-	udv_(lattice.device(), lattice.sites(), lattice.sites()),
 	Qnew_(lattice.device(), lattice.sites(), lattice.sites()),
 	Dnew_(lattice.device(), lattice.sites()),
 	Vnew_(lattice.device(), lattice.sites(), lattice.sites())
@@ -79,8 +76,6 @@ class FermionPropagator: public Measurement {
     void calcPiSigma(NSL::size_t tsrc);
 
     // maybe make these private later. . .
-    NSL::Tensor<Type> invAp1F_;
-    NSL::Tensor<Type> pi_dot_;
     NSL::Tensor<Type> invAp1F_U_;
     NSL::Tensor<Type> invAp1F_D_;
     NSL::Tensor<Type> invAp1F_T_;
@@ -98,7 +93,6 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> dd_; //(device, Nx);
     NSL::Tensor<Type> vv_; //(device, Nx, Nx);
     NSL::Tensor<Type> vu_; //(device, Nx, Nx);
-    NSL::Tensor<Type> udv_; //(device, Nx, Nx);
     NSL::Tensor<Type> Qnew_; //(device, Nx, Nx);
     NSL::Tensor<Type> Dnew_; //(device, Nx);
     NSL::Tensor<Type> Vnew_; //(device, Nx, Nx);
