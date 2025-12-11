@@ -215,14 +215,14 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	      dd_ = Fkt_D_(prime*tt, NSL::Ellipsis());
 	      vv_ = Fkt_V_(prime*tt, NSL::Ellipsis());
 	      for (int pr=0;pr<prime-1;pr++){
-	        vu_ = NSL::LinAlg::mat_mul(vv_ , Fkt_U_(prime*tt+pr+1, NSL::Ellipsis()));
-          udv_ = NSL::LinAlg::mat_mul( NSL::LinAlg::diag(dd_), vu_ );
-          udv_ = NSL::LinAlg::mat_mul(udv_ , NSL::LinAlg::diag(Fkt_D_(prime*tt+pr+1, NSL::Ellipsis())));
-          std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::udt(udv_(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
-          Fkt_U_(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(tt, NSL::Ellipsis()), uu_);
-          vv_ = NSL::LinAlg::mat_mul(vv_,Fkt_V_(prime*tt+pr+1,NSL::Ellipsis()));
-          Fkt_D_(tt, NSL::Ellipsis()) = dd_;
-	      	Fkt_V_(tt, NSL::Ellipsis()) = vv_;
+	         vu_ = NSL::LinAlg::mat_mul(vv_ , Fkt_U_(prime*tt+pr+1, NSL::Ellipsis()));
+		 udv_ = NSL::LinAlg::mat_mul( NSL::LinAlg::diag(dd_), vu_ );
+		 udv_ = NSL::LinAlg::mat_mul(udv_ , NSL::LinAlg::diag(Fkt_D_(prime*tt+pr+1, NSL::Ellipsis())));
+		 std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::udt(udv_(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+		 Fkt_U_(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(tt, NSL::Ellipsis()), uu_);
+		 vv_ = NSL::LinAlg::mat_mul(vv_,Fkt_V_(prime*tt+pr+1,NSL::Ellipsis()));
+		 Fkt_D_(tt, NSL::Ellipsis()) = dd_;
+	      	 Fkt_V_(tt, NSL::Ellipsis()) = vv_;
 	      }
            }
 	} else {

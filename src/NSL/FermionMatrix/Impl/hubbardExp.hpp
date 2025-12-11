@@ -275,27 +275,28 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! chemical potential, stored as mu_ = muTilde_ = delta * mu 
     Type mu_;
 
-    protected:
-    //! species{Particle or Hole} of the fermion matrix
-    NSL::Hubbard::Species species_;
-
-
     //! delta = beta/N_t
     Type delta_;
 
     // Sign of exp( +/- kappa), is assigned in populate
     int sgn_;
 
-    //! The configuration phi (N_t x N_x)
-    NSL::Tensor<Type> phi_;
     //! Exponential of phi
     NSL::Tensor<Type> phiExp_;
     //! Inverse Exponential of phi
     NSL::Tensor<Type> phiExpInv_;
+  
+    protected:
+    //! species{Particle or Hole} of the fermion matrix
+    NSL::Hubbard::Species species_;
+
+    //! The configuration phi (N_t x N_x)
+    NSL::Tensor<Type> phi_;
 
     //! Memory used for the implementation of the force
     NSL::Tensor<Type> Fk_;
     NSL::Tensor<Type> FkFkFk_;
+    NSL::Tensor<Type> FkFkFk0_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
     NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
@@ -345,8 +346,12 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExpInv_.expand(1);
         Fk_.expand(1);
         FkFkFk_.expand(1);
+        FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
+	invAp1F_U_.expand(1);
+	invAp1F_D_.expand(1);
+	invAp1F_T_.expand(1);
     }
 };
 } // namespace FermionMatrix
