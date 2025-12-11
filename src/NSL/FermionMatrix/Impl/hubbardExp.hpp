@@ -296,7 +296,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     //! Memory used for the implementation of the force
     NSL::Tensor<Type> Fk_;
     NSL::Tensor<Type> FkFkFk_;
-    NSL::Tensor<Type> FkFkFk0_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
     NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
@@ -346,11 +345,8 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExpInv_.expand(1);
         Fk_.expand(1);
         FkFkFk_.expand(1);
-        FkFkFk0_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
-	invAp1F_Ut_.expand(1);
-	invAp1F_Tt_.expand(1);
     }
 };
 } // namespace FermionMatrix
