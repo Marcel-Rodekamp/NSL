@@ -17,6 +17,12 @@ inline NSL::Tensor<Type> diagonal(const NSL::Tensor<Type> & t){
     return NSL::Tensor<Type>(torch::diagonal(t, 0, -2,-1),true);
 }
 
+//! return the diagonal elements of a NSL::Tensor with square dimension
+template <typename Type> 
+inline NSL::Tensor<Type> diag_embed(const NSL::Tensor<Type> & t){
+    return NSL::Tensor<Type>(torch::diag_embed(t, 0, -2,-1),true);
+}
+
 } // namespace NSL::LinAlg
 
 #endif
