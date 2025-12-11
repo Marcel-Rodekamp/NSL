@@ -365,7 +365,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     else if (!this->stabilityMethod.compare("QR")) {
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
-      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
       Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
 
@@ -400,9 +400,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       Fk_Dt_(Nt-1,NSL::Ellipsis()) = Fkt_D_(Nt-1,NSL::Ellipsis());
       Fk_Vt_(Nt-1,NSL::Ellipsis()) = Fkt_V_(Nt-1,NSL::Ellipsis());
 
-      std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_Vt_, NSL::LinAlg::adjoint(Fk_Ut_),false ) + NSL::LinAlg::diag_embed(Fk_Dt_));
+      std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular(Fk_Vt_, NSL::LinAlg::adjoint(Fk_Ut_),false ) + NSL::LinAlg::diag_embed(Fk_Dt_));
 
-      invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
+      invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
