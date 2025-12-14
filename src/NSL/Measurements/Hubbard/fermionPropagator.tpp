@@ -38,13 +38,13 @@ class FermionPropagator: public Measurement {
 	Uk_(lattice.device(), lattice.sites(), lattice.sites()),
 	Vk_(lattice.device(), lattice.sites(), lattice.sites()),
 	PI_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-        PI_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
-        PI_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-        SIGMA_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-        SIGMA_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
-        SIGMA_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-        Fk_U_(lattice.device(),lattice.sites(),lattice.sites()),
-        Fk_D_(lattice.device(),lattice.sites()),   
+    PI_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
+    PI_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    SIGMA_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    SIGMA_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
+    SIGMA_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    Fk_U_(lattice.device(),lattice.sites(),lattice.sites()),
+    Fk_D_(lattice.device(),lattice.sites()),   
 	Fk_V_(lattice.device(),lattice.sites(),lattice.sites()),
 	uu_(lattice.device(), lattice.sites(), lattice.sites()),
 	dd_(lattice.device(), lattice.sites()),
@@ -59,7 +59,16 @@ class FermionPropagator: public Measurement {
     vut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     invAp1F_Ut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
 	invAp1F_Dt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
-	invAp1F_Tt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites())
+	invAp1F_Tt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    Fk_Ut_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    Fk_Dt_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),   
+	Fk_Vt_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+	uut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+	ddt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
+	vvt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    Qnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites()),
+	Dnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites()),
+	Vnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites())
     {}
 
     FermionPropagator(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5):
@@ -110,6 +119,15 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> invAp1F_Ut_;
     NSL::Tensor<Type> invAp1F_Dt_;
     NSL::Tensor<Type> invAp1F_Tt_;
+    NSL::Tensor<Type> Fk_Ut_; //(device,Nx,Nx);
+    NSL::Tensor<Type> Fk_Dt_; //(device,Nx);   
+    NSL::Tensor<Type> Fk_Vt_; //(device,Nx,Nx);
+    NSL::Tensor<Type> uut_; //(device, Nx, Nx);
+    NSL::Tensor<Type> ddt_; //(device, Nx);
+    NSL::Tensor<Type> vvt_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Qnewtt_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Dnewtt_; //(device, Nx);
+    NSL::Tensor<Type> Vnewtt_; //(device, Nx, Nx);
 
     protected:
     bool skip_(bool overwrite, std::string node){
@@ -325,43 +343,42 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureDiagonal(){
     const NSL::Device device = this->phi_.device();
 
     // t=0 term
-    std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag(SIGMA_D_(0,NSL::Ellipsis())));
+    std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
 
-    invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
-    invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
-    invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
+    invAp1F_Ut_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnew_));
+    invAp1F_Tt_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
 
-    corr_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
-      		                      NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
-				          invAp1F_T_(0,NSL::Ellipsis()));
+    corr_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(invAp1F_Ut_(0,NSL::Ellipsis()),invAp1F_Tt_(0,NSL::Ellipsis()));
 
-    for (int t=1;t<Nt;t++) {
 
-        vu_ = NSL::LinAlg::mat_mul(PI_V_(t-1,NSL::Ellipsis()),SIGMA_U_(t,NSL::Ellipsis()));
-	vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())),vu_);
-	vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(t,NSL::Ellipsis())));
-	
-	if (!this->hfm_.stabilityMethod.compare("QR")) {
-	   std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
+
+    vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
+	vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(PI_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),vut_(NSL::Slice(1,Nt),NSL::Ellipsis()));
+	vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vut_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis())));
+
+
+    // std::cout << "gets here 1" << std::endl;
+    if (!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt(vut_);
 	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
-	   std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::svd(vu_);
+	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::svd(vut_);
 	}
-	
-      	Fk_U_(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t-1,NSL::Ellipsis()),uu_);
-	Fk_D_(NSL::Ellipsis()) = dd_;
-	Fk_V_(NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(t,NSL::Ellipsis()));
 
-	std::tie( Qnew_, Dnew_, Vnew_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_V_(NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_U_(NSL::Ellipsis())),false ) + NSL::LinAlg::diag(Fk_D_(NSL::Ellipsis())));
 
-        invAp1F_U_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, Fk_V_(NSL::Ellipsis())) , NSL::eye<Type>(device,Nx));
-      	invAp1F_D_(0,NSL::Ellipsis()) = 1./Dnew_;
-      	invAp1F_T_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_U_(NSL::Ellipsis()), Qnew_ ));
+    // std::cout << "gets here 2" << std::endl;
+    Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_(NSL::Slice(1,Nt),NSL::Ellipsis()));
+    Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = ddt_(NSL::Slice(1,Nt),NSL::Ellipsis());
+	Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vvt_(NSL::Slice(1,Nt),NSL::Ellipsis()),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
-	corr_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
-      		                         NSL::LinAlg::mat_mul(invAp1F_U_(0,NSL::Ellipsis()),NSL::LinAlg::diag(invAp1F_D_(0,NSL::Ellipsis()))),
-				         invAp1F_T_(0,NSL::Ellipsis()));
+    // std::cout << "gets here 3" << std::endl;
+    std::tie( Qnewtt_, Dnewtt_, Vnewtt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis())));
 
-    }
+    // std::cout << "gets here 4" << std::endl;
+    invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewtt_, Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnewtt_));
+    invAp1F_Tt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()), Qnewtt_ ));
+    // std::cout << "gets here 5" << std::endl;
+
+	corr_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()),invAp1F_Tt_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
 
 } // measureDiagonal()
