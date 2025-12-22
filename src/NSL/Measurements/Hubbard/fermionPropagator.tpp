@@ -31,9 +31,6 @@ class FermionPropagator: public Measurement {
                 params["Nx"].to<NSL::size_t>()
             ),
             basenode_(basenode_),
-	invAp1F_U_(lattice.device(), 1, lattice.sites(), lattice.sites()),
-	invAp1F_D_(lattice.device(), 1, lattice.sites()),
-	invAp1F_T_(lattice.device(), 1, lattice.sites(), lattice.sites()),
 	expKdiag_(lattice.device(), lattice.sites()),
 	Uk_(lattice.device(), lattice.sites(), lattice.sites()),
 	Vk_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -43,9 +40,6 @@ class FermionPropagator: public Measurement {
     SIGMA_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
     SIGMA_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
     SIGMA_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    Fk_U_(lattice.device(),lattice.sites(),lattice.sites()),
-    Fk_D_(lattice.device(),lattice.sites()),   
-	Fk_V_(lattice.device(),lattice.sites(),lattice.sites()),
 	uu_(lattice.device(), lattice.sites(), lattice.sites()),
 	dd_(lattice.device(), lattice.sites()),
 	vv_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -58,7 +52,6 @@ class FermionPropagator: public Measurement {
 	Vnewt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     vut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     invAp1F_Ut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-	invAp1F_Dt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
 	invAp1F_Tt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     Fk_Ut_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
     Fk_Dt_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),   
@@ -92,9 +85,6 @@ class FermionPropagator: public Measurement {
     void calcPiSigma(NSL::size_t tsrc);
 
     // maybe make these private later. . .
-    NSL::Tensor<Type> invAp1F_U_;
-    NSL::Tensor<Type> invAp1F_D_;
-    NSL::Tensor<Type> invAp1F_T_;
     NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
     NSL::Tensor<Type> PI_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
     NSL::Tensor<Type> PI_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
@@ -102,9 +92,6 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> SIGMA_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
     NSL::Tensor<Type> SIGMA_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
     NSL::Tensor<Type> SIGMA_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
-    NSL::Tensor<Type> Fk_U_; //(device,Nx,Nx);
-    NSL::Tensor<Type> Fk_D_; //(device,Nx);   
-    NSL::Tensor<Type> Fk_V_; //(device,Nx,Nx);
     NSL::Tensor<Type> uu_; //(device, Nx, Nx);
     NSL::Tensor<Type> dd_; //(device, Nx);
     NSL::Tensor<Type> vv_; //(device, Nx, Nx);
@@ -112,22 +99,21 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> Qnew_; //(device, Nx, Nx);
     NSL::Tensor<Type> Dnew_; //(device, Nx);
     NSL::Tensor<Type> Vnew_; //(device, Nx, Nx);
-    NSL::Tensor<Type> Qnewt_; //(device, Nx, Nx);
-    NSL::Tensor<Type> Dnewt_; //(device, Nx);
-    NSL::Tensor<Type> Vnewt_; //(device, Nx, Nx);
-    NSL::Tensor<Type> vut_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Qnewt_; //(device, Nt, Nx, Nx);
+    NSL::Tensor<Type> Dnewt_; //(device, Nt, Nx);
+    NSL::Tensor<Type> Vnewt_; //(device, Nt, Nx, Nx);
+    NSL::Tensor<Type> vut_; //(device, Nt, Nx, Nx);
     NSL::Tensor<Type> invAp1F_Ut_;
-    NSL::Tensor<Type> invAp1F_Dt_;
     NSL::Tensor<Type> invAp1F_Tt_;
-    NSL::Tensor<Type> Fk_Ut_; //(device,Nx,Nx);
-    NSL::Tensor<Type> Fk_Dt_; //(device,Nx);   
-    NSL::Tensor<Type> Fk_Vt_; //(device,Nx,Nx);
-    NSL::Tensor<Type> uut_; //(device, Nx, Nx);
-    NSL::Tensor<Type> ddt_; //(device, Nx);
-    NSL::Tensor<Type> vvt_; //(device, Nx, Nx);
-    NSL::Tensor<Type> Qnewtt_; //(device, Nx, Nx);
-    NSL::Tensor<Type> Dnewtt_; //(device, Nx);
-    NSL::Tensor<Type> Vnewtt_; //(device, Nx, Nx);
+    NSL::Tensor<Type> Fk_Ut_; //(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> Fk_Dt_; //(device,Nt,Nx);   
+    NSL::Tensor<Type> Fk_Vt_; //(device,Nt,Nx,Nx);
+    NSL::Tensor<Type> uut_; //(device, Nt, Nx, Nx);
+    NSL::Tensor<Type> ddt_; //(device, Nt, Nx);
+    NSL::Tensor<Type> vvt_; //(device, Nt, Nx, Nx);
+    NSL::Tensor<Type> Qnewtt_; //(device, Nt-1, Nx, Nx);
+    NSL::Tensor<Type> Dnewtt_; //(device, Nt-1, Nx);
+    NSL::Tensor<Type> Vnewtt_; //(device, Nt-1, Nx, Nx);
 
     protected:
     bool skip_(bool overwrite, std::string node){
@@ -357,7 +343,6 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureDiagonal(){
 	vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vut_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis())));
 
 
-    // std::cout << "gets here 1" << std::endl;
     if (!this->hfm_.stabilityMethod.compare("QR")) {
 	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt(vut_);
 	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
@@ -365,19 +350,15 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureDiagonal(){
 	}
 
 
-    // std::cout << "gets here 2" << std::endl;
     Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_(NSL::Slice(1,Nt),NSL::Ellipsis()));
     Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = ddt_(NSL::Slice(1,Nt),NSL::Ellipsis());
 	Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vvt_(NSL::Slice(1,Nt),NSL::Ellipsis()),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
-    // std::cout << "gets here 3" << std::endl;
     std::tie( Qnewtt_, Dnewtt_, Vnewtt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis())));
 
-    // std::cout << "gets here 4" << std::endl;
     invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewtt_, Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnewtt_));
     invAp1F_Tt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()), Qnewtt_ ));
-    // std::cout << "gets here 5" << std::endl;
-
+    
 	corr_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()),invAp1F_Tt_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
 
