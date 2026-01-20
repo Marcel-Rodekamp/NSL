@@ -109,7 +109,7 @@ int main(int argc, char* argv[]){
     // writeMeta()
     //
     NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>
       > S_fermion(lattice,params);
 
     // set stability method if defined in yml file, otherwise default is "QR"

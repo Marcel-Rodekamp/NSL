@@ -5,6 +5,7 @@
 
 namespace NSL::Hubbard{
 enum Species{ Particle, Hole };
+enum Spin{ Up, Down };
 
 template<NSL::Concept::isNumber Type>
 Type tilde(NSL::Parameter & params, std::string key){
