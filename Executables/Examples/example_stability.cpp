@@ -95,32 +95,7 @@ int main(int argc, char* argv[]){
 
     // define a hubbard gauge action
     NSL::Action::HubbardGaugeAction<Type> Sg(params);
-
-    // define a hubbard fermion action, the discretization (HubbardExp) is
-    // hard wired in the meta data if you change this here, also change the
-    // writeMeta()
-    //
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > Sf_direct(lattice,params);
-
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > Sf_QR(lattice,params);
-
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > Sf_SVD(lattice,params);
-
-    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
-    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
-    Sf_SVD.hfm_.stabilityMethod = "SVD";
-
-    // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S_direct = Sg + Sf_direct;
-    NSL::Action::Action S_QR = Sg + Sf_QR;
-    NSL::Action::Action S_SVD = Sg + Sf_SVD;
-
+    
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
 
@@ -160,20 +135,78 @@ int main(int argc, char* argv[]){
     momentum["phi"].randn();
     momentum["phi"].imag() = 0.0;
 
+
+    // define a hubbard fermion action, the discretization (HubbardExp) is
+    // hard wired in the meta data if you change this here, also change the
+    // writeMeta()
+    //
+
+    /* charge basis (uncomment if necessary) */
+
+    // std::cout << "CHARGE basis" << std::endl;
+    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_direct(lattice,params);
+    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_QR(lattice,params);
+    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_SVD(lattice,params);
+
+    // Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
+    // Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
+    // Sf_SVD.hfm_.stabilityMethod = "SVD";
+
+    // // Initialize the action being the sum of the gauge action & fermion action
+    // NSL::Action::Action S_direct = Sg + Sf_direct;
+    // NSL::Action::Action S_QR = Sg + Sf_QR;
+    // NSL::Action::Action S_SVD = Sg + Sf_SVD;
+
+    // S_direct(config);
+    // S_QR(config);
+    // S_SVD(config);
+    
+    // std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
+    // Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    // Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    // Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    // std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    // Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    // Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    // Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    // std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    
+    /* charge basis (uncomment if necessary) */
+
+    
+    /* spin basis (uncomment if necessary) */
+
+    std::cout << "SPIN basis" << std::endl;
+    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_direct(lattice,params);
+    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_QR(lattice,params);
+    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_SVD(lattice,params);
+
+    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
+    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
+    Sf_SVD.hfm_.stabilityMethod = "SVD";
+
+    // Initialize the action being the sum of the gauge action & fermion action
+    NSL::Action::Action S_direct = Sg + Sf_direct;
+    NSL::Action::Action S_QR = Sg + Sf_QR;
+    NSL::Action::Action S_SVD = Sg + Sf_SVD;
+
     S_direct(config);
     S_QR(config);
     S_SVD(config);
-
+    
     std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
-    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
     std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
     std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    
+    /* spin basis (uncomment if necessary) */
 
+    
     Type Hi_direct, Hf_direct;
     Type Hi_QR, Hf_QR;
     Type Hi_SVD, Hf_SVD;

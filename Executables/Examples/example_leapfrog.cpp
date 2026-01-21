@@ -78,7 +78,7 @@ int main(int argc, char* argv[]){
     if (yml["stability"] ) {
       params["stability"]    = yml["stability"].as<std::string>();
     }
-    
+
     // Standard deviation of proposal lognormal distribution in radial udpate
     if (yml["HMC"]["radial scale"]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();
@@ -108,10 +108,12 @@ int main(int argc, char* argv[]){
     // hard wired in the meta data if you change this here, also change the
     // writeMeta()
     //
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>
-      > S_fermion(lattice,params);
 
+    /* CHARGE basis (uncomment if necessary) */
+    //NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(lattice,params);  // this is the "CHARGE" basis
+    /* SPIN basis (uncomment if necessary) */
+    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> S_fermion(lattice,params);  // this is the "SPIN" basis
+    
     // set stability method if defined in yml file, otherwise default is "QR"
     if (yml["stability"] ) {
       std::string stabilityMethod = params["stability"];
@@ -120,7 +122,6 @@ int main(int argc, char* argv[]){
 
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
-
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);

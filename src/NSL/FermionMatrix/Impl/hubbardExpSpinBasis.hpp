@@ -143,7 +143,7 @@ class HubbardExpSpinBasis : public FermionMatrix<Type,LatticeType> {
     std::string stabilityMethod = "QR";  // options are "QR", "DIRECTINVERSE", "SVD"
 
     // flag for defining which basis
-    std::string basis = "CHARGE";  // options are "CHARGE" (default) and "SPIN" 
+    std::string basis = "SPIN";  
 
     //! Populates the fermion matrix with a new configuration phi using spin
     /*!
