@@ -142,6 +142,9 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
     // flag for defining which stability method to use
     std::string stabilityMethod = "QR";  // options are "QR", "DIRECTINVERSE", "SVD"
 
+    // flag for defining which basis
+    std::string basis = "CHARGE";  
+  
     //! Populates the fermion matrix with a new configuration phi using species
     /*!
      * For measurements the source vector might by of shape Nt,Nx,Nx (identity matrix

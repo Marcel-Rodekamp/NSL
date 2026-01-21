@@ -142,6 +142,9 @@ class HubbardExpSpinBasis : public FermionMatrix<Type,LatticeType> {
     // flag for defining which stability method to use
     std::string stabilityMethod = "QR";  // options are "QR", "DIRECTINVERSE", "SVD"
 
+    // flag for defining which basis
+    std::string basis = "CHARGE";  // options are "CHARGE" (default) and "SPIN" 
+
     //! Populates the fermion matrix with a new configuration phi using spin
     /*!
      * For measurements the source vector might by of shape Nt,Nx,Nx (identity matrix
@@ -190,9 +193,9 @@ class HubbardExpSpinBasis : public FermionMatrix<Type,LatticeType> {
         phi_ = phi;
 	
         // calculate exp(+/- i phi)
-        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi);
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>( sgn_ , 0) * phi);
         // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi);
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(-sgn_ , 0) * phi);
 
     }
 
@@ -201,10 +204,10 @@ class HubbardExpSpinBasis : public FermionMatrix<Type,LatticeType> {
         // Reassign phi
         phi_ = phi;
 	
-        // calculate exp(+/- i phi)
-        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,sgn_) * phi + sgn_*mu_);
-        // calculate exp(+/- phi)^{-1} = exp(-/+ i phi)
-        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(0,-sgn_) * phi - sgn_*mu_);
+        // calculate exp(+/- phi + mu)
+        this->phiExp_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>( sgn_ , 0) * phi + mu_);
+        // calculate exp(+/- phi)^{-1} = exp(-/+ phi - mu)
+        this->phiExpInv_ = NSL::LinAlg::exp(NSL::complex<NSL::RealTypeOf<Type>>(-sgn_ , 0) * phi - mu_);
 
     }
       

@@ -15,14 +15,14 @@ namespace NSL::FermionMatrix {
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::F_(const NSL::Tensor<Type> & psi){
     // We want to compute 
-    //        [\exp(δK)]_{xy} \exp(i φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
+    //        [\exp(δK)]_{xy} \exp( φ_{iy}) B_t δ_{t,i+1} \psi_{yi}
     // Let us first group things into element-wise multiplications, matrix multiplications, and shifts.
-    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    //        B_t δ_{t,i+1} [\exp(δK)]_{xy} (\exp( φ_{iy}) \psi_{yi})
     //        |---shift---> |---mat mul---> |--- element-wise mul ---|
 
     NSL::Tensor<Type> Fpsi = NSL::LinAlg::mat_vec(
     // The needed matrix multiplication is on the spatial index.
-        this->Lat.exp_hopping_matrix(sgn_*delta_),
+        this->Lat.exp_hopping_matrix( delta_ ),
     // To get correct broadcasting we transpose the element-wise multiplication
     // so that each column is Nx big.
         (this->phiExp_ * psi).transpose(-1,-2)
@@ -30,7 +30,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::F_(
     // and then transpose back.
 
     // Now Fpsi contains
-    // [\exp(δK)]_{xy} (\exp(i φ_{iy}) \psi_{yi})
+    // [\exp(δK)]_{xy} (\exp( φ_{iy}) \psi_{yi})
     // What remains is to shift it
     // and apply B
     Fpsi.shift(/*shift*/1,/*dim*/-2,/*boundary*/Type(-1));
@@ -43,33 +43,37 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::M(c
     return psi - this->F_(psi);
 }
 
+
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::Mdagger(const NSL::Tensor<Type> & psi){
+
+    /** I'm not sure if this routine are needed anymore since we use decompositions to measure correlators --T.L. 21.01.26 **/
+    
     /** We derive M† as follows:
-      *     M_{tx,iy}   = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}   exp(+iφ_{iy}  ) δ_{t,i+1}
-      *     M_{tx,iy}^* = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}^* exp(-iφ_{iy}^*) δ_{t,i+1}
+      *     M_{tx,iy}   = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}   exp(+φ_{iy}  ) δ_{t,i+1}
+      *     M_{tx,iy}^* = δ_{xy} δ_{ti} - B_t [exp(δΚ)]_{xy}^* exp(+φ_{iy}^*) δ_{t,i+1}
       *         = (M^*T)_{iy,tx} = (M†)_{iy,tx}
       * so now we just relabel
-      *     M†_{tx,iy}  = δ_{yx} δ_{it} - B_i [exp(δΚ)]_{yx}^* exp(-iφ_{tx}^*) δ_{i,t+1}
+      *     M†_{tx,iy}  = δ_{yx} δ_{it} - B_i [exp(δΚ)]_{yx}^* exp(+φ_{tx}^*) δ_{i,t+1}
       * and massage
-      *     M†_{tx,iy}  = δ_{xy} δ_{ti} - B_i [exp(δΚ)†]_{xy} exp(-iφ_{tx}^*) δ_{t+1,i}.
-      *                 = δ_{xy} δ_{ti} - B_i [exp(δ^* Κ)]_{xy} exp(-iφ_{tx}^*) δ_{t+1,i}.
+      *     M†_{tx,iy}  = δ_{xy} δ_{ti} - B_i [exp(δΚ)†]_{xy} exp(+φ_{tx}^*) δ_{t+1,i}.
+      *                 = δ_{xy} δ_{ti} - B_i [exp(δ^* Κ)]_{xy} exp(+φ_{tx}^*) δ_{t+1,i}.
       * which simplified slightly as K is Hermitian.
       **/
 
     /** If we now consider applying M† to ψ_{iy} we get
-      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} B_i     [exp(δ^* K)]_{xy}  ψ_{iy}
+      *     (M†ψ)_{tx}  = ψ_tx - exp(+φ_{tx}^*)      δ_{t+1,i} B_i     [exp(δ^* K)]_{xy}  ψ_{iy}
       *                                                         |- * -> |--- matrix multiply ---|
       **/
 
     NSL::Tensor<Type> BexpKpsi = NSL::LinAlg::mat_vec(
-        this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_)),
+        this->Lat.exp_hopping_matrix( NSL::LinAlg::conj(delta_) ),
         NSL::LinAlg::transpose(psi,-1,-2)
     ).transpose(-1,-2);
 
     /** We now need to evaluate
-      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t+1,i} expKpsi_{ix}
-      *     (M†ψ)_{tx}  = ψ_tx - exp(-iφ_{tx}^*)      δ_{t,i-1} expKpsi_{ix}
+      *     (M†ψ)_{tx}  = ψ_tx - exp(+φ_{tx}^*)      δ_{t+1,i} expKpsi_{ix}
+      *     (M†ψ)_{tx}  = ψ_tx - exp(+φ_{tx}^*)      δ_{t,i-1} expKpsi_{ix}
       *                          |- element-wise * -->|------- shift ------|
       **/
     BexpKpsi.shift(/*shift*/-1,/*dim*/-2,/*boundary*/Type(-1));
@@ -79,27 +83,30 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::Mda
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::MMdagger(const NSL::Tensor<Type> & psi){
+
+    /** I'm not sure if this routine are needed anymore since we use decompositions to measure correlators --T.L. 21.01.26 **/
+
     /** Let's evaluate MM† using the index representations above.
       *     (MM†)_{tx,iy}   = M_{tx,uz} (M†)_{uz,iy}
-      *                     = (δ_{tu} δ_{xz} - [\exp(δK)]_{xz} \exp(i φ_{uz}) B_t δ_{t,u+1} ) 
-      *                       (δ_{ui} δ_{zy} - B_i [exp(δ^* Κ)]_{zy} exp(-iφ_{uz}^*) δ_{u+1,i})
+      *                     = (δ_{tu} δ_{xz} - [\exp(δK)]_{xz} \exp( φ_{uz}) B_t δ_{t,u+1} ) 
+      *                       (δ_{ui} δ_{zy} - B_i [exp(δ^* Κ)]_{zy} exp( φ_{uz}^*) δ_{u+1,i})
       * Note that the first term in each paren is just the identity matrix.
       * So, if we expand the parentheses we can write 
       *     (MM†)_{tx,iy}   = M_{tx,iy} + M†_{tx,iy) - δ_{ti} δ_{xy}
-      *                     + [\exp(δK)]_{xz} exp(i φ_{uz}) B_t δ_{t,u+1} B_i [exp(δ^* K)]_{zy} exp(-iφ_{uz}^*) δ_{u+1,i}
-      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,u+1} δ_{u+1,i} [exp(δK)]_{xz} [exp(δ^* Κ)]_{zy} exp(i (φ-φ^*)_{uz}) 
-      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,i} [exp(δK)]_{xz}  exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
-      *                     = (M + M† - 1)_{tx,iy} + (B_t)^2 δ_{t,i} [exp(δK)]_{xz}  exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
-      *                     = (M + M† - 1)_{tx,iy} + [exp(δK)]_{xz} δ_{t,i} exp(i (φ-φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *                     + [\exp(δK)]_{xz} exp( φ_{uz}) B_t δ_{t,u+1} B_i [exp(δ^* K)]_{zy} exp( φ_{uz}^*) δ_{u+1,i}
+      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,u+1} δ_{u+1,i} [exp(δK)]_{xz} [exp(δ^* Κ)]_{zy} exp( (φ+φ^*)_{uz}) 
+      *                     = (M + M† - 1)_{tx,iy} + B_t B_i δ_{t,i} [exp(δK)]_{xz}  exp( (φ+φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *                     = (M + M† - 1)_{tx,iy} + (B_t)^2 δ_{t,i} [exp(δK)]_{xz}  exp( (φ+φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
+      *                     = (M + M† - 1)_{tx,iy} + [exp(δK)]_{xz} δ_{t,i} exp( (φ+φ^*)_{i-1,z}) [exp(δ^* K)]_{zy}
       *
       * In the case that phi is real this simplifies because the φ-dependent term is 1 and one finds
       *                     = (M + M† - 1)_{tx,iy} + [exp((δ+δ^*)K)]_{xy}
       **/
     return (this->M(psi) + this->Mdagger(psi) - psi) + NSL::LinAlg::mat_vec(
-        this->Lat.exp_hopping_matrix(sgn_*delta_),
+        this->Lat.exp_hopping_matrix( delta_),
         (   NSL::LinAlg::shift(this->phiExp_ * NSL::LinAlg::conj(this->phiExp_), +1, -2)
           * NSL::LinAlg::mat_vec(
-                this->Lat.exp_hopping_matrix(sgn_*NSL::LinAlg::conj(delta_)),
+                this->Lat.exp_hopping_matrix( NSL::LinAlg::conj(delta_)),
                 NSL::LinAlg::transpose(psi,-1,-2)
             ).transpose(-1,-2)
         ).transpose(-1,-2)
@@ -108,21 +115,24 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::MMd
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::MdaggerM(const NSL::Tensor<Type> & psi){
+
+    /** I'm not sure if this routine are needed anymore since we use decompositions to measure correlators --T.L. 21.01.26 **/
+
     /** Let's evaluate MM† using the index representations above.
       *     (M†M)_{tx,iy}   = (M†)_{tx,uz} M_{uz,iy}
-      *                     = (δ_{tu} δ_{xz} - B_u [exp(δ^* K)]_{xz} exp(-iφ_{tx}^*) δ_{t+1,u})
-      *                       (δ_{ui} δ_{zy} - B_u δ_{u,i+1} [exp(δK)]_{zy} exp(+iφ_{iy}) )
+      *                     = (δ_{tu} δ_{xz} - B_u [exp(δ^* K)]_{xz} exp( φ_{tx}^*) δ_{t+1,u})
+      *                       (δ_{ui} δ_{zy} - B_u δ_{u,i+1} [exp(δK)]_{zy} exp( φ_{iy}) )
       * Note that the first term in each paren is just the identity matrix.
       * So, if we expand the parentheses we can write 
       *     (MM†)_{tx,iy}   = M_{tx,iy} + M†_{tx,iy) - δ_{ti} δ_{xy}
-      *                     + B_u^2 δ_{t+1,u} δ_{u,i+1} exp(-iφ_{tx}^*) [exp(δ^* Κ)]_{xz} [exp(δ K)]_{zy} exp(+iφ_{iy})
-      *                     = (M + M† - 1)_{tx,iy} + δ_{t+1,i+1} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
-      *                     = (M + M† - 1)_{tx,iy} + δ_{t,i} exp(-iφ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
-      *                     = (M + M† - 1)_{tx,iy} + exp(-iφ_{ix}^*) [exp((δ^* + δ) Κ)]_{xy} exp(+iφ_{iy})
+      *                     + B_u^2 δ_{t+1,u} δ_{u,i+1} exp( φ_{tx}^*) [exp(δ^* Κ)]_{xz} [exp(δ K)]_{zy} exp( φ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t+1,i+1} exp( φ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp( φ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + δ_{t,i} exp( φ_{tx}^*) [exp((δ^* + δ) Κ)]_{xy} exp( φ_{iy})
+      *                     = (M + M† - 1)_{tx,iy} + exp( φ_{ix}^*) [exp((δ^* + δ) Κ)]_{xy} exp( φ_{iy})
       *
       **/
     return this->M(psi) + this->Mdagger(psi) - psi + NSL::LinAlg::conj(this->phiExp_) * NSL::LinAlg::mat_mul(
-        this->Lat.exp_hopping_matrix(sgn_*(NSL::LinAlg::conj(delta_)+delta_)),
+        this->Lat.exp_hopping_matrix( (NSL::LinAlg::conj(delta_)+delta_)),
         (this->phiExp_ * psi ).transpose(-1,-2)
     ).transpose(-1,-2);
 }
@@ -144,11 +154,11 @@ Type NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::logDetM(){
     if (!this->stabilityMethod.compare("SVD")) {
       // use SVD for the stability decomposition
 
-      std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping( delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
       Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
-      Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
+      Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp( this->mu_);
       Fkt_U_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk_;
 
       int nnt = Nt;
@@ -196,11 +206,11 @@ Type NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::logDetM(){
     if (!this->stabilityMethod.compare("QR")) {
       // use UDT (QR) for the stability decomposition
 
-      std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping( delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
       Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
-      Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
+      Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp( this->mu_);
       Fkt_U_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk_;
 
       int nnt = Nt;
@@ -246,7 +256,7 @@ Type NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::logDetM(){
     NSL::Tensor<Type> prod(device,full_N,Nx,Nx);
     prod = NSL::eye<Type>(device, Nx).expand(full_N,0);
     NSL::Tensor<Type> sausage = NSL::Matrix::Identity<Type>(device,Nx);
-    prod(NSL::Slice(0,Nt),NSL::Ellipsis()) = (this->Lat.exp_hopping_matrix(sgn_*this->delta_)*NSL::LinAlg::exp(sgn_*this->mu_))
+    prod(NSL::Slice(0,Nt),NSL::Ellipsis()) = (this->Lat.exp_hopping_matrix( this->delta_)*NSL::LinAlg::exp( this->mu_))
     					   * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
 
     // Computing F_{Nt-1}.F_{Nt-2}.....F_0 using a recursive tree structure to minimize lost of precision    
@@ -300,12 +310,12 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
 
     /**
       * We want to calculate Tr((1+A^-1)^-1 ∂_{xt} A^-1 )
-      * This is equal to Tr((1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} ) * i
+      * This is equal to Tr((1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} ) * 1
       * Under the trace we can move the terms cyclicly (is that a real word?)
-      *                = Tr( δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} ) * i
-      *                = [ F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1}) ]_{x,x} * i
+      *                = Tr( δ_{jx} F_{t+1}^{-1}_{x,k} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1})_{i,j} ) * 1
+      *                = [ F_{t+1}^{-1} F_{t+2}^{-1} .... F_{Nt-1}^{-1} (1+A^-1)^-1 F_{0}^{-1} F_{1}^{-1} .... F_{t}^{-1}) ]_{x,x} * 1
       *
-      *                = [FkFkFk(t+1).invAp1.Fk(0).Fk(1)...Fk(t)]_{x,x} * i
+      *                = [FkFkFk(t+1).invAp1.Fk(0).Fk(1)...Fk(t)]_{x,x} * 1
       *
       * (Note:  there is no sum over x)
       **/
@@ -321,15 +331,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
 
     assertm( this->phi_.dim() == 2, "NSL::FermionMatrix::HubbardExpSpinBasis::logDetM; phi must be a 2D tensor" );
 
-    NSL::complex<NSL::RealTypeOf<Type>> II = NSL::complex<NSL::RealTypeOf<Type>> {0,1.0};
     NSL::size_t N = NSL::LinAlg::ceil(NSL::LinAlg::log2(static_cast<NSL::RealTypeOf<Type>>(Nt)));
-
    
     // Now come the specific stability method parts 
     if (!this->stabilityMethod.compare("DIRECTINVERSE")) {
 
       // Fk(t) = exp(i phi_{x,t-1})^{-1} * exp(-k)
-      Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * (this->Lat.exp_hopping_matrix(-1 * sgn_* this->delta_)*NSL::LinAlg::exp(-1 *sgn_*this->mu_));
+      Fk_ =  NSL::LinAlg::shift(this->phiExpInv_,+1).expand(Nx) * (this->Lat.exp_hopping_matrix(-1 * this->delta_)*NSL::LinAlg::exp(-1 * this->mu_));
       NSL::Tensor<Type> Fkt = NSL::eye<Type>(device,Nx);
       Fkt.expand(Nt+std::pow(2,N)-1, 0);
       Fkt(NSL::Slice(0,Nt), NSL::Ellipsis()) = Fk_;
@@ -352,12 +360,12 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
       invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}       
 
       // first do t=Nt-1 case
-      pi_dot_(Nt-1,NSL::Slice()) = II * NSL::LinAlg::diag(
+      pi_dot_(Nt-1,NSL::Slice()) = NSL::LinAlg::diag(
           // NSL::LinAlg::mat_mul( FkFkFk_(0,NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
           NSL::LinAlg::mat_mul( Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
       );
 
-      pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = II * NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt(NSL::Slice(std::pow(2,N),NSL::None),NSL::Ellipsis()),invAp1F_),Fkt(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
+      pi_dot_(NSL::Slice(NSL::None,Nt-1),NSL::Ellipsis()) = NSL::LinAlg::diagonal(NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(Fkt(NSL::Slice(std::pow(2,N),NSL::None),NSL::Ellipsis()),invAp1F_),Fkt(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
 
       return pi_dot_;
       
@@ -365,9 +373,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
     else if (!this->stabilityMethod.compare("QR")) {
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
-      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping( delta_);  // note Uk.expKdiag.Vk = expK
       Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
-      Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
+      Fkt_D_ = expKdiag_*NSL::LinAlg::exp( this->mu_);
 
       fkt_V_=Fkt_V_;
       fkt_D_=Fkt_D_;
@@ -405,7 +413,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
       invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
-      pi_dot_ = II * NSL::LinAlg::diagonal(
+      pi_dot_ =  NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
                                 );
 
@@ -415,9 +423,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
     else if (!this->stabilityMethod.compare("SVD")) {
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
-      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
+      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.svd_hopping( delta_);  // note Uk.expKdiag.Vk = expK
       Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
-      Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
+      Fkt_D_ = expKdiag_*NSL::LinAlg::exp( this->mu_);
 
       fkt_V_=Fkt_V_;
       fkt_D_=Fkt_D_;
@@ -455,7 +463,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
       invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
-      pi_dot_ = II * NSL::LinAlg::diagonal(
+      pi_dot_ =  NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
                                 );
 
