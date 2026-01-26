@@ -6,3 +6,6 @@ target_link_libraries(flowForTrain_keepProbable NSL)
 
 add_executable(propagator propagator.cpp)
 target_link_libraries(propagator NSL)
+
+add_executable(propagatorSpinBasis propagatorSpinBasis.cpp)
+target_link_libraries(propagatorSpinBasis NSL)
