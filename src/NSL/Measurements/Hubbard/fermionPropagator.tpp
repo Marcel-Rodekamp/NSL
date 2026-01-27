@@ -25,6 +25,12 @@ class FermionPropagator: public Measurement {
                 params["Nx"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
+            corrK_(
+                params["device"].template to<NSL::Device>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
+                params["wallSources"].shape(1).template to<NSL::size_t>() // bands
+            ),
             phi_(
                 params["device"].to<NSL::Device>(),
                 params["Nt"].to<NSL::size_t>(),
@@ -77,6 +83,8 @@ class FermionPropagator: public Measurement {
     //! Propagators with averaged second time coordinate
     void measure() override;
     void measure(NSL::size_t NumberTimeSources, NSL::size_t config);
+    void measureK();
+    void measureK(NSL::size_t NumberTimeSources, NSL::size_t config);
     
     void measureDiagonal();
     void measureRow(NSL::size_t tsrc);
@@ -134,7 +142,11 @@ class FermionPropagator: public Measurement {
     NSL::Hubbard::Species species_;
 
     NSL::Tensor<Type> corr_;
+    NSL::Tensor<Type> corrK_;
     NSL::Tensor<Type> phi_;
+
+    NSL::Tensor<Type> wallSink_;
+    NSL::Tensor<Type> wallSrc_;
 
     std::string basenode_;
 };
@@ -317,6 +329,256 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(){
     } // for cfgID
 
 } // measure()
+
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
+    int kDim = params_["wallSources"].shape(0);
+    int bDim = params_["wallSources"].shape(1);
+
+    // Reset memory
+    // - Result correlator
+    corr_ = Type(0);
+    corrK_ = Type(0);
+
+    std::string node;
+
+    bool PiSigma;
+
+    // read configuration 
+    this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
+
+    NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
+
+    NSL::Tensor<Type> wallSources;
+    wallSources = NSL::Tensor<Type> (params_["wallSources"]);
+
+    for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
+        PiSigma = true;
+
+        // first do particle species
+	species_ = NSL::Hubbard::Particle;
+
+	// calculate column
+    node = fmt::format("/markovChain/{}/propagator/particle/invM[t,{}]",cfgID,tsrc); // node for column
+	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	   if (PiSigma) {
+	      // populate the fermion matrix using the free configuration
+    	      hfm_.populate(phi_,species_);
+	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	   }
+       measureColumn(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/particle/invM[t,{}]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the column
+            }
+        } // for kSrc
+	   
+	}
+	
+	// calculate row
+    node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]",cfgID,tsrc); // node for row
+	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	   if (PiSigma) {
+	      // populate the fermion matrix using the free configuration
+    	      hfm_.populate(phi_,species_);
+	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	   }
+	   measureRow(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for row
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
+            }
+        } // for kSrc
+	}
+
+	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
+        node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]",cfgID); // node for column
+	   if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	      if (PiSigma) {
+	      	 // populate the fermion matrix using the free configuration
+    	      	 hfm_.populate(phi_,species_);
+	      	 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      	 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	      }
+	      measureDiagonal();
+          for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]/{}-{}",cfgID,kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
+            }
+        } // for kSrc
+	  }
+	}
+
+	PiSigma = true; // reset bool for the holes. . .
+	
+	// now repeat for hole species
+	species_ = NSL::Hubbard::Hole;
+		
+	// populate the fermion matrix using the free configuration
+    	hfm_.populate(phi_,species_);
+
+	// calculate column
+    node = fmt::format("/markovChain/{}/propagator/hole/invM[t,{}]",cfgID,tsrc); // node for column
+	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	   if (PiSigma) {
+	      // populate the fermion matrix using the free configuration
+    	      hfm_.populate(phi_,species_);
+	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	   }
+       measureColumn(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/hole/invM[t,{}]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the column
+            }
+        } // for kSrc
+	   
+	}
+
+	// calculate row
+    node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]",cfgID,tsrc); // node for row
+	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	   if (PiSigma) {
+	      // populate the fermion matrix using the free configuration
+    	      hfm_.populate(phi_,species_);
+	      calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	   }
+	   measureRow(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for row
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
+            }
+        } // for kSrc
+    }
+
+	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
+        node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]",cfgID); // node for column
+	   if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+	      if (PiSigma) {
+	      	 // populate the fermion matrix using the free configuration
+    	      	 hfm_.populate(phi_,species_);
+	      	 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+	      	 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+	      }
+	      measureDiagonal();
+          for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+            for (int kSink=0; kSink<kDim; kSink++) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]/{}-{}",cfgID,kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
+            }
+        } // for kSrc
+	  }
+      }
+
+    } // tsrc
+      
+} // measureK(Ntsrc,config);
+
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(){
+    NSL::Logger::info("Start Measuring Momentum Hubbard::FermionPropagator");
+
+    // This is the default basenode we used so far
+    // ToDo: this should go into the const
+
+    // write the non interacting correlator 
+    std::string node;
+/*    if (species_ == NSL::Hubbard::Particle){
+          node = "/NonInteracting/propagator/particle/invM[t,t]";
+    } else {
+          node = "/NonInteracting/propagator/hole/invM[t,t]";
+    }
+    // this is a shortcut, we don't need to calculate the non-interacting 
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],node)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
+    
+        // this stores the result in corr_
+        //measure(1);
+
+        // write the calculated correlator to file
+       h5_.write(corr_,std::string(basenode_)+node);
+    } else {
+        NSL::Logger::info("Non-interacting invM[t,t] already exists");
+    }
+*/
+
+    // need to finish calculating non-interacting propagator for rows and columns!!!
+
+
+    // Interacting Correlators
+    // Initialize memory for the configurations
+     // get the range of configuration ids from the h5file
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
+    NSL::size_t saveFreq = this->params_["save frequency"];
+    
+    NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
+        minCfg, maxCfg, saveFreq
+    );
+
+    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
+
+        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
+
+        // compute the correlator for the differen time sources
+        measureK(this->params_["Number Time Sources"], cfgID);
+
+    } // for cfgID
+
+} // measureK()
+
 
 template<
     NSL::Concept::isNumber Type,
