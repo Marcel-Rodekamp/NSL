@@ -190,7 +190,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	   }
 	   measureColumn(tsrc);
 	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
 	
 	// calculate row
 	node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]",cfgID,tsrc); // node for row
@@ -203,7 +205,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	   }
 	   measureRow(tsrc);
 	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
 	   node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]",cfgID); // node for diagonal
@@ -216,7 +220,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      }
 	      measureDiagonal();
 	      this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
-	  }
+	  }else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
 	}
 
 	PiSigma = true; // reset bool for the holes. . .
@@ -238,7 +244,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	   }
 	   measureColumn(tsrc);
 	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the column
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
 
 	// calculate row
 	node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]",cfgID,tsrc); // node for row
@@ -251,7 +259,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	   }
 	   measureRow(tsrc);
 	   this->h5_.write(corr_,std::string(basenode_)+node);  // write out the row
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
 	   node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]",cfgID); // node for diagonal
@@ -264,7 +274,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
 	      }
 	      measureDiagonal();
 	      this->h5_.write(corr_,std::string(basenode_)+node);  // write out the diagonal
-	   }
+	   }else{
+        NSL::Logger::info("Config #{} already has correlators, skipping... ", cfgID);
+    }
       }
 
     } // tsrc
@@ -387,7 +399,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
             }
         } // for kSrc
 	   
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has particle columns, skipping... ", cfgID);
+    }
 	
 	// calculate row
     node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]",cfgID,tsrc); // node for row
@@ -410,7 +424,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                 this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
             }
         } // for kSrc
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has particle rows, skipping... ", cfgID);
+    }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
         node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]",cfgID); // node for column
@@ -433,7 +449,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                 this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
             }
         } // for kSrc
-	  }
+	  }else{
+        NSL::Logger::info("Config #{} already has particle diagonal, skipping... ", cfgID);
+    }
 	}
 
 	PiSigma = true; // reset bool for the holes. . .
@@ -466,7 +484,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
             }
         } // for kSrc
 	   
-	}
+	}else{
+        NSL::Logger::info("Config #{} already has hole columns, skipping... ", cfgID);
+    }
 
 	// calculate row
     node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]",cfgID,tsrc); // node for row
@@ -489,6 +509,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                 this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
             }
         } // for kSrc
+    }else{
+        NSL::Logger::info("Config #{} already has hole rows, skipping... ", cfgID);
     }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
@@ -512,7 +534,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                 this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
             }
         } // for kSrc
-	  }
+	  }else{
+        NSL::Logger::info("Config #{} already has hole diagonal, skipping... ", cfgID);
+    }
       }
 
     } // tsrc
