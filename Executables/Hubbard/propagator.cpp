@@ -6,6 +6,7 @@
 #include <ctime>
 
 int main(int argc, char* argv[]){
+    torch::InferenceMode guard;
 
     typedef NSL::complex<double> Type;
 
