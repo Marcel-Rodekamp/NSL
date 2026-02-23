@@ -149,6 +149,7 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> wallSrc_;
 
     std::string basenode_;
+    std::string leaf;
 };
 
 template<
@@ -165,9 +166,6 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
     std::string node;
 
     bool PiSigma;
-
-    // read configuration 
-    this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
@@ -335,6 +333,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(){
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
+        // read configuration 
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+
         // compute the correlator for the differen time sources
         measure(this->params_["Number Time Sources"], cfgID);
 
@@ -361,9 +362,6 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
 
     bool PiSigma;
 
-    // read configuration 
-    this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
-
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
@@ -378,7 +376,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
 	species_ = NSL::Hubbard::Particle;
 
 	// calculate column
-    node = fmt::format("/markovChain/{}/propagator/particle/invM[t,{}]",cfgID,tsrc); // node for column
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/propagator/particle/invM[t,{}]",tsrc); // node for column
+    }else{
+        node = fmt::format("/markovChain/{}/propagator/particle/invM[t,{}]",cfgID,tsrc); // node for column
+    }
 	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	   if (PiSigma) {
 	      // populate the fermion matrix using the free configuration
@@ -394,8 +396,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/particle/invM[t,{}]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the column
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
             }
         } // for kSrc
 	   
@@ -404,7 +406,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     }
 	
 	// calculate row
-    node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]",cfgID,tsrc); // node for row
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/propagator/particle/invM[{},t]",tsrc); // node for row
+    }else{
+        node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]",cfgID,tsrc); // node for row
+    }
 	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	   if (PiSigma) {
 	      // populate the fermion matrix using the free configuration
@@ -420,8 +426,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/particle/invM[{},t]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for row
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for row
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the row
             }
         } // for kSrc
 	}else{
@@ -429,7 +435,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
-        node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]",cfgID); // node for column
+        if ((phi_ == Type(0)).all()) { // if non-interacting
+            node = fmt::format("/NonInteracting/propagator/particle/invM[t,t]"); // node for diagonal
+        }else{
+            node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]",cfgID); // node for diagonal
+        }
 	   if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	      if (PiSigma) {
 	      	 // populate the fermion matrix using the free configuration
@@ -445,8 +455,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/particle/invM[t,t]/{}-{}",cfgID,kSink,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the diagonal
             }
         } // for kSrc
 	  }else{
@@ -460,10 +470,14 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
 	species_ = NSL::Hubbard::Hole;
 		
 	// populate the fermion matrix using the free configuration
-    	hfm_.populate(phi_,species_);
+    hfm_.populate(phi_,species_);
 
 	// calculate column
-    node = fmt::format("/markovChain/{}/propagator/hole/invM[t,{}]",cfgID,tsrc); // node for column
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/propagator/hole/invM[t,{}]",tsrc); // node for column
+    }else{
+        node = fmt::format("/markovChain/{}/propagator/hole/invM[t,{}]",cfgID,tsrc); // node for column
+    }
 	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	   if (PiSigma) {
 	      // populate the fermion matrix using the free configuration
@@ -479,8 +493,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/hole/invM[t,{}]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the column
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
             }
         } // for kSrc
 	   
@@ -489,7 +503,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     }
 
 	// calculate row
-    node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]",cfgID,tsrc); // node for row
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/propagator/hole/invM[{},t]",tsrc); // node for row
+    }else{
+        node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]",cfgID,tsrc); // node for row
+    }
 	if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	   if (PiSigma) {
 	      // populate the fermion matrix using the free configuration
@@ -505,8 +523,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/hole/invM[{},t]/{}-{}",cfgID,tsrc,kSink,kSrc); // node for row
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the row
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for row
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the row
             }
         } // for kSrc
     }else{
@@ -514,7 +532,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     }
 
 	if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
-        node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]",cfgID); // node for column
+        if ((phi_ == Type(0)).all()) { // if non-interacting
+            node = fmt::format("/NonInteracting/propagator/hole/invM[t,t]"); // node for diagonal
+        }else{
+            node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]",cfgID); // node for column
+        }
 	   if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
 	      if (PiSigma) {
 	      	 // populate the fermion matrix using the free configuration
@@ -530,8 +552,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
                         corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
                     }
                 }
-                node = fmt::format("/markovChain/{}/propagator/hole/invM[t,t]/{}-{}",cfgID,kSink,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node);  // write out the diagonal
+                leaf = fmt::format("/{}-{}",kSink,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the diagonal
             }
         } // for kSrc
 	  }else{
@@ -581,6 +603,25 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(){
 
     // need to finish calculating non-interacting propagator for rows and columns!!!
 
+    // write the momenta out
+    if (!h5_.exist(std::string(basenode_)+"/Momenta")){
+        NSL::Tensor<double> momenta = params_["momenta"];
+        this->h5_.write(momenta,std::string(basenode_)+"/Momenta");
+    }
+
+    // write the non interacting correlator 
+    node = "/NonInteracting/propagator";
+    // this is a shortcut, we don't need to calculate the non-interacting 
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],node)) {
+        // measure the non-interacting theory
+    	// U = 0 <=> phi = 0
+    	phi_ = Type(0);
+
+    	measureK(1,0);
+    }else{
+        NSL::Logger::info("Non-interacting two-body propagator already exists");
+    }
 
     // Interacting Correlators
     // Initialize memory for the configurations
@@ -596,9 +637,11 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(){
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
+        // read configuration 
+        this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+
         // compute the correlator for the differen time sources
         measureK(this->params_["Number Time Sources"], cfgID);
-
     } // for cfgID
 
 } // measureK()
