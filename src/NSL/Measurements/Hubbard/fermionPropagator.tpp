@@ -286,22 +286,17 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(){
 
     // write the non interacting correlator
     std::string nodeD,nodeC,nodeR;
-    if (spin_ == NSL::Hubbard::Up){
-          nodeD = "/NonInteracting/propagator/spinUp/invM[t,t]";
-	  nodeC = "/NonInteracting/propagator/spinUp/invM[t,0]";
-	  nodeR = "/NonInteracting/propagator/spinUp/invM[0,t]";
-    } else {
-          nodeD = "/NonInteracting/propagator/spinDown/invM[t,t]";
-	  nodeC = "/NonInteracting/propagator/spinDown/invM[t,0]";
-	  nodeR = "/NonInteracting/propagator/spinDown/invM[0,t]";
-    }
+    species_ = NSL::Hubbard::Particle;
+    nodeD = "/NonInteracting/propagator/particle/invM[t,t]";
+    nodeC = "/NonInteracting/propagator/particle/invM[t,0]";
+    nodeR = "/NonInteracting/propagator/particle/invM[0,t]";
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
     if(!skip_(this->params_["overwrite"],nodeD)) {
         // measure the non-interacting theory
         // U = 0 <=> phi = 0
         phi_ = Type(0);
-	hfm_.populate(phi_,spin_);
+	hfm_.populate(phi_,species_);
 	calcPiSigma(1); // calculuate prefix/suffix terms with tsrc
 	measureDiagonal();
 	h5_.write(corr_,std::string(basenode_)+nodeD);  // write out the diagonal
@@ -310,6 +305,29 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(){
 	measureColumn(1);
 	h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the column
      
+    } else {
+        NSL::Logger::info("Non-interacting invM[t,t] already exists");
+    }
+
+    species_ = NSL::Hubbard::Hole;
+    nodeD = "/NonInteracting/propagator/hole/invM[t,t]";
+    nodeC = "/NonInteracting/propagator/hole/invM[t,0]";
+    nodeR = "/NonInteracting/propagator/hole/invM[0,t]";
+    // this is a shortcut, we don't need to calculate the non-interacting
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],nodeD)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
+        hfm_.populate(phi_,species_);
+        calcPiSigma(1); // calculuate prefix/suffix terms with tsrc
+        measureDiagonal();
+        h5_.write(corr_,std::string(basenode_)+nodeD);  // write out the diagonal
+        measureRow(1);
+        h5_.write(corr_,std::string(basenode_)+nodeR);  // write out the row
+        measureColumn(1);
+        h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the column
+
     } else {
         NSL::Logger::info("Non-interacting invM[t,t] already exists");
     }
@@ -534,7 +552,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureColumn(NSL::s
 	   invAp1F_Ut_(NSL::Slice(Nt/2,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(PI_U_(NSL::Slice(Nt/2-1,Nt-1),NSL::Ellipsis()),NSL::LinAlg::adjoint(Vnewt_(NSL::Slice(Nt/2,Nt),NSL::Ellipsis()))),NSL::LinAlg::diag_embed(1./Dnewt_(NSL::Slice(Nt/2,Nt),NSL::Ellipsis())));
 	}
     invAp1F_Tt_(NSL::Slice(Nt/2,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Qnewt_(NSL::Slice(Nt/2,Nt),NSL::Ellipsis())), PI_V_(NSL::Slice(Nt/2-1,Nt-1),NSL::Ellipsis()));
-***?
+***/
 
     for (int t=1;t<Nt;t++){ // t>0 terms
 

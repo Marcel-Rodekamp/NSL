@@ -284,17 +284,12 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
     // This is the default basenode we used so far
     // ToDo: this should go into the const
 
-    // write the non interacting correlator 
+    // write the non interacting correlator
     std::string nodeD,nodeC,nodeR;
-    if (spin_ == NSL::Hubbard::Up){
-          nodeD = "/NonInteracting/propagator/spinUp/invM[t,t]";
-	  nodeC = "/NonInteracting/propagator/spinUp/invM[t,0]";
-	  nodeR = "/NonInteracting/propagator/spinUp/invM[0,t]";
-    } else {
-          nodeD = "/NonInteracting/propagator/spinDown/invM[t,t]";
-	  nodeC = "/NonInteracting/propagator/spinDown/invM[t,0]";
-	  nodeR = "/NonInteracting/propagator/spinDown/invM[0,t]";
-    }
+    spin_ = NSL::Hubbard::Up;
+    nodeD = "/NonInteracting/propagator/spinUp/invM[t,t]";
+    nodeC = "/NonInteracting/propagator/spinUp/invM[t,0]";
+    nodeR = "/NonInteracting/propagator/spinUp/invM[0,t]";
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
     if(!skip_(this->params_["overwrite"],nodeD)) {
@@ -310,6 +305,29 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 	measureColumn(1);
 	h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the column
      
+    } else {
+        NSL::Logger::info("Non-interacting invM[t,t] already exists");
+    }
+
+    spin_ = NSL::Hubbard::Down;
+    nodeD = "/NonInteracting/propagator/spinDown/invM[t,t]";
+    nodeC = "/NonInteracting/propagator/spinDown/invM[t,0]";
+    nodeR = "/NonInteracting/propagator/spinDown/invM[0,t]";
+    // this is a shortcut, we don't need to calculate the non-interacting
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],nodeD)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
+        hfm_.populate(phi_,spin_);
+        calcPiSigma(1); // calculuate prefix/suffix terms with tsrc
+        measureDiagonal();
+        h5_.write(corr_,std::string(basenode_)+nodeD);  // write out the diagonal
+        measureRow(1);
+        h5_.write(corr_,std::string(basenode_)+nodeR);  // write out the row
+        measureColumn(1);
+        h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the column
+
     } else {
         NSL::Logger::info("Non-interacting invM[t,t] already exists");
     }
