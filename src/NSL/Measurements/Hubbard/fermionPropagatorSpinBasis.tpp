@@ -306,9 +306,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 	measureDiagonal();
 	h5_.write(corr_,std::string(basenode_)+nodeD);  // write out the diagonal
 	measureRow(1);
-	h5_.write(corr_,std::string(basenode_)+nodeR);  // write out the diagonal
+	h5_.write(corr_,std::string(basenode_)+nodeR);  // write out the row
 	measureColumn(1);
-	h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the diagonal
+	h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the column
      
     } else {
         NSL::Logger::info("Non-interacting invM[t,t] already exists");
@@ -487,7 +487,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureColu
 
     corr_(tsrc,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( invAp1F_Ut_(0,NSL::Ellipsis()),invAp1F_Tt_(0,NSL::Ellipsis()) );
 
-    // t>1
+    // t>0
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::solve(PI_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis())), false ),NSL::LinAlg::diag_embed(1./PI_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = vut_(NSL::Slice(1,Nt),NSL::Ellipsis())+ NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis())),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis())),PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()));
 
