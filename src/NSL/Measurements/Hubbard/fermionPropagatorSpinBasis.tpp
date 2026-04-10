@@ -285,30 +285,34 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
     // ToDo: this should go into the const
 
     // write the non interacting correlator 
-    std::string node;
-/*    if (spin_ == NSL::Hubbard::Up){
-          node = "/NonInteracting/propagator/spinUp/invM[t,t]";
+    std::string nodeD,nodeC,nodeR;
+    if (spin_ == NSL::Hubbard::Up){
+          nodeD = "/NonInteracting/propagator/spinUp/invM[t,t]";
+	  nodeC = "/NonInteracting/propagator/spinUp/invM[t,0]";
+	  nodeR = "/NonInteracting/propagator/spinUp/invM[0,t]";
     } else {
-          node = "/NonInteracting/propagator/spinDown/invM[t,t]";
+          nodeD = "/NonInteracting/propagator/spinDown/invM[t,t]";
+	  nodeC = "/NonInteracting/propagator/spinDown/invM[t,0]";
+	  nodeR = "/NonInteracting/propagator/spinDown/invM[0,t]";
     }
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
-    if(!skip_(this->params_["overwrite"],node)) {
+    if(!skip_(this->params_["overwrite"],nodeD)) {
         // measure the non-interacting theory
         // U = 0 <=> phi = 0
         phi_ = Type(0);
-    
-        // this stores the result in corr_
-        //measure(1);
-
-        // write the calculated correlator to file
-       h5_.write(corr_,std::string(basenode_)+node);
+	hfm_.populate(phi_,spin_);
+	calcPiSigma(1); // calculuate prefix/suffix terms with tsrc
+	measureDiagonal();
+	h5_.write(corr_,std::string(basenode_)+nodeD);  // write out the diagonal
+	measureRow(1);
+	h5_.write(corr_,std::string(basenode_)+nodeR);  // write out the diagonal
+	measureColumn(1);
+	h5_.write(corr_,std::string(basenode_)+nodeC);  // write out the diagonal
+     
     } else {
         NSL::Logger::info("Non-interacting invM[t,t] already exists");
     }
-*/
-
-    // need to finish calculating non-interacting propagator for rows and columns!!!
 
 
     // Interacting Correlators
