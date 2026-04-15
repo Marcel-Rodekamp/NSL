@@ -350,7 +350,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
-    int kDim = params_["wallSources"].shape(0);
+    int kDim = 2*params_["wallSources"].shape(0);
     int bDim = params_["wallSources"].shape(1);
 
     // Reset memory
@@ -366,8 +366,9 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
 
-    NSL::Tensor<Type> wallSources;
-    wallSources = NSL::Tensor<Type> (params_["wallSources"]);
+    NSL::Tensor<Type> wallSources(params_["device"].to<NSL::Device>(), 2 * NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
+    wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
+    wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(NSL::Tensor<Type> (params_["wallSources"]));
 
     for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
         PiSigma = true;
