@@ -108,23 +108,6 @@ int main(int argc, char* argv[]){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
     
-    // define a hubbard gauge action
-    NSL::Action::HubbardGaugeAction<Type> Sg(params);
-
-    // define a hubbard fermion action, the discretization (HubbardExp) is
-    // hard wired in the meta data if you change this here, also change the
-    // writeMeta()
-    //
-    NSL::Action::HubbardFermionAction<
-        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
-      > Sf(lattice,params);
-    
-    // set stability method if defined in yml file, otherwise default is "QR"
-    if (yml["stability"] ) {
-      std::string stabilityMethod = params["stability"];
-      Sf.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
-    }
-
     std::vector<std::vector<std::vector<std::vector<double>>>> kblocks2d;
     std::vector<std::vector<double>> momenta;
    
@@ -160,9 +143,6 @@ int main(int argc, char* argv[]){
       // currently don't know how to do this, will do later
     }
 
-
-    // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S = Sg + Sf;
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
@@ -206,7 +186,13 @@ int main(int argc, char* argv[]){
             Type,decltype(lattice)
         >
     > invM(lattice, params, h5);
-    
+
+    // set stability method if defined in yml file, otherwise default is "QR"
+    if (yml["stability"] ) {
+      std::string stabilityMethod = params["stability"];
+      invM.hfm_.stabilityMethod = stabilityMethod; // "QR", "DIRECTINVERSE", "SVD"
+    }
+
     // Perform calculation of propagator components
     invM.measureK();
 

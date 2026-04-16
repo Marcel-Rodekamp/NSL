@@ -123,6 +123,9 @@ class FermionPropagator: public Measurement {
     NSL::Tensor<Type> Dnewtt_; //(device, Nt-1, Nx);
     NSL::Tensor<Type> Vnewtt_; //(device, Nt-1, Nx, Nx);
 
+    FermionMatrixType hfm_;
+    NSL::Hubbard::Species species_;
+
     protected:
     bool skip_(bool overwrite, std::string node){
         bool exists = this->h5_.exist(fmt::format("{}{}",std::string(basenode_),node));
@@ -133,13 +136,10 @@ class FermionPropagator: public Measurement {
         // if correlator doesn't exist always calculate it
         if (not exists){return false;}
 
-        // if correlator exists only recompute if overwrite is true 
+        // if correlator exists only recompute if overwrite is true
         // (this is the only remaining case)
         return true;
     }
-
-    FermionMatrixType hfm_;
-    NSL::Hubbard::Species species_;
 
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
