@@ -877,8 +877,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::calcPiSigma(NSL::siz
        for (int t=1;t<Nt;t++) {
       	  // PI(t)=Fk(t)...Fk(0)
       	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
-      	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t,NSL::Ellipsis())),vu_);
-      	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
+      	  vu_ *= PI_D_(t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
+      	  vu_ *= PI_D_(t-1,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
       	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
       	  PI_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t,NSL::Ellipsis()),uu_);
 	  PI_D_(t,NSL::Ellipsis()) = dd_;
@@ -886,8 +886,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::calcPiSigma(NSL::siz
 
 	  // SIGMA(t)=Fk(Nt-1)...Fk(t)
 	  vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(Nt-t,NSL::Ellipsis()),SIGMA_U_(Nt-1-t,NSL::Ellipsis()));
-	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
-	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
+	  vu_ *= SIGMA_D_(Nt-1-t,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
+	  vu_ *= SIGMA_D_(Nt-t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
 	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
 	  SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
 	  SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
@@ -897,8 +897,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::calcPiSigma(NSL::siz
         for (int t=1;t<Nt;t++) {
       	  // PI(t)=Fk(t)...Fk(0)
       	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
-      	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t,NSL::Ellipsis())),vu_);
-      	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
+      	  vu_ *= PI_D_(t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
+      	  vu_ *= PI_D_(t-1,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
       	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::svd(vu_);
       	  PI_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t,NSL::Ellipsis()),uu_);
         PI_D_(t,NSL::Ellipsis()) = dd_;
@@ -906,8 +906,8 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::calcPiSigma(NSL::siz
 
         // SIGMA(t)=Fk(Nt-1)...Fk(t)
         vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(Nt-t,NSL::Ellipsis()),SIGMA_U_(Nt-1-t,NSL::Ellipsis()));
-        vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
-        vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
+        vu_ *= SIGMA_D_(Nt-1-t,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
+        vu_ *= SIGMA_D_(Nt-t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
         std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::svd(vu_);
         SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
         SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
