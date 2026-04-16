@@ -7,6 +7,11 @@ template<NSL::Concept::isNumber Type, typename LatticeType>
 void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE);
 
 int main(int argc, char* argv[]){
+    // Disable autograd graph tracking — gradients are computed analytically,
+    // not via backprop. Without this, LibTorch accumulates computation graphs
+    // across all MD steps causing a large memory spike.
+    torch::InferenceMode guard;
+
     typedef NSL::complex<double> Type;
 
     // Initialize NSL

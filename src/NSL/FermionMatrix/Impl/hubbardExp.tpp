@@ -181,7 +181,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       // I express LogDet(1+U.D.V)=LogDet(U)+LogDet(V)+LogDet(U^T.V^T+D)
       // I then perform a QR decomposition on U^T.V^T+D (which is very stable)
       // Note however that I cannot assume that V^{-1}=V^T when mu!=0 or when simulating on a contour, so we must solve for V^{-1} explicitly
-      std::tie( uu_, vv_ ) = NSL::LinAlg::qr(NSL::LinAlg::solve(Fkt_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(Fkt_U_(0,NSL::Slice(),NSL::Slice())), false)
+      std::tie( uu_, vv_ ) = NSL::LinAlg::qr(NSL::LinAlg::solve(Fkt_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint_view(Fkt_U_(0,NSL::Slice(),NSL::Slice())), false)
                                  + NSL::LinAlg::diag(Fkt_D_(0,NSL::Slice()))); // QR decomposition here
 				 
       // The final result is LogDet(U)+LogDet(V)+LogDet(Q)+TrLogDiag(R)  (recall that R is upper triangular)
@@ -232,7 +232,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 
       // I express LogDet(1+U.D.V)=LogDet(U)+LogDet(V)+LogDet(U^T.V^-1+D)
       // I then perform a QR decomposition on U^T.V^-1+D (which is very stable)
-      std::tie( uu_, vv_ ) = NSL::LinAlg::qr( NSL::LinAlg::solve( Fkt_V_(0,NSL::Slice(),NSL::Slice()), NSL::LinAlg::adjoint(Fkt_U_(0,NSL::Slice(),NSL::Slice())), false ) + NSL::LinAlg::diag(Fkt_D_(0,NSL::Slice()))); // QR decomposition here
+      std::tie( uu_, vv_ ) = NSL::LinAlg::qr( NSL::LinAlg::solve( Fkt_V_(0,NSL::Slice(),NSL::Slice()), NSL::LinAlg::adjoint_view(Fkt_U_(0,NSL::Slice(),NSL::Slice())), false ) + NSL::LinAlg::diag(Fkt_D_(0,NSL::Slice()))); // QR decomposition here
 
       // The final result is LogDet(U)+TrLogDiag(V)+LogDet(Q)+TrLogDiag(R)  (recall that R and V are upper triangular)
       Type answer = NSL::LinAlg::logdet(Fkt_U_(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(Fkt_V_(0,NSL::Slice(),NSL::Slice()))+NSL::LinAlg::logdet(uu_)+(NSL::LinAlg::log(NSL::LinAlg::diag(vv_))).sum();
@@ -389,8 +389,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
       vut_ = NSL::LinAlg::mat_mul(Fkt_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),fkt_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
       
-      std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt( NSL::LinAlg::mat_mul(
-          NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),vut_), NSL::LinAlg::diag_embed(fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis())) )
+      // diag_embed(D) @ M @ diag_embed(E) == D.expand_view(Nx,2) * M * E.expand_view(Nx,1)
+      // avoids allocating two full (Nt-1,Nx,Nx) diagonal matrices (~2x622 MB for large systems)
+      std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt(
+          Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis()).expand_view(Nx, 2) * vut_ * fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis()).expand_view(Nx, 1)
       );
 
       Fk_Ut_(NSL::Slice(0,Nt-1),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_);
@@ -400,10 +402,13 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       Fk_Dt_(Nt-1,NSL::Ellipsis()) = Fkt_D_(Nt-1,NSL::Ellipsis());
       Fk_Vt_(Nt-1,NSL::Ellipsis()) = Fkt_V_(Nt-1,NSL::Ellipsis());
 
-      std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve_triangular(Fk_Vt_, NSL::LinAlg::adjoint(Fk_Ut_),false ) + NSL::LinAlg::diag_embed(Fk_Dt_));
+      // M + diag_embed(D): add D to the diagonal in-place, avoiding a full (Nt,Nx,Nx) allocation
+      { auto solve_result = NSL::LinAlg::solve_triangular(Fk_Vt_, NSL::LinAlg::adjoint_view(Fk_Ut_), false);
+        NSL::LinAlg::add_diagonal(solve_result, Fk_Dt_);
+        std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
       invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
-      invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
+      invAp1F_Tt_ = NSL::LinAlg::adjoint_view(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
@@ -439,8 +444,10 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
       vut_ = NSL::LinAlg::mat_mul(Fkt_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),fkt_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
       
-      std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::svd( NSL::LinAlg::mat_mul(
-          NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),vut_), NSL::LinAlg::diag_embed(fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis())) )
+      // diag_embed(D) @ M @ diag_embed(E) == D.expand_view(Nx,2) * M * E.expand_view(Nx,1)
+      // avoids allocating two full (Nt-1,Nx,Nx) diagonal matrices (~2x622 MB for large systems)
+      std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::svd(
+          Fkt_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis()).expand_view(Nx, 2) * vut_ * fkt_D_(NSL::Slice(1,Nt),NSL::Ellipsis()).expand_view(Nx, 1)
       );
 
       Fk_Ut_(NSL::Slice(0,Nt-1),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),uut_);
@@ -450,10 +457,14 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
       Fk_Dt_(Nt-1,NSL::Ellipsis()) = Fkt_D_(Nt-1,NSL::Ellipsis());
       Fk_Vt_(Nt-1,NSL::Ellipsis()) = Fkt_V_(Nt-1,NSL::Ellipsis());
 
-      std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( NSL::LinAlg::solve(Fk_Vt_, NSL::LinAlg::adjoint(Fk_Ut_),false ) + NSL::LinAlg::diag_embed(Fk_Dt_)); // Note: I still use QR to stabilize the inverse, even though this is the "SVD" stabilizer routine
+      // M + diag_embed(D): add D to the diagonal in-place, avoiding a full (Nt,Nx,Nx) allocation
+      // Note: I still use QR to stabilize the inverse, even though this is the "SVD" stabilizer routine
+      { auto solve_result = NSL::LinAlg::solve(Fk_Vt_, NSL::LinAlg::adjoint_view(Fk_Ut_), false);
+        NSL::LinAlg::add_diagonal(solve_result, Fk_Dt_);
+        std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
       invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
-      invAp1F_Tt_ = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
+      invAp1F_Tt_ = NSL::LinAlg::adjoint_view(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
