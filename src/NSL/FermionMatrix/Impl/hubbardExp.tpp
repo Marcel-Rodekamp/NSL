@@ -147,7 +147,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
-      Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand_view(Nx, 1); // zero-copy strided view, no clone
       Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
       Fkt_U_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk_;
 
@@ -166,7 +166,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	         vu_ = NSL::LinAlg::mat_mul(vv_ , Fkt_U_(prime*tt+pr+1, NSL::Ellipsis()));
 		 vu_ *= dd_.expand_view(Nx, 1);                                          // O(Nx^2) left-scale: replaces diag(dd_) @ vu_ GEMM
 		 vu_ *= Fkt_D_(prime*tt+pr+1, NSL::Ellipsis()).expand_view(Nx, 0);        // O(Nx^2) right-scale: replaces vu_ @ diag(D) GEMM
-		 std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::svd(vu_(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+		 std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::svd(vu_); // note that udt returns tuple (Q, D, (1/D)*R)
 		 Fkt_U_(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(tt, NSL::Ellipsis()), uu_);
 		 vv_ = NSL::LinAlg::mat_mul(vv_,Fkt_V_(prime*tt+pr+1,NSL::Ellipsis()));
 		 Fkt_D_(tt, NSL::Ellipsis()) = dd_;
@@ -199,7 +199,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
       std::tie(Uk_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
       
       // initial SVD of B_t
-      Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand(Nx).transpose(1,2);
+      Fkt_V_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_,-1).expand_view(Nx, 1); // zero-copy strided view, no clone
       Fkt_D_(NSL::Slice(0,Nt),NSL::Ellipsis()) = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
       Fkt_U_(NSL::Slice(0,Nt),NSL::Ellipsis()) = Uk_;
 
@@ -218,7 +218,7 @@ Type NSL::FermionMatrix::HubbardExp<Type,LatticeType>::logDetM(){
 	         vu_ = NSL::LinAlg::mat_mul(vv_ , Fkt_U_(prime*tt+pr+1, NSL::Ellipsis()));
 		 vu_ *= dd_.expand_view(Nx, 1);                                          // O(Nx^2) left-scale: replaces diag(dd_) @ vu_ GEMM
 		 vu_ *= Fkt_D_(prime*tt+pr+1, NSL::Ellipsis()).expand_view(Nx, 0);        // O(Nx^2) right-scale: replaces vu_ @ diag(D) GEMM
-		 std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::udt(vu_(NSL::Slice(),NSL::Slice())); // note that udt returns tuple (Q, D, (1/D)*R)
+		 std::tie( uu_, dd_, vv_ ) = NSL::LinAlg::udt(vu_); // note that udt returns tuple (Q, D, (1/D)*R)
 		 Fkt_U_(tt, NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(tt, NSL::Ellipsis()), uu_);
 		 vv_ = NSL::LinAlg::mat_mul(vv_,Fkt_V_(prime*tt+pr+1,NSL::Ellipsis()));
 		 Fkt_D_(tt, NSL::Ellipsis()) = dd_;
@@ -366,7 +366,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
       std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
-      Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
+      Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand_view(Nx, 1); // zero-copy strided view, no clone
       Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
 
       fkt_V_=Fkt_V_;
@@ -414,7 +414,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
       invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
-      invAp1F_Tt_ = NSL::LinAlg::adjoint_view(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
+      invAp1F_Tt_ = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint_view(Qnewt_), NSL::LinAlg::adjoint_view(Fk_Ut_)); // (AB)^H = B^H A^H: cuBLAS handles transposes natively, avoids gather copy
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
@@ -427,7 +427,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
 
       // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
       std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.svd_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
-      Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand(Nx).transpose(1,2);
+      Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand_view(Nx, 1); // zero-copy strided view, no clone
       Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
 
       fkt_V_=Fkt_V_;
@@ -476,7 +476,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
       invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
-      invAp1F_Tt_ = NSL::LinAlg::adjoint_view(NSL::LinAlg::mat_mul( Fk_Ut_, Qnewt_ ));
+      invAp1F_Tt_ = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint_view(Qnewt_), NSL::LinAlg::adjoint_view(Fk_Ut_)); // (AB)^H = B^H A^H: cuBLAS handles transposes natively, avoids gather copy
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
                                   NSL::LinAlg::mat_mul(invAp1F_Ut_,	invAp1F_Tt_)
