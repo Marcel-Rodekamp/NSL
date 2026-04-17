@@ -364,34 +364,55 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     }
     else if (!this->stabilityMethod.compare("QR")) {
 
-      // calculation of F_k(t) (= f^{-1}_k(t)) using initial SVD
-      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping(sgn_* delta_);  // note Uk.expKdiag.Vk = expK
-      Fkt_V_ = Vk_ * NSL::LinAlg::shift(this->phiExp_,+1).expand_view(Nx, 1); // zero-copy strided view, no clone
-      Fkt_D_ = expKdiag_*NSL::LinAlg::exp(sgn_*this->mu_);
+      // Binary tree prefix scan replacing the serial Nt-step UDT recurrence with
+      // N = ceil(log2(Nt)) batched passes.  Same index structure as DIRECTINVERSE
+      // but with REVERSED composition order so that each element accumulates its
+      // right-to-left prefix:
+      //   new_tree[i+stride] = UDT( tree[i+stride] * tree[i] )   (RIGHT x LEFT)
+      // After N passes:
+      //   tree[0..Nt-1]             = Fkt_[t] = UDT(Fk(t)*…*Fk(0))
+      //   tree[full_N..tree_size-1] = fkt_[k+1] = UDT(Fk(Nt-1)*…*Fk(k+1))
+      const NSL::size_t full_N    = NSL::size_t(std::pow(2, N));
+      const NSL::size_t tree_size = Nt + full_N - 1;
+      const NSL::size_t pad       = full_N - 1;
 
-      fkt_V_=Fkt_V_;
-      fkt_D_=Fkt_D_;
-      fkt_U_=Fkt_U_;
+      NSL::Tensor<Type> U_tree(device, tree_size, Nx, Nx);
+      NSL::Tensor<Type> D_tree(device, tree_size, Nx);
+      NSL::Tensor<Type> V_tree(device, tree_size, Nx, Nx);
 
-      for (int t=1;t<Nt;t++) {
-        // Fkt(t)=Fk(t)...Fk(0)
-        vu_ = NSL::LinAlg::mat_mul(Fkt_V_(t,NSL::Ellipsis()), Fkt_U_(t-1,NSL::Ellipsis()));
-        vu_ *= Fkt_D_(t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
-        vu_ *= Fkt_D_(t-1,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
-        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt( vu_ );
-        Fkt_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(Fkt_U_(t,NSL::Ellipsis()),uu_);
-        Fkt_D_(t,NSL::Ellipsis()) = dd_;
-        Fkt_V_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,Fkt_V_(t-1,NSL::Ellipsis()));
+      std::tie(Fkt_U_, expKdiag_, Vk_) = this->Lat.qr_hopping(sgn_* delta_);
+      U_tree(NSL::Slice(0, Nt), NSL::Ellipsis()) = Fkt_U_;
+      D_tree(NSL::Slice(0, Nt), NSL::Ellipsis()) = expKdiag_ * NSL::LinAlg::exp(sgn_ * this->mu_);
+      V_tree(NSL::Slice(0, Nt), NSL::Ellipsis()) = Vk_ * NSL::LinAlg::shift(this->phiExp_, +1).expand_view(Nx, 1);
+      { auto id_pad = NSL::eye<Type>(device, Nx).expand(pad, 0);
+        U_tree(NSL::Slice(Nt, tree_size), NSL::Ellipsis()) = id_pad;
+        D_tree(NSL::Slice(Nt, tree_size), NSL::Ellipsis()) = 1;
+        V_tree(NSL::Slice(Nt, tree_size), NSL::Ellipsis()) = id_pad; }
 
-        // fk(t)=Fk(Nt-1)...Fk(t)
-        vu_ = NSL::LinAlg::mat_mul(fkt_V_(Nt-t,NSL::Ellipsis()), fkt_U_(Nt-1-t,NSL::Ellipsis()));
-        vu_ *= fkt_D_(Nt-t,NSL::Ellipsis()).expand_view(Nx, 1);   // O(Nx^2) left-scale
-        vu_ *= fkt_D_(Nt-1-t,NSL::Ellipsis()).expand_view(Nx, 0); // O(Nx^2) right-scale
-        std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt( vu_ );
-        fkt_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(fkt_U_(Nt-t,NSL::Ellipsis()),uu_);
-        fkt_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
-        fkt_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,fkt_V_(Nt-1-t,NSL::Ellipsis()));
+      for (NSL::size_t t = 0; t < N; t++) {
+        const NSL::size_t stride = NSL::size_t(std::pow(2, t));
+        const NSL::size_t batch  = Nt + stride - 1;
+        // M = D_R * V_R @ U_L * D_L  (RIGHT x LEFT → right-to-left prefix)
+        NSL::Tensor<Type> batch_M = NSL::LinAlg::mat_mul(
+            V_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()),
+            U_tree(NSL::Slice(0,      batch),        NSL::Ellipsis()));
+        batch_M *= D_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()).expand_view(Nx, 2);
+        batch_M *= D_tree(NSL::Slice(0,      batch),        NSL::Ellipsis()).expand_view(Nx, 1);
+        auto [batch_Q, batch_D, batch_R] = NSL::LinAlg::udt(batch_M);
+        U_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+            U_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()), batch_Q); // U_R @ Q
+        D_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()) = batch_D;
+        V_tree(NSL::Slice(stride, stride+batch), NSL::Ellipsis()) = NSL::LinAlg::mat_mul(
+            batch_R, V_tree(NSL::Slice(0, batch), NSL::Ellipsis()));             // R @ V_L
       }
+
+      // Extract prefix products into Fkt_ and suffix products into fkt_[1..Nt-1]
+      Fkt_U_ = U_tree(NSL::Slice(0, Nt),      NSL::Ellipsis());
+      Fkt_D_ = D_tree(NSL::Slice(0, Nt),      NSL::Ellipsis());
+      Fkt_V_ = V_tree(NSL::Slice(0, Nt),      NSL::Ellipsis());
+      fkt_U_(NSL::Slice(1, Nt), NSL::Ellipsis()) = U_tree(NSL::Slice(full_N, tree_size), NSL::Ellipsis());
+      fkt_D_(NSL::Slice(1, Nt), NSL::Ellipsis()) = D_tree(NSL::Slice(full_N, tree_size), NSL::Ellipsis());
+      fkt_V_(NSL::Slice(1, Nt), NSL::Ellipsis()) = V_tree(NSL::Slice(full_N, tree_size), NSL::Ellipsis());
 
       vut_ = NSL::LinAlg::mat_mul(Fkt_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()),fkt_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
       
