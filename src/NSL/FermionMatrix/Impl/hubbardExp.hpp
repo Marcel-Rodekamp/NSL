@@ -343,9 +343,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         Fk_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
-	invAp1F_U_.expand(1);
-	invAp1F_D_.expand(1);
-	invAp1F_T_.expand(1);
     }
 };
 } // namespace FermionMatrix
