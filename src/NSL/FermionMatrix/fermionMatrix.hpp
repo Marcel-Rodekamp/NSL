@@ -109,9 +109,11 @@ class FermionMatrix {
         return M;
     }
 
+  LatticeType & Lat;
+  
     protected:
     //! An object of Lattice type (Ring, square, etc.).
-    LatticeType & Lat;
+  //    LatticeType & Lat;
 };
 }
 

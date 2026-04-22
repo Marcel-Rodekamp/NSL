@@ -37,6 +37,17 @@ class TensorExpand:
         return NSL::Tensor<Type>(this);
     }
 
+    // View-only expand (NO clone)
+    NSL::Tensor<Type> expand_view(const NSL::size_t &newSize, const int &dim) const {
+        std::vector<NSL::size_t> sizes = this->data_.sizes().vec();
+        sizes.insert(sizes.begin() + dim, newSize);
+
+        auto view = this->data_.unsqueeze(dim)
+                            .expand(torch::IntArrayRef(sizes));
+
+        return NSL::Tensor<Type>(view);
+}
+
 };
 
 } // namespace NSL::TensorImpl

@@ -18,6 +18,9 @@
 #include "../LinAlg/abs.tpp"
 #include "../LinAlg/mat_exp.tpp"
 #include "../LinAlg/inner_product.tpp"
+#include "../LinAlg/diag.tpp"
+#include "../LinAlg/mat_mul.tpp"
+#include "../LinAlg/qr.tpp"
 #include "device.tpp"
 
 namespace NSL::Lattice {
@@ -92,6 +95,9 @@ class SpatialLattice {
         //! Returns the SVD of the hopping matrix.
         std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> svd_hopping(Type delta=1.);
 
+        //! Returns the QR of the hopping matrix.
+        std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> qr_hopping(Type delta=1.);
+
         //! Returns the eigenenergies and unitary matrix (ie eigenvectors) of the hopping matrix.
         std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> eigh_hopping(Type delta=1.);
 
@@ -137,6 +143,9 @@ class SpatialLattice {
 
         //! store svd of hopping matrix
         NSL::map<Type,std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>> svd_hopping_matrix_;
+
+        //! store qr of hopping matrix
+        NSL::map<Type,std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>>> qr_hopping_matrix_;
 
         //! holds eigenenergies of the hopping matrix
         NSL::Tensor<Type> ee_;
