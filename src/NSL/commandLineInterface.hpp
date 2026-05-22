@@ -55,12 +55,12 @@ inline void add_logger(CLI::App & app, std::string & log_level, std::string & lo
 NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
     CLI::App app{CLIName};
 
-    // this add options to app and initializes log_level, log_file
+    // this adds options to app and initializes log_level, log_file
     std::string log_level;
     std::string log_file;
     NSL::Logger::add_logger(app, log_level, log_file);
 
-    // Define a bunch of default options 
+    // define a bunch of default options 
     NSL::Parameter params;
     app.add_option<NSL::GenType, std::string>("-f, --file", params["file"], 
         "Provide a parameter file"
@@ -108,12 +108,12 @@ NSL::Parameter init(int argc, char ** argv,
 ){
     CLI::App app{CLIName};
 
-    // this add options to app and initializes log_level, log_file
+    // this adds options to app and initializes log_level, log_file
     std::string log_level;
     std::string log_file;
     NSL::Logger::add_logger(app, log_level, log_file);
 
-    // Define a bunch of default options 
+    // define a bunch of default options 
     NSL::Parameter params;
     app.add_option("-f, --file", params["file"], 
         "Provide a parameter file"

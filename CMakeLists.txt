@@ -53,6 +53,7 @@ include(cmake/highfive.cmake)
 include(cmake/spdlog.cmake)
 include(cmake/yamlcpp.cmake)
 include(cmake/CLIUtils.cmake)
+include(cmake/pybind11.cmake)
 
 add_subdirectory(src/NSL)
 
@@ -68,3 +69,4 @@ add_subdirectory(Benchmarks)
 
 add_subdirectory(Documentation EXCLUDE_FROM_ALL)
 
+add_subdirectory(Python)

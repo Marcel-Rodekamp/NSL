@@ -15,7 +15,7 @@ namespace NSL::MCMC{
 enum Chain{ AllStates, LastState };
 
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
-          NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType
+          typename ActionType
 >
 class HMC{
     public:

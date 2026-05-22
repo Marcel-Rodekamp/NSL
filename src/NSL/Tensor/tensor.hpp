@@ -210,11 +210,11 @@ class Tensor:
      *      - H
      * - Real & Imag part: Impl/realImag.tpp
      *      - real
-     *      -imag
+     *      - imag
      * - abs: Impl/abs.tpp
      *      - abs
      * - Tensor contraction: Impl/contraction.tpp
-     *      - contraction
+     *      - contract
      * - Matrix exponential: Impl/matrixExp.tpp
      *      - mat_exp
      * - Trigonometric functions: Impl/trigonometric.tpp
