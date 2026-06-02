@@ -4,7 +4,7 @@ Leapfrog:
 HMC:
   save frequency: 10
   Ntherm: 100
-  Nconf: 5000
+  Nconf: 1000
   Nhmc: 1
   Nradial: 1
   radial scale: 0.03125
@@ -38,10 +38,10 @@ system:
   - - 2.5
     - -0.866025403784439
 
-stability: DIRECTINVERSE
+stability: QR
 
 measurements:
-  Number Time Sources: 4
+  Number Time Sources: 1
   momenta:
   - - 0.0
     - 0.0

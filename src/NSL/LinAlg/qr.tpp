@@ -14,12 +14,12 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>> qr(const NSL::Tensor<Type> & t){
 //! returns QDV decomposition of matrix M, where D is diagonal (R = DV)
 template <NSL::Concept::isNumber Type>
 std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udt(const NSL::Tensor<Type> & t){
-    NSL::Tensor<Type> Q = NSL::zeros_like(t);
-    NSL::Tensor<Type> R = NSL::zeros_like(t);
-    std::tie( Q , R ) = NSL::LinAlg::qr( t );
+    // Avoid pre-allocating zeros_like(t) — qr() already allocates its own output tensors.
+    auto [Q, R] = NSL::LinAlg::qr( t );
     NSL::Tensor<Type> D = NSL::LinAlg::diagonal(R);
-    NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(1./D), R);
-    return std::tie( Q, D, V ); 
+    // NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(1./D), R);
+    R *= (1./D).expand_view(D.shape(D.dim()-1), R.dim()-1);
+    return std::make_tuple( std::move(Q), std::move(D), std::move(R) );
 }
 
 } // namespace NSL::LinAlg

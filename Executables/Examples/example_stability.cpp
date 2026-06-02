@@ -1,8 +1,13 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
 #include "NSL.hpp"
+#include <chrono>
 
 int main(int argc, char* argv[]){
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
 
     typedef NSL::complex<double> Type;
 
@@ -95,7 +100,32 @@ int main(int argc, char* argv[]){
 
     // define a hubbard gauge action
     NSL::Action::HubbardGaugeAction<Type> Sg(params);
-    
+
+    // define a hubbard fermion action, the discretization (HubbardExp) is
+    // hard wired in the meta data if you change this here, also change the
+    // writeMeta()
+    //
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_direct(lattice,params);
+
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_QR(lattice,params);
+
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf_SVD(lattice,params);
+
+    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
+    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
+    Sf_SVD.hfm_.stabilityMethod = "SVD";
+
+    // Initialize the action being the sum of the gauge action & fermion action
+    NSL::Action::Action S_direct = Sg + Sf_direct;
+    NSL::Action::Action S_QR = Sg + Sf_QR;
+    NSL::Action::Action S_SVD = Sg + Sf_SVD;
+
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
 
@@ -128,85 +158,27 @@ int main(int argc, char* argv[]){
     if (yml["system"]["offset"]){
       config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
     } else {
-    config["phi"].real() = 0.0;
+    config["phi"].imag() = 0.0;
     }
     
     //! \todo: we really need a proper random interface...
     momentum["phi"].randn();
     momentum["phi"].imag() = 0.0;
 
-
-    // define a hubbard fermion action, the discretization (HubbardExp) is
-    // hard wired in the meta data if you change this here, also change the
-    // writeMeta()
-    //
-
-    /* charge basis (uncomment if necessary) */
-
-    // std::cout << "CHARGE basis" << std::endl;
-    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_direct(lattice,params);
-    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_QR(lattice,params);
-    // NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> Sf_SVD(lattice,params);
-
-    // Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
-    // Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
-    // Sf_SVD.hfm_.stabilityMethod = "SVD";
-
-    // // Initialize the action being the sum of the gauge action & fermion action
-    // NSL::Action::Action S_direct = Sg + Sf_direct;
-    // NSL::Action::Action S_QR = Sg + Sf_QR;
-    // NSL::Action::Action S_SVD = Sg + Sf_SVD;
-
-    // S_direct(config);
-    // S_QR(config);
-    // S_SVD(config);
-    
-    // std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
-    // Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    // Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    // Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
-    // std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    // Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    // Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    // Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
-    // std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    
-    /* charge basis (uncomment if necessary) */
-
-    
-    /* spin basis (uncomment if necessary) */
-
-    std::cout << "SPIN basis" << std::endl;
-    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_direct(lattice,params);
-    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_QR(lattice,params);
-    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> Sf_SVD(lattice,params);
-
-    Sf_QR.hfm_.stabilityMethod = "QR";// "QR", "DIRECTINVERSE"
-    Sf_direct.hfm_.stabilityMethod = "DIRECTINVERSE";
-    Sf_SVD.hfm_.stabilityMethod = "SVD";
-
-    // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S_direct = Sg + Sf_direct;
-    NSL::Action::Action S_QR = Sg + Sf_QR;
-    NSL::Action::Action S_SVD = Sg + Sf_SVD;
-
     S_direct(config);
     S_QR(config);
     S_SVD(config);
-    
-    std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
-    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
-    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
-    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Up);
-    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
-    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
-    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Spin::Down);
-    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
-    
-    /* spin basis (uncomment if necessary) */
 
-    
+    std::cout << "# value of action S for DIRECTINVERSE \t QR \t SVD" << std::endl;
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Particle);
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+    Sf_direct.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_QR.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    Sf_SVD.hfm_.populate(config["phi"], NSL::Hubbard::Species::Hole);
+    std::cout << std::setprecision(15) << Sf_direct.hfm_.logDetM() << "\t" <<  Sf_QR.hfm_.logDetM() << "\t" << Sf_SVD.hfm_.logDetM() << std::endl;
+
     Type Hi_direct, Hf_direct;
     Type Hi_QR, Hf_QR;
     Type Hi_SVD, Hf_SVD;
@@ -220,8 +192,13 @@ int main(int argc, char* argv[]){
     double U = params["U"];
     double beta = params["beta"];
     double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
-    std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
-
+    // std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
+    int Nmd = 1;
+    std::cout << "Nmd = " << Nmd << std::endl;
+    std::cout << "Lattice size = " << lattice.sites() << std::endl;
+    std::cout << "Nt = " << Nt << std::endl;
+    std::cout << "Total system size = " << lattice.sites() * Nt << std::endl;
+    std::vector<float> times_direct, times_QR, times_SVD;
     for (int Nmd = 10; Nmd < 210; Nmd += 10){
       // define integrator
       NSL::Integrator::LeapfrogRealForce LF_direct(
@@ -244,9 +221,16 @@ int main(int argc, char* argv[]){
       );
 
       // integrate eom
-      auto [config_proposal,momentum_proposal] = LF_direct(config, momentum);
-      auto [config_proposal2,momentum_proposal2] = LF_QR(config, momentum);
-      auto [config_proposal3,momentum_proposal3] = LF_SVD(config, momentum);
+    auto ti = high_resolution_clock::now();
+
+    auto [config_proposal,momentum_proposal] = LF_direct(config, momentum);
+    auto tf1 = high_resolution_clock::now();
+
+    auto [config_proposal2,momentum_proposal2] = LF_QR(config, momentum);
+    auto tf2 = high_resolution_clock::now();
+      
+    auto [config_proposal3,momentum_proposal3] = LF_SVD(config, momentum);
+    auto tf3 = high_resolution_clock::now();
 
       Hf_direct = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S_direct(config_proposal);
       Hf_QR = (momentum_proposal2["phi"] * momentum_proposal2["phi"]).sum()/2.0 + S_QR(config_proposal2);
@@ -254,8 +238,25 @@ int main(int argc, char* argv[]){
       std::cout << Nmd << std::setprecision(15) << "\t" << NSL::LinAlg::abs((Hf_direct-Hi_direct).real()) << "\t"
 		<< NSL::LinAlg::abs((Hf_QR-Hi_QR).real()) << "\t"
 		<< NSL::LinAlg::abs((Hf_SVD-Hi_SVD).real()) << std::endl;
+
+    duration<double, std::milli> durr1 = tf1 - ti;
+    duration<double, std::milli> durr2 = tf2 - tf1;
+    duration<double, std::milli> durr3 = tf3 - tf2;
+    times_direct.push_back(durr1.count());
+    times_QR.push_back(durr2.count());
+    times_SVD.push_back(durr3.count());
+
+    std::cout << "# Routine ran in " << durr1.count() << " milliseconds for DIRECTINVERSE" << std::endl;
+    std::cout << "# Routine ran in " << durr2.count() << " milliseconds for QR" << std::endl;
+    std::cout << "# Routine ran in " << durr3.count() << " milliseconds for SVD" << std::endl;
+    std::cout << " " << std::endl;
     }
-    
+    std::cout << "Average time per step: " << std::accumulate(times_direct.begin(), times_direct.end(), 0.0)/times_direct.size() << " ms for DIRECTINVERSE" << std::endl;
+    std::cout << "Average time per step: " << std::accumulate(times_QR.begin(), times_QR.end(), 0.0)/times_QR.size() << " ms for QR" << std::endl;
+    std::cout << "Ratio of average time per step QR / DIRECTINVERSE: " << std::accumulate(times_QR.begin(), times_QR.end(), 0.0)/times_QR.size() / (std::accumulate(times_direct.begin(), times_direct.end(), 0.0)/times_direct.size()) << std::endl;
+    std::cout << "Average time per step: " << std::accumulate(times_SVD.begin(), times_SVD.end(), 0.0)/times_SVD.size() << " ms for SVD" << std::endl;
+    std::cout << "Ratio of average time per step SVD / DIRECTINVERSE: " << std::accumulate(times_SVD.begin(), times_SVD.end(), 0.0)/times_SVD.size() / (std::accumulate(times_direct.begin(), times_direct.end(), 0.0)/times_direct.size()) << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
 
     return EXIT_SUCCESS;
 }

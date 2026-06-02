@@ -115,8 +115,8 @@ if tuneFlag == 0:
 
         # Run
         # p.cpu_affinity(cpuList)
-        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
-        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
+        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
+        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
         print(result)
 
         # os.system(f"./{binary} --file {args.yaml}")
@@ -245,7 +245,8 @@ if tuneFlag == 0:
                     for k,v in all_accept_rates.items():
                         f[f"{base_name}/autotune/all-accept-rates"].create_dataset(str(k), data=v)
 
-                result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
+                # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
+                result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
                 print(result)
 
                 with h5.File(ymlFile["fileIO"]["h5file"], 'a') as f:

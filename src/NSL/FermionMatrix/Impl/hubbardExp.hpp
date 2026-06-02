@@ -57,7 +57,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExp_( lat.device(), Nt, lat.sites() ),
         phiExpInv_( lat.device(), Nt, lat.sites() ),
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
-        FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites()),
         expKdiag_(lat.device(), lat.sites()),
@@ -74,18 +73,18 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         vv_(lat.device(), lat.sites(), lat.sites()),
         vu_(lat.device(), lat.sites(), lat.sites()),
         vut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-        uut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+        uut_(vut_), // alias of vut_
         ddt_(lat.device(), Nt-1, lat.sites()),
         vvt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
         udv_(lat.device(), lat.sites(), lat.sites()),
-        Qnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+        Qnewt_(Fkt_U_), // alias of Fkt_U_
         Dnewt_(lat.device(), Nt, lat.sites()),
-        Vnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+        Vnewt_(fkt_U_), // alias of fkt_U_
         Fk_Ut_(lat.device(), Nt, lat.sites(),lat.sites()),
-        Fk_Dt_(lat.device(), Nt, lat.sites()),   
+        Fk_Dt_(lat.device(), Nt, lat.sites()),
         Fk_Vt_(lat.device(), Nt, lat.sites(),lat.sites()),
-        invAp1F_Ut_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_Tt_(lat.device(), Nt, lat.sites(), lat.sites())
+        invAp1F_Ut_(fkt_U_), // alias of fkt_U_
+        invAp1F_Tt_(Fkt_U_)  // alias of Fkt_U_
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, const NSL::size_t Nt, const Type & beta = 1.0, const Type & mu = 0.0 ):
@@ -99,7 +98,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExp_( lat.device(), Nt, lat.sites() ),
         phiExpInv_( lat.device(), Nt, lat.sites() ),
         Fk_( lat.device(), Nt, lat.sites(), lat.sites() ),
-        FkFkFk_(lat.device(), Nt, lat.sites(), lat.sites()),
         invAp1F_(lat.device(), 1, lat.sites(), lat.sites()),
         pi_dot_(lat.device(), Nt, lat.sites()),
         expKdiag_(lat.device(), lat.sites()),
@@ -116,18 +114,18 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         vv_(lat.device(), lat.sites(), lat.sites()),
         vu_(lat.device(), lat.sites(), lat.sites()),
         vut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
-        uut_(lat.device(), Nt-1, lat.sites(), lat.sites()),
+        uut_(vut_), // alias of vut_
         ddt_(lat.device(), Nt-1, lat.sites()),
         vvt_(lat.device(), Nt-1, lat.sites(), lat.sites()),
         udv_(lat.device(), lat.sites(), lat.sites()),
-        Qnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+        Qnewt_(Fkt_U_), // alias of Fkt_U_
         Dnewt_(lat.device(), Nt, lat.sites()),
-        Vnewt_(lat.device(), Nt, lat.sites(), lat.sites()),
+        Vnewt_(fkt_U_), // alias of fkt_U_
         Fk_Ut_(lat.device(), Nt,lat.sites(),lat.sites()),
-        Fk_Dt_(lat.device(), Nt,lat.sites()),   
+        Fk_Dt_(lat.device(), Nt,lat.sites()),
         Fk_Vt_(lat.device(), Nt,lat.sites(),lat.sites()),
-        invAp1F_Ut_(lat.device(), Nt, lat.sites(), lat.sites()),
-        invAp1F_Tt_(lat.device(), Nt, lat.sites(), lat.sites())
+        invAp1F_Ut_(fkt_U_), // alias of fkt_U_
+        invAp1F_Tt_(Fkt_U_)  // alias of Fkt_U_
     {}
 
     HubbardExp(NSL::Hubbard::Species species, LatticeType & lat, NSL::Parameter & params):
@@ -298,7 +296,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
 
     //! Memory used for the implementation of the force
     NSL::Tensor<Type> Fk_;
-    NSL::Tensor<Type> FkFkFk_;
     NSL::Tensor<Type> invAp1F_;
     NSL::Tensor<Type> pi_dot_;
     NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
@@ -347,7 +344,6 @@ class HubbardExp : public FermionMatrix<Type,LatticeType> {
         phiExp_.expand(1);
         phiExpInv_.expand(1);
         Fk_.expand(1);
-        FkFkFk_.expand(1);
         invAp1F_.expand(1);
         pi_dot_.expand(1);
     }
