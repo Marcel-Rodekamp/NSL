@@ -9,3 +9,6 @@ target_link_libraries(propagator NSL)
 
 add_executable(propagatorSpinBasis propagatorSpinBasis.cpp)
 target_link_libraries(propagatorSpinBasis NSL)
+
+add_executable(propagatorChargeBasis propagatorChargeBasis.cpp)
+target_link_libraries(propagatorChargeBasis NSL)
