@@ -150,11 +150,7 @@ int main(int argc, char* argv[]){
 
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    if (yml["system"]["offset"]){
-      config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
-    } else {
-      config["phi"].imag() = 0.0;
-    }
+    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     // create an H5 object to store data
     NSL::H5IO h5(

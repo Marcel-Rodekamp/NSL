@@ -79,7 +79,7 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
      hfm_.populate(phi, NSL::Hubbard::Species::Hole);
      logDetMpMh+= hfm_.logDetM();
 
-    } else if (!hfm_.basis.compare("SPIN")) {
+    } else { // (!hfm_.basis.compare("SPIN")) {
 
      // spin up contribution
      hfm_.populate(phi, NSL::Hubbard::Spin::Up);
@@ -135,7 +135,7 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
        dS[this->configKey_]-= hfm_.gradLogDetM();
 
      }
-    } else if (!hfm_.basis.compare("SPIN")) {
+    } else { //(!hfm_.basis.compare("SPIN")) {
 
       // spin up contribution
       hfm_.populate(phi, NSL::Hubbard::Spin::Up);

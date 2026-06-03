@@ -380,10 +380,10 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureDiag
 
 
     // std::cout << "gets here 1" << std::endl;
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
-	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt(vut_);
-	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+    if (!this->hfm_.stabilityMethod.compare("SVD")) {
 	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::svd(vut_);
+	} else { //(!this->hfm_.stabilityMethod.compare("QR")) {
+	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::udt(vut_);
 	}
 
 
@@ -428,10 +428,10 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureRow(
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),NSL::LinAlg::solve(SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(1./SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis()))));
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) + NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(PI_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),PI_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
-    } else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+    if (!this->hfm_.stabilityMethod.compare("SVD")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
+    } else { //(!this->hfm_.stabilityMethod.compare("QR")) {
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
     }
 
     invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::solve(Vnewt_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(1./Dnewt_(NSL::Slice(1,Nt),NSL::Ellipsis()))));
@@ -509,10 +509,10 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureColu
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(NSL::LinAlg::solve(PI_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis())), false ),NSL::LinAlg::diag_embed(1./PI_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())));
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = vut_(NSL::Slice(1,Nt),NSL::Ellipsis())+ NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis())),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis())),PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()));
 
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
-    } else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+    if (!this->hfm_.stabilityMethod.compare("SVD")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
+    } else { //(!this->hfm_.stabilityMethod.compare("QR")) {
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
     }
 
 
@@ -589,27 +589,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::calcPiSigma
     SIGMA_U_(NSL::Slice(0,Nt),NSL::Ellipsis())=PI_U_(NSL::Slice(0,Nt),NSL::Ellipsis());
 
 
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
-       for (int t=1;t<Nt;t++) {
-      	  // PI(t)=Fk(t)...Fk(0)
-      	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
-      	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t,NSL::Ellipsis())),vu_);
-      	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
-      	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
-      	  PI_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t,NSL::Ellipsis()),uu_);
-	  PI_D_(t,NSL::Ellipsis()) = dd_;
-	  PI_V_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,PI_V_(t-1,NSL::Ellipsis()));
-
-	  // SIGMA(t)=Fk(Nt-1)...Fk(t)
-	  vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(Nt-t,NSL::Ellipsis()),SIGMA_U_(Nt-1-t,NSL::Ellipsis()));
-	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
-	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
-	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
-	  SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
-	  SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
-	  SIGMA_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(Nt-1-t,NSL::Ellipsis()));
-      }
-   } else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+    if (!this->hfm_.stabilityMethod.compare("SVD")) {
       for (int t=1;t<Nt;t++) {
       	  // PI(t)=Fk(t)...Fk(0)
       	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
@@ -625,6 +605,26 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::calcPiSigma
 	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
 	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
 	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::svd(vu_);
+	  SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
+	  SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
+	  SIGMA_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(Nt-1-t,NSL::Ellipsis()));
+      }
+   } else { //(!this->hfm_.stabilityMethod.compare("QR")) {
+       for (int t=1;t<Nt;t++) {
+      	  // PI(t)=Fk(t)...Fk(0)
+      	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
+      	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t,NSL::Ellipsis())),vu_);
+      	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
+      	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
+      	  PI_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t,NSL::Ellipsis()),uu_);
+	  PI_D_(t,NSL::Ellipsis()) = dd_;
+	  PI_V_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,PI_V_(t-1,NSL::Ellipsis()));
+
+	  // SIGMA(t)=Fk(Nt-1)...Fk(t)
+	  vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(Nt-t,NSL::Ellipsis()),SIGMA_U_(Nt-1-t,NSL::Ellipsis()));
+	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
+	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
+	  std::tie( uu_,dd_,vv_ ) = NSL::LinAlg::udt(vu_);
 	  SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
 	  SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
 	  SIGMA_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(Nt-1-t,NSL::Ellipsis()));
