@@ -774,10 +774,10 @@ A_V_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(1./SIGMA_D_(NSL::
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) + NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(P\
 I_D_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),PI_V_(NSL::Slice(0,Nt-1),NSL::Ellipsis())),SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
-    } else if (!this->hfm_.stabilityMethod.compare("SVD")) {
+    if (!this->hfm_.stabilityMethod.compare("SVD")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
+    } else { // (!this->hfm_.stabilityMethod.compare("QR")) {
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
     }
 
     invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::solve(Vnewt_(NSL::Slice(\
@@ -861,10 +861,10 @@ SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis())), false ),NSL::LinAlg::diag_embed(1./
     vut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = vut_(NSL::Slice(1,Nt),NSL::Ellipsis())+ NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embe\
 d(SIGMA_D_(NSL::Slice(1,Nt),NSL::Ellipsis())),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis())),PI_U_(NSL::Slice(0,Nt-1),NSL::Ellipsis()));
 
-    if (!this->hfm_.stabilityMethod.compare("QR")) {
+   if (!this->hfm_.stabilityMethod.compare("SVD")) {
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_); 
+    } else { // (!this->hfm_.stabilityMethod.compare("QR")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt(vut_);
-    } else if (!this->hfm_.stabilityMethod.compare("SVD")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
     }
 
 
