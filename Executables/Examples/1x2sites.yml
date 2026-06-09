@@ -1,5 +1,5 @@
 Leapfrog:
-  trajectory length: 1.0
+  trajectory length: 1.61318
   Nmd: 5
 HMC:
   save frequency: 10
@@ -12,8 +12,8 @@ fileIO:
   h5file: "hex1x2_U3_B90_Nt256.h5"
 system:
   name: ""
-  Nt: 128
-  beta: 12.0
+  Nt: 32
+  beta: 9.0
   nions: 4
   U: 3.
   mu: 0

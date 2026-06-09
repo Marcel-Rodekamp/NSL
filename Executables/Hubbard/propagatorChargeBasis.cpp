@@ -1,11 +1,12 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
-//#include "Integrator/Impl/leapfrog.tpp"
-//#include "Integrator/Impl/leapfrogRealForce.tpp"
 #include "NSL.hpp"
+#include <iostream>
+#include <vector>
 #include <ctime>
 
 int main(int argc, char* argv[]){
+    torch::InferenceMode guard;
 
     typedef NSL::complex<double> Type;
 
@@ -74,9 +75,11 @@ int main(int argc, char* argv[]){
         params["mu"]            = 0.0;
     }
 
-    // Stability method
-    if (yml["stability"] ) {
-      params["stability"]    = yml["stability"].as<std::string>();
+    if (yml["measurements"]["Number Time Sources"]){
+        params["Number Time Sources"] = yml["measurements"]["Number Time Sources"].as<NSL::size_t>();
+    } else {
+        // DEFAULT: Number Time Sources = Nt
+        params["Number Time Sources"] = 1;
     }
 
     // Standard deviation of proposal lognormal distribution in radial udpate
@@ -91,6 +94,10 @@ int main(int argc, char* argv[]){
         params["Nradial"] = 0;
     }
 
+    // Stability method
+    if (yml["stability"] ) {
+      params["stability"]    = yml["stability"].as<std::string>();
+    }
 
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
@@ -100,28 +107,26 @@ int main(int argc, char* argv[]){
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
-
+    
     // define a hubbard gauge action
-    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    NSL::Action::HubbardGaugeAction<Type> Sg(params);
 
     // define a hubbard fermion action, the discretization (HubbardExp) is
     // hard wired in the meta data if you change this here, also change the
     // writeMeta()
     //
-
-    /* CHARGE basis (uncomment if necessary) */
-    //NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>> S_fermion(lattice,params);  // this is the "CHARGE" basis
-    /* SPIN basis (uncomment if necessary) */
-    NSL::Action::HubbardFermionAction<Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type,decltype(lattice)>> S_fermion(lattice,params);  // this is the "SPIN" basis
+    NSL::Action::HubbardFermionAction<
+        Type, decltype(lattice), NSL::FermionMatrix::HubbardExp<Type,decltype(lattice)>
+      > Sf(lattice,params);
     
     // set stability method if defined in yml file, otherwise default is "QR"
     if (yml["stability"] ) {
       std::string stabilityMethod = params["stability"];
-      S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
+      Sf.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
     }
 
     // Initialize the action being the sum of the gauge action & fermion action
-    NSL::Action::Action S = S_gauge + S_fermion;
+    NSL::Action::Action S = Sg + Sf;
 
     NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
@@ -137,60 +142,33 @@ int main(int argc, char* argv[]){
         }
     };
 
-    NSL::Configuration<Type> momentum{
-        {"phi",
-            NSL::Tensor<Type>(
-                NSL::Device(params["device"]),
-                NSL::size_t(params["Nt"]),
-                NSL::size_t(params["Nx"])
-            )
-        }
-    };
-
+    // set seed if desired
     NSL::setSeed(1234);
-
+    
     //! \todo: we really need a proper random interface...
+    std::complex<double> I = std::complex<double> (0.0,1.0);
+
     config["phi"].randn();
     config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    if (yml["system"]["offset"]){
-      config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
-    } else {
-    config["phi"].imag() = 0.0;
-    }
+    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
+
+    // create an H5 object to store data
+    NSL::H5IO h5(
+        params["h5file"].to<std::string>(), 
+        params["overwrite"].to<bool>() ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
+    );
     
-    //! \todo: we really need a proper random interface...
-    momentum["phi"].randn();
-    momentum["phi"].imag() = 0.0;
-
-    Type Hi, Hf;
-    double U = params["U"];
-    double beta = params["beta"];
-    double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
-    std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
-
-    Hi = (momentum["phi"] * momentum["phi"]).sum()/2.0 + S(config);
-
-    clock_t ti = clock();
-    for (int Nmd = 10; Nmd < 210; Nmd += 10){
-      // define integrator
-      NSL::Integrator::LeapfrogRealForce LF(
-        /*action=*/ S,
-        /*trajectoryLength=*/ trajLength,
-        /*numberSteps=*/ Nmd,
-        /*backward*/ false // optional
-      );
-
-      // integrate eom
-      auto [config_proposal,momentum_proposal] = LF(/*q=*/config,/*p*/ momentum);
-
- 
-      Hf = (momentum_proposal["phi"] * momentum_proposal["phi"]).sum()/2.0 + S(config_proposal);
-      std::cout << Nmd << "\t (Hf,Hi) = (" << std::setprecision(15) << Hf <<", "<< Hi <<") dH = " << NSL::LinAlg::abs((Hf-Hi).real()) << std::endl;
-    }
-    clock_t tf = clock();
-
-    std::cout << "# Routine ran in " << (float)(tf-ti) / CLOCKS_PER_SEC << " seconds" << std::endl;
-
+    // initialize 2 point correlation function <p^+_x p_y>
+    NSL::Measure::Hubbard::FermionPropagator<
+        Type,
+        decltype(lattice),
+        NSL::FermionMatrix::HubbardExp<
+            Type,decltype(lattice)
+        >
+    > invM(lattice, params, h5);
     
+    // Perform calculation of propagator components
+    invM.measure();
+
     return EXIT_SUCCESS;
 }

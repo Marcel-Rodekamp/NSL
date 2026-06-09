@@ -220,7 +220,6 @@ int main(int argc, char* argv[]){
          false // optional
       );
 
-    
       // integrate eom
     auto ti = high_resolution_clock::now();
 

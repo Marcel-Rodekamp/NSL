@@ -28,6 +28,9 @@ target_link_libraries(RadialMCMC NSL)
 add_executable(autotune_RadialMCMC autotune_RadialMCMC.cpp)
 target_link_libraries(autotune_RadialMCMC NSL)
 
+add_executable(autotune_RadialMCMC_SpinBasis autotune_RadialMCMC_SpinBasis.cpp)
+target_link_libraries(autotune_RadialMCMC_SpinBasis NSL)
+
 #add_executable(example_GPU_Tensor example_GPU_Tensor.cpp)
 #target_link_libraries(example_GPU_Tensor NSL)
 

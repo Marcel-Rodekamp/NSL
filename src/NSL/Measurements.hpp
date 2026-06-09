@@ -4,5 +4,6 @@
 #include "Measurements/Hubbard/twoPointCorrelationFunction.tpp"
 #include "Measurements/Hubbard/twoBodyCorrelationFunction.tpp"
 #include "Measurements/Hubbard/fermionPropagator.tpp"
+#include "Measurements/Hubbard/fermionPropagatorSpinBasis.tpp"
 
 #endif //NSL_MEASURE_HPP

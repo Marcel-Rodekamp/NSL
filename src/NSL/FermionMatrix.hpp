@@ -10,4 +10,7 @@
 #include "FermionMatrix/Impl/hubbardExp.hpp"
 #include "FermionMatrix/Impl/hubbardExp.tpp"
 
+#include "FermionMatrix/Impl/hubbardExpSpinBasis.hpp"
+#include "FermionMatrix/Impl/hubbardExpSpinBasis.tpp"
+
 #endif
