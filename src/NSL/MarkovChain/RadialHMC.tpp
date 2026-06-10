@@ -321,29 +321,6 @@ class RadialHMC{
                 false
             );
 	}
-
-
-/*
-        // accept reject
-	if ( r_.rand()[0] <= acceptanceProb ){
-            return NSL::MCMC::MarkovState<Type>{
-                proposal_config,
-                proposal_S,
-                acceptanceProb,
-                state.markovTime+1,
-                true
-                // For this algorithm there are no weights to be added //
-            };
-        } else {
-            return NSL::MCMC::MarkovState<Type>(
-                state.configuration,
-                state.actionValue,
-                acceptanceProb,
-                state.markovTime+1,
-                false
-            );
-        }
-	*/
     }
 
     //! Implementation of the HMC radial update

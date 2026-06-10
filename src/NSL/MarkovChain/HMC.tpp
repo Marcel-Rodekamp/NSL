@@ -195,7 +195,8 @@ class HMC{
         }
 
         // use integrator to generate proposal 
-        auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+	try{
+	auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
 
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
@@ -231,6 +232,31 @@ class HMC{
             };
         } else {
             return NSL::MCMC::MarkovState<Type>(
+                state.configuration,
+                state.actionValue,
+                acceptanceProb,
+                state.markovTime+1,
+                false
+            );
+        }
+	}
+
+        catch (const std::exception& e) {
+              NSL::Logger::info( "# Warning! Exception in catch 1");
+              NSL::RealTypeOf<Type> acceptanceProb = 0.;
+              return NSL::MCMC::MarkovState<Type>(
+                state.configuration,
+                state.actionValue,
+                acceptanceProb,
+                state.markovTime+1,
+                false
+            );
+        }
+
+        catch (...) {
+              NSL::Logger::info( "# Warning! Exception in catch 2");
+              NSL::RealTypeOf<Type> acceptanceProb = 0.;
+              return NSL::MCMC::MarkovState<Type>(
                 state.configuration,
                 state.actionValue,
                 acceptanceProb,
