@@ -252,8 +252,9 @@ class RadialHMC{
             momentum[key] = p; 
         }
 
-        // use integrator to generate proposal 
-         auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+        // use integrator to generate proposal
+	try {
+        auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
 
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
@@ -276,8 +277,8 @@ class RadialHMC{
         // for complex actions!
         NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
 
-        // accept reject
-	    if ( r_.rand()[0] <= acceptanceProb ){
+	// accept reject
+        if ( r_.rand()[0] <= acceptanceProb ){
             return NSL::MCMC::MarkovState<Type>{
                 proposal_config,
                 proposal_S,
@@ -295,6 +296,31 @@ class RadialHMC{
                 false
             );
         }
+	}
+
+	catch (const std::exception& e) {
+	      NSL::Logger::info( "# Warning! Exception in catch 1");	
+              NSL::RealTypeOf<Type> acceptanceProb = 0.;
+	      return NSL::MCMC::MarkovState<Type>(
+                state.configuration,
+                state.actionValue,
+                acceptanceProb,
+                state.markovTime+1,
+                false
+            );
+        }
+
+	catch (...) {
+	      NSL::Logger::info( "# Warning! Exception in catch 2");
+     	      NSL::RealTypeOf<Type> acceptanceProb = 0.;
+	      return NSL::MCMC::MarkovState<Type>(
+                state.configuration,
+                state.actionValue,
+                acceptanceProb,
+                state.markovTime+1,
+                false
+            );
+	}
     }
 
     //! Implementation of the HMC radial update
