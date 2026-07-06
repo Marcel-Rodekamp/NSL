@@ -37,9 +37,6 @@ class FermionPropagatorSpinBasis: public Measurement {
                 params["Nx"].template to<NSL::size_t>()
             ),
             basenode_(basenode_),
-	invAp1F_U_(lattice.device(), 1, lattice.sites(), lattice.sites()),
-	invAp1F_D_(lattice.device(), 1, lattice.sites()),
-	invAp1F_T_(lattice.device(), 1, lattice.sites(), lattice.sites()),
 	expKdiag_(lattice.device(), lattice.sites()),
 	Uk_(lattice.device(), lattice.sites(), lattice.sites()),
 	Vk_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -49,9 +46,6 @@ class FermionPropagatorSpinBasis: public Measurement {
     SIGMA_U_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
     SIGMA_D_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites()),
     SIGMA_V_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    Fk_U_(lattice.device(),lattice.sites(),lattice.sites()),
-    Fk_D_(lattice.device(),lattice.sites()),   
-	Fk_V_(lattice.device(),lattice.sites(),lattice.sites()),
 	uu_(lattice.device(), lattice.sites(), lattice.sites()),
 	dd_(lattice.device(), lattice.sites()),
 	vv_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -63,13 +57,12 @@ class FermionPropagatorSpinBasis: public Measurement {
 	Dnewt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites()),
 	Vnewt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     vut_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-    invAp1F_Ut_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-	invAp1F_Dt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites()),
-	invAp1F_Tt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    invAp1F_Ut_(vut_), // alias of vut_
+    invAp1F_Tt_(Qnewt_), // alias of Qnewt_
     Fk_Ut_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
     Fk_Dt_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites()),   
 	Fk_Vt_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-	uut_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+	uut_(vut_), // alias of vut_
 	ddt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites()),
 	vvt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     Qnewtt_(lattice.device(), params["Nt"].template to<NSL::size_t>()-1, lattice.sites(), lattice.sites()),
@@ -100,9 +93,6 @@ class FermionPropagatorSpinBasis: public Measurement {
     void calcPiSigma(NSL::size_t tsrc);
 
     // maybe make these private later. . .
-    NSL::Tensor<Type> invAp1F_U_;
-    NSL::Tensor<Type> invAp1F_D_;
-    NSL::Tensor<Type> invAp1F_T_;
     NSL::Tensor<Type> expKdiag_, Uk_, Vk_;
     NSL::Tensor<Type> PI_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
     NSL::Tensor<Type> PI_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
@@ -110,9 +100,6 @@ class FermionPropagatorSpinBasis: public Measurement {
     NSL::Tensor<Type> SIGMA_U_; //(device,Nt,Nx,Nx); // stores U of M = U.D.V [ = Q.D.(D^{-1}.R) ]
     NSL::Tensor<Type> SIGMA_D_; //(device,Nt,Nx);    // stores D of M = U.D.V
     NSL::Tensor<Type> SIGMA_V_; //(device,Nt,Nx,Nx); // stores V of M = U.D.V
-    NSL::Tensor<Type> Fk_U_; //(device,Nx,Nx);
-    NSL::Tensor<Type> Fk_D_; //(device,Nx);   
-    NSL::Tensor<Type> Fk_V_; //(device,Nx,Nx);
     NSL::Tensor<Type> uu_; //(device, Nx, Nx);
     NSL::Tensor<Type> dd_; //(device, Nx);
     NSL::Tensor<Type> vv_; //(device, Nx, Nx);
@@ -125,7 +112,6 @@ class FermionPropagatorSpinBasis: public Measurement {
     NSL::Tensor<Type> Vnewt_; //(device, Nx, Nx);
     NSL::Tensor<Type> vut_; //(device, Nx, Nx);
     NSL::Tensor<Type> invAp1F_Ut_;
-    NSL::Tensor<Type> invAp1F_Dt_;
     NSL::Tensor<Type> invAp1F_Tt_;
     NSL::Tensor<Type> Fk_Ut_; //(device,Nx,Nx);
     NSL::Tensor<Type> Fk_Dt_; //(device,Nx);   
@@ -167,219 +153,6 @@ class FermionPropagatorSpinBasis: public Measurement {
     std::string leaf;
 
 };
-
-template<
-    NSL::Concept::isNumber Type,
-    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
-    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
->
-void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
-    NSL::Logger::info("Start Measuring Momentum Hubbard::FermionPropagatorSpinBasis");
-
-    // This is the default basenode we used so far
-    // ToDo: this should go into the const
-
-    std::string node;
-
-    // write the momenta out
-    //if (!h5_.exist(std::string(basenode_)+"/Momenta")){
-    //    NSL::Tensor<double> momenta = params_["momenta"];
-    //    this->h5_.write(momenta,std::string(basenode_)+"/Momenta");
-    //}
-
-    // write the non interacting correlator
-    node = "/NonInteracting/propagator";
-
-// this is a shortcut, we don't need to calculate the non-interacting
-    // correlators if we won't update the file
-    if(!skip_(this->params_["overwrite"],node)) {
-        // measure the non-interacting theory
-        // U = 0 <=> phi = 0
-        phi_ = Type(0);
-        measureK(1,0);
-    }else{
-        NSL::Logger::info("Non-interacting two-body propagator already exists");
-    }
-
-    // Interacting Correlators
-    // Initialize memory for the configurations
-     // get the range of configuration ids from the h5file
-    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
-    NSL::size_t saveFreq = this->params_["save frequency"];
-
-    NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
-        minCfg, maxCfg, saveFreq
-    );
-
-    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
-
-        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
-
-        // read configuration
-	this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
-
-        // compute the correlator for the differen time sources
-        measureK(this->params_["Number Time Sources"], cfgID);
-    } // for cfgID
-
-} // measureK()
-
-template<
-    NSL::Concept::isNumber Type,
-    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
-    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
->
-void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
-    int kDim = params_["wallSources"].shape(0);  // !! got rid of factor of 2
-    int bDim = params_["wallSources"].shape(1);
-
-    // Reset memory
-    // - Result correlator
-    corr_ = Type(0);
-    corrK_ = Type(0);
-
-    std::string node;
-
-    bool PiSigma;
-
-    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
-    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
-
-    NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
-
-    NSL::Tensor<Type> wallSources(params_["device"].template to<NSL::Device>(), NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
-    wallSources(NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
-//    wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
-//    wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(NSL::Tensor<Type> (params_["wallSources"]));
-
-    for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
-        PiSigma = true;
-
-        // first do up species
-        spin_ = NSL::Hubbard::Up;
-
-        // calculate column
-    if ((phi_ == Type(0)).all()) { // if non-interacting
-        node = fmt::format("/NonInteracting/measurements/spinUp/Ck[t,{}]",tsrc); // node for column
-    }else{
-        node = fmt::format("/markovChain/{}/measurements/spinUp/Ck[t,{}]",cfgID,tsrc); // node for column
-    }
-        if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
-           if (PiSigma) {
-              // populate the fermion matrix using the free configuration
-              hfm_.populate(phi_,spin_);
-              calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
-              PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
-           }
-       measureColumn(tsrc);
-       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
-                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
-                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSrc,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
-                    }
-                }
-                leaf = fmt::format("/{}-{}",kSrc,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
-        } // for kSrc
-
-        }else{
-        NSL::Logger::info("Config #{} already has up columns, skipping... ", cfgID);
-    }
-
-    // here we just measure the charge since it is easy to do
-        if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
-        if ((phi_ == Type(0)).all()) { // if non-interacting
-            node = fmt::format("/NonInteracting/measurements/spinUp/Q"); // node for diagonal
-        }else{
-            node = fmt::format("/markovChain/{}/measurements/spinUp/Q",cfgID); // node for diagonal
-        }
-           if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
-              if (PiSigma) {
-                 // populate the fermion matrix using the free configuration
-                 hfm_.populate(phi_,spin_);
-                 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
-                 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
-              }
-              measureDiagonal();
-
-	      auto Q = phi_[0]*0.0;
-	      for (int t=0; t< Nt; t++) {
-		 Q += NSL::LinAlg::diag(corr_(t,NSL::Ellipsis())).sum();
-	      }
-	      Q /= Nt;
-	      this->h5_.write(Q,std::string(basenode_)+node);  // write out the charge
-
-          }else{
-        NSL::Logger::info("Config #{} already has up diagonal, skipping... ", cfgID);
-    }
-        }
-
-        PiSigma = true; // reset bool for the downs. . .
-
-        // now repeat for down species
-        spin_ = NSL::Hubbard::Down;
-
-        // populate the fermion matrix using the free configuration
-    hfm_.populate(phi_,spin_);
-
-        // calculate column
-    if ((phi_ == Type(0)).all()) { // if non-interacting
-        node = fmt::format("/NonInteracting/measurements/spinDown/Ck[t,{}]",tsrc); // node for column
-    }else{
-        node = fmt::format("/markovChain/{}/measurements/spinDown/Ck[t,{}]",cfgID,tsrc); // node for column
-    }
-        if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
-           if (PiSigma) {
-              // populate the fermion matrix using the free configuration
-              hfm_.populate(phi_,spin_);
-              calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
-              PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
-           }
-       measureColumn(tsrc);
-       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
-                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
-                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSrc,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
-                    }
-                }
-                leaf = fmt::format("/{}-{}",kSrc,kSrc); // node for column
-                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
-        } // for kSrc
-
-        }else{
-        NSL::Logger::info("Config #{} already has down columns, skipping... ", cfgID);
-    }
-
-	// and now the charge again. . .
-        if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
-        if ((phi_ == Type(0)).all()) { // if non-interacting
-            node = fmt::format("/NonInteracting/measurements/spinDown/Q"); // node for diagonal
-        }else{
-            node = fmt::format("/markovChain/{}/measurements/spinDown/Q",cfgID); // node for column
-        }
-           if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
-              if (PiSigma) {
-                 // populate the fermion matrix using the free configuration
-                 hfm_.populate(phi_,spin_);
-                 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
-                 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
-              }
-              measureDiagonal();
-	      auto Q = phi_[0]*0.0;
-              for (int t=0; t< Nt; t++) {
-                 Q += NSL::LinAlg::diag(corr_(t,NSL::Ellipsis())).sum();
-              }
-              Q /= Nt;
-              this->h5_.write(Q,std::string(basenode_)+node);  // write out the charge
-
-          }else{
-        NSL::Logger::info("Config #{} already has down diagonal, skipping... ", cfgID);
-    }
-      }
-
-    } // tsrc
-
-} // measureK(Ntsrc,config);	  
 
 template<
     NSL::Concept::isNumber Type,
@@ -581,6 +354,219 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
     } // for cfgID
 
 } // measure()
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
+    int kDim = params_["wallSources"].shape(0);  // !! got rid of factor of 2
+    int bDim = params_["wallSources"].shape(1);
+
+    // Reset memory
+    // - Result correlator
+    corr_ = Type(0);
+    corrK_ = Type(0);
+
+    std::string node;
+
+    bool PiSigma;
+
+    NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
+    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+
+    NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
+
+    NSL::Tensor<Type> wallSources(params_["device"].template to<NSL::Device>(), NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
+    wallSources(NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
+//    wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
+//    wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(NSL::Tensor<Type> (params_["wallSources"]));
+
+    for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
+        PiSigma = true;
+
+        // first do up species
+        spin_ = NSL::Hubbard::Up;
+
+        // calculate column
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/measurements/spinUp/Ck[t,{}]",tsrc); // node for column
+    }else{
+        node = fmt::format("/markovChain/{}/measurements/spinUp/Ck[t,{}]",cfgID,tsrc); // node for column
+    }
+        if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+           if (PiSigma) {
+              // populate the fermion matrix using the free configuration
+              hfm_.populate(phi_,spin_);
+              calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+              PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+           }
+       measureColumn(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSrc,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                leaf = fmt::format("/{}-{}",kSrc,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
+        } // for kSrc
+
+        }else{
+        NSL::Logger::info("Config #{} already has up columns, skipping... ", cfgID);
+    }
+
+    // here we just measure the charge since it is easy to do
+        if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
+        if ((phi_ == Type(0)).all()) { // if non-interacting
+            node = fmt::format("/NonInteracting/measurements/spinUp/Q"); // node for diagonal
+        }else{
+            node = fmt::format("/markovChain/{}/measurements/spinUp/Q",cfgID); // node for diagonal
+        }
+           if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+              if (PiSigma) {
+                 // populate the fermion matrix using the free configuration
+                 hfm_.populate(phi_,spin_);
+                 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+                 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+              }
+              measureDiagonal();
+
+	      auto Q = phi_[0]*0.0;
+	      for (int t=0; t< Nt; t++) {
+		 Q += NSL::LinAlg::diag(corr_(t,NSL::Ellipsis())).sum();
+	      }
+	      Q /= Nt;
+	      this->h5_.write(Q,std::string(basenode_)+node);  // write out the charge
+
+          }else{
+        NSL::Logger::info("Config #{} already has up diagonal, skipping... ", cfgID);
+    }
+        }
+
+        PiSigma = true; // reset bool for the downs. . .
+
+        // now repeat for down species
+        spin_ = NSL::Hubbard::Down;
+
+        // populate the fermion matrix using the free configuration
+    hfm_.populate(phi_,spin_);
+
+        // calculate column
+    if ((phi_ == Type(0)).all()) { // if non-interacting
+        node = fmt::format("/NonInteracting/measurements/spinDown/Ck[t,{}]",tsrc); // node for column
+    }else{
+        node = fmt::format("/markovChain/{}/measurements/spinDown/Ck[t,{}]",cfgID,tsrc); // node for column
+    }
+        if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+           if (PiSigma) {
+              // populate the fermion matrix using the free configuration
+              hfm_.populate(phi_,spin_);
+              calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+              PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+           }
+       measureColumn(tsrc);
+       for (int kSrc=0; kSrc<kDim; kSrc++ ) {
+                for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
+                    for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
+                        corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSrc,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
+                    }
+                }
+                leaf = fmt::format("/{}-{}",kSrc,kSrc); // node for column
+                this->h5_.write(corrK_,std::string(basenode_)+node+leaf);  // write out the column
+        } // for kSrc
+
+        }else{
+        NSL::Logger::info("Config #{} already has down columns, skipping... ", cfgID);
+    }
+
+	// and now the charge again. . .
+        if(tsrc==0) { // calculate diagonal terms using tsrc=0 prefix/suffix terms
+        if ((phi_ == Type(0)).all()) { // if non-interacting
+            node = fmt::format("/NonInteracting/measurements/spinDown/Q"); // node for diagonal
+        }else{
+            node = fmt::format("/markovChain/{}/measurements/spinDown/Q",cfgID); // node for column
+        }
+           if (!skip_(this->params_["overwrite"],node)) { // if node already exists (meaning this is already calculated), then skip
+              if (PiSigma) {
+                 // populate the fermion matrix using the free configuration
+                 hfm_.populate(phi_,spin_);
+                 calcPiSigma(tsrc); // calculuate prefix/suffix terms with tsrc
+                 PiSigma = false;  // set flag to false to avoid repeating this calculation for the other terms
+              }
+              measureDiagonal();
+	      auto Q = phi_[0]*0.0;
+              for (int t=0; t< Nt; t++) {
+                 Q += NSL::LinAlg::diag(corr_(t,NSL::Ellipsis())).sum();
+              }
+              Q /= Nt;
+              this->h5_.write(Q,std::string(basenode_)+node);  // write out the charge
+
+          }else{
+        NSL::Logger::info("Config #{} already has down diagonal, skipping... ", cfgID);
+    }
+      }
+
+    } // tsrc
+
+} // measureK(Ntsrc,config);
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
+    NSL::Logger::info("Start Measuring Momentum Hubbard::FermionPropagatorSpinBasis");
+
+    // This is the default basenode we used so far
+    // ToDo: this should go into the const
+
+    std::string node;
+
+    // write the momenta out
+    //if (!h5_.exist(std::string(basenode_)+"/Momenta")){
+    //    NSL::Tensor<double> momenta = params_["momenta"];
+    //    this->h5_.write(momenta,std::string(basenode_)+"/Momenta");
+    //}
+
+    // write the non interacting correlator
+    node = "/NonInteracting/propagator";
+
+// this is a shortcut, we don't need to calculate the non-interacting
+    // correlators if we won't update the file
+    if(!skip_(this->params_["overwrite"],node)) {
+        // measure the non-interacting theory
+        // U = 0 <=> phi = 0
+        phi_ = Type(0);
+        measureK(1,0);
+    }else{
+        NSL::Logger::info("Non-interacting two-body propagator already exists");
+    }
+
+    // Interacting Correlators
+    // Initialize memory for the configurations
+     // get the range of configuration ids from the h5file
+    auto [minCfg, maxCfg] = this->h5_.getMinMaxConfigs(std::string(basenode_)+"/markovChain");
+    NSL::size_t saveFreq = this->params_["save frequency"];
+
+    NSL::Logger::info("Found trajectories: {} to {} with save frequency {}",
+        minCfg, maxCfg, saveFreq
+    );
+
+    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
+
+        NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
+
+        // read configuration
+	this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
+
+        // compute the correlator for the differen time sources
+        measureK(this->params_["Number Time Sources"], cfgID);
+    } // for cfgID
+
+} // measureK()
 
 template<
     NSL::Concept::isNumber Type,
