@@ -20,10 +20,10 @@ class FermionPropagator: public Measurement {
             Measurement(params, h5),
             hfm_(lattice, params),
             corr_(
-                params["device"].to<NSL::Device>(),
-                params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>()
+                params["device"].template to<NSL::Device>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>()
             ),
             corrK_(
                 params["device"].template to<NSL::Device>(),
@@ -32,20 +32,20 @@ class FermionPropagator: public Measurement {
                 params["wallSources"].shape(1).template to<NSL::size_t>() // bands
             ),
             phi_(
-                params["device"].to<NSL::Device>(),
-                params["Nt"].to<NSL::size_t>(),
-                params["Nx"].to<NSL::size_t>()
+                params["device"].template to<NSL::Device>(),
+                params["Nt"].template to<NSL::size_t>(),
+                params["Nx"].template to<NSL::size_t>()
             ),
             basenode_(basenode_),
 	expKdiag_(lattice.device(), lattice.sites()),
 	Uk_(lattice.device(), lattice.sites(), lattice.sites()),
 	Vk_(lattice.device(), lattice.sites(), lattice.sites()),
-	PI_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    PI_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
-    PI_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    SIGMA_U_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    SIGMA_D_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),
-    SIGMA_V_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+	PI_U_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    PI_D_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites()),
+    PI_V_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    SIGMA_U_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    SIGMA_D_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites()),
+    SIGMA_V_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
 	uu_(lattice.device(), lattice.sites(), lattice.sites()),
 	dd_(lattice.device(), lattice.sites()),
 	vv_(lattice.device(), lattice.sites(), lattice.sites()),
@@ -53,21 +53,21 @@ class FermionPropagator: public Measurement {
 	Qnew_(lattice.device(), lattice.sites(), lattice.sites()),
 	Dnew_(lattice.device(), lattice.sites()),
 	Vnew_(lattice.device(), lattice.sites(), lattice.sites()),
-    Qnewt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-	Dnewt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
-	Vnewt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-    vut_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    Qnewt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+	Dnewt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites()),
+	Vnewt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    vut_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
     invAp1F_Ut_(vut_), // alias of vut_
 	invAp1F_Tt_(Qnewt_), // alias of Qnewt_
-    Fk_Ut_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
-    Fk_Dt_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites()),   
-	Fk_Vt_(lattice.device(),params["Nt"].to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    Fk_Ut_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
+    Fk_Dt_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites()),   
+	Fk_Vt_(lattice.device(),params["Nt"].template to<NSL::size_t>(),lattice.sites(),lattice.sites()),
 	uut_(vut_), // alias of vut_
-	ddt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites()),
-	vvt_(lattice.device(), params["Nt"].to<NSL::size_t>(), lattice.sites(), lattice.sites()),
-    Qnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites()),
-	Dnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites()),
-	Vnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites())
+	ddt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites()),
+	vvt_(lattice.device(), params["Nt"].template to<NSL::size_t>(), lattice.sites(), lattice.sites()),
+    Qnewtt_(lattice.device(), params["Nt"].template to<NSL::size_t>()-1, lattice.sites(), lattice.sites()),
+	Dnewtt_(lattice.device(), params["Nt"].template to<NSL::size_t>()-1, lattice.sites()),
+	Vnewtt_(lattice.device(), params["Nt"].template to<NSL::size_t>()-1, lattice.sites(), lattice.sites())
     {}
 
     FermionPropagator(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5):
@@ -413,7 +413,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
 
-    NSL::Tensor<Type> wallSources(params_["device"].to<NSL::Device>(), 2 * NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
+    NSL::Tensor<Type> wallSources(params_["device"].template to<NSL::Device>(), 2 * NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
     wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
     wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(NSL::Tensor<Type> (params_["wallSources"]));
 
