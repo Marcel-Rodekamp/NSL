@@ -4,6 +4,7 @@
 #include "Action/action.tpp"
 
 // implementations
+#include "Action/Implementations/PPP_GaugeAction.tpp"
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
 
