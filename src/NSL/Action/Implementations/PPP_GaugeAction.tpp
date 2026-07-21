@@ -31,27 +31,19 @@ class PPPGaugeAction :
 	Nx_(params["Nx"].template to<NSL::size_t>()),
 	Nt_(params["Nt"].template to<NSL::size_t>()),
 	invVtilde_(Nx_,Nx_),
-	invVtildePhi_(Nt_,Nx_)
+	invVtildePhi_(Nt_,Nx_),
+	U_(params["U"].template to<NSL::size_t>())
     {
-      double R;
+      double R;  // distance between sites (in units of lattice spacing)
       for (int i=0;i<Nx_;i++) {
       	  for (int j=0;j<Nx_;j++) {
 	      R=0.0;
 	      for (int k=0;k<3;k++) R+=(positions[i][k]-positions[j][k])*(positions[i][k]-positions[j][k]);
 	      R=sqrt(R);
-	      invVtilde_(i,j)=Utilde_/(1+Utilde_*R*t1_*a_/e2_);
-	      //std::cout << i << " " << j << " " << invVtilde_(i,j) << std::endl;
+	      invVtilde_(i,j)=Utilde_/(1+U_*R*t1_*a_/e2_);
 	  }
       }
-      //std::cout << " " << std::endl;
       invVtilde_=NSL::LinAlg::mat_inv(invVtilde_);
-      //for (int i=0;i<Nx_;i++) {
-      //    for (int j=0;j<Nx_;j++) {
-      //        std::cout << i << " " << j << " " << invVtilde_(i,j) << std::endl;
-      //    }
-     // }
-     // std::cout << Utilde_ << std::endl;
-    //exit(0);
     }
 
 /*
@@ -78,10 +70,11 @@ class PPPGaugeAction :
     int Nx_; // number of spatial sites
     int Nt_; // number of time slices
     double e2_= 14.3997; // eV-Angstrom
-    double t1_ = 2.8; // eV  hopping strength
+    double t1_ = 2.7; // eV  hopping strength
     double a_ = 1.4; // lattice spacing in Angstrom
     NSL::Parameter params_;
     Type Utilde_;
+    Type U_;
     NSL::Tensor<Type> invVtilde_;
     NSL::Tensor<Type> invVtildePhi_;
     
@@ -93,7 +86,6 @@ Type PPPGaugeAction<Type, TensorType>::eval(const Tensor<TensorType>& phi){
      	 invVtildePhi_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_vec(invVtilde_, phi(t,NSL::Ellipsis()));
      }
      return (phi * invVtildePhi_).sum()/2.0;
-     //return (phi * phi).sum() / ( 2 * Utilde_ ) ;
 }
 	
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
@@ -102,7 +94,6 @@ Configuration<TensorType> PPPGaugeAction<Type, TensorType>::force(const Tensor<T
          invVtildePhi_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_vec(invVtilde_, phi(t,NSL::Ellipsis()));
      }
      return Configuration<Type>{{this->configKey_, -invVtildePhi_ }};
-     //return Configuration<Type>{{this->configKey_, phi /(- Utilde_)}};
 }
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isNumber TensorType>
@@ -111,7 +102,6 @@ Configuration<TensorType> PPPGaugeAction<Type, TensorType>::grad(const Tensor<Te
          invVtildePhi_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_vec(invVtilde_, phi(t,NSL::Ellipsis()));
      }
      return Configuration<Type>{{this->configKey_, invVtildePhi_ }};
-     //return Configuration<Type>{{this->configKey_, phi / Utilde_}};
 }
 
 } // namespace NSL::Action
