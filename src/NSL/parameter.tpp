@@ -295,33 +295,49 @@ class GeneralType{
     GeneralType<Types_...> & operator=( GeneralType<Types_...> && genT) = default;
 
     //! Copy-Construct the GeneralType<Types...> from an object with type Type;
+    //! Excludes Type = GeneralType itself so this forwarding constructor never
+    //! competes with (and hijacks) the real copy constructor above.
     template<typename Type>
+        requires( !std::is_same_v<std::remove_cvref_t<Type>, GeneralType<Types_...>> )
     GeneralType( const Type & obj ) :
         obj_(obj)
     {}
 
     //! Move-Construct the GeneralType<Types...> from an object with type Type;
+    //! Excludes Type = GeneralType itself so this forwarding constructor never
+    //! competes with (and hijacks) the real move constructor above.
     template<typename Type>
+        requires( !std::is_same_v<std::remove_cvref_t<Type>, GeneralType<Types_...>> )
     GeneralType( Type && obj ) :
         obj_(std::move(obj))
     {}
 
     //! Copy-assign the GeneralType<Types...> from an object with type Type;
+    //! Excludes Type = GeneralType itself so this forwarding assignment never
+    //! competes with (and hijacks) the real copy-assignment operator above.
     template<typename Type>
+        requires( !std::is_same_v<std::remove_cvref_t<Type>, GeneralType<Types_...>> )
     GeneralType<Types_...> & operator=( const Type & obj ){
         obj_ = obj;
         return *this;
     }
 
     //! Move-assign the GeneralType<Types...> from an object with type Type;
+    //! Excludes Type = GeneralType itself so this forwarding assignment never
+    //! competes with (and hijacks) the real move-assignment operator above.
     template<typename Type>
+        requires( !std::is_same_v<std::remove_cvref_t<Type>, GeneralType<Types_...>> )
     GeneralType<Types_...> & operator=( Type && obj ){
         obj_ = obj;
         return *this;
     }
 
     //! This operator decomposes the `GeneralType` into a given type potentially casting it
+    //! Constrained to only the types this GeneralType can actually hold (Types_...), so that
+    //! it does not get pulled into overload resolution for unrelated types (e.g. fmt's internal
+    //! fmt::detail::value<Context>), which previously caused an ambiguous conversion error.
     template<typename Type>
+        requires( (std::is_same_v<Type,Types_> || ...) )
     operator Type(){
         return std::visit(
             [](auto & e){
