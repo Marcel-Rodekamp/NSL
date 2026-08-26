@@ -165,13 +165,13 @@ class TensorBase {
      *  \todo: Does the compile optimize this away?
      *  \todo: Is this publicly available in NSL::Tensor?
      * */
-    explicit TensorBase<Type>(TensorBase<Type> * other) : 
+    explicit TensorBase(TensorBase<Type> * other) : 
         TensorBase(*other)
     {
         //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
     }
     template<NSL::Concept::isNumber OtherType>
-    explicit TensorBase<Type>(TensorBase<OtherType> * other) : 
+    explicit TensorBase(TensorBase<OtherType> * other) : 
         TensorBase(*other)
     {
         //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
