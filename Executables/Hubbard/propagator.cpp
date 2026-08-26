@@ -23,6 +23,11 @@ int main(int argc, char* argv[]){
     // For personal files, this code needs to be adjusted accordingly
     YAML::Node yml = YAML::LoadFile(params["file"]);
 
+    int startConfig=-1;
+    if(params["config"]) {
+      startConfig=params["config"];
+    }
+
     // convert the data from example_param.yml and put it into the params
     // The name of the physical system
     params["name"]              = yml["system"]["name"].as<std::string>();
@@ -178,7 +183,7 @@ int main(int argc, char* argv[]){
     NSL::Measure::Hubbard::FermionPropagator<
         Type,
         decltype(lattice),
-        NSL::FermionMatrix::HubbardExp<
+        NSL::FermionMatrix::HubbardExpSpinBasis<
             Type,decltype(lattice)
         >
     > invM(lattice, params, h5);
@@ -190,7 +195,11 @@ int main(int argc, char* argv[]){
     }
 
     // Perform calculation of propagator components
-    invM.measureK();
+    if (startConfig < 0) {
+      invM.measureK();
+    } else {
+      invM.measureK(startConfig);
+    }
 
     return EXIT_SUCCESS;
 }

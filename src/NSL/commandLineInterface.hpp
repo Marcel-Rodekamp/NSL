@@ -66,6 +66,11 @@ NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
         "Provide a parameter file"
     );
 
+    // add start config option to tell NSL which config to directly start on
+    app.add_option<NSL::GenType, int>("-c, --config", params["config"],
+        "Provide a starting config number"
+    );
+
     bool useGPU = false;
     app.add_flag("--GPU", useGPU, "Toggle GPU usage, according to this params['device'] is NSL::GPU or NSL::CPU [DEFAULT]");
     bool overwrite = false;
