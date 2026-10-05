@@ -204,11 +204,16 @@ int main(int argc, char* argv[]){
         >
     > invM(lattice, params, h5);
 
-    // set stability method if defined in yml file, otherwise default is "QR"
+    // The propagator measurement is only validated with QR stabilization: its SVD path
+    // overflows/produces NaN at large beta and it has no DIRECTINVERSE path (falls back to QR).
+    // The action above keeps the yml stability method; the measurement always uses QR.
     if (yml["stability"] ) {
       std::string stabilityMethod = params["stability"];
-      invM.hfm_.stabilityMethod = stabilityMethod; // "QR", "DIRECTINVERSE", "SVD"
+      if (stabilityMethod != "QR") {
+        NSL::Logger::warn("stability: {} is not supported by the spin-basis propagator measurement, using QR instead", stabilityMethod);
+      }
     }
+    invM.hfm_.stabilityMethod = "QR";
 
     // Perform calculation of wall-source projected propagator components
     invM.measureK();
