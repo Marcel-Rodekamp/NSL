@@ -25,11 +25,12 @@ class FermionPropagatorSpinBasis: public Measurement {
                 params["Nx"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
+            // wall sources are optional (only measureK needs them); without them corrK_ is empty
             corrK_(
                 params["device"].template to<NSL::Device>(),
                 params["Nt"].template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
-                params["wallSources"].shape(1).template to<NSL::size_t>() // bands
+                params.contains("wallSources") ? params["wallSources"].shape(1).template to<NSL::size_t>() : NSL::size_t(0), // bands
+                params.contains("wallSources") ? params["wallSources"].shape(1).template to<NSL::size_t>() : NSL::size_t(0)  // bands
             ),
             phi_(
                 params["device"].to<NSL::Device>(),
@@ -159,6 +160,14 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! and write each (Nt x bands x bands) block to basenode_+node+"/kSink-kSrc".
     //! `sources` holds all wall-source vectors as rows, (kDim*bands) x Nx, row k*bands+sigma.
     void writeK_(const NSL::Tensor<Type> & sources, const std::string & node);
+
+    //! measureK needs params["wallSources"]; fail with a clear message if it is missing
+    void requireWallSources_(){
+        if (!this->params_.contains("wallSources")){
+            NSL::Logger::error("FermionPropagatorSpinBasis::measureK requires wall sources (measurements: wallSources in the parameter file)");
+            throw std::runtime_error("FermionPropagatorSpinBasis::measureK: params[\"wallSources\"] is not set");
+        }
+    }
 
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
@@ -400,6 +409,8 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
+    requireWallSources_();
+
     // Reset memory
     // - Result correlator
     corr_ = Type(0);
@@ -493,6 +504,7 @@ template<
 >
 void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
     NSL::Logger::info("Start Measuring Momentum Hubbard::FermionPropagatorSpinBasis");
+    requireWallSources_();
 
     // write the momenta out
     if (!h5_.exist(std::string(basenode_)+"/Momenta")){

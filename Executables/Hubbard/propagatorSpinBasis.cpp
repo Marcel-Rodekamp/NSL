@@ -139,8 +139,9 @@ int main(int argc, char* argv[]){
       }
       params["wallSources"]=kblocks.to(params["device"]);
     } else {
-      // DEFAULT: raise an exception
-      // currently don't know how to do this, will do later
+      // measureK() projects onto wall sources; fail before the h5 file is opened
+      NSL::Logger::error("propagatorSpinBasis requires measurements: wallSources in {}", params["file"].to<std::string>());
+      return EXIT_FAILURE;
     }
 
 
