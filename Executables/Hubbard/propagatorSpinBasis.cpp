@@ -8,6 +8,7 @@
 int main(int argc, char* argv[]){
 
     typedef NSL::complex<double> Type;
+    torch::InferenceMode guard;
 
     // Initialize NSL
     NSL::Parameter params = NSL::init(argc, argv, "Example MCMC");
@@ -107,6 +108,42 @@ int main(int argc, char* argv[]){
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);
     
+    std::vector<std::vector<std::vector<std::vector<double>>>> kblocks2d;
+    std::vector<std::vector<double>> momenta;
+   
+
+    // Load momentum blocks if they exist
+    if (yml["measurements"]["momenta"]){
+      momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
+      NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
+      for (int i=0;i<momenta.size(); i++){
+        for (int j=0;j<momenta[0].size();j++){
+          mblocks(i,j) = momenta[i][j];
+        }
+      }
+      params["momenta"]=mblocks;
+    }
+
+    if (yml["measurements"]["wallSources"]){
+      kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
+      NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+      NSL::Logger::info( "Measuring {} momentum block(s), each with {} band(s) of length {}",kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
+
+      // now populate the momentum blocks with proper complex variables
+      for (int i=0; i<kblocks2d.size(); i++){
+        for (int j=0; j<kblocks2d[0].size(); j++) {
+          for (int k=0; k<kblocks2d[0][0].size(); k++) {
+            kblocks(i,j,k) = NSL::complex<double> (kblocks2d[i][j][k][0], kblocks2d[i][j][k][1]);
+          }
+        }
+      }
+      params["wallSources"]=kblocks.to(params["device"]);
+    } else {
+      // DEFAULT: raise an exception
+      // currently don't know how to do this, will do later
+    }
+
+
     // define a hubbard gauge action
     NSL::Action::HubbardGaugeAction<Type> Sg(params);
 
@@ -165,9 +202,15 @@ int main(int argc, char* argv[]){
             Type,decltype(lattice)
         >
     > invM(lattice, params, h5);
-    
-    // Perform calculation of propagator components
-    invM.measure();
+
+    // set stability method if defined in yml file, otherwise default is "QR"
+    if (yml["stability"] ) {
+      std::string stabilityMethod = params["stability"];
+      invM.hfm_.stabilityMethod = stabilityMethod; // "QR", "DIRECTINVERSE", "SVD"
+    }
+
+    // Perform calculation of wall-source projected propagator components
+    invM.measureK();
 
     return EXIT_SUCCESS;
 }
