@@ -156,8 +156,9 @@ class FermionPropagatorSpinBasis: public Measurement {
     }
 
     //! Project corr_ (Nt x Nx x Nx) onto all (sink,source) pairs of wall sources
-    //! and write each (Nt x bands x bands) block to basenode_+node+"/kSink-kSrc"
-    void writeK_(const NSL::Tensor<Type> & wallSources, const std::string & node);
+    //! and write each (Nt x bands x bands) block to basenode_+node+"/kSink-kSrc".
+    //! `sources` holds all wall-source vectors as rows, (kDim*bands) x Nx, row k*bands+sigma.
+    void writeK_(const NSL::Tensor<Type> & sources, const std::string & node);
 
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
@@ -372,22 +373,26 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::writeK_(const NSL::Tensor<Type> & wallSources, const std::string & node){
-    int kDim = wallSources.shape(0);
-    int bDim = wallSources.shape(1);
+void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::writeK_(const NSL::Tensor<Type> & sources, const std::string & node){
+    int bDim = corrK_.shape(1);
+    int kDim = sources.shape(0)/bDim;
+
+    // all projections at once: proj(t,i,j) = sum_{x,y} conj(sources(i,x)) corr_(t,x,y) sources(j,y)
+    // with i = kSink*bDim+sigmaSink, j = kSrc*bDim+sigmaSrc
+    NSL::Tensor<Type> proj = NSL::LinAlg::mat_mul(
+        NSL::LinAlg::conj(sources),
+        NSL::LinAlg::mat_mul(corr_, NSL::LinAlg::transpose(sources))
+    ); // (Nt, kDim*bDim, kDim*bDim)
 
     for (int kSrc=0; kSrc<kDim; kSrc++ ) {
         for (int kSink=0; kSink<kDim; kSink++) {
-            for (int sigmaSink=0; sigmaSink<bDim; sigmaSink++) {
-                for (int sigmaSrc=0; sigmaSrc<bDim; sigmaSrc++) {
-                    corrK_(NSL::Slice(),sigmaSink,sigmaSrc) = NSL::LinAlg::inner_product( wallSources(kSink,sigmaSink,NSL::Slice()) , NSL::LinAlg::mat_mul(corr_, wallSources(kSrc,sigmaSrc,NSL::Slice())),1);
-                }
-            }
+            // deep copy into the contiguous corrK_ (Nt x bands x bands) buffer
+            corrK_ = proj(NSL::Slice(), NSL::Slice(kSink*bDim,(kSink+1)*bDim), NSL::Slice(kSrc*bDim,(kSrc+1)*bDim));
             std::string leaf = fmt::format("/{}-{}",kSink,kSrc);
             this->h5_.write(corrK_,std::string(basenode_)+node+leaf);
         }
     } // for kSrc
-} // writeK_(wallSources,node)
+} // writeK_(sources,node)
 
 template<
     NSL::Concept::isNumber Type,
@@ -413,6 +418,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NS
     NSL::Tensor<Type> wallSources(params_["device"].to<NSL::Device>(), 2 * NSL::Tensor<Type> (params_["wallSources"]).shape(0), NSL::Tensor<Type> (params_["wallSources"]).shape(1), NSL::Tensor<Type> (params_["wallSources"]).shape(2));
     wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::Tensor<Type> (params_["wallSources"]);
     wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(NSL::Tensor<Type> (params_["wallSources"]));
+    // flatten to (kDim*bands) x Nx: row k*bands+sigma is wall source (k,sigma)
+    wallSources.reshape(wallSources.shape(0)*wallSources.shape(1), wallSources.shape(2));
 
     // if non-interacting (phi = 0) write to /NonInteracting, otherwise to /markovChain/cfgID
     if ((phi_ == Type(0)).all()) {
