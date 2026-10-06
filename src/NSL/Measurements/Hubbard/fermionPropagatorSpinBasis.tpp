@@ -170,8 +170,10 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! R for finite inputs with |x| >~ 1e154 = sqrt(DBL_MAX), and also for row/column-graded inputs
     //! spanning ~1e-170..1e170, while LAPACK, the single-matrix CUDA QR and MAGMA stay finite. The
     //! fix is about finiteness, not accuracy: on such graded matrices |diag(R)| from LAPACK (and from
-    //! the single-matrix CUDA QR) also differs from an exact QR by huge factors; with the host QR the
-    //! GPU propagator agrees with the CPU one (<= 1e-11 relative), which matches the reference.
+    //! the single-matrix CUDA QR) also differs from an exact QR by huge factors. With the host QR the
+    //! GPU propagator agrees with the CPU one to <~ 1e-11 relative to the maximum of each node; per
+    //! time slice, both CPU and GPU differ from an exact (high-precision) reference by up to
+    //! ~1e-7..1e-6 relative (inherent precision of the stabilised algorithm at beta = 90).
     //! Cost: the host round trip is free for perylene (Nx = 20) but slows the GPU run down for
     //! Nx >~ 100 (measured vs 7b495d0: tube Nx=112/Nt=256 1.6x, ring Nx=200/Nt=128 2.1x).
     //! Not changed here: the batched CUDA linalg_solve can also go non-finite for row-graded
