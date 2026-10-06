@@ -444,9 +444,10 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
     if (projectionReady_) { return; }
 
     const bool wallMode = hasWallSources_(this->params_);
-    // an empty eigenvalueIndices tensor counts as absent (default selection), like empty wall sources
+    // an eigenvalueIndices tensor without elements (any shape) counts as absent (default
+    // selection), like empty wall sources; otherwise all its elements are the requested indices
     const bool idxMode = this->params_.contains("eigenvalueIndices")
-        && this->params_["eigenvalueIndices"].shape(0).template to<NSL::size_t>() > 0;
+        && NSL::Tensor<double>(this->params_["eigenvalueIndices"]).numel() > 0;
     const int mode = wallMode ? 1 : 2;
     const std::string modeName = wallMode ? "wallSources" : "hoppingEigenbasis";
     const std::string root = std::string(basenode_);
@@ -549,6 +550,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         }
         sel.assign(selSet.begin(), selSet.end());
         std::sort(sel.begin(), sel.end(), [&](NSL::size_t a, NSL::size_t b){ return epsIndex[a] < epsIndex[b]; });
+        if (sel.empty()) { fail("the eigenbasis selection is empty"); }   // never write an empty projection
 
         std::string desc;
         for (NSL::size_t j = 0; j < sel.size(); j++) {
