@@ -124,8 +124,27 @@ int main(int argc, char* argv[]){
       params["momenta"]=mblocks;
     }
 
-    if (yml["measurements"]["wallSources"]){
-      kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
+    // Wall sources (blocks x bands x Nx, entries [re,im]) are optional: without them (key
+    // missing, null or an empty list) measureK projects onto eigenvectors of the hopping matrix.
+    const YAML::Node wsNode = yml["measurements"]["wallSources"];
+    if (wsNode && !wsNode.IsNull() && !(wsNode.IsSequence() && wsNode.size() == 0)){
+      kblocks2d = wsNode.as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
+
+      // reject ragged/malformed input before indexing into it
+      const NSL::size_t nBands = kblocks2d[0].size();
+      bool wellFormed = nBands > 0;
+      for (const auto & block: kblocks2d) {
+        wellFormed = wellFormed && block.size() == nBands;
+        for (const auto & vec: block) {
+          wellFormed = wellFormed && vec.size() == params["Nx"].to<NSL::size_t>();
+          for (const auto & z: vec) { wellFormed = wellFormed && z.size() == 2; }
+        }
+      }
+      if (!wellFormed) {
+        NSL::Logger::error("measurements: wallSources must be blocks x bands x Nx({}) x [re,im] with the same number (>0) of bands in every block", params["Nx"].to<NSL::size_t>());
+        return EXIT_FAILURE;
+      }
+
       NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
       NSL::Logger::info( "Measuring {} momentum block(s), each with {} band(s) of length {}",kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
 
@@ -139,9 +158,10 @@ int main(int argc, char* argv[]){
       }
       params["wallSources"]=kblocks.to(params["device"]);
     } else {
-      // measureK() projects onto wall sources; fail before the h5 file is opened
-      NSL::Logger::error("propagatorSpinBasis requires measurements: wallSources in {}", params["file"].to<std::string>());
-      return EXIT_FAILURE;
+      if (wsNode) {
+        NSL::Logger::warn("measurements: wallSources is empty, treating it as absent");
+      }
+      NSL::Logger::info("No wall sources: projecting onto eigenvectors of the hopping matrix (2 smallest + 2 largest |eigenvalue|)");
     }
 
 
