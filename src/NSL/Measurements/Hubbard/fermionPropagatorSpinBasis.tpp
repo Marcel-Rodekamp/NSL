@@ -182,7 +182,7 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! operands (the operands NSL passes stayed finite in all tests), and other code still calls
     //! NSL::LinAlg::udt on batched (per-time-slice) device tensors and can hit the same batched CUDA
     //! QR overflow on the GPU: the charge-basis propagator (fermionPropagator.tpp: measureDiagonal,
-    //! measureRow, measureColumn, calcPiSigma) and the HMC force gradLogDetM in hubbardExp.tpp and
+    //! measureRow, measureColumn) and the HMC force gradLogDetM in hubbardExp.tpp and
     //! hubbardExpSpinBasis.tpp. On the CPU this is exactly NSL::LinAlg::udt.
     static std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udtHost_(const NSL::Tensor<Type> & t){
         torch::Tensor M = static_cast<torch::Tensor>(t);
