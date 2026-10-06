@@ -179,9 +179,11 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! Cost: the host round trip is free for perylene (Nx = 20) but slows the GPU run down for
     //! Nx >~ 100 (measured vs 7b495d0: tube Nx=112/Nt=256 1.6x, ring Nx=200/Nt=128 2.1x).
     //! Not changed here: the batched CUDA linalg_solve can also go non-finite for row-graded
-    //! operands (the operands NSL passes stayed finite in all tests), and the charge-basis
-    //! fermionPropagator.tpp still calls the batched NSL::LinAlg::udt on the device (e.g. ~lines 730,
-    //! 740). On the CPU this is exactly NSL::LinAlg::udt.
+    //! operands (the operands NSL passes stayed finite in all tests), and other code still calls
+    //! NSL::LinAlg::udt on batched (per-time-slice) device tensors and can hit the same batched CUDA
+    //! QR overflow on the GPU: the charge-basis propagator (fermionPropagator.tpp: measureDiagonal,
+    //! measureRow, measureColumn, calcPiSigma) and the HMC force gradLogDetM in hubbardExp.tpp and
+    //! hubbardExpSpinBasis.tpp. On the CPU this is exactly NSL::LinAlg::udt.
     static std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udtHost_(const NSL::Tensor<Type> & t){
         torch::Tensor M = static_cast<torch::Tensor>(t);
         if (!M.is_cuda()) { return NSL::LinAlg::udt(t); }
