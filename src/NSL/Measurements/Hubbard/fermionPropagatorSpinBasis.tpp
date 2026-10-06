@@ -164,21 +164,21 @@ class FermionPropagatorSpinBasis: public Measurement {
         return true;
     }
 
-    //! UDT decomposition t = U.D.V as NSL::LinAlg::udt (QR, D = diag(R), V = D^{-1} R), but every
-    //! column of t is first scaled by an exact power of two to max |entry| in [1,2) and the scales
-    //! are restored in R afterwards. Householder QR commutes with power-of-two column scaling, so the
-    //! result is the same as NSL::LinAlg::udt (bit for bit on the CPU), while the QR only sees O(1)
-    //! columns. At beta = 90 and mu != 0 the products reach |x| ~ 1e165 > sqrt(DBL_MAX) ~ 1.3e154,
-    //! where the CUDA QR returns non-finite values (the CPU LAPACK QR scales internally).
-    static std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udtScaled_(const NSL::Tensor<Type> & t){
+    //! UDT decomposition t = U.D.V (NSL::LinAlg::udt: QR, D = diag(R), V = D^{-1} R) computed with the
+    //! CPU (LAPACK) QR also when t lives on the GPU. The matrices factorised here span |x| ~ 1e-170 ..
+    //! 1e170 (beta = 90, mu != 0). torch's batched CUDA QR (cuSOLVER/cuBLAS path) returns non-finite
+    //! R for finite inputs with |x| >~ 1.3e154 = sqrt(DBL_MAX) and, even after column equilibration,
+    //! an inaccurate R (relative errors O(10..100) in diag(R)) when the rows span many orders of
+    //! magnitude; LAPACK (and MAGMA) are accurate for the same inputs. The matrices are only Nx x Nx
+    //! (batched over Nt), so the host round trip costs nothing measurable. On the CPU this is exactly
+    //! NSL::LinAlg::udt.
+    static std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udtHost_(const NSL::Tensor<Type> & t){
         torch::Tensor M = static_cast<torch::Tensor>(t);
-        torch::Tensor colMax = M.abs().amax(-2, true);
-        torch::Tensor expo = torch::floor(torch::log2(torch::where(colMax > 0, colMax, torch::ones_like(colMax))));
-        auto [Q, Rs] = torch::linalg_qr(M * torch::exp2(-expo), "reduced");
-        NSL::Tensor<Type> R(Rs * torch::exp2(expo));
-        NSL::Tensor<Type> D = NSL::LinAlg::diagonal(R);
-        R *= (1./D).expand_view(D.shape(D.dim()-1), R.dim()-1);
-        return std::make_tuple( NSL::Tensor<Type>(Q), std::move(D), std::move(R) );
+        if (!M.is_cuda()) { return NSL::LinAlg::udt(t); }
+        auto [Q, D, V] = NSL::LinAlg::udt(NSL::Tensor<Type>(M.cpu()));
+        return std::make_tuple( NSL::Tensor<Type>(static_cast<torch::Tensor>(Q).to(M.device())),
+                                NSL::Tensor<Type>(static_cast<torch::Tensor>(D).to(M.device())),
+                                NSL::Tensor<Type>(static_cast<torch::Tensor>(V).to(M.device())) );
     }
 
     //! Stop (exception, nothing written for this node) if a result is not finite
@@ -899,7 +899,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureDiag
     const NSL::Device device = this->phi_.device();
 
     // t=0 term
-    std::tie( Qnew_, Dnew_, Vnew_ ) = udtScaled_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
+    std::tie( Qnew_, Dnew_, Vnew_ ) = udtHost_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
 
     invAp1F_Ut_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnew_));
     invAp1F_Tt_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
@@ -917,7 +917,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureDiag
     if (!this->hfm_.stabilityMethod.compare("SVD")) {
 	   std::tie( uut_,ddt_,vvt_ ) = NSL::LinAlg::svd(vut_);
 	} else { //(!this->hfm_.stabilityMethod.compare("QR")) {
-	   std::tie( uut_,ddt_,vvt_ ) = udtScaled_(vut_);
+	   std::tie( uut_,ddt_,vvt_ ) = udtHost_(vut_);
 	}
 
 
@@ -927,7 +927,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureDiag
 	Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vvt_(NSL::Slice(1,Nt),NSL::Ellipsis()),SIGMA_V_(NSL::Slice(1,Nt),NSL::Ellipsis()));
 
     // std::cout << "gets here 3" << std::endl;
-    std::tie( Qnewtt_, Dnewtt_, Vnewtt_ ) = udtScaled_( NSL::LinAlg::solve(Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis())));
+    std::tie( Qnewtt_, Dnewtt_, Vnewtt_ ) = udtHost_( NSL::LinAlg::solve(Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis()), NSL::LinAlg::adjoint(Fk_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(Fk_Dt_(NSL::Slice(1,Nt),NSL::Ellipsis())));
 
     // std::cout << "gets here 4" << std::endl;
     invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewtt_, Fk_Vt_(NSL::Slice(1,Nt),NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnewtt_));
@@ -951,7 +951,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureRow(
 
 
     // t=0 term
-    std::tie( Qnew_, Dnew_, Vnew_ ) = udtScaled_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
+    std::tie( Qnew_, Dnew_, Vnew_ ) = udtHost_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
 
     invAp1F_Ut_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnew_));
     invAp1F_Tt_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
@@ -965,7 +965,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureRow(
     if (!this->hfm_.stabilityMethod.compare("SVD")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
     } else { //(!this->hfm_.stabilityMethod.compare("QR")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtScaled_(vut_);
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtHost_(vut_);
     }
 
     invAp1F_Ut_(NSL::Slice(1,Nt),NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::solve(Vnewt_(NSL::Slice(1,Nt),NSL::Ellipsis()),NSL::LinAlg::diag_embed(1./Dnewt_(NSL::Slice(1,Nt),NSL::Ellipsis()))));
@@ -987,7 +987,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureRow(
 
 
     if (!this->hfm_.stabilityMethod.compare("QR")) {
-	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtScaled_(vut_);
+	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtHost_(vut_);
 	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
 	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
 	}
@@ -1032,7 +1032,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureColu
 
 
     // t=0 term
-    std::tie( Qnew_, Dnew_, Vnew_ ) = udtScaled_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
+    std::tie( Qnew_, Dnew_, Vnew_ ) = udtHost_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
 
     invAp1F_Ut_(0,NSL::Ellipsis()) = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnew_));
     invAp1F_Tt_(0,NSL::Ellipsis()) = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
@@ -1046,7 +1046,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureColu
     if (!this->hfm_.stabilityMethod.compare("SVD")) {
            std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
     } else { //(!this->hfm_.stabilityMethod.compare("QR")) {
-           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtScaled_(vut_);
+           std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtHost_(vut_);
     }
 
 
@@ -1069,7 +1069,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureColu
 
 
     if (!this->hfm_.stabilityMethod.compare("QR")) {
-	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtScaled_(vut_);
+	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = udtHost_(vut_);
 	} else if (!this->hfm_.stabilityMethod.compare("SVD")) {
 	   std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::svd(vut_);
 	}
@@ -1149,7 +1149,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::calcPiSigma
       	  vu_ = NSL::LinAlg::mat_mul(PI_V_(t,NSL::Ellipsis()),PI_U_(t-1,NSL::Ellipsis()));
       	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(PI_D_(t,NSL::Ellipsis())),vu_);
       	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(PI_D_(t-1,NSL::Ellipsis())));
-      	  std::tie( uu_,dd_,vv_ ) = udtScaled_(vu_);
+      	  std::tie( uu_,dd_,vv_ ) = udtHost_(vu_);
       	  PI_U_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(PI_U_(t,NSL::Ellipsis()),uu_);
 	  PI_D_(t,NSL::Ellipsis()) = dd_;
 	  PI_V_(t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,PI_V_(t-1,NSL::Ellipsis()));
@@ -1158,7 +1158,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::calcPiSigma
 	  vu_ = NSL::LinAlg::mat_mul(SIGMA_V_(Nt-t,NSL::Ellipsis()),SIGMA_U_(Nt-1-t,NSL::Ellipsis()));
 	  vu_ = NSL::LinAlg::mat_mul(vu_,NSL::LinAlg::diag(SIGMA_D_(Nt-1-t,NSL::Ellipsis())));
 	  vu_ = NSL::LinAlg::mat_mul(NSL::LinAlg::diag(SIGMA_D_(Nt-t,NSL::Ellipsis())),vu_);
-	  std::tie( uu_,dd_,vv_ ) = udtScaled_(vu_);
+	  std::tie( uu_,dd_,vv_ ) = udtHost_(vu_);
 	  SIGMA_U_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(SIGMA_U_(Nt-t,NSL::Ellipsis()),uu_);
 	  SIGMA_D_(Nt-1-t,NSL::Ellipsis()) = dd_;
 	  SIGMA_V_(Nt-1-t,NSL::Ellipsis()) = NSL::LinAlg::mat_mul(vv_,SIGMA_V_(Nt-1-t,NSL::Ellipsis()));
