@@ -173,15 +173,17 @@ class FermionPropagatorSpinBasis: public Measurement {
             && params["wallSources"].shape(0).template to<NSL::size_t>() > 0;
     }
 
-    //! Without wall sources measureK projects onto eigenvectors of the hopping matrix K
-    //! (see prepareEigenbasis_); computes them once, stores eigSources_ and the provenance
-    void prepareEigenbasis_();
+    //! Choose the projection of measureK (wall sources, or else eigenvectors of the hopping
+    //! matrix K), check it against what the file already holds and store mode marker and
+    //! eigenbasis provenance (see the definition); runs once, before anything is written
+    void setupProjection_();
+    bool projectionReady_ = false;
 
     NSL::Tensor<Type> corr_;
     NSL::Tensor<Type> corrK_;
     NSL::Tensor<Type> phi_;
 
-    //! selected hopping eigenvectors as (nSel x 1 x Nx) blocks (undefined until prepareEigenbasis_)
+    //! selected hopping eigenvectors as (nSel x 1 x Nx) blocks (undefined until setupProjection_)
     NSL::Tensor<Type> eigSources_;
 
     std::string basenode_;
@@ -388,157 +390,198 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 
 } // measure()
 
-//! Hopping-eigenbasis projection, used by measureK when no wall sources are given.
+//! Prepare the projection used by measureK, before anything is written to the file:
 //!
-//! Selection: eigenpairs (lambda_n, v_n) of the hopping matrix K (eigh, ascending lambda,
-//! index n as in numpy.linalg.eigh; mu is not included, so the orbitals are the same for
-//! every mu). Order all n by (|lambda|, lambda, n), where values that agree within
-//! 1e-8*max(1,max|lambda|) count as equal, and take the first two (smallest |lambda|)
-//! and the last two (largest |lambda|). For Nx < 4 these sets overlap; each eigenvector is
-//! used once, i.e. all Nx eigenvectors are selected. The selected vectors are ordered by
-//! ascending (lambda, n); vector j becomes block j with one band, so measureK writes it at
-//! k = 2j and its complex conjugate at k = 2j+1 (exactly as for wall sources).
-//! If the selection cuts through a degenerate eigenspace a warning is logged: the result
-//! then depends on the eigensolver's basis of that subspace.
+//! Mode. With non-empty params["wallSources"] measureK projects onto the wall sources
+//! ("wallSources", mode 1); otherwise onto eigenvectors of the hopping matrix K
+//! ("hoppingEigenbasis", mode 2). The mode is stored as <basenode>/ProjectionMode (int,
+//! attribute "mode"). A file is never mixed: if it holds a different ProjectionMode, or (files
+//! without the marker) an Eigenbasis group while wall sources are requested, or propagator
+//! nodes (NonInteracting or any configuration) without an Eigenbasis group while the
+//! eigenbasis is requested, measureK stops with an error before writing.
+//!
+//! Eigenbasis selection (rule version 2). Eigenpairs (lambda_n, v_n) of K, ascending lambda,
+//! n as in numpy.linalg.eigh; mu is not included, so the orbitals are the same for every mu.
+//! Only the positive branch lambda > tol is used (tol = 1e-8*max(1,max|lambda|); |lambda| <= tol
+//! are zero modes and excluded with a warning):
+//!   level A = the smallest positive lambda, level B = the largest lambda, each with its full
+//!   degenerate subspace (eigenvalues within tol), A == B taken once.
+//! Degenerate levels are never split, so the selection is basis independent. A spectrum that is
+//! not symmetric (non-bipartite K) gives a warning; no positive lambda at all is an error.
+//! The selected vectors are ordered by ascending (lambda, n); vector j is block j with one band,
+//! written at k = 2j and its complex conjugate at k = 2j+1 (as for wall sources).
 //!
 //! Provenance (written once, then reused): <basenode>/Eigenbasis/
+//!   ruleVersion  ()         2 (attribute "rule": description of the selection rule)
 //!   spectrum     (Nx)       all eigenvalues of K, ascending
 //!   indices      (nSel)     eigh index n of block j
 //!   eigenvalues  (nSel)     lambda of block j
 //!   eigenvectors (Nx,nSel)  column j = vector of block j (sign/phase as used)
-//! If the file already holds an eigenbasis it is checked against K and reused, so all
-//! configurations of a file share the same eigenvector signs.
+//! If the file already holds an eigenbasis it must have the same rule version and match K and
+//! the selection (eigenvalues, eigen-residual, orthonormality); it is then reused, so all
+//! configurations of a file share the same eigenvectors.
 template<
     NSL::Concept::isNumber Type,
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::prepareEigenbasis_(){
-    if (eigSources_.defined()) { return; }
+void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjection_(){
+    if (projectionReady_) { return; }
 
-    const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
-    const NSL::Device device = this->params_["device"].template to<NSL::Device>();
-    const std::string base = std::string(basenode_) + "/Eigenbasis";
+    const bool wallMode = hasWallSources_(this->params_);
+    const int mode = wallMode ? 1 : 2;
+    const std::string modeName = wallMode ? "wallSources" : "hoppingEigenbasis";
+    const std::string root = std::string(basenode_);
+    const std::string base = root + "/Eigenbasis";
+    const int ruleVersion = 2;
+    const std::string ruleText = "positive branch of K: smallest positive and largest eigenvalue, full degenerate subspaces, zero modes excluded; blocks by ascending eigenvalue";
 
-    // eigen decomposition of K on the CPU; real symmetric K gives real eigenvectors
-    torch::Tensor K = static_cast<torch::Tensor>(this->hfm_.Lat.hopping_matrix()).to(torch::kCPU).to(torch::kComplexDouble);
-    torch::Tensor evals, evecs;
-    if (torch::imag(K).abs().max().template item<double>() == 0.) {
-        std::tie(evals, evecs) = torch::linalg_eigh(torch::real(K).contiguous(), "L");
-        evecs = evecs.to(torch::kComplexDouble);
-    } else {
-        std::tie(evals, evecs) = torch::linalg_eigh(K, "L");
-    }
-    evals = evals.to(torch::kDouble).contiguous();
-    std::vector<double> lambda(evals.data_ptr<double>(), evals.data_ptr<double>()+Nx);
-
-    double maxAbs = 0.;
-    for (double l: lambda) { maxAbs = std::max(maxAbs, std::abs(l)); }
-    const double tolDeg = 1e-8 * std::max(1., maxAbs);
-
-    // order by (|lambda|, lambda, n) and select the 2 smallest and the 2 largest |lambda|.
-    // Values equal up to tolDeg (e.g. the +-lambda pairs of a bipartite lattice, which differ
-    // only by rounding) must tie, so |lambda| and lambda are first mapped to cluster ids of
-    // consecutive (within tolDeg) sorted values; the comparison then uses these exact integers.
-    auto clusters = [&](auto value){
-        std::vector<NSL::size_t> byValue(Nx), id(Nx);
-        std::iota(byValue.begin(), byValue.end(), 0);
-        std::stable_sort(byValue.begin(), byValue.end(), [&](NSL::size_t a, NSL::size_t b){ return value(a) < value(b); });
-        NSL::size_t c = 0;
-        for (NSL::size_t i = 0; i < Nx; i++) {
-            if (i > 0 && value(byValue[i]) - value(byValue[i-1]) > tolDeg) { c++; }
-            id[byValue[i]] = c;
-        }
-        return id;
+    auto fail = [&](const std::string & msg){
+        NSL::Logger::error("FermionPropagatorSpinBasis::measureK: {}", msg);
+        throw std::runtime_error("FermionPropagatorSpinBasis::measureK: " + msg);
     };
-    const std::vector<NSL::size_t> absId = clusters([&](NSL::size_t n){ return std::abs(lambda[n]); });
-    const std::vector<NSL::size_t> lamId = clusters([&](NSL::size_t n){ return lambda[n]; });
-    std::vector<NSL::size_t> order(Nx);
-    std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(), [&](NSL::size_t a, NSL::size_t b){
-        return std::make_tuple(absId[a], lamId[a], a) < std::make_tuple(absId[b], lamId[b], b);
-    });
-    std::set<NSL::size_t> selSet;
-    for (NSL::size_t i = 0; i < std::min<NSL::size_t>(2,Nx); i++) { selSet.insert(order[i]); selSet.insert(order[Nx-1-i]); }
-    std::vector<NSL::size_t> sel(selSet.begin(), selSet.end()); // ascending n == ascending (lambda, n)
-    const NSL::size_t nSel = sel.size();
 
-    std::string desc;
-    for (NSL::size_t j = 0; j < nSel; j++) {
-        desc += fmt::format("{}block {} (k={},{}): n={} lambda={:.6f}", j ? "; " : "", j, 2*j, 2*j+1, sel[j], lambda[sel[j]]);
-    }
-    NSL::Logger::info("Hopping eigenbasis: {} of {} eigenvectors selected (2 smallest + 2 largest |lambda|): {}", nSel, Nx, desc);
-    if (Nx < 4) {
-        NSL::Logger::warn("Hopping eigenbasis: Nx = {} < 4, all {} eigenvectors are used", Nx, nSel);
-    }
+    // ---- eigenbasis selection (no file access yet)
+    torch::Tensor K, evals, V, lamSel, idx;
+    std::vector<NSL::size_t> sel;
+    double tolDeg = 0.;
+    if (!wallMode) {
+        const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
 
-    // degeneracy checks (one message per selected level):
-    //  - an unselected eigenvector with the same lambda: the cut splits that eigenspace, so the
-    //    selection depends on the eigensolver's basis of it -> warning
-    //  - an unselected eigenvector with the same |lambda| but opposite lambda: tie resolved by lambda -> info
-    std::set<NSL::size_t> reported;
-    for (NSL::size_t m: sel) {
-        std::string sameLevel, sameAbs;
+        // eigen decomposition of K on the CPU; real symmetric K gives real eigenvectors
+        K = static_cast<torch::Tensor>(this->hfm_.Lat.hopping_matrix()).to(torch::kCPU).to(torch::kComplexDouble);
+        torch::Tensor evecs;
+        if (torch::imag(K).abs().max().template item<double>() == 0.) {
+            std::tie(evals, evecs) = torch::linalg_eigh(torch::real(K).contiguous(), "L");
+            evecs = evecs.to(torch::kComplexDouble);
+        } else {
+            std::tie(evals, evecs) = torch::linalg_eigh(K, "L");
+        }
+        evals = evals.to(torch::kDouble).contiguous();
+        std::vector<double> lambda(evals.data_ptr<double>(), evals.data_ptr<double>()+Nx);
+
+        double maxAbs = 0.;
+        for (double l: lambda) { maxAbs = std::max(maxAbs, std::abs(l)); }
+        tolDeg = 1e-8 * std::max(1., maxAbs);
+
+        // spectrum symmetry (lambda ascending: lambda_i = -lambda_{Nx-1-i})
+        double asym = 0.;
+        for (NSL::size_t i = 0; i < Nx; i++) { asym = std::max(asym, std::abs(lambda[i] + lambda[Nx-1-i])); }
+        if (asym > tolDeg) {
+            NSL::Logger::warn("Hopping eigenbasis: the spectrum of K is not symmetric (max |lambda_i + lambda_(Nx-1-i)| = {:.3e}); the positive-branch selection is applied anyway", asym);
+        }
+
+        std::string zeroModes;
+        NSL::size_t firstPos = Nx;
         for (NSL::size_t n = 0; n < Nx; n++) {
-            if (selSet.contains(n)) { continue; }
-            if (std::abs(lambda[n] - lambda[m]) <= tolDeg) { sameLevel += fmt::format(" {}", n); }
-            else if (std::abs(std::abs(lambda[n]) - std::abs(lambda[m])) <= tolDeg) { sameAbs += fmt::format(" {}", n); }
+            if (std::abs(lambda[n]) <= tolDeg) { zeroModes += fmt::format(" {}", n); }
+            if (lambda[n] > tolDeg && firstPos == Nx) { firstPos = n; }
         }
-        // report each level once (selected members of the same level share the message)
-        bool first = true;
-        for (NSL::size_t r: reported) { if (std::abs(lambda[r] - lambda[m]) <= tolDeg) { first = false; } }
-        if (!first) { continue; }
-        reported.insert(m);
-        std::string selLevel;
-        for (NSL::size_t n: sel) { if (std::abs(lambda[n] - lambda[m]) <= tolDeg) { selLevel += fmt::format(" {}", n); } }
-        if (!sameLevel.empty()) {
-            NSL::Logger::warn("Hopping eigenbasis: the selection splits the degenerate eigenspace lambda={:.6f} (selected n:{}; not selected n:{}); the projected propagators depend on the eigensolver's basis of that subspace", lambda[m], selLevel, sameLevel);
-        } else if (selLevel.size() > fmt::format(" {}", m).size()) {
-            NSL::Logger::info("Hopping eigenbasis: degenerate level lambda={:.6f} fully selected (n:{}); the individual blocks are basis dependent", lambda[m], selLevel);
+        if (!zeroModes.empty()) {
+            NSL::Logger::warn("Hopping eigenbasis: K has zero modes (|lambda| <= {:.1e}, n:{}); they are excluded", tolDeg, zeroModes);
         }
-        if (!sameAbs.empty()) {
-            NSL::Logger::info("Hopping eigenbasis: |lambda|={:.6f} tie between selected n:{} and not selected n:{} resolved by lambda", std::abs(lambda[m]), selLevel, sameAbs);
+        if (firstPos == Nx) {
+            fail(fmt::format("the hopping matrix has no positive eigenvalue (max lambda = {:.3e}); cannot select a hopping eigenbasis, give wallSources instead", lambda[Nx-1]));
         }
+
+        // level A: smallest positive lambda, level B: largest lambda, each with its full degenerate subspace
+        std::set<NSL::size_t> selSet;
+        for (NSL::size_t n = firstPos; n < Nx; n++) {
+            if (std::abs(lambda[n] - lambda[firstPos]) <= tolDeg || std::abs(lambda[n] - lambda[Nx-1]) <= tolDeg) { selSet.insert(n); }
+        }
+        sel.assign(selSet.begin(), selSet.end()); // ascending n == ascending (lambda, n)
+
+        std::string desc;
+        for (NSL::size_t j = 0; j < sel.size(); j++) {
+            desc += fmt::format("{}block {} (k={},{}): n={} lambda={:.6f}", j ? "; " : "", j, 2*j, 2*j+1, sel[j], lambda[sel[j]]);
+        }
+        NSL::Logger::info("Hopping eigenbasis: {} of {} eigenvectors selected (smallest positive and largest eigenvalue level, full degenerate subspaces): {}", sel.size(), Nx, desc);
+
+        idx = torch::tensor(std::vector<int64_t>(sel.begin(), sel.end()), torch::kLong);
+        V = evecs.index_select(1, idx).contiguous();
+        lamSel = evals.index_select(0, idx).contiguous();
     }
 
-    // selected eigenpairs: V (Nx x nSel), columns = vectors of the blocks
-    torch::Tensor idx = torch::tensor(std::vector<int64_t>(sel.begin(), sel.end()), torch::kLong);
-    torch::Tensor V = evecs.index_select(1, idx).contiguous();
-    torch::Tensor lamSel = evals.index_select(0, idx).contiguous();
-
-    if (this->h5_.exist(base+"/eigenvectors")) {
-        // reuse the stored eigenbasis (keeps the eigenvector signs of this file) after checking it
-        NSL::Tensor<Type> Vstored; NSL::Tensor<double> lamStored;
-        this->h5_.read(Vstored, base+"/eigenvectors");
-        this->h5_.read(lamStored, base+"/eigenvalues");
-        torch::Tensor Vs = static_cast<torch::Tensor>(Vstored).to(torch::kCPU).to(torch::kComplexDouble);
-        torch::Tensor ls = static_cast<torch::Tensor>(lamStored).to(torch::kCPU).to(torch::kDouble);
-        bool ok = Vs.dim() == 2 && Vs.size(0) == (int64_t) Nx && Vs.size(1) == (int64_t) nSel && ls.numel() == (int64_t) nSel;
-        if (ok) {
-            ok = (ls - lamSel).abs().max().template item<double>() <= tolDeg
-              && (torch::matmul(K, Vs) - Vs * ls.to(torch::kComplexDouble)).abs().max().template item<double>() <= tolDeg
-              && (torch::matmul(Vs.conj().transpose(0,1), Vs) - torch::eye(nSel, torch::kComplexDouble)).abs().max().template item<double>() <= 1e-8;
+    // ---- mode check against the file (no writes yet)
+    if (this->h5_.exist(root+"/ProjectionMode")) {
+        int stored = 0;
+        this->h5_.read(stored, root+"/ProjectionMode");
+        if (stored != mode) {
+            fail(fmt::format("the file already holds propagators with ProjectionMode {} ({}), this run would use {} ({}); refusing to mix projections in one file",
+                stored, stored == 1 ? "wallSources" : "hoppingEigenbasis", mode, modeName));
         }
-        if (!ok) {
-            NSL::Logger::error("Hopping eigenbasis stored in {} does not match the lattice of this run", base);
-            throw std::runtime_error("FermionPropagatorSpinBasis: stored hopping eigenbasis does not match the lattice");
-        }
-        NSL::Logger::info("Hopping eigenbasis: using the eigenvectors stored in {}", base);
-        V = Vs;
     } else {
-        NSL::Tensor<double> spectrum(evals.clone());
-        NSL::Tensor<double> lamOut(lamSel.clone());
-        NSL::Tensor<int> idxOut(idx.to(torch::kInt).clone());
-        NSL::Tensor<Type> Vout(V.clone());
-        this->h5_.write(spectrum, base+"/spectrum");
-        this->h5_.write(idxOut,   base+"/indices");
-        this->h5_.write(lamOut,   base+"/eigenvalues");
-        this->h5_.write(Vout,     base+"/eigenvectors");
+        // files written before the marker existed
+        const bool hasEigenbasis = this->h5_.exist(base);
+        bool hasPropagators = this->h5_.exist(root+"/NonInteracting/propagator");
+        if (!wallMode && !hasPropagators && this->h5_.exist(root+"/markovChain")) {
+            for (const auto & cfg: this->h5_.getFile().getGroup(root+"/markovChain").listObjectNames()) {
+                if (this->h5_.exist(root+"/markovChain/"+cfg+"/propagator")) { hasPropagators = true; break; }
+            }
+        }
+        if (wallMode && hasEigenbasis) {
+            fail("the file holds hopping-eigenbasis propagators (Eigenbasis group) but wallSources are given; refusing to mix projections in one file");
+        }
+        if (!wallMode && hasPropagators && !hasEigenbasis) {
+            fail("the file holds propagators without an Eigenbasis group (wall-source projection) but no wallSources are given; refusing to mix projections in one file");
+        }
     }
 
-    // blocks (nSel x 1 x Nx): block j holds column j of V
-    eigSources_ = NSL::Tensor<Type>(V.transpose(0,1).reshape({(int64_t) nSel, 1, (int64_t) Nx}).contiguous().to(device.device().device()));
-} // prepareEigenbasis_()
+    // ---- eigenbasis provenance: reuse (after checking) or write
+    if (!wallMode) {
+        const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
+        const NSL::size_t nSel = sel.size();
+        if (this->h5_.exist(base)) {
+            bool ok = this->h5_.exist(base+"/ruleVersion") && this->h5_.exist(base+"/eigenvectors") && this->h5_.exist(base+"/eigenvalues");
+            int storedRule = 0;
+            if (ok) { this->h5_.read(storedRule, base+"/ruleVersion"); ok = storedRule == ruleVersion; }
+            if (ok) {
+                NSL::Tensor<Type> Vstored; NSL::Tensor<double> lamStored;
+                this->h5_.read(Vstored, base+"/eigenvectors");
+                this->h5_.read(lamStored, base+"/eigenvalues");
+                torch::Tensor Vs = static_cast<torch::Tensor>(Vstored).to(torch::kCPU).to(torch::kComplexDouble);
+                torch::Tensor ls = static_cast<torch::Tensor>(lamStored).to(torch::kCPU).to(torch::kDouble);
+                ok = Vs.dim() == 2 && Vs.size(0) == (int64_t) Nx && Vs.size(1) == (int64_t) nSel && ls.numel() == (int64_t) nSel;
+                if (ok) {
+                    ok = (ls - lamSel).abs().max().template item<double>() <= tolDeg
+                      && (torch::matmul(K, Vs) - Vs * ls.to(torch::kComplexDouble)).abs().max().template item<double>() <= tolDeg
+                      && (torch::matmul(Vs.conj().transpose(0,1), Vs) - torch::eye(nSel, torch::kComplexDouble)).abs().max().template item<double>() <= 1e-8;
+                }
+                if (ok) { V = Vs; }
+            }
+            if (!ok) {
+                fail(fmt::format("the hopping eigenbasis stored in {} does not match this lattice and selection rule (version {}, stored version {})", base, ruleVersion, storedRule));
+            }
+            NSL::Logger::info("Hopping eigenbasis: using the eigenvectors stored in {}", base);
+        } else {
+            NSL::Tensor<double> spectrum(evals.clone());
+            NSL::Tensor<double> lamOut(lamSel.clone());
+            NSL::Tensor<int> idxOut(idx.to(torch::kInt).clone());
+            NSL::Tensor<Type> Vout(V.clone());
+            this->h5_.write(ruleVersion, base+"/ruleVersion");
+            HighFive::DataSet ruleSet = this->h5_.getFile().getDataSet(base+"/ruleVersion");
+            ruleSet.createAttribute<std::string>("rule", HighFive::DataSpace::From(ruleText)).write(ruleText);
+            this->h5_.write(spectrum, base+"/spectrum");
+            this->h5_.write(idxOut,   base+"/indices");
+            this->h5_.write(lamOut,   base+"/eigenvalues");
+            this->h5_.write(Vout,     base+"/eigenvectors");
+        }
+
+        // blocks (nSel x 1 x Nx): block j holds column j of V
+        const NSL::Device device = this->params_["device"].template to<NSL::Device>();
+        eigSources_ = NSL::Tensor<Type>(V.transpose(0,1).reshape({(int64_t) nSel, 1, (int64_t) Nx}).contiguous().to(device.device().device()));
+    }
+
+    // ---- mode marker
+    if (!this->h5_.exist(root+"/ProjectionMode")) {
+        this->h5_.write(mode, root+"/ProjectionMode");
+        HighFive::DataSet modeSet = this->h5_.getFile().getDataSet(root+"/ProjectionMode");
+        modeSet.createAttribute<std::string>("mode", HighFive::DataSpace::From(modeName)).write(modeName);
+        this->h5_.getFile().flush();
+    }
+
+    projectionReady_ = true;
+} // setupProjection_()
 
 template<
     NSL::Concept::isNumber Type,
@@ -573,7 +616,7 @@ template<
 >
 void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t NumberTimeSources, NSL::size_t cfgID){
     const bool wallMode = hasWallSources_(this->params_);
-    if (!wallMode) { prepareEigenbasis_(); }
+    setupProjection_();
 
     // Reset memory
     // - Result correlator
@@ -676,8 +719,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
         NSL::Logger::info("Projecting onto {} wall-source block(s)", this->params_["wallSources"].shape(0).template to<NSL::size_t>());
     } else {
         NSL::Logger::info("No wall sources given: projecting onto eigenvectors of the hopping matrix");
-        prepareEigenbasis_();
     }
+    setupProjection_();
 
     // write the momenta out
     if (!h5_.exist(std::string(basenode_)+"/Momenta")){
