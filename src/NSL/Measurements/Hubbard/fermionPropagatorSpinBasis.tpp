@@ -412,7 +412,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 //! depend on mu, only the selection does.
 //!  - params["eigenvalueIndices"] (energy indices): exactly these vectors; duplicates or indices
 //!    outside [0,Nx) are an error; a listed level whose degenerate partners are not all listed
-//!    gives a warning (basis-dependent selection), the partners are not added.
+//!    gives a warning (basis-dependent selection), the partners are not added. An empty list
+//!    counts as absent, i.e. selects the default (provenance identical to a default run).
 //!  - default: the highest negative-eps level and the lowest positive-eps level, each with its full
 //!    degenerate subspace; |eps| <= tol levels are excluded with a warning; no level on one side is
 //!    an error.
@@ -443,7 +444,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
     if (projectionReady_) { return; }
 
     const bool wallMode = hasWallSources_(this->params_);
-    const bool idxMode = this->params_.contains("eigenvalueIndices");
+    // an empty eigenvalueIndices tensor counts as absent (default selection), like empty wall sources
+    const bool idxMode = this->params_.contains("eigenvalueIndices")
+        && this->params_["eigenvalueIndices"].shape(0).template to<NSL::size_t>() > 0;
     const int mode = wallMode ? 1 : 2;
     const std::string modeName = wallMode ? "wallSources" : "hoppingEigenbasis";
     const std::string root = std::string(basenode_);
@@ -506,7 +509,6 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         if (idxMode) {
             torch::Tensor req = static_cast<torch::Tensor>(NSL::Tensor<double>(this->params_["eigenvalueIndices"])).to(torch::kCPU).to(torch::kDouble).contiguous();
             std::vector<double> reqD(req.data_ptr<double>(), req.data_ptr<double>()+req.numel());
-            if (reqD.empty()) { fail("eigenvalueIndices is empty"); }
             for (double r: reqD) {
                 if (r != std::floor(r) || r < 0 || r >= (double) Nx) {
                     fail(fmt::format("eigenvalueIndices: {} is not an integer energy index in [0,{})", r, Nx));
