@@ -3,6 +3,8 @@
 #include "NSL.hpp"
 #include <iostream>
 #include <vector>
+#include <set>
+#include <cmath>
 #include <ctime>
 
 int main(int argc, char* argv[]){
@@ -161,7 +163,40 @@ int main(int argc, char* argv[]){
       if (wsNode) {
         NSL::Logger::warn("measurements: wallSources is empty, treating it as absent");
       }
-      NSL::Logger::info("No wall sources: projecting onto eigenvectors of the hopping matrix (smallest positive and largest eigenvalue level)");
+    }
+
+    // Without wall sources measureK projects onto eigenvectors of the hopping matrix K. Their
+    // single-particle energies are eps_n = -(lambda_n + mu); measurements: eigenvalueIndices
+    // (optional) lists indices into the ascending-eps order (0 = lowest eps, ties by eigh index),
+    // otherwise the highest negative-eps and lowest positive-eps levels are used. A null value
+    // counts as absent; an empty list, non-integers, out-of-range or repeated indices are errors.
+    const YAML::Node eiNode = yml["measurements"]["eigenvalueIndices"];
+    if (eiNode && !eiNode.IsNull()) {
+      if (params.contains("wallSources")) {
+        NSL::Logger::error("measurements: give either wallSources or eigenvalueIndices, not both");
+        return EXIT_FAILURE;
+      }
+      std::vector<double> idx;
+      try {
+        idx = eiNode.as<std::vector<double>>();
+      } catch (const YAML::Exception & e) {
+        NSL::Logger::error("measurements: eigenvalueIndices must be a list of integers ({})", e.what());
+        return EXIT_FAILURE;
+      }
+      const NSL::size_t Nx = params["Nx"].to<NSL::size_t>();
+      std::set<double> seen;
+      bool valid = !idx.empty();
+      for (double i: idx) { valid = valid && i == std::floor(i) && i >= 0 && i < Nx && seen.insert(i).second; }
+      if (!valid) {
+        NSL::Logger::error("measurements: eigenvalueIndices must be a non-empty list of distinct integers in [0,{})", Nx);
+        return EXIT_FAILURE;
+      }
+      NSL::Tensor<double> idxTensor(idx.size());
+      for (NSL::size_t i = 0; i < idx.size(); i++) { idxTensor(i) = idx[i]; }
+      params["eigenvalueIndices"] = idxTensor;
+      NSL::Logger::info("Projecting onto the hopping eigenvectors with energy indices {} (ascending eps = -(lambda + mu))", fmt::join(idx, ", "));
+    } else if (!params.contains("wallSources")) {
+      NSL::Logger::info("No wall sources: projecting onto the highest negative- and lowest positive-energy levels of the hopping matrix (eps = -(lambda + mu))");
     }
 
 
