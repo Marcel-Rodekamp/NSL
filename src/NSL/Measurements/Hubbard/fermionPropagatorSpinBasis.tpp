@@ -170,17 +170,18 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! R for finite inputs with |x| >~ 1e154 = sqrt(DBL_MAX), and also for row/column-graded inputs
     //! spanning ~1e-170..1e170, while LAPACK, the single-matrix CUDA QR and MAGMA stay finite. The
     //! fix is about finiteness, not accuracy: on such graded matrices |diag(R)| from LAPACK (and from
-    //! the single-matrix CUDA QR) also differs from an exact QR by huge factors. With the host QR the
-    //! GPU propagator agrees with the CPU one to <~ 1e-11 relative to the maximum of each node; per
-    //! time slice, both CPU and GPU differ from an exact (high-precision) reference by up to
-    //! ~1e-7..1e-6 relative (inherent precision of the stabilised algorithm at beta = 90).
+    //! the single-matrix CUDA QR) also differs from an exact QR by huge factors. With the host QR,
+    //! max|GPU - CPU| / max|node| <~ 1e-10 (measured on 32 perylene configs: 3.8e-11 at mu = 0,
+    //! 6.5e-11 at mu = 0.4062, 1.4e-10 at mu = 0.4688). Against a double-precision sparse-LU
+    //! reference, normalised per time slice, CPU and GPU both agree to <= ~2e-10; element-wise
+    //! relative errors reach ~3e-7..6e-7 for elements >= 1e-6 of the time-slice maximum (inherent
+    //! precision of the stabilised algorithm at beta = 90).
     //! Cost: the host round trip is free for perylene (Nx = 20) but slows the GPU run down for
     //! Nx >~ 100 (measured vs 7b495d0: tube Nx=112/Nt=256 1.6x, ring Nx=200/Nt=128 2.1x).
     //! Not changed here: the batched CUDA linalg_solve can also go non-finite for row-graded
-    //! operands (the operands NSL passes stayed finite in all tests), and sibling code still uses the
-    //! batched NSL::LinAlg::udt on the device (charge-basis fermionPropagator.tpp measure*, ~711ff;
-    //! hubbardExpSpinBasis.tpp logDet/force, lines 231/386/392). On the CPU this is exactly
-    //! NSL::LinAlg::udt.
+    //! operands (the operands NSL passes stayed finite in all tests), and the charge-basis
+    //! fermionPropagator.tpp still calls the batched NSL::LinAlg::udt on the device (e.g. ~lines 730,
+    //! 740). On the CPU this is exactly NSL::LinAlg::udt.
     static std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udtHost_(const NSL::Tensor<Type> & t){
         torch::Tensor M = static_cast<torch::Tensor>(t);
         if (!M.is_cuda()) { return NSL::LinAlg::udt(t); }
