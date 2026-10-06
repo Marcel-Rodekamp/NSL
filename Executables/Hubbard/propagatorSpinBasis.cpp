@@ -161,7 +161,7 @@ int main(int argc, char* argv[]){
       if (wsNode) {
         NSL::Logger::warn("measurements: wallSources is empty, treating it as absent");
       }
-      NSL::Logger::info("No wall sources: projecting onto eigenvectors of the hopping matrix (2 smallest + 2 largest |eigenvalue|)");
+      NSL::Logger::info("No wall sources: projecting onto eigenvectors of the hopping matrix (smallest positive and largest eigenvalue level)");
     }
 
 
@@ -235,8 +235,14 @@ int main(int argc, char* argv[]){
     }
     invM.hfm_.stabilityMethod = "QR";
 
-    // Perform calculation of wall-source projected propagator components
-    invM.measureK();
+    // Perform calculation of wall-source projected propagator components; measureK throws
+    // (before writing) e.g. if the requested projection conflicts with the file's content
+    try {
+        invM.measureK();
+    } catch (const std::exception & e) {
+        NSL::Logger::error("propagatorSpinBasis aborted: {}", e.what());
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
