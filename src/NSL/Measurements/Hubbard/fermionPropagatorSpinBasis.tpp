@@ -87,7 +87,9 @@ class FermionPropagatorSpinBasis: public Measurement {
     Qnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites()),
 	Dnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites()),
 	Vnewtt_(lattice.device(), params["Nt"].to<NSL::size_t>()-1, lattice.sites(), lattice.sites())
-    {}
+    {
+        configureAllocator_();
+    }
 
     FermionPropagatorSpinBasis(LatticeType & lattice, NSL::Parameter params,NSL::H5IO & h5):
         FermionPropagatorSpinBasis(
@@ -237,15 +239,20 @@ class FermionPropagatorSpinBasis: public Measurement {
 
     std::string basenode_;
 
-    //! Return freed heap memory to the OS after each configuration. Every configuration writes many
-    //! small HDF5 datasets; HDF5's long-lived metadata-cache allocations interleave in the heap with the
-    //! large (Nt x Nx x Nx) tensor temporaries, so glibc can neither reuse nor trim the freed tensor
-    //! memory and the resident set grows by ~10-30 MB per configuration (perylene Nt=512) until the
-    //! node runs out of memory. malloc_trim releases the free pages (MADV_DONTNEED) in all arenas;
-    //! it does not touch live data.
-    static void releaseFreeMemory_(){
+    //! glibc: use a fixed mmap threshold of 128 KiB for the whole process. Every configuration writes
+    //! many small HDF5 datasets whose long-lived allocations stay in the heap; with glibc's default
+    //! dynamic threshold (raised after large frees) the large tensor temporaries (Nt x Nx x Nx) are
+    //! then also placed in the heap between them, so the freed tensor memory can neither be reused nor
+    //! returned and the resident set grew by several MB per configuration (perylene, Nt = 512) until
+    //! the node ran out of memory. With a fixed threshold, allocations >= 128 KiB are mmapped and
+    //! returned to the OS on free. (mallopt also disables the dynamic adjustment.) No-op elsewhere.
+    //! Not addressed: HDF5 (1.14.5) itself keeps ~60-67 B of live heap per created dataset (also with
+    //! its C API, after closing the file and after H5garbage_collect), i.e. ~0.12 MB per configuration
+    //! in eigenbasis mode with 10 blocks (1800 datasets) and ~5 kB in wall mode (72 datasets).
+    static void configureAllocator_(){
 #if defined(__GLIBC__)
-        malloc_trim(0);
+        static const bool configured = (mallopt(M_MMAP_THRESHOLD, 128 * 1024) == 1);
+        (void) configured;
 #endif
     }
 };
@@ -446,7 +453,6 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 
         // compute the correlator for the differen time sources
         measure(this->params_["Number Time Sources"], cfgID);
-        releaseFreeMemory_();
 
     } // for cfgID
 
@@ -912,7 +918,6 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
 
         // compute the correlator for the different time sources
         measureK(this->params_["Number Time Sources"], cfgID);
-        releaseFreeMemory_();
     } // for cfgID
 
 } // measureK()
