@@ -13,6 +13,9 @@
 #include <numeric>
 #include <set>
 #include <tuple>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 
 namespace NSL::Measure::Hubbard {
 
@@ -233,6 +236,18 @@ class FermionPropagatorSpinBasis: public Measurement {
     NSL::Tensor<Type> eigSources_;
 
     std::string basenode_;
+
+    //! Return freed heap memory to the OS after each configuration. Every configuration writes many
+    //! small HDF5 datasets; HDF5's long-lived metadata-cache allocations interleave in the heap with the
+    //! large (Nt x Nx x Nx) tensor temporaries, so glibc can neither reuse nor trim the freed tensor
+    //! memory and the resident set grows by ~10-30 MB per configuration (perylene Nt=512) until the
+    //! node runs out of memory. malloc_trim releases the free pages (MADV_DONTNEED) in all arenas;
+    //! it does not touch live data.
+    static void releaseFreeMemory_(){
+#if defined(__GLIBC__)
+        malloc_trim(0);
+#endif
+    }
 };
 
 template<
@@ -431,6 +446,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 
         // compute the correlator for the differen time sources
         measure(this->params_["Number Time Sources"], cfgID);
+        releaseFreeMemory_();
 
     } // for cfgID
 
@@ -896,6 +912,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
 
         // compute the correlator for the different time sources
         measureK(this->params_["Number Time Sources"], cfgID);
+        releaseFreeMemory_();
     } // for cfgID
 
 } // measureK()
