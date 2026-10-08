@@ -168,7 +168,8 @@ int main(int argc, char* argv[]){
     // Without wall sources measureK projects onto eigenvectors of the hopping matrix K. Their
     // single-particle energies are eps_n = -(lambda_n + mu); measurements: eigenvalueIndices
     // (optional) lists indices into the ascending-eps order (0 = lowest eps, ties by eigh index),
-    // otherwise the highest negative-eps and lowest positive-eps levels are used. A null value or
+    // otherwise the Fermi window measurements: fermiWindow: {below: 1, above: 0} (defaults) selects
+    // the levels HOMO-below .. LUMO+above of the non-interacting filling at mu. A null value or
     // an empty list counts as absent (like wallSources); non-integers, out-of-range or repeated
     // indices are errors.
     const YAML::Node eiNode = yml["measurements"]["eigenvalueIndices"];
@@ -200,8 +201,37 @@ int main(int argc, char* argv[]){
       for (NSL::size_t i = 0; i < idx.size(); i++) { idxTensor(i) = idx[i]; }
       params["eigenvalueIndices"] = idxTensor;
       NSL::Logger::info("Projecting onto the hopping eigenvectors with energy indices {} (ascending eps = -(lambda + mu))", fmt::join(idx, ", "));
-    } else if (!params.contains("wallSources")) {
-      NSL::Logger::info("No wall sources: projecting onto the highest negative- and lowest positive-energy levels of the hopping matrix (eps = -(lambda + mu))");
+    }
+
+    // Fermi window (default eigenbasis selection): below, above >= 0 levels around HOMO / LUMO
+    const YAML::Node fwNode = yml["measurements"]["fermiWindow"];
+    if (fwNode && !fwNode.IsNull()) {
+      if (!fwNode.IsMap()) {
+        NSL::Logger::error("measurements: fermiWindow must be a map {{below: <int >= 0>, above: <int >= 0>}}");
+        return EXIT_FAILURE;
+      }
+      for (const auto & kv: fwNode) {
+        const std::string key = kv.first.as<std::string>();
+        if (key != "below" && key != "above") {
+          NSL::Logger::error("measurements: fermiWindow has an unknown key '{}' (allowed: below, above)", key);
+          return EXIT_FAILURE;
+        }
+        double v = -1;
+        try { v = kv.second.as<double>(); } catch (const YAML::Exception &) { v = -1; }
+        if (v < 0 || v != std::floor(v)) {
+          NSL::Logger::error("measurements: fermiWindow {} must be a non-negative integer", key);
+          return EXIT_FAILURE;
+        }
+        params[key == "below" ? "fermiWindowBelow" : "fermiWindowAbove"] = (int) v;
+      }
+      if (params.contains("wallSources") || params.contains("eigenvalueIndices")) {
+        NSL::Logger::warn("measurements: fermiWindow is ignored when wallSources or eigenvalueIndices are given");
+      }
+    }
+    if (!params.contains("wallSources") && !params.contains("eigenvalueIndices")) {
+      NSL::Logger::info("No wall sources: projecting onto the hopping eigenvectors of the Fermi window HOMO-{} .. LUMO+{} (eps = -(lambda + mu))",
+          params.contains("fermiWindowBelow") ? params["fermiWindowBelow"].to<int>() : 1,
+          params.contains("fermiWindowAbove") ? params["fermiWindowAbove"].to<int>() : 0);
     }
 
 
