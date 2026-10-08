@@ -35,8 +35,8 @@ class FermionPropagatorSpinBasis: public Measurement {
                 params["Nx"].to<NSL::size_t>(),
                 params["Nx"].to<NSL::size_t>()
             ),
-            // wall sources are optional; without them measureK projects onto single
-            // hopping eigenvectors, i.e. one band per block
+            // wall sources are optional; without them measureK projects onto one block of
+            // hopping eigenvectors (setupProjection_ resizes corrK_ to their number of bands)
             corrK_(
                 params["device"].template to<NSL::Device>(),
                 params["Nt"].template to<NSL::size_t>(),
@@ -212,9 +212,10 @@ class FermionPropagatorSpinBasis: public Measurement {
         this->h5_.write(x, node);
     }
 
-    //! Project corr_ (Nt x Nx x Nx) onto all (sink,source) pairs of wall sources
+    //! Project corr_ (Nt x Nx x Nx) onto all (sink,source) pairs of source blocks
     //! and write each (Nt x bands x bands) block to basenode_+node+"/kSink-kSrc".
-    //! `sources` holds all wall-source vectors as rows, (kDim*bands) x Nx, row k*bands+sigma.
+    //! `sources` holds all source vectors as rows, (kDim*bands) x Nx, row k*bands+sigma
+    //! (wall mode: kDim = 2*blocks with conjugate copies; eigenbasis: kDim = 1, bands = m).
     void writeK_(const NSL::Tensor<Type> & sources, const std::string & node);
 
     //! true if params holds a non-empty wallSources tensor (blocks x bands x Nx)
@@ -234,8 +235,14 @@ class FermionPropagatorSpinBasis: public Measurement {
     NSL::Tensor<Type> corrK_;
     NSL::Tensor<Type> phi_;
 
-    //! selected hopping eigenvectors as (nSel x 1 x Nx) blocks (undefined until setupProjection_)
+    //! selected hopping eigenvectors as the m bands of one block, (m x Nx), row j = band j
+    //! (undefined until setupProjection_)
     NSL::Tensor<Type> eigSources_;
+
+    //! Tr_x G(0,0) of the full equal-time propagator (the t = 0 term of measureDiagonal) for the
+    //! prefix/suffix products computed by calcPiSigma(0); same definition as the Q of earlier
+    //! measurements (luu: markovChain/<cfg>/measurements/<spin>/Q)
+    Type traceG00_();
 
     std::string basenode_;
 
@@ -473,37 +480,43 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 //! configuration) without an Eigenbasis group while the eigenbasis is requested, measureK stops
 //! with an error before writing.
 //!
-//! Eigenbasis selection (rule version 3). K v_n = lambda_n v_n (eigh: ascending lambda, index n
+//! Eigenbasis selection (rule version 4). K v_n = lambda_n v_n (eigh: ascending lambda, index n
 //! as in numpy.linalg.eigh). Single-particle energies eps_n = -(lambda_n + mu): the propagator
 //! carries e^{delta K} e^{delta mu}, so <c(tau) c^+(0)> = e^{-eps tau} / (1 + e^{-beta eps}) and a
-//! level is occupied for eps < 0. Energy index i = position in ascending eps, eps values within
-//! tol = 1e-8*max(1,max|eps|) count as equal and ties go by ascending n. The eigenvectors do not
-//! depend on mu, only the selection does.
+//! level is occupied for eps < 0. Levels = groups of eps within tol = 1e-8*max(1,max|eps|)
+//! (chained over consecutive sorted values); energy index i = position in ascending eps, ties by n.
+//! The eigenvectors do not depend on mu, only the selection does.
+//! Non-interacting filling at mu: HOMO = highest level with eps < 0, LUMO = lowest level with
+//! eps > 0; a level with |eps| <= tol is ambiguous and taken as the HOMO (warning).
+//!  - default (Fermi window): the levels HOMO-below .. LUMO+above (params fermiWindowBelow = 1,
+//!    fermiWindowAbove = 0 by default), each with its full degenerate subspace; levels beyond the
+//!    edges of the spectrum are skipped with a warning.
 //!  - params["eigenvalueIndices"] (energy indices): exactly these vectors; duplicates or indices
 //!    outside [0,Nx) are an error; a listed level whose degenerate partners are not all listed
 //!    gives a warning (basis-dependent selection), the partners are not added. An empty list
 //!    counts as absent, i.e. selects the default (provenance identical to a default run).
-//!  - default: the highest negative-eps level and the lowest positive-eps level, each with its full
-//!    degenerate subspace; |eps| <= tol levels are excluded with a warning; no level on one side is
-//!    an error.
-//! Blocks are ordered by ascending eps (ties by n); vector j is block j with one band, written at
-//! k = 2j and its complex conjugate at k = 2j+1 (as for wall sources).
+//! Layout: ONE block whose m bands are the selected vectors in ascending eps (ties by n), without
+//! conjugate copies: measureK writes only the key "0-0" with leaves (Nt, m, m).
 //!
-//! Provenance (written once, then reused): <basenode>/Eigenbasis/
-//!   ruleVersion      ()        3 (attribute "rule")
+//! Provenance (written once, then reused): <basenode>/Eigenbasis/ (group attribute
+//! conjugateCopies = 0)
+//!   ruleVersion      ()        4 (attribute "rule")
 //!   mu               ()        chemical potential of the selection
-//!   selectionMode    ()        1 = default, 2 = eigenvalueIndices (attribute "mode")
-//!   requestedIndices (m)       the requested energy indices (eigenvalueIndices mode only)
+//!   selectionMode    ()        1 = Fermi window (default), 2 = eigenvalueIndices (attribute "mode")
+//!   fermiWindowBelow, fermiWindowAbove ()   window parameters (Fermi-window mode only)
+//!   requestedIndices (r)       the requested energy indices (eigenvalueIndices mode only)
 //!   lambda, energy   (Nx)      lambda_n and eps_n, both in eigh order n
 //!   energyOrder      (Nx)      eigh index n of energy index i
-//!   indices          (nSel)    eigh index n of block j
-//!   energyIndices    (nSel)    energy index of block j
-//!   eigenvalues      (nSel)    lambda of block j
-//!   energies         (nSel)    eps of block j
-//!   eigenvectors     (Nx,nSel) column j = vector of block j (sign/phase as used)
-//! A stored eigenbasis is reused only if rule version, mu, selection mode, requested indices and
-//! selected eigh indices are equal and its eigenvectors are orthonormal eigenvectors of K with the
-//! stored eigenvalues; otherwise measureK stops with an error before writing.
+//!   indices          (m)       eigh index n of band j
+//!   energyIndices    (m)       energy index of band j
+//!   eigenvalues      (m)       lambda of band j
+//!   energies         (m)       eps of band j
+//!   roles            (m)       non-interacting role of band j ("HOMO-1", "HOMO", "LUMO", "LUMO+1", ...)
+//!   eigenvectors     (Nx,m)    column j = vector of band j (sign/phase as used)
+//! A stored eigenbasis is reused only if rule version, mu, selection mode, window parameters,
+//! requested indices and selected eigh indices are equal and its eigenvectors are orthonormal
+//! eigenvectors of K with the stored eigenvalues; otherwise measureK stops with an error before
+//! writing (this includes eigenbases written by older rule versions).
 template<
     NSL::Concept::isNumber Type,
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
@@ -521,10 +534,10 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
     const std::string modeName = wallMode ? "wallSources" : "hoppingEigenbasis";
     const std::string root = std::string(basenode_);
     const std::string base = root + "/Eigenbasis";
-    const int ruleVersion = 3;
-    const std::string ruleText = "eps_n = -(lambda_n + mu); default: highest negative-eps and lowest positive-eps level with full degenerate subspaces, |eps|<=tol excluded; eigenvalueIndices: the listed ascending-eps indices; blocks by ascending eps";
+    const int ruleVersion = 4;
+    const std::string ruleText = "eps_n = -(lambda_n + mu); default (Fermi window): levels HOMO-below .. LUMO+above of the non-interacting filling at mu (|eps|<=tol level = HOMO), full degenerate subspaces; eigenvalueIndices: the listed ascending-eps indices; one block, bands by ascending eps, no conjugate copies";
     const int selMode = idxMode ? 2 : 1;
-    const std::string selName = idxMode ? "eigenvalueIndices" : "default";
+    const std::string selName = idxMode ? "eigenvalueIndices" : "fermiWindow";
 
     auto fail = [&](const std::string & msg){
         NSL::Logger::error("FermionPropagatorSpinBasis::measureK: {}", msg);
@@ -535,12 +548,23 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         fail("both wallSources and eigenvalueIndices are given; choose one projection");
     }
 
+    // Fermi-window parameters (default below = 1, above = 0)
+    auto windowParam = [&](const std::string & key, int def){
+        if (!this->params_.contains(key)) { return def; }
+        const int v = this->params_[key].template to<int>();
+        if (v < 0) { fail(fmt::format("{} must be a non-negative integer (got {})", key, v)); }
+        return v;
+    };
+    const int below = windowParam("fermiWindowBelow", 1);
+    const int above = windowParam("fermiWindowAbove", 0);
+
     // ---- eigenbasis selection (no file access yet)
     const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
     const double mu = this->params_.contains("mu") ? this->params_["mu"].template to<double>() : 0.;
     torch::Tensor K, V;
     std::vector<double> lambda, eps;
-    std::vector<NSL::size_t> order, epsIndex, sel;
+    std::vector<NSL::size_t> order, epsIndex, sel, cluster;
+    std::vector<std::string> roles;
     std::vector<int64_t> requested;
     double tolDeg = 0.;
     if (!wallMode) {
@@ -560,20 +584,40 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         for (NSL::size_t n = 0; n < Nx; n++) { eps[n] = -(lambda[n] + mu); maxAbs = std::max(maxAbs, std::abs(eps[n])); }
         tolDeg = 1e-8 * std::max(1., maxAbs);
 
-        // ascending-energy order; eps within tolDeg (chained over consecutive sorted values) tie, ties by n
-        std::vector<NSL::size_t> byEps(Nx), cluster(Nx);
+        // levels: eps within tolDeg (chained over consecutive sorted values); ascending-energy order, ties by n
+        std::vector<NSL::size_t> byEps(Nx);
+        cluster.resize(Nx);
         std::iota(byEps.begin(), byEps.end(), 0);
         std::stable_sort(byEps.begin(), byEps.end(), [&](NSL::size_t a, NSL::size_t b){ return eps[a] < eps[b]; });
-        for (NSL::size_t i = 0, c = 0; i < Nx; i++) {
-            if (i > 0 && eps[byEps[i]] - eps[byEps[i-1]] > tolDeg) { c++; }
-            cluster[byEps[i]] = c;
+        NSL::size_t nLevels = 0;
+        for (NSL::size_t i = 0; i < Nx; i++) {
+            if (i > 0 && eps[byEps[i]] - eps[byEps[i-1]] > tolDeg) { nLevels++; }
+            cluster[byEps[i]] = nLevels;
         }
+        nLevels++;
         order.resize(Nx); epsIndex.resize(Nx);
         std::iota(order.begin(), order.end(), 0);
         std::sort(order.begin(), order.end(), [&](NSL::size_t a, NSL::size_t b){
             return std::make_pair(cluster[a], a) < std::make_pair(cluster[b], b);
         });
         for (NSL::size_t i = 0; i < Nx; i++) { epsIndex[order[i]] = i; }
+
+        // non-interacting filling: HOMO level h (-1 if none), LUMO level l (nLevels if none)
+        long h = -1;
+        long zeroLevel = -1;
+        for (NSL::size_t n = 0; n < Nx; n++) {
+            if (std::abs(eps[n]) <= tolDeg) { zeroLevel = (long) cluster[n]; }
+            else if (eps[n] < 0) { h = std::max(h, (long) cluster[n]); }
+        }
+        if (zeroLevel >= 0) {
+            NSL::Logger::warn("Hopping eigenbasis: the level at eps = 0 (|eps| <= {:.1e}) is ambiguous at mu = {}; it is taken as the non-interacting HOMO", tolDeg, mu);
+            h = zeroLevel;
+        }
+        const long l = h + 1;   // levels are ordered by eps, so the LUMO follows the HOMO
+        auto role = [&](long c){
+            if (c <= h) { return c == h ? std::string("HOMO") : fmt::format("HOMO-{}", h - c); }
+            return c == l ? std::string("LUMO") : fmt::format("LUMO+{}", c - l);
+        };
 
         std::set<NSL::size_t> selSet;
         if (idxMode) {
@@ -591,41 +635,38 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
             for (NSL::size_t n: selSet) {
                 std::string missing;
                 for (NSL::size_t m = 0; m < Nx; m++) {
-                    if (!selSet.contains(m) && std::abs(eps[m] - eps[n]) <= tolDeg) { missing += fmt::format(" {}", epsIndex[m]); }
+                    if (!selSet.contains(m) && cluster[m] == cluster[n]) { missing += fmt::format(" {}", epsIndex[m]); }
                 }
                 if (!missing.empty()) {
                     NSL::Logger::warn("Hopping eigenbasis: energy index {} (eps={:.6f}) is degenerate with the unlisted energy indices{}; the selection depends on the eigensolver's basis of that subspace", epsIndex[n], eps[n], missing);
                 }
             }
         } else {
-            std::string zeroModes;
-            double epsA = -std::numeric_limits<double>::infinity(), epsB = std::numeric_limits<double>::infinity();
-            for (NSL::size_t n = 0; n < Nx; n++) {
-                if (std::abs(eps[n]) <= tolDeg) { zeroModes += fmt::format(" {}", epsIndex[n]); }
-                else if (eps[n] < 0) { epsA = std::max(epsA, eps[n]); }
-                else { epsB = std::min(epsB, eps[n]); }
+            // Fermi window: levels h-below .. l+above, clipped to the spectrum
+            const long first = h - below, last = l + above;
+            std::string skipped;
+            for (long c = first; c <= last; c++) {
+                if (c < 0 || c >= (long) nLevels) { skipped += " " + role(c); continue; }
+                for (NSL::size_t n = 0; n < Nx; n++) { if ((long) cluster[n] == c) { selSet.insert(n); } }
             }
-            if (!zeroModes.empty()) {
-                NSL::Logger::warn("Hopping eigenbasis: levels with |eps| <= {:.1e} (energy indices{}) are excluded", tolDeg, zeroModes);
-            }
-            if (std::isinf(epsA) || std::isinf(epsB)) {
-                fail(fmt::format("at mu = {} there is no level with {} energy (eps = -(lambda + mu) in [{:.6f}, {:.6f}]); the default eigenbasis needs both, give eigenvalueIndices or wallSources",
-                    mu, std::isinf(epsA) ? "negative" : "positive", *std::min_element(eps.begin(), eps.end()), *std::max_element(eps.begin(), eps.end())));
-            }
-            for (NSL::size_t n = 0; n < Nx; n++) {
-                if (std::abs(eps[n]) <= tolDeg) { continue; }
-                if (std::abs(eps[n] - epsA) <= tolDeg || std::abs(eps[n] - epsB) <= tolDeg) { selSet.insert(n); }
+            if (!skipped.empty()) {
+                NSL::Logger::warn("Hopping eigenbasis: Fermi window levels{} lie beyond the spectrum at mu = {} and are skipped", skipped, mu);
             }
         }
         sel.assign(selSet.begin(), selSet.end());
         std::sort(sel.begin(), sel.end(), [&](NSL::size_t a, NSL::size_t b){ return epsIndex[a] < epsIndex[b]; });
         if (sel.empty()) { fail("the eigenbasis selection is empty"); }   // never write an empty projection
+        for (NSL::size_t n: sel) { roles.push_back(role((long) cluster[n])); }
 
         std::string desc;
         for (NSL::size_t j = 0; j < sel.size(); j++) {
-            desc += fmt::format("{}block {} (k={},{}): n={} energy index {} lambda={:.6f} eps={:.6f}", j ? "; " : "", j, 2*j, 2*j+1, sel[j], epsIndex[sel[j]], lambda[sel[j]], eps[sel[j]]);
+            desc += fmt::format("{}band {}: n={} energy index {} lambda={:.6f} eps={:.6f} {}", j ? "; " : "", j, sel[j], epsIndex[sel[j]], lambda[sel[j]], eps[sel[j]], roles[j]);
         }
-        NSL::Logger::info("Hopping eigenbasis ({} selection, mu = {}): {} of {} eigenvectors: {}", selName, mu, sel.size(), Nx, desc);
+        if (idxMode) {
+            NSL::Logger::info("Hopping eigenbasis (eigenvalueIndices selection, mu = {}): {} of {} eigenvectors, one block: {}", mu, sel.size(), Nx, desc);
+        } else {
+            NSL::Logger::info("Hopping eigenbasis (Fermi window HOMO-{} .. LUMO+{}, mu = {}): {} of {} eigenvectors, one block: {}", below, above, mu, sel.size(), Nx, desc);
+        }
 
         V = evecs.index_select(1, torch::tensor(std::vector<int64_t>(sel.begin(), sel.end()), torch::kLong)).contiguous();
     }
@@ -677,9 +718,17 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
                 this->h5_.read(storedMu, base+"/mu");
                 this->h5_.read(storedSel, base+"/selectionMode");
                 if (std::abs(storedMu - mu) > 1e-12 * std::max(1., std::abs(mu))) { why = fmt::format("mu = {} (this run: {})", storedMu, mu); }
-                else if (storedSel != selMode) { why = fmt::format("selection mode {} (this run: {})", storedSel == 2 ? "eigenvalueIndices" : "default", selName); }
+                else if (storedSel != selMode) { why = fmt::format("selection mode {} (this run: {})", storedSel == 2 ? "eigenvalueIndices" : "fermiWindow", selName); }
                 else if (idxMode && asLong(base+"/requestedIndices") != requested) { why = "different eigenvalueIndices"; }
-                else if (asLong(base+"/indices") != nSelV) { why = "different selected eigenvectors"; }
+                else if (!idxMode) {
+                    int storedBelow = -1, storedAbove = -1;
+                    this->h5_.read(storedBelow, base+"/fermiWindowBelow");
+                    this->h5_.read(storedAbove, base+"/fermiWindowAbove");
+                    if (storedBelow != below || storedAbove != above) {
+                        why = fmt::format("Fermi window HOMO-{} .. LUMO+{} (this run: HOMO-{} .. LUMO+{})", storedBelow, storedAbove, below, above);
+                    }
+                }
+                if (why.empty() && asLong(base+"/indices") != nSelV) { why = "different selected eigenvectors"; }
             }
             if (why.empty()) {
                 NSL::Tensor<Type> Vstored; NSL::Tensor<double> lamStored;
@@ -709,9 +758,12 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
             NSL::Tensor<int> orderOut = itg(orderV), idxOut = itg(nSelV), eidxOut = itg(iSelV);
             NSL::Tensor<Type> Vout(V.clone());
             this->h5_.write(ruleVersion, base+"/ruleVersion");  attr(base+"/ruleVersion", "rule", ruleText);
+            const int conjugateCopies = 0;
+            this->h5_.getFile().getGroup(base).createAttribute<int>("conjugateCopies", HighFive::DataSpace::From(conjugateCopies)).write(conjugateCopies);
             this->h5_.write(mu, base+"/mu");
             this->h5_.write(selMode, base+"/selectionMode");    attr(base+"/selectionMode", "mode", selName);
             if (idxMode) { NSL::Tensor<int> reqOut = itg(requested); this->h5_.write(reqOut, base+"/requestedIndices"); }
+            else { this->h5_.write(below, base+"/fermiWindowBelow"); this->h5_.write(above, base+"/fermiWindowAbove"); }
             this->h5_.write(lamAll,   base+"/lambda");
             this->h5_.write(epsAll,   base+"/energy");
             this->h5_.write(orderOut, base+"/energyOrder");
@@ -719,12 +771,14 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
             this->h5_.write(eidxOut,  base+"/energyIndices");
             this->h5_.write(lamOut,   base+"/eigenvalues");
             this->h5_.write(epsOut,   base+"/energies");
+            this->h5_.getFile().createDataSet<std::string>(base+"/roles", HighFive::DataSpace::From(roles)).write(roles);
             this->h5_.write(Vout,     base+"/eigenvectors");
         }
 
-        // blocks (nSel x 1 x Nx): block j holds column j of V
+        // one block: rows of eigSources_ (m x Nx) are the band vectors (columns of V)
         const NSL::Device device = this->params_["device"].template to<NSL::Device>();
-        eigSources_ = NSL::Tensor<Type>(V.transpose(0,1).reshape({(int64_t) nSel, 1, (int64_t) Nx}).contiguous().to(device.device().device()));
+        eigSources_ = NSL::Tensor<Type>(V.transpose(0,1).contiguous().to(device.device().device()));
+        corrK_.resize(this->params_["Nt"].template to<NSL::size_t>(), nSel, nSel);
     }
 
     // ---- mode marker
@@ -788,22 +842,30 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NS
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
 
-    // source blocks (blocks x bands x Nx): the wall sources, or else the selected
-    // hopping eigenvectors (one band each)
-    NSL::Tensor<Type> blocks = wallMode ? NSL::Tensor<Type> (params_["wallSources"]) : eigSources_;
-
-    // wall sources: even k = source, odd k = conj(source)
-    NSL::Tensor<Type> wallSources(params_["device"].to<NSL::Device>(), 2 * blocks.shape(0), blocks.shape(1), blocks.shape(2));
-    wallSources(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = blocks;
-    wallSources(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(blocks);
-    // flatten to (kDim*bands) x Nx: row k*bands+sigma is wall source (k,sigma)
-    wallSources.reshape(wallSources.shape(0)*wallSources.shape(1), wallSources.shape(2));
+    // projection sources as rows, (kDim*bands) x Nx, row k*bands+sigma = source (k,sigma)
+    NSL::Tensor<Type> wallSources;
+    if (wallMode) {
+        // wall sources (blocks x bands x Nx): even k = source, odd k = conj(source)
+        NSL::Tensor<Type> blocks(params_["wallSources"]);
+        NSL::Tensor<Type> doubled(params_["device"].to<NSL::Device>(), 2 * blocks.shape(0), blocks.shape(1), blocks.shape(2));
+        doubled(NSL::Slice(0,NSL::none_t(), 2), NSL::Ellipsis()) = blocks;
+        doubled(NSL::Slice(1,NSL::none_t(), 2), NSL::Ellipsis()) = NSL::LinAlg::conj(blocks);
+        doubled.reshape(doubled.shape(0)*doubled.shape(1), doubled.shape(2));
+        wallSources = doubled;
+    } else {
+        // hopping eigenbasis: one block (kDim = 1) whose m bands are the selected vectors,
+        // no conjugate copies -> only the key "0-0", leaves (Nt, m, m)
+        wallSources = eigSources_;
+    }
 
     // if non-interacting (phi = 0) write to /NonInteracting, otherwise to /markovChain/cfgID
+    std::string measPrefix;
     if ((phi_ == Type(0)).all()) {
         prefix = "/NonInteracting/propagator";
+        measPrefix = "/NonInteracting/measurements";
     } else {
         prefix = fmt::format("/markovChain/{}/propagator",cfgID);
+        measPrefix = fmt::format("/markovChain/{}/measurements",cfgID);
     }
 
     const NSL::Hubbard::Spin spins[2] = {NSL::Hubbard::Up, NSL::Hubbard::Down};
@@ -858,6 +920,22 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(NS
                 }else{
                     NSL::Logger::info("Config #{} already has {} diagonal, skipping... ", cfgID, spinNames[s]);
                 }
+
+                // charge Q = Tr_x G(0,0) of the full (unprojected) equal-time propagator
+                node = fmt::format("{}/{}/Q",measPrefix,spinNames[s]);
+                if (!skip_(this->params_["overwrite"],node)) {
+                    if (PiSigma) {
+                        hfm_.populate(phi_,spin_);
+                        calcPiSigma(tsrc);
+                        PiSigma = false;
+                    }
+                    Type Q = traceG00_();
+                    if (!std::isfinite(static_cast<double>(Q.real())) || !std::isfinite(static_cast<double>(Q.imag()))) {
+                        NSL::Logger::error("FermionPropagatorSpinBasis: non-finite charge in {}; nothing written for this node", std::string(basenode_)+node);
+                        throw std::runtime_error("FermionPropagatorSpinBasis: non-finite charge in " + std::string(basenode_)+node);
+                    }
+                    this->h5_.write(Q, std::string(basenode_)+node);
+                }
             }
         } // spin
     } // tsrc
@@ -888,7 +966,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
     std::string node = "/NonInteracting/propagator";
     // this is a shortcut, we don't need to calculate the non-interacting 
     // correlators if we won't update the file
-    if(!skip_(this->params_["overwrite"],node)) {
+    if(!skip_(this->params_["overwrite"],node)
+        || !skip_(this->params_["overwrite"],"/NonInteracting/measurements/spinUp/Q")
+        || !skip_(this->params_["overwrite"],"/NonInteracting/measurements/spinDown/Q")) {
         // measure the non-interacting theory
         // U = 0 <=> phi = 0
         phi_ = Type(0);
@@ -925,6 +1005,20 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureK(){
     } // for cfgID
 
 } // measureK()
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
+Type FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::traceG00_(){
+    // the t = 0 term of measureDiagonal (identical operations), traced over the sites
+    std::tie( Qnew_, Dnew_, Vnew_ ) = udtHost_( NSL::LinAlg::solve(SIGMA_V_(0,NSL::Ellipsis()), NSL::LinAlg::adjoint(SIGMA_U_(0,NSL::Ellipsis())),false ) + NSL::LinAlg::diag_embed(SIGMA_D_(0,NSL::Ellipsis())));
+    NSL::Tensor<Type> Ut = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnew_, SIGMA_V_(0,NSL::Ellipsis())) , NSL::LinAlg::diag_embed(1./Dnew_));
+    NSL::Tensor<Type> Tt = NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( SIGMA_U_(0,NSL::Ellipsis()), Qnew_ ));
+    torch::Tensor G00 = static_cast<torch::Tensor>(NSL::LinAlg::mat_mul(Ut, Tt));
+    return G00.diagonal(0, -2, -1).sum().to(torch::kCPU).template item<Type>();
+} // traceG00_()
 
 template<
     NSL::Concept::isNumber Type,
