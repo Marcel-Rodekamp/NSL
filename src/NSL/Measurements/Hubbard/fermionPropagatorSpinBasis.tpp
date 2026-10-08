@@ -246,9 +246,13 @@ class FermionPropagatorSpinBasis: public Measurement {
     //! returned and the resident set grew by several MB per configuration (perylene, Nt = 512) until
     //! the node ran out of memory. With a fixed threshold, allocations >= 128 KiB are mmapped and
     //! returned to the OS on free. (mallopt also disables the dynamic adjustment.) No-op elsewhere.
-    //! Not addressed: HDF5 (1.14.5) itself keeps ~60-67 B of live heap per created dataset (also with
-    //! its C API, after closing the file and after H5garbage_collect), i.e. ~0.12 MB per configuration
-    //! in eigenbasis mode with 10 blocks (1800 datasets) and ~5 kB in wall mode (72 datasets).
+    //! The setting is process-wide. 128 KiB was the only tested threshold that removes the
+    //! fragmentation (256 KiB and 1 MiB fragment partially, 4 MiB behaves like no fix); it costs
+    //! ~+10% run time in eigenbasis mode and ~+14% in wall mode.
+    //! Not addressed: while the h5 file is open, HDF5 (1.14.5) keeps ~47-67 B of live heap per
+    //! created dataset (open-file state, released when the file is closed), growing linearly: ~0.11 MB
+    //! per configuration in eigenbasis mode with the current per-vector layout (~2.6 GB per process
+    //! after 19k configurations) and ~5 kB per configuration in wall mode.
     static void configureAllocator_(){
 #if defined(__GLIBC__)
         static const bool configured = (mallopt(M_MMAP_THRESHOLD, 128 * 1024) == 1);
