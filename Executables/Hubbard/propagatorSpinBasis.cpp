@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <limits>
 #include <ctime>
 
 int main(int argc, char* argv[]){
@@ -203,26 +204,57 @@ int main(int argc, char* argv[]){
       NSL::Logger::info("Projecting onto the hopping eigenvectors with energy indices {} (ascending eps = -(lambda + mu))", fmt::join(idx, ", "));
     }
 
-    // Fermi window (default eigenbasis selection): below, above >= 0 levels around HOMO / LUMO
+    // Fermi window (default eigenbasis selection): below, above >= 0 levels around HOMO / LUMO.
+    // Missing key, null, {} or [] -> defaults {below: 1, above: 0}; a partial map keeps the default
+    // for the missing key. Values must be plain (unquoted) YAML decimal integers >= 0; negative
+    // values, floats (1.0, 1.5, 1e10, .inf, .nan), strings ("2"), booleans, null and lists are
+    // errors, as are unknown or repeated keys. Values above INT_MAX are saturated here; measureK
+    // clamps them to the number of distinct levels before selecting.
     const YAML::Node fwNode = yml["measurements"]["fermiWindow"];
-    if (fwNode && !fwNode.IsNull()) {
+    const bool fwEmpty = fwNode && ((fwNode.IsSequence() || fwNode.IsMap()) && fwNode.size() == 0);
+    if (fwNode && fwNode.IsSequence() && fwEmpty) {
+      NSL::Logger::info("measurements: fermiWindow is an empty list, treated as absent (defaults {{below: 1, above: 0}})");
+    }
+    if (fwNode && !fwNode.IsNull() && !fwEmpty) {
       if (!fwNode.IsMap()) {
         NSL::Logger::error("measurements: fermiWindow must be a map {{below: <int >= 0>, above: <int >= 0>}}");
         return EXIT_FAILURE;
       }
+      std::set<std::string> seenKeys;
       for (const auto & kv: fwNode) {
-        const std::string key = kv.first.as<std::string>();
+        const std::string key = kv.first.IsScalar() ? kv.first.Scalar() : std::string("<non-scalar>");
         if (key != "below" && key != "above") {
           NSL::Logger::error("measurements: fermiWindow has an unknown key '{}' (allowed: below, above)", key);
           return EXIT_FAILURE;
         }
-        double v = -1;
-        try { v = kv.second.as<double>(); } catch (const YAML::Exception &) { v = -1; }
-        if (v < 0 || v != std::floor(v)) {
-          NSL::Logger::error("measurements: fermiWindow {} must be a non-negative integer", key);
+        if (!seenKeys.insert(key).second) {
+          NSL::Logger::error("measurements: fermiWindow key '{}' is given more than once", key);
           return EXIT_FAILURE;
         }
-        params[key == "below" ? "fermiWindowBelow" : "fermiWindowAbove"] = (int) v;
+        // plain scalar of decimal digits with an optional sign; anything else is not an integer
+        const YAML::Node & val = kv.second;
+        const std::string text = val.IsScalar() ? val.Scalar() : std::string();
+        const bool plain = val.IsScalar() && val.Tag() == "?";
+        std::string digits = text;
+        bool negative = false;
+        if (!digits.empty() && (digits[0] == '+' || digits[0] == '-')) { negative = digits[0] == '-'; digits.erase(0, 1); }
+        const bool isInt = plain && !digits.empty() && digits.find_first_not_of("0123456789") == std::string::npos;
+        if (!isInt) {
+          NSL::Logger::error("measurements: fermiWindow {} must be a non-negative integer (got {})", key,
+              val.IsNull() ? std::string("null") : val.IsSequence() ? std::string("a list") : val.IsMap() ? std::string("a map")
+                           : (plain ? "'" + text + "'" : "the string \"" + text + "\""));
+          return EXIT_FAILURE;
+        }
+        const std::size_t nz = digits.find_first_not_of('0');
+        const std::string sig = nz == std::string::npos ? std::string("0") : digits.substr(nz);
+        if (negative && sig != "0") {
+          NSL::Logger::error("measurements: fermiWindow {} must be a non-negative integer (got {})", key, text);
+          return EXIT_FAILURE;
+        }
+        // saturate at INT_MAX without overflowing (measureK clamps to the number of levels)
+        const int intMax = std::numeric_limits<int>::max();
+        int v = (sig.size() > 10 || std::stoll(sig) > intMax) ? intMax : (int) std::stoll(sig);
+        params[key == "below" ? "fermiWindowBelow" : "fermiWindowAbove"] = v;
       }
       if (params.contains("wallSources") || params.contains("eigenvalueIndices")) {
         NSL::Logger::warn("measurements: fermiWindow is ignored when wallSources or eigenvalueIndices are given");
