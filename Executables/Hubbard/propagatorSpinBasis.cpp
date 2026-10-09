@@ -206,10 +206,11 @@ int main(int argc, char* argv[]){
 
     // Fermi window (default eigenbasis selection): below, above >= 0 levels around HOMO / LUMO.
     // Missing key, null, {} or [] -> defaults {below: 1, above: 0}; a partial map keeps the default
-    // for the missing key. Values must be plain (unquoted) YAML decimal integers >= 0; negative
-    // values, floats (1.0, 1.5, 1e10, .inf, .nan), strings ("2"), booleans, null and lists are
-    // errors, as are unknown or repeated keys. Values above INT_MAX are saturated here; measureK
-    // clamps them to the number of distinct levels before selecting.
+    // for the missing key. Values must be YAML decimal integers >= 0: plain (unquoted) scalars or
+    // scalars with an explicit !!int tag. Negative values, floats (1.0, 1.5, 1e10, .inf, .nan),
+    // strings ("2", !!str 2), other tags, booleans, null, lists and multi-digit values with a
+    // leading zero (010 is octal in YAML 1.1) are errors, as are unknown or repeated keys. Values
+    // above INT_MAX are saturated here; measureK clamps them to the number of distinct levels.
     const YAML::Node fwNode = yml["measurements"]["fermiWindow"];
     const bool fwEmpty = fwNode && ((fwNode.IsSequence() || fwNode.IsMap()) && fwNode.size() == 0);
     if (fwNode && fwNode.IsSequence() && fwEmpty) {
@@ -231,18 +232,27 @@ int main(int argc, char* argv[]){
           NSL::Logger::error("measurements: fermiWindow key '{}' is given more than once", key);
           return EXIT_FAILURE;
         }
-        // plain scalar of decimal digits with an optional sign; anything else is not an integer
+        // scalar of decimal digits with an optional sign, either plain (yaml-cpp tag "?") or with an
+        // explicit !!int tag; quoted scalars (tag "!") and other tags are not integers
         const YAML::Node & val = kv.second;
         const std::string text = val.IsScalar() ? val.Scalar() : std::string();
-        const bool plain = val.IsScalar() && val.Tag() == "?";
+        const std::string tag = val.IsScalar() ? val.Tag() : std::string();
+        const bool plain = tag == "?";
+        const bool intTag = tag == "tag:yaml.org,2002:int";
         std::string digits = text;
         bool negative = false;
         if (!digits.empty() && (digits[0] == '+' || digits[0] == '-')) { negative = digits[0] == '-'; digits.erase(0, 1); }
-        const bool isInt = plain && !digits.empty() && digits.find_first_not_of("0123456789") == std::string::npos;
+        const bool isInt = (plain || intTag) && !digits.empty() && digits.find_first_not_of("0123456789") == std::string::npos;
         if (!isInt) {
           NSL::Logger::error("measurements: fermiWindow {} must be a non-negative integer (got {})", key,
               val.IsNull() ? std::string("null") : val.IsSequence() ? std::string("a list") : val.IsMap() ? std::string("a map")
-                           : (plain ? "'" + text + "'" : "the string \"" + text + "\""));
+              : plain ? "'" + text + "'"
+              : tag == "!" ? "the string \"" + text + "\""
+              : "'" + text + "' tagged " + tag);
+          return EXIT_FAILURE;
+        }
+        if (digits.size() > 1 && digits[0] == '0') {
+          NSL::Logger::error("measurements: fermiWindow {} has an ambiguous leading zero (got {}; YAML 1.1 reads it as octal), write it without leading zeros", key, text);
           return EXIT_FAILURE;
         }
         const std::size_t nz = digits.find_first_not_of('0');
