@@ -487,10 +487,12 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 //! (chained over consecutive sorted values); energy index i = position in ascending eps, ties by n.
 //! The eigenvectors do not depend on mu, only the selection does.
 //! Non-interacting filling at mu: HOMO = highest level with eps < 0, LUMO = lowest level with
-//! eps > 0; a level with |eps| <= tol is ambiguous and taken as the HOMO (warning).
+//! eps > 0; a level with |eps| <= tol is ambiguous and taken as the HOMO (warning, and
+//! homoAmbiguous = 1 plus homoAmbiguousEps in the provenance).
 //!  - default (Fermi window): the levels HOMO-below .. LUMO+above (params fermiWindowBelow = 1,
-//!    fermiWindowAbove = 0 by default), each with its full degenerate subspace; levels beyond the
-//!    edges of the spectrum are skipped with a warning.
+//!    fermiWindowAbove = 0 by default; values above the number of distinct levels are clamped to
+//!    it), each with its full degenerate subspace; levels beyond the edges of the spectrum are
+//!    skipped with a warning giving their number.
 //!  - params["eigenvalueIndices"] (energy indices): exactly these vectors; duplicates or indices
 //!    outside [0,Nx) are an error; a listed level whose degenerate partners are not all listed
 //!    gives a warning (basis-dependent selection), the partners are not added. An empty list
@@ -503,7 +505,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 //!   ruleVersion      ()        4 (attribute "rule")
 //!   mu               ()        chemical potential of the selection
 //!   selectionMode    ()        1 = Fermi window (default), 2 = eigenvalueIndices (attribute "mode")
-//!   fermiWindowBelow, fermiWindowAbove ()   window parameters (Fermi-window mode only)
+//!   fermiWindowBelow, fermiWindowAbove ()   window parameters after clamping (Fermi-window mode only)
+//!   homoAmbiguous    ()        int 1 if the HOMO is a level with |eps| <= tol (else 0)
+//!   homoAmbiguousEps ()        eps of that level (only if homoAmbiguous = 1)
 //!   requestedIndices (r)       the requested energy indices (eigenvalueIndices mode only)
 //!   lambda, energy   (Nx)      lambda_n and eps_n, both in eigh order n
 //!   energyOrder      (Nx)      eigh index n of energy index i
@@ -555,8 +559,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         if (v < 0) { fail(fmt::format("{} must be a non-negative integer (got {})", key, v)); }
         return v;
     };
-    const int below = windowParam("fermiWindowBelow", 1);
-    const int above = windowParam("fermiWindowAbove", 0);
+    // (both are clamped to the number of distinct levels in the Fermi-window selection below)
+    long below = windowParam("fermiWindowBelow", 1);
+    long above = windowParam("fermiWindowAbove", 0);
 
     // ---- eigenbasis selection (no file access yet)
     const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
@@ -567,6 +572,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
     std::vector<std::string> roles;
     std::vector<int64_t> requested;
     double tolDeg = 0.;
+    int homoAmbiguous = 0;          // 1 if the HOMO is a level with |eps| <= tol
+    double homoAmbiguousEps = 0.;   // eps of that level
     if (!wallMode) {
         // eigen decomposition of K on the CPU; real symmetric K gives real eigenvectors
         K = static_cast<torch::Tensor>(this->hfm_.Lat.hopping_matrix()).to(torch::kCPU).to(torch::kComplexDouble);
@@ -612,6 +619,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
         if (zeroLevel >= 0) {
             NSL::Logger::warn("Hopping eigenbasis: the level at eps = 0 (|eps| <= {:.1e}) is ambiguous at mu = {}; it is taken as the non-interacting HOMO", tolDeg, mu);
             h = zeroLevel;
+            homoAmbiguous = 1;
+            for (NSL::size_t n = 0; n < Nx; n++) { if ((long) cluster[n] == zeroLevel) { homoAmbiguousEps = eps[n]; break; } }
         }
         const long l = h + 1;   // levels are ordered by eps, so the LUMO follows the HOMO
         auto role = [&](long c){
@@ -642,15 +651,23 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
                 }
             }
         } else {
-            // Fermi window: levels h-below .. l+above, clipped to the spectrum
+            // Fermi window: levels h-below .. l+above, clipped to the spectrum. below/above larger
+            // than the number of distinct levels select nothing more and are clamped to it first,
+            // so the loop below runs over at most 3*nLevels levels.
+            if (below > (long) nLevels || above > (long) nLevels) {
+                NSL::Logger::info("Hopping eigenbasis: Fermi window HOMO-{} .. LUMO+{} clamped to the {} distinct levels", below, above, nLevels);
+                below = std::min(below, (long) nLevels);
+                above = std::min(above, (long) nLevels);
+            }
             const long first = h - below, last = l + above;
-            std::string skipped;
+            long missingBelow = 0, missingAbove = 0;
             for (long c = first; c <= last; c++) {
-                if (c < 0 || c >= (long) nLevels) { skipped += " " + role(c); continue; }
+                if (c < 0) { missingBelow++; continue; }
+                if (c >= (long) nLevels) { missingAbove++; continue; }
                 for (NSL::size_t n = 0; n < Nx; n++) { if ((long) cluster[n] == c) { selSet.insert(n); } }
             }
-            if (!skipped.empty()) {
-                NSL::Logger::warn("Hopping eigenbasis: Fermi window levels{} lie beyond the spectrum at mu = {} and are skipped", skipped, mu);
+            if (missingBelow > 0 || missingAbove > 0) {
+                NSL::Logger::warn("Hopping eigenbasis: the Fermi window HOMO-{} .. LUMO+{} extends {} level(s) below and {} level(s) above the spectrum at mu = {}; these are skipped", below, above, missingBelow, missingAbove, mu);
             }
         }
         sel.assign(selSet.begin(), selSet.end());
@@ -763,7 +780,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
             this->h5_.write(mu, base+"/mu");
             this->h5_.write(selMode, base+"/selectionMode");    attr(base+"/selectionMode", "mode", selName);
             if (idxMode) { NSL::Tensor<int> reqOut = itg(requested); this->h5_.write(reqOut, base+"/requestedIndices"); }
-            else { this->h5_.write(below, base+"/fermiWindowBelow"); this->h5_.write(above, base+"/fermiWindowAbove"); }
+            else { const int b = (int) below, a = (int) above; this->h5_.write(b, base+"/fermiWindowBelow"); this->h5_.write(a, base+"/fermiWindowAbove"); }
+            this->h5_.write(homoAmbiguous, base+"/homoAmbiguous");
+            if (homoAmbiguous) { this->h5_.write(homoAmbiguousEps, base+"/homoAmbiguousEps"); }
             this->h5_.write(lamAll,   base+"/lambda");
             this->h5_.write(epsAll,   base+"/energy");
             this->h5_.write(orderOut, base+"/energyOrder");
