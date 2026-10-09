@@ -517,10 +517,13 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measure(){
 //!   energies         (m)       eps of band j
 //!   roles            (m)       non-interacting role of band j ("HOMO-1", "HOMO", "LUMO", "LUMO+1", ...)
 //!   eigenvectors     (Nx,m)    column j = vector of band j (sign/phase as used)
-//! A stored eigenbasis is reused only if rule version, mu, selection mode, window parameters,
-//! requested indices and selected eigh indices are equal and its eigenvectors are orthonormal
-//! eigenvectors of K with the stored eigenvalues; otherwise measureK stops with an error before
-//! writing (this includes eigenbases written by older rule versions).
+//! A stored eigenbasis is reused if rule version, mu and the selected eigh indices (in band order)
+//! are equal and its eigenvectors are orthonormal eigenvectors of K with the stored eigenvalues,
+//! i.e. if the effective selection is the same; differing selection parameters (selection mode,
+//! eigenvalueIndices, Fermi window) that select the same vectors are only logged. Otherwise
+//! measureK stops with an error before writing (this includes eigenbases written by older rule
+//! versions). A reused eigenbasis without homoAmbiguous (written before it existed) gets
+//! homoAmbiguous (and homoAmbiguousEps) added; existing datasets are never modified.
 template<
     NSL::Concept::isNumber Type,
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
@@ -562,6 +565,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
     // (both are clamped to the number of distinct levels in the Fermi-window selection below)
     long below = windowParam("fermiWindowBelow", 1);
     long above = windowParam("fermiWindowAbove", 0);
+    const long belowRequested = below, aboveRequested = above;
 
     // ---- eigenbasis selection (no file access yet)
     const NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
@@ -651,9 +655,9 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
                 }
             }
         } else {
-            // Fermi window: levels h-below .. l+above, clipped to the spectrum. below/above larger
-            // than the number of distinct levels select nothing more and are clamped to it first,
-            // so the loop below runs over at most 3*nLevels levels.
+            // Fermi window: levels h-below .. l+above (l = h+1), clipped to the spectrum. below/above
+            // larger than the number of distinct levels select nothing more and are clamped to it
+            // first, so the loop below runs over below+above+2 <= 2*nLevels+2 levels.
             if (below > (long) nLevels || above > (long) nLevels) {
                 NSL::Logger::info("Hopping eigenbasis: Fermi window HOMO-{} .. LUMO+{} clamped to the {} distinct levels", below, above, nLevels);
                 below = std::min(below, (long) nLevels);
@@ -732,20 +736,33 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
                 if (storedRule != ruleVersion) { why = fmt::format("rule version {} (this run: {})", storedRule, ruleVersion); }
             }
             if (why.empty()) {
+                // the reuse decision depends on the effective selection only (mu, selected eigh indices
+                // in band order and, below, the eigenvectors); differing selection parameters that select
+                // the same vectors (selection mode, eigenvalueIndices, Fermi window) are only logged
                 this->h5_.read(storedMu, base+"/mu");
-                this->h5_.read(storedSel, base+"/selectionMode");
                 if (std::abs(storedMu - mu) > 1e-12 * std::max(1., std::abs(mu))) { why = fmt::format("mu = {} (this run: {})", storedMu, mu); }
-                else if (storedSel != selMode) { why = fmt::format("selection mode {} (this run: {})", storedSel == 2 ? "eigenvalueIndices" : "fermiWindow", selName); }
-                else if (idxMode && asLong(base+"/requestedIndices") != requested) { why = "different eigenvalueIndices"; }
-                else if (!idxMode) {
-                    int storedBelow = -1, storedAbove = -1;
-                    this->h5_.read(storedBelow, base+"/fermiWindowBelow");
-                    this->h5_.read(storedAbove, base+"/fermiWindowAbove");
-                    if (storedBelow != below || storedAbove != above) {
-                        why = fmt::format("Fermi window HOMO-{} .. LUMO+{} (this run: HOMO-{} .. LUMO+{})", storedBelow, storedAbove, below, above);
+                else if (asLong(base+"/indices") != nSelV) { why = "different selected eigenvectors"; }
+                else {
+                    std::string paramDiff;
+                    this->h5_.read(storedSel, base+"/selectionMode");
+                    if (storedSel != selMode) {
+                        paramDiff = fmt::format("selection mode {} (this run: {})", storedSel == 2 ? "eigenvalueIndices" : "fermiWindow", selName);
+                    } else if (idxMode && this->h5_.exist(base+"/requestedIndices") && asLong(base+"/requestedIndices") != requested) {
+                        paramDiff = "eigenvalueIndices differ";
+                    } else if (!idxMode && this->h5_.exist(base+"/fermiWindowBelow") && this->h5_.exist(base+"/fermiWindowAbove")) {
+                        int storedBelow = -1, storedAbove = -1;
+                        this->h5_.read(storedBelow, base+"/fermiWindowBelow");
+                        this->h5_.read(storedAbove, base+"/fermiWindowAbove");
+                        const bool sameAsRequested = storedBelow == belowRequested && storedAbove == aboveRequested;
+                        const bool sameAsClamped = storedBelow == below && storedAbove == above;
+                        if (!sameAsRequested && !sameAsClamped) {
+                            paramDiff = fmt::format("Fermi window HOMO-{} .. LUMO+{} (this run: HOMO-{} .. LUMO+{})", storedBelow, storedAbove, belowRequested, aboveRequested);
+                        }
+                    }
+                    if (!paramDiff.empty()) {
+                        NSL::Logger::info("Hopping eigenbasis: the stored selection parameters differ ({}) but select the same eigenvectors; reusing the stored eigenbasis", paramDiff);
                     }
                 }
-                if (why.empty() && asLong(base+"/indices") != nSelV) { why = "different selected eigenvectors"; }
             }
             if (why.empty()) {
                 NSL::Tensor<Type> Vstored; NSL::Tensor<double> lamStored;
@@ -764,6 +781,12 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::setupProjec
                 fail(fmt::format("the hopping eigenbasis stored in {} differs from this run: {}; refusing to mix selections in one file", base, why));
             }
             NSL::Logger::info("Hopping eigenbasis: using the eigenvectors stored in {}", base);
+            // eigenbases written before homoAmbiguous existed: add it (the selection equals the
+            // stored one); existing datasets are never modified
+            if (!this->h5_.exist(base+"/homoAmbiguous")) {
+                this->h5_.write(homoAmbiguous, base+"/homoAmbiguous");
+                if (homoAmbiguous && !this->h5_.exist(base+"/homoAmbiguousEps")) { this->h5_.write(homoAmbiguousEps, base+"/homoAmbiguousEps"); }
+            }
         } else {
             auto attr = [&](const std::string & node, const std::string & name, const std::string & value){
                 HighFive::DataSet ds = this->h5_.getFile().getDataSet(node);
