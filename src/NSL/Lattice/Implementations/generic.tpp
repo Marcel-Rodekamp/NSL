@@ -18,6 +18,24 @@ namespace {
         std::string result=system["system"]["name"].as<std::string>();
         return result;
     }
+
+    //! Spatial dimension of the lattice: the number of components of each entry of
+    //! `system: positions` (2 for planar molecules, 3 for systems extending in z)
+    int spatialDimGeneric(const YAML::Node &system){
+        const YAML::Node positions = system["system"]["positions"];
+        const int nions = system["system"]["nions"].as<int>();
+        if (!positions || !positions.IsSequence() || int(positions.size()) != nions) {
+            throw std::runtime_error("NSL::Lattice::Generic: `system: positions` must list `nions` positions");
+        }
+        const int dim = positions[0].size();
+        for (int ni = 0; ni < nions; ++ni) {
+            if (int(positions[ni].size()) != dim || dim < 1) {
+                throw std::runtime_error(
+                    "NSL::Lattice::Generic: all entries of `system: positions` must have the same number of coordinates");
+            }
+        }
+        return dim;
+    }
 }
 
 namespace NSL::Lattice {
@@ -31,9 +49,12 @@ template<typename Type>
 void NSL::Lattice::Generic<Type>::init_(const YAML::Node &system)
 {
 
+    // all coordinates of each position (x, y and, if given, z)
+    const int dim = spatialDimGeneric(system);
     for(int ni = 0; ni < system["system"]["nions"].as<int>(); ++ni){
-    	  this->sites_(ni, 0) = system["system"]["positions"][ni][0].as<double>();
-	  this->sites_(ni, 1) = system["system"]["positions"][ni][1].as<double>();
+        for(int d = 0; d < dim; ++d){
+            this->sites_(ni, d) = system["system"]["positions"][ni][d].as<double>();
+        }
     }
 
     int n1,n2;
@@ -70,7 +91,7 @@ NSL::Lattice::Generic<Type>::Generic(
 	    NSL::Lattice::SpatialLattice<Type>(
                 nameGeneric(system),
                 NSL::Tensor<Type>(this->get_number_of_sites_(system), this->get_number_of_sites_(system)),
-                NSL::Tensor<double>(this->get_number_of_sites_(system),2)  // the "2" is for the spatial dimension (I believe)
+                NSL::Tensor<double>(this->get_number_of_sites_(system), spatialDimGeneric(system))  // (nions, spatial dimension)
         ),
         kappa(kappa)
 {
