@@ -43,6 +43,64 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make
 ```
 
+### Build on macOS with Homebrew (tested)
+
+These commands were run exactly as written on a fresh clone on 2026-11-17:
+macOS 26.6 on Apple silicon, Homebrew `cmake` 4.4.5, `ninja` 1.13.2, `hdf5` 2.2.0,
+`pytorch` 2.15.0, Apple clang 21. Configuring took 27 s, compiling everything 6 min on 8 cores,
+the tests 2.5 min.
+
+```sh
+# 1. tools and libraries (once); Apple's compiler comes with the Xcode command line tools
+#    (`xcode-select --install` if `clang --version` fails)
+brew install cmake ninja hdf5 pytorch
+
+# 2. the code (or cd into your existing checkout)
+git clone https://github.com/Marcel-Rodekamp/NSL.git
+cd NSL
+git checkout newMeasurements
+
+# 3. configure a Release build in ./build; this downloads Catch2, HighFive, spdlog,
+#    yaml-cpp and CLI11 on the first run
+cmake --fresh -S . -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DTorch_DIR="$(brew --prefix)/share/cmake/Torch" \
+      -DHIGHFIVE_USE_BOOST=OFF \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+# 4. compile everything ...
+cmake --build build -j 8
+#    ... or only the programs you need
+cmake --build build -j 8 --target propagator autotune_RadialMCMC_PPP
+
+# 5. run the tests
+ctest --test-dir build -j 4
+```
+
+The programs are then in `build/Executables/` (e.g. `build/Executables/Hubbard/propagator`,
+`build/Executables/PPP/autotune_RadialMCMC_PPP`), the tests in `build/Tests/`.
+After `git pull`, step 4 alone recompiles what changed.
+
+Why the options:
+
+* `Torch_DIR` points CMake to Homebrew's `libtorch`.
+* `HIGHFIVE_USE_BOOST=OFF`: otherwise HighFive looks for Boost components that NSL does not use.
+* `CMAKE_POLICY_VERSION_MINIMUM=3.5`: CMake 4 refuses the old `cmake_minimum_required` of the
+  downloaded HighFive; this lets it configure anyway.
+* `--fresh` discards an existing CMake cache. Use it (i.e. repeat steps 3 and 4) after
+  `brew upgrade` has updated `pytorch`, `hdf5` or their dependencies; an old build directory
+  otherwise links against libraries that no longer exist.
+* CMake picks Apple's compiler (`/usr/bin/c++`) even when Homebrew's LLVM `clang++` comes first in
+  `PATH`; that is the tested setup. If you have set `CC`/`CXX` to another compiler, unset them.
+
+Known test failures (also before the changes on `newMeasurements`): `test_Tensor_mat_exp`,
+`test_FermionMatrix_hermitian`, `test_fermionMatrixHubbardExp` and `test_force` fail in their
+single-precision (`complex<float>`) cases, `test_BiCGStab` breaks down with NaN residuals, and
+`test_CG` and `test_leapfrog` fail now and then because they use unseeded random input.
+
+The Python tools in `Executables/PPP/python` need
+`python3 -m pip install numpy scipy h5py pyyaml matplotlib`.
+
 ### Prerequisites
 
 Sometimes a few things are needed before the build can work.
@@ -154,6 +212,8 @@ pytorch version.
 Now you can use the quick build to compile NSL, don't forget to specify `Torch_DIR` as explained above.
 
 #### 2. macOS 
+
+For a tested Homebrew setup see *Build on macOS with Homebrew (tested)* above.
 
 Ensure that your clang version matches one of the above.
 
