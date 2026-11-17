@@ -183,11 +183,11 @@ stability: QR            # QR or SVD
 | path (under `<name>/`) | content |
 |---|---|
 | `markovChain/<n>/propagator/spatial/<species>/invM[t,s]`, `invM[s,t]`, `invM[t,t]` | position space, $(N_t,N_x,N_x)$ |
-| `markovChain/<n>/propagator/momentum/<species>/invM[t,s]/<kSink>-<kSrc>` … | projected on wall sources |
+| `markovChain/<n>/propagator/momentum/<species>/invM[t,s]/<kSink>-<kSrc>` …, `Q` | all pairs of wall sources (each followed by its conjugate); $\frac1{N_t}\sum_t\operatorname{Tr}\,\mathrm{invM}[t,t]$ |
 | `NonInteracting/propagator/{spatial,momentum}/…` | the same for $\phi=0$, $s=0$ |
 | `Meta/propagator/basis`, `Meta/propagator/momentum/wallSources` | basis; the sources `kSink`, `kSrc` refer to |
 
-[`<species>`: `particle`/`hole` or `spinUp`/`spinDown`. The program refuses a basis that contradicts the
+[`<species>`: `particle`/`hole` or `spinUp`/`spinDown`; both bases measure the same quantities. The program refuses a basis that contradicts the
 file, and wall sources that differ from those already used. Checked against exact inverses in both bases (deck 5, A10–A12).]{.small .muted}
 
 ## Tests: `Tests/Action/test_PPPGaugeAction.cpp`

@@ -26,9 +26,10 @@
  *    <name>/Meta/propagator/basis                  "charge" or "spin"
  *    <name>/Meta/propagator/momentum/wallSources   the sources kSink, kSrc refer to
  *    <name>/Meta/propagator/momentum/momenta       the labels, if given
- *  <species> is particle/hole (charge basis) or spinUp/spinDown (spin basis). The content
- *  of the momentum block depends on the basis, see FermionPropagator::measureK and
- *  FermionPropagatorSpinBasis::measureK.
+ *    <name>/<base>/propagator/momentum/<species>/Q    1/Nt sum_t Tr invM[t,t]
+ *  <species> is particle/hole (charge basis) or spinUp/spinDown (spin basis). Both bases
+ *  measure the same quantities; the wall sources are each source of the parameter file
+ *  followed by its complex conjugate (kSink, kSrc = 2k and 2k+1).
  */
 #include "NSL.hpp"
 #include <iostream>

@@ -98,9 +98,11 @@ class FermionPropagator: public Measurement {
      *  projected on the wall sources w = wallSources_() (each source of params["wallSources"]
      *  followed by its complex conjugate, indices 2k and 2k+1):
      *    <basenode>/<base>/propagator/momentum/<species>/invM[t,<s>]/<kSink>-<kSrc>   (Nt, bands, bands)
-     *  and likewise invM[<s>,t] and invM[t,t], for all pairs (kSink, kSrc). The sources are
-     *  recorded in <basenode>/Meta/propagator/momentum/wallSources (and params["momenta"],
-     *  if given, in .../momenta).
+     *  and likewise invM[<s>,t] and invM[t,t], for all pairs (kSink, kSrc), with entry
+     *  (t, sigmaSink, sigmaSrc) = <w(kSink, sigmaSink) | invM(t) | w(kSrc, sigmaSrc)>; and
+     *    <basenode>/<base>/propagator/momentum/<species>/Q = 1/Nt sum_t Tr invM[t,t].
+     *  The sources are recorded in <basenode>/Meta/propagator/momentum/wallSources (and
+     *  params["momenta"], if given, in .../momenta). Both bases measure the same quantities.
      */
     void measureK(NSL::size_t startConfig = 0);
     //! Momentum-projected propagators of the configuration in phi_ (phi_ = 0: free theory)
@@ -171,7 +173,7 @@ class FermionPropagator: public Measurement {
     }
 
     //! The wall sources of the momentum projection: each source of params["wallSources"]
-    //! (shape blocks x bands x Nx) followed by its complex conjugate
+    //! (shape blocks x bands x Nx) followed by its complex conjugate (indices 2k and 2k+1)
     NSL::Tensor<Type> wallSources_(){
         NSL::Tensor<Type> src(params_["wallSources"]);
         NSL::Tensor<Type> w(params_["device"].template to<NSL::Device>(), 2 * src.shape(0), src.shape(1), src.shape(2));
@@ -180,14 +182,24 @@ class FermionPropagator: public Measurement {
         return w;
     }
 
-    //! corrK_(t, sigmaSink, sigmaSrc) = <w(kSink, sigmaSink) | corr_(t) | w(kSrc, sigmaSrc)>
-    void project_(NSL::Tensor<Type> & w, NSL::size_t kSink, NSL::size_t kSrc){
-        const NSL::size_t bDim = w.shape(1);
-        for (NSL::size_t sigmaSink = 0; sigmaSink < bDim; ++sigmaSink) {
-            for (NSL::size_t sigmaSrc = 0; sigmaSrc < bDim; ++sigmaSrc) {
-                corrK_(NSL::Slice(), sigmaSink, sigmaSrc) = NSL::LinAlg::inner_product(
-                    w(kSink, sigmaSink, NSL::Slice()), NSL::LinAlg::mat_mul(corr_, w(kSrc, sigmaSrc, NSL::Slice())), 1
-                );
+    //! All projections of corr_ at once, P(t, kSink, sigmaSink, kSrc, sigmaSrc) =
+    //! <w(kSink, sigmaSink) | corr_(t) | w(kSrc, sigmaSrc)> = sum_xy conj(w_x) corr_(t)_xy w_y
+    torch::Tensor projectAll_(NSL::Tensor<Type> & w){
+        const int64_t K = w.shape(0), B = w.shape(1), Nx = w.shape(2);
+        const torch::Tensor W = static_cast<torch::Tensor>(w).reshape({K*B, Nx});
+        const torch::Tensor C = static_cast<torch::Tensor>(corr_);             // (Nt, Nx, Nx)
+        const torch::Tensor X = torch::matmul(C, W.transpose(0, 1));            // (Nt, Nx, K*B)
+        return torch::matmul(W.conj(), X).reshape({C.size(0), K, B, K, B});     // (Nt, K, B, K, B)
+    }
+
+    //! Writes corrK_(t, sigmaSink, sigmaSrc) = P(t, kSink, sigmaSink, kSrc, sigmaSrc) for all
+    //! pairs to node/<kSink>-<kSrc>
+    void writeProjections_(const torch::Tensor & P, const std::string & node){
+        torch::Tensor out = static_cast<torch::Tensor>(corrK_);   // view on corrK_'s memory
+        for (int64_t kSrc = 0; kSrc < P.size(3); ++kSrc) {
+            for (int64_t kSink = 0; kSink < P.size(1); ++kSink) {
+                out.copy_(P.index({torch::indexing::Slice(), kSink, torch::indexing::Slice(), kSrc, torch::indexing::Slice()}));
+                this->h5_.write(corrK_, std::string(basenode_) + node + fmt::format("/{}-{}", kSink, kSrc));
             }
         }
     }
@@ -309,7 +321,6 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     const NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     const NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
     NSL::Tensor<Type> w = wallSources_();
-    const NSL::size_t kDim = w.shape(0);
     NSL::size_t kept = 0;
 
     corr_ = Type(0);
@@ -317,26 +328,45 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t
     for (const NSL::Hubbard::Species species: {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
         species_ = species;
         for (NSL::size_t tsrc = 0; tsrc < Nt; tsrc += tsrcStep) {
+            // the fermion matrix and the prefix/suffix products of this source time are
+            // computed once, and only if a component has to be measured
             bool ready = false;
+            auto prepare = [&](){
+                if (ready) { return; }
+                hfm_.populate(phi_, species_);
+                calcPiSigma(tsrc);
+                ready = true;
+            };
             auto component = [&](const std::string & name, auto && compute){
                 const std::string node = node_("momentum", free, cfgID, name);
                 if (skip_(node)) { ++kept; return; }
-                if (!ready) {
-                    hfm_.populate(phi_, species_);
-                    calcPiSigma(tsrc);
-                    ready = true;
-                }
+                prepare();
                 compute();
-                for (NSL::size_t kSrc = 0; kSrc < kDim; ++kSrc) {
-                    for (NSL::size_t kSink = 0; kSink < kDim; ++kSink) {
-                        project_(w, kSink, kSrc);
-                        this->h5_.write(corrK_, std::string(basenode_) + node + fmt::format("/{}-{}", kSink, kSrc));
-                    }
-                }
+                writeProjections_(projectAll_(w), node);
             };
             component(fmt::format("invM[t,{}]", tsrc), [&](){ measureColumn(tsrc); });
             component(fmt::format("invM[{},t]", tsrc), [&](){ measureRow(tsrc); });
-            if (tsrc == 0) { component("invM[t,t]", [&](){ measureDiagonal(); }); }
+
+            // the diagonal, and Q = 1/Nt sum_t Tr invM[t,t], use the products of source time 0
+            if (tsrc == 0) {
+                const std::string nodeD = node_("momentum", free, cfgID, "invM[t,t]");
+                const std::string nodeQ = node_("momentum", free, cfgID, "Q");
+                const bool needD = !skip_(nodeD), needQ = !skip_(nodeQ);
+                kept += !needD + !needQ;
+                if (needD || needQ) {
+                    prepare();
+                    measureDiagonal();
+                    if (needD) { writeProjections_(projectAll_(w), nodeD); }
+                    if (needQ) {
+                        Type Q = 0;
+                        for (NSL::size_t t = 0; t < Nt; ++t) {
+                            Q += NSL::LinAlg::diag(corr_(t, NSL::Ellipsis())).sum();
+                        }
+                        Q /= Type(Nt);
+                        this->h5_.write(Q, std::string(basenode_) + nodeQ);
+                    }
+                }
+            }
         }
     }
     if (kept > 0) {

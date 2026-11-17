@@ -53,6 +53,9 @@ python python/ppp_geometry.py perylene --beta 40 --Nt 160 --autotune -o perylene
 python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 2 inter-naphthalene bonds
 ```
 
+`<build>` below is the build directory, `build/` if you follow *Build on macOS with Homebrew
+(tested)* in the top-level [README](../../README.md).
+
 * **Autotuned production run** (`HMC: autotune: true`, same protocol as
   `autotune_RadialMCMC`):
   `python autotuner8/autotuner.py yml/perylene.yml <build>/Executables/PPP/autotune_RadialMCMC_PPP`
@@ -65,14 +68,18 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
   spatial). `--config N` starts at configuration N; `--overwrite` recomputes existing results
   (the ensemble itself is never modified). Position-space propagators are stored as
 
-      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,<s>]   (Nt, Nx, Nx)
-      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[<s>,t]
-      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,t]
+  ```text
+  <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,<s>]   (Nt, Nx, Nx)
+  <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[<s>,t]
+  <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,t]
+  ```
 
   for `Number Time Sources` source times s, and the free theory (phi = 0, s = 0) in
   `<name>/NonInteracting/propagator/spatial/...`. Momentum-projected propagators go to
-  `.../propagator/momentum/<species>/invM[...]/<kSink>-<kSrc>`, with the wall sources used in
-  `<name>/Meta/propagator/momentum/wallSources`; see `Executables/Hubbard/propagator.cpp`.
+  `.../propagator/momentum/<species>/invM[...]/<kSink>-<kSrc>` (all pairs of the wall sources,
+  each followed by its complex conjugate) and `.../propagator/momentum/<species>/Q`
+  (1/Nt sum_t Tr invM[t,t]), with the sources used in `<name>/Meta/propagator/momentum/wallSources`.
+  Charge and spin basis measure the same quantities; see `Executables/Hubbard/propagator.cpp`.
   `python/ppp_compare.py` and `python/ppp_autocorr.py` read this layout and the older one
   (`propagator/{particle,hole}/...`, from the former `propagatorChargeBasis`).
 
