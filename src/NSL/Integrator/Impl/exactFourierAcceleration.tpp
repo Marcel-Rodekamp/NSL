@@ -174,6 +174,16 @@ class ExactFourierAcceleration: Integrator<ActionTermTypes...> {
     double trajectoryLength() const { return trajLength_; }
     NSL::size_t numberSteps() const { return numSteps_; }
 
+    //! Number of MD steps per trajectory; the trajectory length stays fixed (used by NSL::MCMC::Autotune)
+    void setNumberSteps(NSL::size_t numberSteps){
+        if (numberSteps < 1) {
+            throw std::invalid_argument("NSL::Integrator: the number of MD steps must be at least 1");
+        }
+        const double sign = (stepSize_ < 0) ? -1. : 1.;
+        numSteps_ = numberSteps;
+        stepSize_ = sign * trajLength_ / static_cast<double>(numberSteps);
+    }
+
     protected:
         double trajLength_;
         NSL::size_t numSteps_;

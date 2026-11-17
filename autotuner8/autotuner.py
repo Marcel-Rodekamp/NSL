@@ -8,6 +8,9 @@ Notes:
 - In case the model fails to converg, try different initial guess numbers, different CDFs,
   such as alpha.cdf((x+a[0])*a[1], a[2]) from scipy.stats, or different ftting parameters
 - For notes on the confidence interval and fitting method see the _functions.py file 
+- LEGACY: the NSL executables now thermalize, tune Nmd and produce the chain in one run when
+  started directly (`HMC: autotune: true`, see src/NSL/MarkovChain/autotune.tpp). This script
+  is kept for comparison; it sets NSL_AUTOTUNE_PROTOCOL=legacy for the executable.
 - Safe early stop: on SIGUSR1 (e.g. `#SBATCH --signal=USR1@600`) or SIGTERM the running NSL call
   finishes its current trajectory, no further call is started, and the tuner exits with code 75.
   Running the same command again continues from the h5 file.
@@ -86,7 +89,9 @@ def run_nsl():
     if stop_signal is not None:
         stop_now("stop requested")
     command = [args.executable, "--file", args.yaml, *(["--GPU"] if args.GPU else [])]
-    current_call = subprocess.Popen(command)
+    # this script drives the legacy protocol (one trajectory per call); the executables would
+    # otherwise thermalize, tune and produce the whole chain themselves (HMC: autotune: true)
+    current_call = subprocess.Popen(command, env=dict(os.environ, NSL_AUTOTUNE_PROTOCOL="legacy"))
     returncode = current_call.wait()
     current_call = None
     print(f"autotuner: {' '.join(command)} -> exit code {returncode}", flush=True)

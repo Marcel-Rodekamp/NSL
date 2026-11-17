@@ -4,6 +4,10 @@ export PATH_TO_NSL_HMC=$PROJECT_cjjsc37/sinilkov/NSL_Executables/example_autotun
 export PATH_TO_NSL_ONE=$PROJECT_cjjsc37/sinilkov/NSL_Executables/example_k_correlators  # point to one-body executable
 export PATH_TO_NSL_TWO=$PROJECT_cjjsc37/sinilkov/NSL_Executables/example_2_correlators   # point to two-body executable
 
+# nsl: the HMC executable thermalizes, tunes Nmd and produces the chain itself (HMC: autotune: true);
+# python: the legacy protocol of autotuner8/autotuner.py
+export AUTOTUNER=nsl
+
 # run parameters
 export BANK=jjsc37
 export PARTITION=dc-cpu-devel     # set to dc-cpu-devel for testing

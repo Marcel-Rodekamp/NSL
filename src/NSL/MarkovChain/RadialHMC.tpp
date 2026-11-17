@@ -13,6 +13,8 @@
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 namespace NSL::MCMC{
 
@@ -254,6 +256,27 @@ class RadialHMC{
     }
 
     
+
+    //! One combined update, as one step of generate: Nradial radial updates followed by Nhmc
+    //! HMC trajectories. If hmcAcceptance is given, e^{-dH} of each HMC trajectory is appended.
+    template<NSL::Concept::isNumber Type>
+    NSL::MCMC::MarkovState<Type> step(NSL::MCMC::MarkovState<Type> state, NSL::size_t Nradial, NSL::size_t Nhmc,
+                                      NSL::RealTypeOf<Type> radialScale, std::vector<double> * hmcAcceptance = nullptr){
+        const NSL::RealTypeOf<Type> volume = state.configuration["phi"].numel();
+        for (NSL::size_t n_radial = 0; n_radial < Nradial; ++n_radial){
+            state = this->radialgenerate_(state, volume, radialScale);
+        }
+        for (NSL::size_t n_hmc = 0; n_hmc < std::max<NSL::size_t>(Nhmc, 1); ++n_hmc){
+            state = this->generate_(state);
+            if (hmcAcceptance) { hmcAcceptance->push_back(static_cast<double>(state.acceptanceProbability)); }
+        }
+        return state;
+    }
+
+    //! Number of MD steps per trajectory of the integrator (Leapfrog, LeapfrogRealForce,
+    //! ExactFourierAcceleration); the trajectory length stays fixed.
+    void setNumberSteps(NSL::size_t numberSteps){ integrator_.setNumberSteps(numberSteps); }
+    NSL::size_t numberSteps() const { return integrator_.numberSteps(); }
 
     //! Number of combined update steps done by the last generate<Chain::LastState> call:
     //! Nconf*saveFrequency-1, or fewer if it stopped early on a signal (see NSL::Stop).

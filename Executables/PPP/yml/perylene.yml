@@ -89,8 +89,10 @@ PPP:
   dielectric: 2.0
 
 HMC:
-  autotune: true   # true: run via autotuner8/autotuner.py
-  # seed: 1234     # only used with autotune: false
+  autotune: true   # true: thermalize, tune Nmd and produce in one run (src/NSL/MarkovChain/autotune.tpp);
+                   # false: plain run with the fixed Leapfrog: Nmd; legacy: autotuner8/autotuner.py
+  start: cold      # cold (phi = 0; the default except for a plain leapfrog run) or gaussian (sample of the gauge action)
+  # seed: 1234     # makes the run reproducible (not used by the legacy protocol)
   Ntherm: 500
   Nconf: 1000
   save frequency: 1
@@ -101,7 +103,14 @@ HMC:
 Leapfrog:
   trajectory length: 1.5707963267948966   # pi/2, optimal for exact Fourier acceleration
   Fourier acceleration: true   # exact Fourier acceleration (see README); false: unit-mass leapfrog
-  Nmd: 10            # ignored with autotune: true (tuned, starting at 200)
+  Nmd: 10            # starting value of the tuning (autotune: true), the fixed value otherwise
+
+# Autotune:                       # optional settings of the tuning, defaults shown
+#   target bulk acceptance: 0.85  # bulk = trajectories with dH <= spike threshold
+#   spike threshold: 3
+#   batch: 20
+#   min trajectories: 50
+#   spike fraction: 0.1           # above it, Nmd and 1.5 Nmd are compared by cost
 
 stability: QR
 

@@ -61,7 +61,30 @@ static int runHMC(int argc, char* argv[]){
     // The trajectory length
     params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    params["Nmd"]               = (NSL::size_t) 200;
+    // tune Nmd (default), plain run, or the legacy protocol of autotuner8/autotuner.py
+    // (see src/NSL/MarkovChain/autotune.tpp)
+    using NSL::MCMC::Autotune::Mode;
+    using NSL::MCMC::Autotune::Start;
+    const Mode mode = NSL::MCMC::Autotune::modeFromYAML(yml);
+    const bool legacy = (mode == Mode::Legacy);
+    const NSL::MCMC::Autotune::Options tuneOptions = NSL::MCMC::Autotune::Options::fromYAML(yml);
+    // starting field with the leapfrog: phi = 0 when Nmd is tuned, a sample of the gauge action
+    // for a plain run (see NSL::MCMC::Autotune::startDefault)
+    const Start start = legacy ? Start::Gaussian
+        : NSL::MCMC::Autotune::startFromYAML(yml, NSL::MCMC::Autotune::startDefault(false, mode == Mode::Tune));
+    // number of MD steps: 200 for the legacy protocol (its choice is then read from the h5 file),
+    // the fixed `Leapfrog: Nmd` of a plain run, or the starting value of the tuning (default 10)
+    if (legacy) {
+        params["Nmd"] = (NSL::size_t) 200;
+    } else if (mode == Mode::Plain) {
+        if (!yml["Leapfrog"]["Nmd"]) {
+            throw std::runtime_error("`HMC: autotune: false` requires `Leapfrog: Nmd`");
+        }
+        params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    } else {
+        params["Nmd"] = yml["Leapfrog"]["Nmd"] ? yml["Leapfrog"]["Nmd"].as<NSL::size_t>() : NSL::size_t(10);
+    }
+    NSL::Logger::info("Mode: {}; start: {}", NSL::MCMC::Autotune::to_string(mode), start == Start::Cold ? "cold (phi = 0)" : "gaussian");
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
     // The offset: tangent plane/NLO plane
@@ -110,7 +133,7 @@ static int runHMC(int argc, char* argv[]){
     NSL::size_t _thermalFlag = 1;
     params["thermalFlag"] = _thermalFlag;
 
-    NSL::size_t _tuneFlag = 0;
+    NSL::size_t _tuneFlag = legacy ? 0 : 1;
     params["tuneFlag"] = _tuneFlag;
 
     // create an H5 object to store data
@@ -135,13 +158,18 @@ static int runHMC(int argc, char* argv[]){
     // write the meta data to the h5file
     writeMeta<Type,decltype(lattice)>(lattice, params, h5, BASENODE);
 
-    if (h5.exist(fmt::format("{}/Meta/params/nMD",BASENODE))) {
-        NSL::size_t temp;
-        h5.read(temp, fmt::format("{}/Meta/params/nMD",BASENODE));
-        params["Nmd"] = temp;
+    if (legacy) {
+        if (h5.exist(fmt::format("{}/Meta/params/nMD",BASENODE))) {
+            NSL::size_t temp;
+            h5.read(temp, fmt::format("{}/Meta/params/nMD",BASENODE));
+            params["Nmd"] = temp;
+        }
+        h5.read(_thermalFlag, fmt::format("{}/Meta/params/thermalFlag",BASENODE));
+        h5.read(_tuneFlag, fmt::format("{}/Meta/params/tuneFlag",BASENODE));
+    } else if (yml["HMC"]["seed"]) {
+        // not for the legacy protocol, which calls the program once per trajectory
+        NSL::setSeed(yml["HMC"]["seed"].as<NSL::size_t>());
     }
-    h5.read(_thermalFlag, fmt::format("{}/Meta/params/thermalFlag",BASENODE));
-    h5.read(_tuneFlag, fmt::format("{}/Meta/params/tuneFlag",BASENODE));
 
 
     NSL::Logger::info("Setting up a Hubbard action with beta={}, Nt={}, U={}, on a {}.", 
@@ -183,8 +211,17 @@ static int runHMC(int argc, char* argv[]){
     };
 
     //! \todo: we really need a proper random interface...
-    config["phi"].randn();
-    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    if (legacy) {
+        // the start of the legacy protocol (narrower than the gauge action)
+        config["phi"].randn();
+        config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
+    } else if (start == Start::Gaussian) {
+        // a sample of the gauge action phi^2/(2 U~): standard deviation sqrt(U~)
+        config["phi"].randn();
+        config["phi"] *= NSL::LinAlg::sqrt(NSL::Hubbard::tilde<Type>(params, "U"));
+    } else {
+        config["phi"] = Type(0);
+    }
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     
@@ -201,6 +238,18 @@ static int runHMC(int argc, char* argv[]){
     // Initialize the RadialHMC
     NSL::MCMC::RadialHMC hmc(leapfrog, S, h5);
     NSL::Logger::stop_profile(init_time);
+
+    if (!legacy) {
+        // thermalization, tuning of Nmd (mode Tune) and production; resumable
+        NSL::MCMC::MarkovState<Type> start_state = hmc.generate<NSL::MCMC::Chain::LastState>(
+            config, 1, params["Nradial"], params["Nhmc"], params["radial scale"]);
+        const NSL::MCMC::Autotune::RunParameters rp{
+            params["Nmd"].to<NSL::size_t>(), params["Ntherm"].to<NSL::size_t>(), params["Nconf"].to<NSL::size_t>(),
+            params["save frequency"].to<NSL::size_t>(), params["Nradial"].to<NSL::size_t>(), params["Nhmc"].to<NSL::size_t>(),
+            params["radial scale"].to<double>()
+        };
+        return NSL::MCMC::Autotune::run(hmc, start_state, h5, BASENODE, rp, tuneOptions, mode == Mode::Tune);
+    }
 
     // Burn In
     // We can pass just a config to the generate function a MarkovState is 

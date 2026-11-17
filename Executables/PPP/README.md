@@ -56,9 +56,11 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
 `<build>` below is the build directory, `build/` if you follow *Build on macOS with Homebrew
 (tested)* in the top-level [README](../../README.md).
 
-* **Autotuned production run** (`HMC: autotune: true`, same protocol as
-  `autotune_RadialMCMC`):
-  `python autotuner8/autotuner.py yml/perylene.yml <build>/Executables/PPP/autotune_RadialMCMC_PPP`
+* **Autotuned production run** (`HMC: autotune: true`): one run thermalizes (from φ = 0 by
+  default, `HMC: start: cold`), tunes the number of MD steps on the thermalized chain and
+  generates the chain; see *Autotuner* in the top-level [README](../../README.md).
+  `<build>/Executables/PPP/autotune_RadialMCMC_PPP --file yml/perylene.yml`
+  (the legacy `python autotuner8/autotuner.py <yml> <executable>` still works).
 * **Plain run** (`HMC: autotune: false`): uses `Leapfrog: Nmd`, `HMC: Ntherm`, `HMC: Nconf`
   and the optional `HMC: seed`; rerunning on an existing h5 file extends the chain.
   `<build>/Executables/PPP/autotune_RadialMCMC_PPP --file yml/naphthalene_benchmark.yml`

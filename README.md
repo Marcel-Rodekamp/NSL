@@ -241,7 +241,66 @@ This should install an Ubuntu 20.04 kernel, hence further prerequisites can be f
 
 ## Autotuner
 
-The autotuner in the base directory **autotuner8** will run out of the box w/o any extra compilation.
+The HMC programs `autotune_RadialMCMC_PPP`, `autotune_RadialMCMC` and `autotune_RadialMCMC_SpinBasis` choose the
+number of molecular dynamics steps (Nmd) themselves. With `HMC: autotune: true` (the default), run the program once;
+it thermalizes, tunes Nmd on the thermalized chain, and generates the Markov chain with the tuned Nmd
+(`src/NSL/MarkovChain/autotune.tpp`):
+
+1. **Start and thermalization.** The run starts from φ = 0 (`HMC: start: cold`) or from a sample of the gauge
+   action (`start: gaussian`).
+   * **Cold is the default.** A Gaussian start lies in a rough, slowly relaxing region: on a 140-site ribbon it
+     needed Nmd ≥ 40 and chains stayed stuck, while a cold start thermalized in one trajectory at Nmd = 6.
+   * **The exception is a plain run with the leapfrog.** There, from φ = 0, the leapfrog error of the quadratic
+     part does not average out and grows like V·ε²: ΔH ≈ 4 for perylene at Nmd = 10, with no trajectory accepted.
+     When Nmd is tuned, one doubling of Nmd removes this.
+
+   The run then performs `HMC: Ntherm` updates, beginning at `Leapfrog: Nmd` (default 10). Nmd doubles after 3
+   rejections in a row with an energy error ΔH > 3.
+2. **Tuning.** A trajectory with ΔH > 3 is a *spike*; the others form the *bulk*.
+   * For a second-order integrator, the bulk acceptance follows P_b = erfc((N₀/Nmd)²/2), with one constant
+     *step scale* N₀. It was found constant over Nmd for benzene, perylene and a 140-site zigzag ribbon.
+   * Batches of 20 trajectories estimate N₀. The tuner moves to the Nmd with P_b = 0.85 and stops once that Nmd
+     has 50 bulk trajectories.
+   * If more than 10% of its trajectories are spikes, the tuner runs Nmd and 1.5·Nmd alternately on the same
+     chain. It keeps the one with the lower cost per independent configuration, (Nmd + 1)·(2/P − 1) MD steps,
+     where P is the mean acceptance. The cost is counted in steps, not seconds, so that a seeded run always makes
+     the same choice.
+3. **Production.** The program generates `HMC: Nconf` configurations with the tuned Nmd. It then writes
+   diagnostics: acceptance, spike fraction, bulk acceptance, and ⟨e^−ΔH⟩, which is 1 for a correct integrator.
+
+Every tuning trajectory and the result are recorded in `<name>/Meta/autotune`, the diagnostics in
+`<name>/Meta/diagnostics`, and the Nmd used in `<name>/Meta/params/nMD`. All steps can be stopped safely
+and are continued by running the same command again (see below).
+
+On perylene (β = 20, Nt = 80, Fourier acceleration) the tuning takes 80–200 trajectories (about 600–1,400 MD
+steps) and finds Nmd = 6. The legacy tuner spends about 280 trajectories plus 500 thermalization trajectories
+that it then discards (about 6,000 MD steps).
+
+Optional settings (yml block `Autotune:`, defaults shown):
+
+```yaml
+Autotune:
+  target bulk acceptance: 0.85
+  spike threshold: 3          # dH above which a trajectory is a spike
+  batch: 20                   # trajectories per tuning batch
+  min trajectories: 50        # bulk trajectories needed at the final Nmd (and per candidate in the comparison)
+  tolerance: 0.1              # the search stops when the proposed Nmd is within 10% of the current one
+  max trajectories: 2000      # budget of tuning trajectories
+  spike fraction: 0.1         # above it, Nmd and 1.5 Nmd are compared by cost
+  escalate after: 3           # thermalization: double Nmd after this many large-dH rejections in a row
+  max Nmd: 4096
+  checkpoint every: 10        # trajectories between checkpoints
+```
+
+`HMC: autotune: false` is a plain run with the fixed `Leapfrog: Nmd` (and exactly `Ntherm` thermalization updates).
+`HMC: seed` makes a run reproducible.
+
+**Legacy autotuner.** `autotuner8/autotuner.py` still works and is kept for comparison. It sets
+`NSL_AUTOTUNE_PROTOCOL=legacy`, so the executables follow its one-trajectory-per-call protocol (`HMC: autotune:
+legacy` does the same). The batch scripts in `autotuner8/batch-scripts` run the executable directly unless
+`AUTOTUNER=python` is set in `env.sh`. The rest of this section concerns only the legacy script.
+
+The legacy autotuner in the base directory **autotuner8** will run out of the box w/o any extra compilation.
 However, it will use an in-house pythone routine for calculating the skew-normal distribution at the upper tail end of the distribution.
 The reason for this is that scipy's implementation of the skew-normal distribution is buggy in this regime! See [here](https://github.com/scipy/scipy/issues/7746).
 

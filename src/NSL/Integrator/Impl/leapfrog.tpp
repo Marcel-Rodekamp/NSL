@@ -5,6 +5,8 @@
 #include "Configuration/Configuration.tpp"
 #include "typePromotion.hpp"
 
+#include <stdexcept>
+
 namespace NSL::Integrator {
 
 
@@ -56,6 +58,18 @@ class Leapfrog: Integrator<ActionTermTypes...> {
 
         return {q,p};
     }
+
+    //! Number of MD steps per trajectory; the trajectory length stays fixed (used by NSL::MCMC::Autotune)
+    void setNumberSteps(NSL::size_t numberSteps){
+        if (numberSteps < 1) {
+            throw std::invalid_argument("NSL::Integrator: the number of MD steps must be at least 1");
+        }
+        const double sign = (stepSize_ < 0) ? -1. : 1.;
+        numSteps_ = numberSteps;
+        stepSize_ = sign * trajLength_ / static_cast<double>(numberSteps);
+    }
+    NSL::size_t numberSteps() const { return numSteps_; }
+    double trajectoryLength() const { return trajLength_; }
 
     protected:
         double trajLength_;

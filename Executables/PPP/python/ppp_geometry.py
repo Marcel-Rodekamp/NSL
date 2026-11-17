@@ -134,21 +134,23 @@ def yml_text(name, args):
         f"  dielectric: {args.dielectric}",
         "",
         "HMC:",
-        f"  autotune: {'true' if args.autotune else 'false'}   # true: run via autotuner8/autotuner.py",
-        (f"  # seed: {args.seed}     # only used with autotune: false" if args.autotune
-         else f"  seed: {args.seed}"),
+        f"  autotune: {'true' if args.autotune else 'false'}   # true: thermalize, tune Nmd and produce in one run; false: fixed Nmd",
+        f"  start: {args.start or ('cold' if (args.fourier_acceleration or args.autotune) else 'gaussian')}"
+        + "      # cold (phi = 0; default except for a plain leapfrog run) or gaussian (sample of the gauge action)",
+        f"  seed: {args.seed}",
         f"  Ntherm: {args.Ntherm}",
         f"  Nconf: {args.Nconf}",
         "  save frequency: 1",
         f"  Nradial: {args.Nradial}",
-        f"  radial scale: {args.radial_scale:g}",
+        (f"  radial scale: {args.radial_scale!r}" if args.radial_scale is not None
+         else f"  radial scale: {1.0 / (args.Nt * n)!r}   # 1/(Nt*Nx) = 1/({args.Nt}*{n})"),
         "  Nhmc: 1",
         "",
         "Leapfrog:",
         f"  trajectory length: {args.trajectory_length!r}",
         f"  Fourier acceleration: {'true' if args.fourier_acceleration else 'false'}"
         + "   # exact Fourier acceleration (see README); false: unit-mass leapfrog",
-        f"  Nmd: {args.Nmd}" + ("            # ignored with autotune: true (tuned, starting at 200)" if args.autotune else ""),
+        f"  Nmd: {args.Nmd}" + ("            # starting value of the tuning" if args.autotune else ""),
         "",
         "stability: QR",
         "",
@@ -178,7 +180,9 @@ def main(argv=None):
     p.add_argument("--hopping", type=float, default=1.0, help="hopping of every bond (units of t)")
     p.add_argument("--bridge-hopping", type=float, default=None,
                    help="hopping of bridge bonds (default: same as --hopping)")
-    p.add_argument("--autotune", action="store_true", help="write `HMC: autotune: true`")
+    p.add_argument("--autotune", action="store_true", help="write `HMC: autotune: true` (tune Nmd in the run)")
+    p.add_argument("--start", choices=["cold", "gaussian"], default=None,
+                   help="starting field (default: cold, phi = 0; gaussian for a plain run with the leapfrog)")
     p.add_argument("--seed", type=int, default=1234)
     p.add_argument("--Ntherm", type=int, default=200)
     p.add_argument("--Nconf", type=int, default=2000)
@@ -188,7 +192,7 @@ def main(argv=None):
     p.add_argument("--trajectory-length", type=float, default=None,
                    help="MD trajectory length (default: pi/2 with Fourier acceleration, else 1)")
     p.add_argument("--Nradial", type=int, default=1)
-    p.add_argument("--radial-scale", type=float, default=0.1)
+    p.add_argument("--radial-scale", type=float, default=None, help="default: 1/(Nt*Nx)")
     p.add_argument("--time-sources", type=int, default=4)
     p.add_argument("--h5file", default=None)
     args = p.parse_args(argv)

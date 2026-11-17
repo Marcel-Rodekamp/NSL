@@ -4,5 +4,6 @@
 #include "MarkovChain/markovState.tpp"
 #include "MarkovChain/HMC.tpp"
 #include "MarkovChain/RadialHMC.tpp"
+#include "MarkovChain/autotune.tpp"
 
 #endif // NSL_MARKOV_STATE_HPP

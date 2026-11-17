@@ -84,7 +84,11 @@ fi
 
 if [ ! "\${maxCfgID}" ]; then
     echo "Generating configurations"
-    srun python \$autotuner ${yaml} \$executable_hmc $gpu
+    if [ "${AUTOTUNER:-nsl}" = "python" ]; then
+        srun python \$autotuner ${yaml} \$executable_hmc $gpu   # legacy protocol, one trajectory per call
+    else
+        srun \$executable_hmc --file ${yaml} $gpu   # thermalization, tuning of Nmd and production in one run
+    fi
 else
     if [ ! "\${particle}" ] || [ ! "\${hole}" ]; then
         echo "Generating One-Body correlation functions"

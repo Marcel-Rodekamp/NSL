@@ -554,7 +554,11 @@ PPP:
   form: onsite          # Hubbard model: V = U * identity
 
 HMC:
-  autotune: true        # true: run via autotuner8/autotuner.py; false: plain run with Leapfrog: Nmd
+  autotune: true        # true: thermalize, tune Nmd and produce in one run; false: plain run with Leapfrog: Nmd
+  # start: cold (phi = 0) by default, gaussian for a plain run (autotune: false) with the leapfrog.
+  # Recommended here: Fourier acceleration (trajectory length pi/2) with a cold start, which thermalized in
+  # 1 trajectory at Nmd 6; a gaussian start needed Nmd >= 40, and a cold leapfrog start at the fixed
+  # Nmd 20 was never accepted (dH ~ 11; with autotune: true Nmd doubles until it is).
   Ntherm: 100
   Nconf: 1000
   save frequency: 1
@@ -565,7 +569,7 @@ HMC:
 Leapfrog:
   trajectory length: 1       # use 1.5707963267948966 (pi/2) with Fourier acceleration
   Fourier acceleration: false
-  Nmd: 10
+  Nmd: 10                    # starting value of the tuning (autotune: true), the fixed value otherwise
 
 stability: QR
 

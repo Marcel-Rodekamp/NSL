@@ -53,7 +53,8 @@ PPP:
   dielectric: 2.0
 
 HMC:
-  autotune: false   # true: run via autotuner8/autotuner.py
+  autotune: false   # false: plain run with Leapfrog: Nmd; true: tune Nmd (src/NSL/MarkovChain/autotune.tpp)
+  start: gaussian   # a sample of the gauge action, as in the benchmark runs (the default for a plain leapfrog run)
   seed: 2026
   Ntherm: 500
   Nconf: 10000

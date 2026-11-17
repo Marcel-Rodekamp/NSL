@@ -6,14 +6,17 @@
  *  with NSL::Action::PPPGaugeAction. The interaction matrix V is built from the
  *  `PPP` block of the yml file, see NSL::PPP (src/NSL/Action/Implementations/PPP_Interaction.tpp).
  *
- *  Two modes, selected by `HMC: autotune:` in the yml file:
- *   - true (default): the protocol of autotune_RadialMCMC, driven by
- *     autotuner8/autotuner.py (one trajectory per call during tuning,
- *     Nmd is taken from the h5 file).
- *   - false: a plain run with `Leapfrog: Nmd` molecular dynamics steps,
- *     `HMC: Ntherm` thermalization trajectories and `HMC: Nconf` stored
- *     configurations. An optional `HMC: seed` makes the run reproducible.
- *     Rerunning on an existing h5 file continues the Markov chain.
+ *  Three modes, selected by `HMC: autotune:` in the yml file (NSL::MCMC::Autotune):
+ *   - true (default): `HMC: Ntherm` thermalization updates, tuning of the number of MD
+ *     steps (starting at `Leapfrog: Nmd`, default 10) on the thermalized chain, and
+ *     `HMC: Nconf` stored configurations with the tuned Nmd, all in one run; see
+ *     src/NSL/MarkovChain/autotune.tpp and the optional `Autotune:` block.
+ *   - false: a plain run with the fixed `Leapfrog: Nmd`.
+ *   - legacy: the protocol of autotuner8/autotuner.py (one trajectory per call during
+ *     tuning, Nmd taken from the h5 file); autotuner.py selects it by itself.
+ *  `HMC: start: cold` (phi = 0; the default except for a plain leapfrog run) or `gaussian` (a
+ *  sample of the gauge action) is the starting field; an optional `HMC: seed` makes a run reproducible. Rerunning on an existing
+ *  h5 file continues where the run stopped.
  *
  *  Integrator, selected by `Leapfrog: Fourier acceleration:` (default false):
  *   - false: leapfrog with unit mass (NSL::Integrator::LeapfrogRealForce);
@@ -27,7 +30,7 @@
  *  (position-space and/or momentum-projected propagators).
  *
  *  Safe early stop (NSL::Stop, e.g. `#SBATCH --signal=USR1@600`): on SIGUSR1 the current
- *  trajectory is finished and stored; a plain-run thermalization is stored in
+ *  trajectory is finished and stored; thermalization and tuning are checkpointed in
  *  <name>/thermalization and continued by the next run. Exit code 75 means "stopped early,
  *  run again to continue".
  */
@@ -83,23 +86,37 @@ static int runPPP(int argc, char* argv[]){
     // Chemical Potential
     params["mu"]     = yml["system"]["mu"]     ? yml["system"]["mu"].as<double>()     : 0.0;
 
-    // autotune (default) or plain run
-    const bool autotune = yml["HMC"]["autotune"] ? yml["HMC"]["autotune"].as<bool>() : true;
+    // tune Nmd (default), plain run, or the legacy protocol of autotuner8/autotuner.py
+    using NSL::MCMC::Autotune::Mode;
+    using NSL::MCMC::Autotune::Start;
+    const Mode mode = NSL::MCMC::Autotune::modeFromYAML(yml);
+    const bool legacy = (mode == Mode::Legacy);
+    const NSL::MCMC::Autotune::Options tuneOptions = NSL::MCMC::Autotune::Options::fromYAML(yml);
 
     // exact Fourier acceleration (NSL::Integrator::ExactFourierAcceleration) or plain leapfrog
     const bool fourierAcceleration = yml["Leapfrog"]["Fourier acceleration"]
         ? yml["Leapfrog"]["Fourier acceleration"].as<bool>() : false;
     params["Fourier acceleration"] = fourierAcceleration;
 
-    // The number of molecular dynamics steps.
-    // autotuner.py starts from 200 steps and stores its choice in the h5 file.
-    if (autotune) {
+    // starting field: phi = 0 or a sample of the gauge action; the default depends on the
+    // integrator and the mode (NSL::MCMC::Autotune::startDefault), the legacy protocol always
+    // uses a sample
+    const Start start = legacy ? Start::Gaussian
+        : NSL::MCMC::Autotune::startFromYAML(yml, NSL::MCMC::Autotune::startDefault(fourierAcceleration, mode == Mode::Tune));
+    NSL::Logger::info("Mode: {}; start: {}", NSL::MCMC::Autotune::to_string(mode), start == Start::Cold ? "cold (phi = 0)" : "gaussian");
+
+    // The number of molecular dynamics steps: the starting value of the tuning (default 10),
+    // the fixed value of a plain run, or 200 for the legacy protocol (which stores its choice
+    // in the h5 file).
+    if (legacy) {
         params["Nmd"] = (NSL::size_t) 200;
-    } else {
+    } else if (mode == Mode::Plain) {
         if (!yml["Leapfrog"]["Nmd"]) {
             throw std::runtime_error("`HMC: autotune: false` requires `Leapfrog: Nmd`");
         }
         params["Nmd"] = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
+    } else {
+        params["Nmd"] = yml["Leapfrog"]["Nmd"] ? yml["Leapfrog"]["Nmd"].as<NSL::size_t>() : NSL::size_t(10);
     }
 
     // Standard deviation of proposal lognormal distribution in radial udpate
@@ -123,10 +140,10 @@ static int runPPP(int argc, char* argv[]){
         NSL::Logger::info( "{}: {}", key, value );
     }
 
-    // Flags used by autotuner.py. A plain run is "tuned" from the start.
+    // Flags of the legacy protocol (autotuner.py); the other modes are "tuned" from the start.
     NSL::size_t _thermalFlag = 1;
     params["thermalFlag"] = _thermalFlag;
-    NSL::size_t _tuneFlag = autotune ? 0 : 1;
+    NSL::size_t _tuneFlag = legacy ? 0 : 1;
     params["tuneFlag"] = _tuneFlag;
 
     // create an H5 object to store data
@@ -158,7 +175,7 @@ static int runPPP(int argc, char* argv[]){
     // write the meta data to the h5file
     writeMeta<Type,decltype(lattice)>(lattice, params, h5, BASENODE, ppp, V);
 
-    if (autotune) {
+    if (legacy) {
         if (h5.exist(fmt::format("{}/Meta/params/nMD",BASENODE))) {
             NSL::size_t temp;
             h5.read(temp, fmt::format("{}/Meta/params/nMD",BASENODE));
@@ -188,17 +205,17 @@ static int runPPP(int argc, char* argv[]){
 
     NSL::Action::Action S = S_gauge + S_fermion;
 
-    // seed (plain runs only: autotuner.py calls this executable once per
+    // seed (not for the legacy protocol: autotuner.py calls this executable once per
     // trajectory, a fixed seed would repeat the same momenta every time)
     if (yml["HMC"]["seed"]) {
-        if (autotune) {
-            NSL::Logger::warn("`HMC: seed` is ignored in autotune mode.");
+        if (legacy) {
+            NSL::Logger::warn("`HMC: seed` is ignored by the legacy protocol.");
         } else {
             NSL::setSeed(yml["HMC"]["seed"].as<NSL::size_t>());
         }
     }
 
-    // Initial configuration: a sample of the Gaussian gauge action, φ_t ~ N(0, δV)
+    // Initial configuration: φ = 0 (cold) or a sample of the Gaussian gauge action, φ_t ~ N(0, δV)
     NSL::Configuration<Type> config{
         {"phi",
             NSL::Tensor<Type>(
@@ -208,7 +225,11 @@ static int runPPP(int argc, char* argv[]){
             )
         }
     };
-    S_gauge.sample(config["phi"]);
+    if (start == Start::Gaussian) {
+        S_gauge.sample(config["phi"]);
+    } else {
+        config["phi"] = Type(0);
+    }
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     // Everything below only depends on the type of the integrator
@@ -222,60 +243,18 @@ static int runPPP(int argc, char* argv[]){
             config, 1, params["Nradial"], params["Nhmc"], params["radial scale"]
         );
 
-        if (!autotune) {
-            // ------------------------------------------------------------------
-            // plain run
-            // ------------------------------------------------------------------
-            const std::string chainNode = BASENODE+"/markovChain";
-            // checkpoint of a thermalization that was stopped early on a signal (NSL::Stop)
-            const std::string thermNode = BASENODE+"/thermalization";
-            if (!h5.exist(chainNode)) {
-                auto therm_time =  NSL::Logger::start_profile("Thermalization");
-                // generate<LastState>(state, N) performs N-1 update steps
-                const NSL::size_t total = std::max<NSL::size_t>(params["Ntherm"].to<NSL::size_t>(), 1) - 1;
-                NSL::size_t done = 0;
-                if (h5.exist(thermNode)) {
-                    h5.read(done, thermNode + "/completedSteps");
-                    h5.read(start_state, thermNode + "/state", 0);
-                    NSL::Logger::info("Resuming the thermalization: {} of {} steps done", done, total);
-                } else {
-                    NSL::Logger::info("Thermalizing {} trajectories...", params["Ntherm"].to<NSL::size_t>());
-                }
-                if (done < total) {
-                    start_state = hmc.template generate<NSL::MCMC::Chain::LastState>(
-                        start_state, total - done + 1, params["Nradial"], params["Nhmc"], params["radial scale"]
-                    );
-                    done += hmc.completedSteps();
-                }
-                NSL::Logger::stop_profile(therm_time);
-                if (NSL::Stop::requested()) {
-                    // store the thermalization so far as one write section; the next run continues it
-                    NSL::Stop::WriteGuard writing;
-                    h5.deleteData(thermNode);
-                    h5.write(start_state, thermNode + "/state/0");
-                    h5.write(done, thermNode + "/completedSteps");
-                    NSL::Logger::warn("Thermalization stopped after {} of {} steps and stored in {}. Run again to continue.",
-                        done, total, thermNode);
-                    return NSL::Stop::exitCode;
-                }
-            } else {
-                NSL::Logger::info("Continuing the Markov chain in {}", chainNode);
-            }
-
-            auto gen_time =  NSL::Logger::start_profile("Generation");
-            NSL::Logger::info("Generating {} configurations, saving every {}...", params["Nconf"], params["save frequency"]);
-            std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.template generate<NSL::MCMC::Chain::AllStates>(
-                start_state, params["Nconf"], params["Nradial"], params["Nhmc"], params["radial scale"], params["save frequency"], chainNode
-            );
-            // the chain starts with the thermalized state, the checkpoint is no longer needed
-            if (h5.exist(thermNode)) { h5.deleteData(thermNode); }
-            NSL::Logger::stop_profile(gen_time);
-            NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
-            return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
+        if (!legacy) {
+            // thermalization, tuning of Nmd (mode Tune) and production; resumable
+            const NSL::MCMC::Autotune::RunParameters rp{
+                params["Nmd"].to<NSL::size_t>(), params["Ntherm"].to<NSL::size_t>(), params["Nconf"].to<NSL::size_t>(),
+                params["save frequency"].to<NSL::size_t>(), params["Nradial"].to<NSL::size_t>(), params["Nhmc"].to<NSL::size_t>(),
+                params["radial scale"].to<double>()
+            };
+            return NSL::MCMC::Autotune::run(hmc, start_state, h5, BASENODE, rp, tuneOptions, mode == Mode::Tune);
         }
 
         // ----------------------------------------------------------------------
-        // autotune protocol (identical to autotune_RadialMCMC)
+        // legacy protocol of autotuner8/autotuner.py (as in autotune_RadialMCMC)
         // ----------------------------------------------------------------------
         auto therm_time =  NSL::Logger::start_profile("Thermalization");
         if (_tuneFlag == 0) {
