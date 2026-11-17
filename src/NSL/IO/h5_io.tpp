@@ -45,7 +45,8 @@ class H5IO {
         }
 
         std::tuple<NSL::size_t,NSL::size_t> getMinMaxConfigs(std::string node) {
-    	    NSL::size_t minCfg = std::numeric_limits<NSL::size_t>::infinity();
+    	    // (numeric_limits<integer>::infinity() is 0, which made the minimum always 0)
+    	    NSL::size_t minCfg = std::numeric_limits<NSL::size_t>::max();
 	        NSL::size_t maxCfg = -1;
 	        NSL::size_t temp;
 
