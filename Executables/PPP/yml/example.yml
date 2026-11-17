@@ -1,0 +1,97 @@
+# Example input for the HMC programs and the propagator measurement: every key they read, with its
+# meaning and default. It runs as is (benzene, a few seconds):
+#   <build>/Executables/PPP/autotune_RadialMCMC_PPP --file example.yml   # thermalize, tune Nmd, generate
+#   <build>/Executables/Hubbard/propagator --file example.yml            # measure
+# The Hubbard programs (Executables/Examples/autotune_RadialMCMC[_SpinBasis]) read the same keys,
+# except the PPP block (they use the on-site U only) and `Fourier acceleration` (leapfrog only).
+# New geometries: python Executables/PPP/python/ppp_geometry.py <molecule> ... writes this format.
+# Units: energies in units of the hopping t, beta in 1/t, positions in units of `PPP: length unit`.
+
+system:
+  name: benzene                 # required; group name in the h5 file (<name>/markovChain/...)
+  nions: 6                      # required; number of sites Nx
+  Nt: 16                        # required; time slices, delta = beta/Nt
+  beta: 4                       # required; inverse temperature
+  U: 3.3333333333333335         # required; on-site interaction (here 8 eV / 2.4 eV)
+  mu: 0                         # chemical potential [0]
+  offset: 0                     # constant imaginary part of the field (tangent plane) [0]
+  positions:                    # required; one [x, y, z] per site (z = 0 for planar molecules)
+  - [-1.0000000000, 0.0000000000, 0.0]
+  - [-0.5000000000, -0.8660254038, 0.0]
+  - [-0.5000000000, 0.8660254038, 0.0]
+  - [0.5000000000, -0.8660254038, 0.0]
+  - [0.5000000000, 0.8660254038, 0.0]
+  - [1.0000000000, 0.0000000000, 0.0]
+  adjacency:                    # required; bonds [i, j] (each bond once)
+  - [0, 1]
+  - [0, 2]
+  - [1, 3]
+  - [2, 4]
+  - [3, 5]
+  - [4, 5]
+  hopping:                      # required; one hopping per bond (in units of t), or one number for all
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+
+PPP:                            # PPP program only: the interaction matrix V (src/NSL/Action/Implementations/PPP_Interaction.tpp)
+  form: ohno                    # required; ohno | mataga-nishimoto | onsite (Hubbard, V = U) | explicit
+  hopping energy: 2.4           # t in eV [2.7]
+  length unit: 1.4              # Angstrom per position unit [1.4]
+  dielectric: 2.0               # epsilon for the off-diagonal terms [1.0]
+  # e2: 14.399645               # e^2/(4 pi eps0) in eV Angstrom [14.399645]
+  # V: [[...], ...]             # form explicit only: the Nx x Nx matrix in units of t
+
+HMC:
+  autotune: true                # true [default]: thermalize, tune Nmd, then generate (one run, resumable);
+                                # false: plain run with the fixed Leapfrog: Nmd;
+                                # legacy: protocol of autotuner8/autotuner.py (sets it by itself)
+  start: cold                   # cold (phi = 0) | gaussian (a sample of the gauge action);
+                                # default cold, except gaussian for a plain run with the leapfrog
+  seed: 1234                    # makes the run reproducible [random]
+  Ntherm: 200                   # required; thermalization updates (before tuning)
+  Nconf: 1000                   # required; configurations stored in <name>/markovChain
+  save frequency: 1             # required; updates between stored configurations
+  Nradial: 1                    # radial updates per update [0]
+  radial scale: 0.010416666666666666   # width of log r for the radial update [1/(Nt*Nx)]; here 1/(16*6)
+  Nhmc: 1                       # HMC trajectories per update [1]
+
+Leapfrog:
+  trajectory length: 1.5707963267948966   # required; pi/2 with Fourier acceleration, else e.g. 1
+  Fourier acceleration: true    # PPP program: exact Fourier acceleration [false = unit-mass leapfrog]
+  Nmd: 10                       # MD steps: starting value of the tuning [10], or the fixed value
+                                # (required for autotune: false)
+
+Autotune:                       # optional; the values shown are the defaults (src/NSL/MarkovChain/autotune.tpp)
+  target bulk acceptance: 0.85  # bulk = trajectories with dH <= spike threshold
+  spike threshold: 3
+  batch: 20                     # trajectories per tuning batch
+  min trajectories: 50          # bulk trajectories needed at the final Nmd (and per compared Nmd)
+  tolerance: 0.1                # stop when the proposed Nmd is within 10% of the current one
+  max trajectories: 2000        # budget of tuning trajectories
+  spike fraction: 0.1           # above it, Nmd and 1.5 Nmd are compared by cost
+  escalate after: 3             # thermalization: double Nmd after this many dH > spike threshold in a row
+  max Nmd: 4096
+  checkpoint every: 10          # trajectories between checkpoints (safe stop and resume)
+
+stability: QR                   # QR [default] | SVD | DIRECTINVERSE for the HMC; measurements always use QR
+
+measurements:                   # Executables/Hubbard/propagator
+  basis: charge                 # required; charge (HubbardExp: particles/holes, all PPP ensembles) | spin
+  type: [spatial, eigenbasis]   # spatial | momentum | eigenbasis | both (= spatial + momentum), or a list
+  Number Time Sources: 4        # source times 0, Nt/4, ... [1]
+  fermiWindow: {below: 1, above: 0}   # eigenbasis: hopping eigenvectors HOMO-1 .. LUMO (defaults shown)
+  # eigenvalueIndices: [0, 1, 2, 3, 4, 5]   # eigenbasis instead: explicit positions in ascending
+                                            # single-particle energy eps = -(lambda + mu); all Nx = every eigenvector
+  # Momentum projection (type momentum): wall sources, blocks x bands x Nx entries [re, im]; each is
+  # measured together with its complex conjugate. Here k = 0 and k = pi on the benzene ring.
+  # wallSources:
+  # - [[[0.408248290463863, 0], [0.408248290463863, 0], [0.408248290463863, 0], [0.408248290463863, 0], [0.408248290463863, 0], [0.408248290463863, 0]]]
+  # - [[[0.408248290463863, 0], [-0.408248290463863, 0], [-0.408248290463863, 0], [0.408248290463863, 0], [0.408248290463863, 0], [-0.408248290463863, 0]]]
+  # momenta: [[0], [3.141592653589793]]   # optional labels of the wall sources, stored with the data
+
+fileIO:
+  h5file: benzene_example.h5    # required; created in the working directory
