@@ -62,6 +62,10 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
 * **Plain run** (`HMC: autotune: false`): uses `Leapfrog: Nmd`, `HMC: Ntherm`, `HMC: Nconf`
   and the optional `HMC: seed`; rerunning on an existing h5 file extends the chain.
   `<build>/Executables/PPP/autotune_RadialMCMC_PPP --file yml/naphthalene_benchmark.yml`
+* **Stopping before the walltime**: all of the above stop safely on SIGUSR1 (after the current
+  trajectory or component) and SIGTERM, with exit code 75; the same command continues the run, a
+  thermalization stopped by SIGUSR1 included. See *Stopping runs safely* in the top-level
+  [README](../../README.md) (`#SBATCH --signal=USR1@600`).
 * **Measurements**: `<build>/Executables/Hubbard/propagator --file <yml> [--config N]`, with
   `measurements: basis: charge` (required; PPP ensembles exist only in the charge basis) and
   `type:` one of `spatial`, `momentum`, `eigenbasis` or a list of them (`both` = spatial and

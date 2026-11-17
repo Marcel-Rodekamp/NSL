@@ -25,6 +25,7 @@
 #include "Tensor.hpp"
 #include "LinAlg.hpp"
 #include "IO.hpp"
+#include "stop.hpp"
 #include "logger.hpp"
 
 namespace NSL::Measure::Hubbard::PropagatorTools {
@@ -347,6 +348,8 @@ torch::Tensor recordEigenbasis(NSL::H5IO & h5, const std::string & node, const E
         h5.deleteData(node);
     }
 
+    // the record is one write section: a SIGTERM waits until it is complete (NSL::Stop)
+    NSL::Stop::WriteGuard writing;
     HighFive::File & file = h5.getFile();
     auto attr = [&](const std::string & n, const std::string & name, const std::string & value){
         file.getDataSet(n).createAttribute<std::string>(name, HighFive::DataSpace::From(value)).write(value);

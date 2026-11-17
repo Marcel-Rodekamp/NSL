@@ -25,6 +25,11 @@
  *
  *  Measurements: Executables/Hubbard/propagator with `measurements: basis: charge`
  *  (position-space and/or momentum-projected propagators).
+ *
+ *  Safe early stop (NSL::Stop, e.g. `#SBATCH --signal=USR1@600`): on SIGUSR1 the current
+ *  trajectory is finished and stored; a plain-run thermalization is stored in
+ *  <name>/thermalization and continued by the next run. Exit code 75 means "stopped early,
+ *  run again to continue".
  */
 
 #include <chrono>
@@ -36,7 +41,7 @@ template<NSL::Concept::isNumber Type, typename LatticeType>
 void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE,
                const NSL::PPP::Parameters & ppp, NSL::Tensor<double> V);
 
-int main(int argc, char* argv[]){
+static int runPPP(int argc, char* argv[]){
     // Disable autograd graph tracking — gradients are computed analytically
     torch::InferenceMode guard;
 
@@ -222,13 +227,37 @@ int main(int argc, char* argv[]){
             // plain run
             // ------------------------------------------------------------------
             const std::string chainNode = BASENODE+"/markovChain";
+            // checkpoint of a thermalization that was stopped early on a signal (NSL::Stop)
+            const std::string thermNode = BASENODE+"/thermalization";
             if (!h5.exist(chainNode)) {
                 auto therm_time =  NSL::Logger::start_profile("Thermalization");
-                NSL::Logger::info("Thermalizing {} trajectories...", params["Ntherm"].to<NSL::size_t>());
-                start_state = hmc.template generate<NSL::MCMC::Chain::LastState>(
-                    start_state, params["Ntherm"].to<NSL::size_t>(), params["Nradial"], params["Nhmc"], params["radial scale"]
-                );
+                // generate<LastState>(state, N) performs N-1 update steps
+                const NSL::size_t total = std::max<NSL::size_t>(params["Ntherm"].to<NSL::size_t>(), 1) - 1;
+                NSL::size_t done = 0;
+                if (h5.exist(thermNode)) {
+                    h5.read(done, thermNode + "/completedSteps");
+                    h5.read(start_state, thermNode + "/state", 0);
+                    NSL::Logger::info("Resuming the thermalization: {} of {} steps done", done, total);
+                } else {
+                    NSL::Logger::info("Thermalizing {} trajectories...", params["Ntherm"].to<NSL::size_t>());
+                }
+                if (done < total) {
+                    start_state = hmc.template generate<NSL::MCMC::Chain::LastState>(
+                        start_state, total - done + 1, params["Nradial"], params["Nhmc"], params["radial scale"]
+                    );
+                    done += hmc.completedSteps();
+                }
                 NSL::Logger::stop_profile(therm_time);
+                if (NSL::Stop::requested()) {
+                    // store the thermalization so far as one write section; the next run continues it
+                    NSL::Stop::WriteGuard writing;
+                    h5.deleteData(thermNode);
+                    h5.write(start_state, thermNode + "/state/0");
+                    h5.write(done, thermNode + "/completedSteps");
+                    NSL::Logger::warn("Thermalization stopped after {} of {} steps and stored in {}. Run again to continue.",
+                        done, total, thermNode);
+                    return NSL::Stop::exitCode;
+                }
             } else {
                 NSL::Logger::info("Continuing the Markov chain in {}", chainNode);
             }
@@ -238,9 +267,11 @@ int main(int argc, char* argv[]){
             std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.template generate<NSL::MCMC::Chain::AllStates>(
                 start_state, params["Nconf"], params["Nradial"], params["Nhmc"], params["radial scale"], params["save frequency"], chainNode
             );
+            // the chain starts with the thermalized state, the checkpoint is no longer needed
+            if (h5.exist(thermNode)) { h5.deleteData(thermNode); }
             NSL::Logger::stop_profile(gen_time);
             NSL::Logger::info("Acceptance Rate: {}%", NSL::MCMC::getAcceptanceRate(markovChain) * 100);
-            return EXIT_SUCCESS;
+            return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
         }
 
         // ----------------------------------------------------------------------
@@ -263,7 +294,7 @@ int main(int argc, char* argv[]){
 
             std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.template generate<NSL::MCMC::Chain::AllStates>(start_state, n, params["Nradial"], params["Nhmc"], params["radial scale"], 1, BASENODE+"/thermal");
 
-            return EXIT_SUCCESS;
+            return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
         }
 
         NSL::Logger::info("Appending to previous data.");
@@ -280,7 +311,7 @@ int main(int argc, char* argv[]){
             NSL::MCMC::getAcceptanceRate(markovChain) * 100
         );
 
-        return EXIT_SUCCESS;
+        return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
     }; // simulate
 
     const double trajectoryLength = params["trajectory length"].to<double>();
@@ -355,4 +386,15 @@ void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::st
     writeDouble ("/Meta/PPP/dielectric",     ppp.dielectric);
     writeDouble ("/Meta/PPP/e2",             ppp.e2);
     h5.write(V, BASENODE+"/Meta/PPP/V");
+}
+
+int main(int argc, char* argv[]){
+    // a failure ends the run with a message and a non-zero exit code;
+    // everything stored before stays valid
+    try {
+        return runPPP(argc, argv);
+    } catch (const std::exception & e) {
+        NSL::Logger::error("autotune_RadialMCMC_PPP: {}", e.what());
+        return EXIT_FAILURE;
+    }
 }

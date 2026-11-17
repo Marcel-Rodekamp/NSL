@@ -17,6 +17,11 @@
 
 #submit.batch.half.tuning tunes a system without Hasenbusch-parameters
 
+#safe early stop: STOP_MARGIN seconds (default 600) before the walltime SLURM sends SIGUSR1;
+#the NSL executables (and autotuner.py) then finish the current trajectory/configuration, store it,
+#and exit with code 75. The next job, submitted with afterany, continues from the h5 file.
+#STOP_MARGIN must exceed the time of one trajectory (or one measured configuration).
+
 function submit.batch.half.tuning {
     yaml=$1
     dirname=$2
@@ -37,6 +42,7 @@ function submit.batch.half.tuning {
 #SBATCH --ntasks-per-node=1
 #SBATCH --distribution=block:block:block,Pack
 #SBATCH --time=$walltime
+#SBATCH --signal=USR1@${STOP_MARGIN:-600}
 #SBATCH --mail-user=$email
 #SBATCH --mail-type=FAIL
 #SBATCH --output=output/$dirname.%j

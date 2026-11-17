@@ -198,6 +198,8 @@ class FermionPropagator: public Measurement {
     //! has a non-finite entry.
     void writeProjected_(const torch::Tensor & P, const std::string & block, const std::string & node){
         using torch::indexing::Slice;
+        // a SIGTERM waits until all leaves of the component are written (NSL::Stop)
+        NSL::Stop::WriteGuard writing;
         PropagatorTools::requireFinite(P, std::string(basenode_) + node);
         if (block == "eigenbasis") {
             NSL::Tensor<Type> out(P.index({Slice(), 0, Slice(), 0, Slice()}).contiguous());
@@ -282,6 +284,12 @@ class FermionPropagator: public Measurement {
             // previous phi_ in place and write its propagators under this ID
             const std::string phiNode = fmt::format("{}/markovChain/{}/phi", std::string(basenode_), cfgID);
             if (!this->h5_.exist(phiNode)) { continue; }
+            // safe early stop (NSL::Stop): every component written so far is complete
+            if (NSL::Stop::requested()) {
+                NSL::Logger::warn("Measurement stopped ({}) before configuration {}. Run again to continue.",
+                    NSL::Stop::signalName(), cfgID);
+                break;
+            }
             NSL::Logger::info("Measuring configuration {}/{}", cfgID, maxCfg);
             this->h5_.read(phi_, phiNode);
             f(cfgID);
@@ -315,6 +323,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
             auto component = [&](const std::string & name, auto && compute){
                 const std::string node = node_("spatial", free, cfgID, name);
                 if (skip_(node)) { ++kept; return; }
+                if (NSL::Stop::requested()) { return; }
                 if (!ready) {
                     hfm_.populate(phi_, species_);
                     calcPiSigma(tsrc);
@@ -378,6 +387,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureProjected_(co
             auto component = [&](const std::string & name, auto && compute){
                 const std::string node = node_(block, free, cfgID, name);
                 if (skip_(node)) { ++kept; return; }
+                if (NSL::Stop::requested()) { return; }
                 prepare();
                 compute();
                 writeProjected_(PropagatorTools::projectAll(corr_, w), block, node);
@@ -391,7 +401,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureProjected_(co
                 const std::string nodeQ = node_(block, free, cfgID, "Q");
                 const bool needD = !skip_(nodeD), needQ = !skip_(nodeQ);
                 kept += !needD + !needQ;
-                if (needD || needQ) {
+                if ((needD || needQ) && !NSL::Stop::requested()) {
                     prepare();
                     measureDiagonal();
                     if (needD) { writeProjected_(PropagatorTools::projectAll(corr_, w), block, nodeD); }

@@ -8,6 +8,9 @@ Notes:
 - In case the model fails to converg, try different initial guess numbers, different CDFs,
   such as alpha.cdf((x+a[0])*a[1], a[2]) from scipy.stats, or different ftting parameters
 - For notes on the confidence interval and fitting method see the _functions.py file 
+- Safe early stop: on SIGUSR1 (e.g. `#SBATCH --signal=USR1@600`) or SIGTERM the running NSL call
+  finishes its current trajectory, no further call is started, and the tuner exits with code 75.
+  Running the same command again continues from the h5 file.
 '''
 
 from scipy.optimize import least_squares
@@ -16,6 +19,7 @@ import numpy as np
 from _functions import *
 import os
 import sys
+import signal
 import subprocess
 import math
 import pickle
@@ -53,6 +57,55 @@ parser.add_argument("yaml", type=str, help="Initialization YAML file")
 parser.add_argument("executable", type=str, help="NSL Executable")
 parser.add_argument("--GPU", default=False, action='store_true', help="Using GPU")
 args = parser.parse_args()
+
+# ---------------------------------------------------------------------------------------------
+# Safe early stop (see src/NSL/stop.hpp). The signal is passed on to the running NSL call, which
+# finishes its current trajectory and exits with code 75; no further call is started.
+# ---------------------------------------------------------------------------------------------
+STOPPED = 75          # exit code of a run that stopped early and can be resumed (NSL::Stop::exitCode)
+stop_signal = None    # signal that requested the stop
+current_call = None   # the running NSL process
+
+def _request_stop(signum, frame):
+    global stop_signal
+    stop_signal = signum
+    if current_call is not None and current_call.poll() is None:
+        current_call.send_signal(signum)  # SLURM need not signal child processes itself
+    print(f"autotuner: received {signal.Signals(signum).name}; stopping after the current call", flush=True)
+
+signal.signal(signal.SIGUSR1, _request_stop)
+signal.signal(signal.SIGTERM, _request_stop)
+
+def stop_now(reason):
+    print(f"autotuner: {reason}. Run the same command again to continue.", flush=True)
+    sys.exit(STOPPED)
+
+def run_nsl():
+    """One call of the NSL executable; ends the tuner (exit code 75) if a stop was requested."""
+    global current_call
+    if stop_signal is not None:
+        stop_now("stop requested")
+    command = [args.executable, "--file", args.yaml, *(["--GPU"] if args.GPU else [])]
+    current_call = subprocess.Popen(command)
+    returncode = current_call.wait()
+    current_call = None
+    print(f"autotuner: {' '.join(command)} -> exit code {returncode}", flush=True)
+    if returncode == STOPPED:
+        stop_now("the NSL executable stopped early on a signal")
+    # the passed-on signal can arrive before the executable has installed its handlers (during
+    # its start-up, before it writes anything); then it ends with exit code -signal
+    if stop_signal is not None and returncode == -stop_signal:
+        stop_now("the NSL executable was stopped by the signal during its start-up")
+    if returncode != 0:
+        raise subprocess.CalledProcessError(returncode, command)
+    if stop_signal is not None:
+        stop_now("stop requested")
+
+def acceptance_probability_of(stored):
+    """min(1, e^{-dH}) from the stored e^{-dH}. NaN (a failed update in files written before
+    NSL stored 0 for it) counts as a rejection; min(1, NaN) would be 1 in Python."""
+    p = float(stored)
+    return 0.0 if math.isnan(p) else min(1.0, p)
 
 with open(args.yaml) as stream:
     ymlFile = yaml.safe_load(stream)
@@ -115,9 +168,7 @@ if tuneFlag == 0:
 
         # Run
         # p.cpu_affinity(cpuList)
-        # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
-        result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
-        print(result)
+        run_nsl()
 
         # os.system(f"./{binary} --file {args.yaml}")
         # p.cpu_affinity([cpuList[0]])
@@ -135,7 +186,7 @@ if tuneFlag == 0:
                 f[f"{base_name}/Meta/params/thermalFlag"][...] = 1
 
             for traj in range(counter):
-                acceptance_probability = min(1, f[f"{base_name}/{conf_dir}/{traj}/acceptanceProbability"][()])
+                acceptance_probability = acceptance_probability_of(f[f"{base_name}/{conf_dir}/{traj}/acceptanceProbability"][()])
                 acceptance_rate = f[f"{base_name}/{conf_dir}/{traj}/acceptanceRate"][()]
 
                 if traj >= counter - trajectories_count:
@@ -245,9 +296,7 @@ if tuneFlag == 0:
                     for k,v in all_accept_rates.items():
                         f[f"{base_name}/autotune/all-accept-rates"].create_dataset(str(k), data=v)
 
-                # result = subprocess.run([f"{binary}", "--file", f"{args.yaml}"], check=True)
-                result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
-                print(result)
+                run_nsl()
 
                 with h5.File(ymlFile["fileIO"]["h5file"], 'a') as f:
                     f[f"{base_name}/Meta/params/thermalFlag"][...] = 1
@@ -264,5 +313,4 @@ if tuneFlag == 0:
 
     print("Final Nmd: " + str(steps))
 
-result = subprocess.run([f"{binary}", "--file", f"{args.yaml}", *(["--GPU"] if args.GPU else []) ], check=True)
-print(result)
+run_nsl()

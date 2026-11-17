@@ -6,7 +6,7 @@
 template<NSL::Concept::isNumber Type, typename LatticeType>
 void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::string BASENODE);
 
-int main(int argc, char* argv[]){
+static int runHMC(int argc, char* argv[]){
     typedef NSL::complex<double> Type;
 
     // Initialize NSL
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]){
 
         std::vector<NSL::MCMC::MarkovState<Type>> markovChain = hmc.generate<NSL::MCMC::Chain::AllStates>(start_state, n, 1, BASENODE+"/thermal");
 
-        return EXIT_SUCCESS;
+        return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
 
     }
 
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]){
         NSL::MCMC::getAcceptanceRate(markovChain) * 100
     );
 
-    return EXIT_SUCCESS;
+    return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
 }
 
 template<NSL::Concept::isNumber Type, typename LatticeType>
@@ -316,4 +316,15 @@ void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::st
         HighFive::DataSpace::From(NSL::size_t(params["tuneFlag"]))
     );
     dataset.write(NSL::size_t(params["tuneFlag"]));
+}
+
+int main(int argc, char* argv[]){
+    // a failure ends the run with a message and a non-zero exit code;
+    // everything stored before stays valid
+    try {
+        return runHMC(argc, argv);
+    } catch (const std::exception & e) {
+        NSL::Logger::error("{}: {}", argv[0], e.what());
+        return EXIT_FAILURE;
+    }
 }

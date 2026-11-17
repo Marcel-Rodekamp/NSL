@@ -9,6 +9,10 @@
 #include "concepts.hpp"
 #include "IO.hpp"
 #include "logger.hpp"
+#include "stop.hpp"
+#include <cmath>
+#include <stdexcept>
+#include <string>
 
 namespace NSL::MCMC{
 
@@ -161,8 +165,15 @@ class RadialHMC{
                     NSL::Logger::info("HMC: {}/{}; Running Acceptance Rate: {:.6}%", n, Nconf, runningAcceptance*100./((n-nstart)*saveFrequency*Nhmc));
                     NSL::Logger::elapsed_profile(mc_time);
                 }
+
+                // safe early stop (NSL::Stop): configuration n is stored and flushed
+                if (NSL::Stop::requested()) {
+                    NSL::Logger::warn("HMC: stop requested ({}); configuration {} is stored. Run again to continue the chain.",
+                        NSL::Stop::signalName(), n);
+                    MC.resize(n+1);
+                    break;
+                }
             }
-            // Logging of information on radial Metropolis updates
 
             NSL::Logger::stop_profile(mc_time);
 
@@ -175,6 +186,7 @@ class RadialHMC{
 
             // generate Nconf-1 configurations
             // As none is returned we just multiply the number of configurations
+            completedSteps_ = 0;
             for(NSL::size_t n = 1; n < Nconf*saveFrequency; ++n){
                 // radial update steps in a single combined step
                 for (NSL::size_t n_radial = 0; n_radial < Nradial; ++n_radial){
@@ -184,8 +196,15 @@ class RadialHMC{
                 for (NSL::size_t n_hmc = 0; n_hmc < Nhmc; ++n_hmc){
                     newState = this->generate_(newState);
                 }
+                completedSteps_ = n;
                 if (n % logFrequency == 0){
                     NSL::Logger::info("HMC: {}/{}", n, Nconf);
+                }
+                // safe early stop (NSL::Stop): the caller decides whether to store newState
+                if (NSL::Stop::requested()) {
+                    NSL::Logger::warn("HMC: stop requested ({}) after {} of {} steps.",
+                        NSL::Stop::signalName(), n, Nconf*saveFrequency-1);
+                    break;
                 }
             }
 
@@ -236,6 +255,14 @@ class RadialHMC{
 
     
 
+    //! Number of combined update steps done by the last generate<Chain::LastState> call:
+    //! Nconf*saveFrequency-1, or fewer if it stopped early on a signal (see NSL::Stop).
+    NSL::size_t completedSteps() const { return completedSteps_; }
+
+    //! An update that throws or yields a NaN energy is rejected and logged; after this
+    //! many failures in a row (default 10) the run is aborted with an exception.
+    void setMaxConsecutiveFailures(NSL::size_t n) { maxConsecutiveFailures_ = n; }
+
     protected:
 
     //! Implementation of the HMC
@@ -245,71 +272,68 @@ class RadialHMC{
         // sample momentum (unit mass unless the integrator defines a mass matrix)
         NSL::Configuration<Type> momentum = NSL::Integrator::sampleMomentum(integrator_, state.configuration);
 
-        // use integrator to generate proposal
-	try {
-        auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
+        std::string failure;
+        try {
+            // use integrator to generate proposal
+            auto [proposal_config,proposal_momentum] = this->integrator_(state.configuration,momentum);
 
-        // compute the Action
-        Type proposal_S = this->action_(proposal_config);
+            // compute the Action
+            Type proposal_S = this->action_(proposal_config);
 
-        // compute the Hamiltonian H = K(p) + S, K(p) = p^2/2 for unit mass
-        // Starting point of the trajectory
-        Type starting_H = state.actionValue;
-        starting_H += NSL::Integrator::kineticEnergy(integrator_, momentum);
+            // compute the Hamiltonian H = K(p) + S, K(p) = p^2/2 for unit mass
+            // Starting point of the trajectory
+            Type starting_H = state.actionValue;
+            starting_H += NSL::Integrator::kineticEnergy(integrator_, momentum);
 
-        
-        // End point of the trajectory i.e. proposal
-        Type proposal_H = proposal_S;
-        proposal_H += NSL::Integrator::kineticEnergy(integrator_, proposal_momentum);
+            // End point of the trajectory i.e. proposal
+            Type proposal_H = proposal_S;
+            proposal_H += NSL::Integrator::kineticEnergy(integrator_, proposal_momentum);
 
-        // We always assume real part of the action, i.e. automatic reweighting
-        // for complex actions!
-        NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_H - proposal_H) );
+            // We always assume real part of the action, i.e. automatic reweighting
+            // for complex actions!
+            const NSL::RealTypeOf<Type> logAcceptance = NSL::real(starting_H - proposal_H);
+            const double r = r_.rand()[0];
 
-	// accept reject
-        if ( r_.rand()[0] <= acceptanceProb ){
-            return NSL::MCMC::MarkovState<Type>{
-                proposal_config,
-                proposal_S,
-                acceptanceProb,
-                state.markovTime+1,
-                true
-                /*For this algorithm there are no weights to be added*/
-            };
-        } else {
-            return NSL::MCMC::MarkovState<Type>(
-                state.configuration,
-                state.actionValue,
-                acceptanceProb,
-                state.markovTime+1,
-                false
-            );
+            // A non-finite energy difference is a rejection with probability 0, also when
+            // e^{-dH} would be infinite (an overflow in the proposal must never be accepted).
+            // +-inf is a diverged trajectory; NaN is a numerical breakdown and counts as a failure.
+            if (std::isnan(logAcceptance)) {
+                failure = fmt::format("the energy difference is NaN (H at the start: {}, at the end: {})",
+                                      NSL::real(starting_H), NSL::real(proposal_H));
+            } else if (!std::isfinite(logAcceptance)) {
+                hmcFailures_ = 0;
+                return rejected_(state);
+            } else {
+                hmcFailures_ = 0;
+                const NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp(logAcceptance);
+
+                // accept reject
+                if ( r <= acceptanceProb ){
+                    return NSL::MCMC::MarkovState<Type>{
+                        proposal_config,
+                        proposal_S,
+                        acceptanceProb,
+                        state.markovTime+1,
+                        true
+                        /*For this algorithm there are no weights to be added*/
+                    };
+                } else {
+                    return NSL::MCMC::MarkovState<Type>(
+                        state.configuration,
+                        state.actionValue,
+                        acceptanceProb,
+                        state.markovTime+1,
+                        false
+                    );
+                }
+            }
+        } catch (const std::exception & e) {
+            failure = e.what();
+        } catch (...) {
+            failure = "unknown exception";
         }
-	}
-
-	catch (const std::exception& e) {
-	      NSL::Logger::info( "# Warning! Exception in catch 1");	
-              NSL::RealTypeOf<Type> acceptanceProb = 0.;
-	      return NSL::MCMC::MarkovState<Type>(
-                state.configuration,
-                state.actionValue,
-                acceptanceProb,
-                state.markovTime+1,
-                false
-            );
-        }
-
-	catch (...) {
-	      NSL::Logger::info( "# Warning! Exception in catch 2");
-     	      NSL::RealTypeOf<Type> acceptanceProb = 0.;
-	      return NSL::MCMC::MarkovState<Type>(
-                state.configuration,
-                state.actionValue,
-                acceptanceProb,
-                state.markovTime+1,
-                false
-            );
-	}
+        failed_(hmcFailures_, "HMC trajectory", failure);
+        return rejected_(state);
     }
 
     //! Implementation of the HMC radial update
@@ -317,46 +341,91 @@ class RadialHMC{
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> radialgenerate_(const NSL::MCMC::MarkovState<Type> & state, NSL::RealTypeOf<Type> volume, NSL::RealTypeOf<Type> radialScale){
         NSL::RealTypeOf<Type> rscale_ = rscaleTensor_.lognormal(0., radialScale)[0];
-        // compute the Action
-	NSL::Configuration<Type> config_imag (state.configuration,true);
-        NSL::Configuration<Type> config_real (state.configuration,true);
-        for(auto & [key,field]: state.configuration){
-            config_imag[key].real() = 0;
-            config_real[key].imag() = 0;
+
+        std::string failure;
+        try {
+            // compute the Action
+            NSL::Configuration<Type> config_imag (state.configuration,true);
+            NSL::Configuration<Type> config_real (state.configuration,true);
+            for(auto & [key,field]: state.configuration){
+                config_imag[key].real() = 0;
+                config_real[key].imag() = 0;
+            }
+
+            // we only want to scale the real part of the configuration
+            NSL::Configuration<Type> proposal_config = static_cast<Type>(rscale_) * config_real + config_imag;
+            Type proposal_S = this->action_(proposal_config);
+
+            // Starting point of the trajectory
+            Type starting_S = state.actionValue;
+
+            // We always assume real part of the action, i.e. automatic reweighting
+            // for complex actions!
+            const NSL::RealTypeOf<Type> logAcceptance = NSL::real(starting_S - proposal_S) + volume * NSL::LinAlg::log(rscale_);
+            const double r = r_.rand()[0];
+
+            // non-finite: rejected with probability 0 (NaN counts as a failure), as in generate_
+            if (std::isnan(logAcceptance)) {
+                failure = fmt::format("the action difference is NaN (S at the start: {}, of the proposal: {})",
+                                      NSL::real(starting_S), NSL::real(proposal_S));
+            } else if (!std::isfinite(logAcceptance)) {
+                radialFailures_ = 0;
+                return rejected_(state);
+            } else {
+                radialFailures_ = 0;
+                const NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp(logAcceptance);
+
+                // accept reject
+                if ( r <= acceptanceProb ){
+                    return NSL::MCMC::MarkovState<Type>{
+                        proposal_config,
+                        proposal_S,
+                        acceptanceProb,
+                        state.markovTime+1,
+                        true
+                        /*For this algorithm there are no weights to be added*/
+                    };
+                } else {
+                    return NSL::MCMC::MarkovState<Type>(
+                        state.configuration,
+                        state.actionValue,
+                        acceptanceProb,
+                        state.markovTime+1,
+                        false
+                    );
+                }
+            }
+        } catch (const std::exception & e) {
+            failure = e.what();
+        } catch (...) {
+            failure = "unknown exception";
         }
-
-        // we only want to scale the real part of the configuration
-        NSL::Configuration<Type> proposal_config = static_cast<Type>(rscale_) * config_real + config_imag;
-        Type proposal_S = this->action_(proposal_config);
-
-        // Starting point of the trajectory
-        Type starting_S = state.actionValue;
-
-        // We always assume real part of the action, i.e. automatic reweighting
-        // for complex actions!
-        NSL::RealTypeOf<Type> acceptanceProb = NSL::LinAlg::exp( NSL::real(starting_S - proposal_S) + volume * NSL::LinAlg::log(rscale_)) ;
-
-        // accept reject 
-	    if ( r_.rand()[0] <= acceptanceProb ){
-            return NSL::MCMC::MarkovState<Type>{
-                proposal_config,
-                proposal_S,
-                acceptanceProb,
-                state.markovTime+1,
-                true
-                /*For this algorithm there are no weights to be added*/
-            };
-        } else {
-            return NSL::MCMC::MarkovState<Type>(
-                state.configuration,
-                state.actionValue,
-                acceptanceProb,
-                state.markovTime+1,
-                false
-            );
-        }
+        failed_(radialFailures_, "radial update", failure);
+        return rejected_(state);
     }
 
+    //! The state after a rejected (or failed) update: acceptance probability 0
+    template<NSL::Concept::isNumber Type>
+    NSL::MCMC::MarkovState<Type> rejected_(const NSL::MCMC::MarkovState<Type> & state) const {
+        return NSL::MCMC::MarkovState<Type>(
+            state.configuration,
+            state.actionValue,
+            NSL::RealTypeOf<Type>(0),
+            state.markovTime+1,
+            false
+        );
+    }
+
+    //! A failed update (exception or NaN) is rejected and logged; after
+    //! maxConsecutiveFailures_ failures in a row the run is aborted.
+    void failed_(NSL::size_t & counter, const char * update, const std::string & what){
+        ++counter;
+        NSL::Logger::warn("{} failed and is rejected ({} in a row): {}", update, counter, what);
+        if (counter >= maxConsecutiveFailures_) {
+            throw std::runtime_error(fmt::format(
+                "{} failed {} times in a row; last error: {}", update, counter, what));
+        }
+    }
 
     private:
     //! ToDo: We need to implement a proper RNG class!
@@ -366,6 +435,13 @@ class RadialHMC{
     ActionType action_;
 
     NSL::H5IO h5_;
+
+    //! combined update steps of the last generate<Chain::LastState> call
+    NSL::size_t completedSteps_ = 0;
+    //! failed updates in a row (exception or NaN), per update type
+    NSL::size_t hmcFailures_ = 0;
+    NSL::size_t radialFailures_ = 0;
+    NSL::size_t maxConsecutiveFailures_ = 10;
 
 }; // RadialHMC
 

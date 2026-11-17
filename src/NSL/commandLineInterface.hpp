@@ -3,6 +3,7 @@
 
 #include<CLI/CLI.hpp>
 #include "parameter.tpp"
+#include "stop.hpp"
 
 namespace NSL {
 
@@ -51,8 +52,13 @@ inline void add_logger(CLI::App & app, std::string & log_level, std::string & lo
  *
  * The logger is initialized. The available command line options
  * can be found at `NSL::Logger::init`
+ * The handlers for a safe early stop (SIGUSR1, SIGTERM, SIGINT) are installed,
+ * see NSL::Stop.
  * */
 NSL::Parameter init(int argc, char ** argv, std::string CLIName = "NSL"){
+    // first thing: SIGUSR1 stops after the current unit of work, SIGTERM/SIGINT stop now (stop.hpp)
+    NSL::Stop::install();
+
     CLI::App app{CLIName};
 
     // this add options to app and initializes log_level, log_file
@@ -111,6 +117,9 @@ NSL::Parameter init(int argc, char ** argv,
         std::string profile_pattern,
         std::string CLIName = "NSL"
 ){
+    // first thing: SIGUSR1 stops after the current unit of work, SIGTERM/SIGINT stop now (stop.hpp)
+    NSL::Stop::install();
+
     CLI::App app{CLIName};
 
     // this add options to app and initializes log_level, log_file

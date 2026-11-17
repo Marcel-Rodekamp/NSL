@@ -255,6 +255,38 @@ To install this code, do the following:
 
 That should make the binding!
 
+## Stopping runs safely (SLURM walltime)
+
+Every executable that calls `NSL::init` handles three signals (see `src/NSL/stop.hpp`):
+
+* **SIGUSR1**: finish the current HMC trajectory (or the current propagator component), store it,
+  and stop.
+* **SIGTERM, SIGINT**: stop at once. If an HDF5 write is in progress, it is completed and flushed
+  first, so everything stored before the stop is complete.
+
+A run stopped this way exits with code **75** ("stopped early, resumable"); running the same command
+again continues where it stopped:
+
+* HMC chains continue from the last stored configuration.
+* A plain-run thermalization stopped by SIGUSR1 is stored in `<name>/thermalization` and continued.
+  After SIGTERM it starts again.
+* `propagator` measures the components that are not yet stored.
+* `autotuner8/autotuner.py` passes the signal on to the running call and exits with code 75.
+
+In a SLURM batch script, ask for the warning some time before the walltime:
+
+```sh
+#SBATCH --signal=USR1@600
+```
+
+Write it without `B:`, so that the `srun` job step receives the signal. The margin (here 600 s) must exceed the time of one
+trajectory (times `save frequency`) or of one measured component. `autotuner8/batch-scripts/submit_chain_batch.sh`
+takes it from `STOP_MARGIN` in `env.sh`. Use it only with NSL executables, since SIGUSR1 terminates programs that do not handle it.
+
+**Failed updates.** An HMC trajectory or radial update whose energy difference is not finite is rejected,
+and its acceptance probability is stored as 0, never NaN. An update that throws an exception or yields NaN is rejected
+and logged as a warning; 10 such failures in a row abort the run with an error message and exit code 1.
+
 ## Stability routines
 
 NSL can now simulate at room temperature!!!  To perform such simulations, one needs to use particular stability methods.  The possible choices are

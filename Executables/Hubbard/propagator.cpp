@@ -325,6 +325,11 @@ int propagator(NSL::Parameter & params){
             Type, decltype(lattice), NSL::FermionMatrix::HubbardExpSpinBasis<Type, decltype(lattice)>
         >>(lattice, params, h5, blocks, NSL::size_t(startConfig));
     }
+    if (NSL::Stop::requested()) {
+        // every component written so far is complete; a rerun measures the rest
+        NSL::Logger::warn("propagator: stopped early ({}). Run the same command again to continue.", NSL::Stop::signalName());
+        return NSL::Stop::exitCode;
+    }
     return EXIT_SUCCESS;
 }
 

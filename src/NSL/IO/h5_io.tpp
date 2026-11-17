@@ -4,6 +4,7 @@
 #include "../complex.hpp"
 #include "../concepts.hpp"
 #include "../logger.hpp"
+#include "../stop.hpp"
 #include <iostream>
 #include <vector>
 #include "device.tpp"
@@ -68,6 +69,8 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::MCMC::MarkovState<Type> & markovstate, const std::string node){
+            // a SIGTERM during the write waits until the state is complete and flushed
+            NSL::Stop::WriteGuard guard;
             std::string baseNode;
 	        if (node.back() == '/') { // define the node
 	            baseNode = node;// + std::to_string(markovstate.markovTime);
@@ -163,9 +166,12 @@ class H5IO {
                 );
 	            dataset.write(markovstate.markovTime);
 	        }
-	
+
+            // the scalars above are written after the configuration's flush
+            h5f_.flush();
+
             return 0;
-        } // write(markovState,node) 
+        } // write(markovState,node)
 
         template <NSL::Concept::isNumber Type> 
         inline int read(NSL::MCMC::MarkovState<Type> &markovstate, const std::string node){
@@ -242,6 +248,7 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(NSL::Tensor<Type> &tensor_in, const std::string node){
+            NSL::Stop::WriteGuard guard;
 	        std::string DIM("shape");
         	std::vector<NSL::size_t> shape = tensor_in.shape();
 	        std::string FORMAT("type");
@@ -295,6 +302,7 @@ class H5IO {
 
         template <NSL::Concept::isNumber Type> 
         inline int write(const NSL::Configuration<Type> &config, const std::string node){
+            NSL::Stop::WriteGuard guard;
 
 	        for (auto [key,field] : config) {
 	            if (node.back() == '/'){
@@ -408,6 +416,7 @@ class H5IO {
     
         template<NSL::Concept::isNumber Type>
         inline int write(const Type & obj, const std::string node){
+            NSL::Stop::WriteGuard guard;
             if constexpr(NSL::is_complex<Type>()){
                 typedef NSL::RealTypeOf<Type> real;
                 typedef std::complex<real> comp;
@@ -424,7 +433,8 @@ class H5IO {
                 );
                 dataset.write(obj);
             }
-            
+            h5f_.flush();
+
             return 0;
         }
     
@@ -442,8 +452,10 @@ class H5IO {
             // remove the group if it exists; once the file is closed
             // automatic repacking is applied
             if (exist){
+                NSL::Stop::WriteGuard guard;
                 NSL::Logger::debug("Unlinking Dataset (node exists={}): {}",exist,node);
                 h5f_.unlink(node);
+                h5f_.flush();
             }
         }
     private:
