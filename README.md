@@ -96,7 +96,8 @@ Why the options:
 Known test failures (also before the changes on `newMeasurements`): `test_Tensor_mat_exp`,
 `test_FermionMatrix_hermitian`, `test_fermionMatrixHubbardExp` and `test_force` fail in their
 single-precision (`complex<float>`) cases, `test_BiCGStab` breaks down with NaN residuals, and
-`test_CG` and `test_leapfrog` fail now and then because they use unseeded random input.
+`test_CG`, `test_LinAlg_matvec` and `test_leapfrog` fail now and then because they use unseeded
+random input.
 
 The Python tools in `Executables/PPP/python` need
 `python3 -m pip install numpy scipy h5py pyyaml matplotlib`.
