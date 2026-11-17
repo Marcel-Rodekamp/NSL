@@ -434,7 +434,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         NSL::LinAlg::add_diagonal(solve_result, Fk_Dt_);
         std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
-      invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
+      invAp1F_Ut_ = NSL::LinAlg::solve_triangular(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(NSL::RealTypeOf<Type>(1.)/Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint_view(Qnewt_), NSL::LinAlg::adjoint_view(Fk_Ut_)); // (AB)^H = B^H A^H: cuBLAS handles transposes natively, avoids gather copy
 
       pi_dot_ = II * NSL::LinAlg::diagonal(
@@ -496,7 +496,7 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
         NSL::LinAlg::add_diagonal(solve_result, Fk_Dt_);
         std::tie( Qnewt_, Dnewt_, Vnewt_ ) = NSL::LinAlg::udt( solve_result ); }
 
-      invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(1./Dnewt_));
+      invAp1F_Ut_ = NSL::LinAlg::solve(NSL::LinAlg::mat_mul(Vnewt_, Fk_Vt_) , NSL::LinAlg::diag_embed(NSL::RealTypeOf<Type>(1.)/Dnewt_));
       invAp1F_Tt_ = NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint_view(Qnewt_), NSL::LinAlg::adjoint_view(Fk_Ut_)); // (AB)^H = B^H A^H: cuBLAS handles transposes natively, avoids gather copy
 
       pi_dot_ = II * NSL::LinAlg::diagonal(

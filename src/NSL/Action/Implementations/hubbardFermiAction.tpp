@@ -8,6 +8,24 @@
 #include "FermionMatrix/fermionMatrix.hpp"
 #include "hubbard.tpp"
 
+namespace NSL::FermionMatrix {
+
+//! A charge (particle/hole) basis fermion matrix is populated per NSL::Hubbard::Species
+//! (e.g. HubbardExp: the auxiliary field enters as exp(±iφ)).
+template<typename FermionMatrixType, typename Type>
+concept ChargeBasis = requires(FermionMatrixType m, const NSL::Tensor<Type> & phi) {
+    m.populate(phi, NSL::Hubbard::Species::Particle);
+};
+
+//! A spin basis fermion matrix is populated per NSL::Hubbard::Spin
+//! (e.g. HubbardExpSpinBasis: the auxiliary field enters as exp(±φ)).
+template<typename FermionMatrixType, typename Type>
+concept SpinBasis = requires(FermionMatrixType m, const NSL::Tensor<Type> & phi) {
+    m.populate(phi, NSL::Hubbard::Spin::Up);
+};
+
+} // namespace NSL::FermionMatrix
+
 namespace NSL::Action {
 
 //! Hubbard Gauge Action
@@ -69,7 +87,9 @@ template<
 Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(const Tensor<TensorType>& phi){
     Type logDetMpMh = 0;
 
-    if (!hfm_.basis.compare("CHARGE")) {
+    // The basis is a property of the fermion-matrix type, so it is resolved at
+    // compile time (see ChargeBasis/SpinBasis above).
+    if constexpr (NSL::FermionMatrix::ChargeBasis<FermionMatrixType,Type>) {
 
      // particle contribution
      hfm_.populate(phi, NSL::Hubbard::Species::Particle);
@@ -79,7 +99,9 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
      hfm_.populate(phi, NSL::Hubbard::Species::Hole);
      logDetMpMh+= hfm_.logDetM();
 
-    } else { // (!hfm_.basis.compare("SPIN")) {
+    } else {
+     static_assert(NSL::FermionMatrix::SpinBasis<FermionMatrixType,Type>,
+        "HubbardFermionAction: fermion matrix must provide populate(phi, Species) (charge basis) or populate(phi, Spin) (spin basis)");
 
      // spin up contribution
      hfm_.populate(phi, NSL::Hubbard::Spin::Up);
@@ -116,7 +138,7 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
 
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
 
-    if (!hfm_.basis.compare("CHARGE")) {
+    if constexpr (NSL::FermionMatrix::ChargeBasis<FermionMatrixType,Type>) {
 
      if(hfm_.bipartite_ && hfm_.mu_.real() == 0 && hfm_.mu_.imag() == 0) {;
         // 2x real part of particle contribution
@@ -135,7 +157,9 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
        dS[this->configKey_]-= hfm_.gradLogDetM();
 
      }
-    } else { //(!hfm_.basis.compare("SPIN")) {
+    } else {
+      static_assert(NSL::FermionMatrix::SpinBasis<FermionMatrixType,Type>,
+        "HubbardFermionAction: fermion matrix must provide populate(phi, Species) (charge basis) or populate(phi, Spin) (spin basis)");
 
       // spin up contribution
       hfm_.populate(phi, NSL::Hubbard::Spin::Up);

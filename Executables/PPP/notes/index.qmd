@@ -1,0 +1,116 @@
+---
+title: "PPP on perylene in NSL"
+subtitle: "Notes on the changes on branch `newMeasurements`, 2026-11-16/17"
+---
+
+## The decks
+
+| deck | topic |
+|---|---|
+| [1 · The PPP action and driver](01-ppp-action.html) | interaction forms, the rewritten gauge action, compile-time basis choice, the charge-basis driver |
+| [2 · Why not the spin basis](02-spin-basis.html) | why a spin-basis fermion matrix with the PPP gauge action simulates a different model |
+| [3 · Exact diagonalization](03-exact-diagonalization.html) | `ppp_ed.py`: exact propagators at the *same* $N_t$, and how NSL is compared with them |
+| [4 · Exact Fourier acceleration](04-fourier-acceleration.html) | the new integrator, the HMC hooks, tests and benchmarks |
+| [5 · Bugs and fixes](05-bugs-and-fixes.html) | bugs found in NSL, bugs in my own code, operational problems, open issues |
+
+Everything described here is **uncommitted** on `newMeasurements`.
+
+## Why the work was done in this order
+
+1. **Get the model right.** The existing `PPPGaugeAction` had bugs and was never used; the production
+   driver used the spin basis, which cannot represent PPP. → decks 1, 2
+2. **Check it independently.** Exact diagonalization at the same $N_t$ removes the Trotter error from the
+   comparison, so any disagreement is a bug. Benzene and naphthalene agree with NSL. → deck 3
+3. **Then make it fast.** The long-range $V$ makes the gauge action stiff. Exact Fourier acceleration
+   removes that stiffness: 6–10× less CPU per independent sample for naphthalene and perylene at
+   $\beta = 20$. → deck 4
+
+Bugs met along the way, in NSL and in my own code, are collected in deck 5.
+
+## Files: library (`src/NSL`)
+
+| file | status | change |
+|---|---|---|
+| `Action/Implementations/PPP_Interaction.tpp` | new | `NSL::PPP`: interaction matrix $V$ (Ohno, Mataga–Nishimoto, on-site, explicit) from the yml file |
+| `Action/Implementations/PPP_GaugeAction.tpp` | rewritten | $S=\frac12\sum_t\phi_t^T(\delta V)^{-1}\phi_t$, checks on $V$, `sample()` |
+| `Action/Implementations/hubbardFermiAction.tpp` | modified | basis chosen at compile time (concepts, `if constexpr`) |
+| `FermionMatrix/Impl/hubbardExp.hpp`, `hubbardExpSpinBasis.hpp` | modified | `populate(phi, reshape)` binds only a genuine `bool` |
+| `FermionMatrix/Impl/hubbardExp.tpp` | modified | `complex<float>` compile fix |
+| `Measurements/Hubbard/fermionPropagator.tpp` | modified | `measureK(startConfig)`; `wallSources` optional |
+| `Integrator/Impl/exactFourierAcceleration.tpp` | new | the EFA integrator |
+| `Integrator/integrator.tpp` | modified | `sampleMomentum` / `kineticEnergy` hooks |
+| `MarkovChain/HMC.tpp`, `MarkovChain/RadialHMC.tpp` | modified | use the hooks |
+
+## Files: executables, tests, tools
+
+| file | status | change |
+|---|---|---|
+| `Executables/PPP/autotune_RadialMCMC_PPP.cpp` | new | PPP driver: charge basis; autotune or plain mode; leapfrog or EFA |
+| `Executables/PPP/python/ppp_geometry.py` | new | benzenoid geometries → NSL yml with per-bond hopping |
+| `Executables/PPP/python/ppp_ed.py` | new | exact lattice propagators |
+| `Executables/PPP/python/ppp_compare.py` | new | NSL vs ED: deterministic and statistical checks |
+| `Executables/PPP/python/ppp_autocorr.py` | new | integrated autocorrelation times (Γ method and binning) |
+| `Executables/PPP/yml/*.yml` | new | benzene and naphthalene benchmarks, perylene template |
+| `Executables/Hubbard/propagator.cpp` | modified | uses the charge-basis matrix it needs |
+| `Tests/Action/test_PPPGaugeAction.cpp` | new | 9 test cases |
+| `Tests/Integrator/test_exactFourierAcceleration.cpp` | new | 8 test cases |
+| `Tests/Action/test_force.cpp` | modified | `HubbardDiag` case removed |
+
+Also: `Executables/CMakeLists.txt`, `Tests/CMakeLists.txt` (new targets); `Executables/PPP/README.md`,
+`spin_basis_note.md`, `figures/`.
+
+## Conventions used in all decks
+
+$$
+H = -\sum_{xy,\sigma}\kappa_{xy}\,c^\dagger_{x\sigma}c_{y\sigma}
+  + \frac12\sum_{xy}V_{xy}\,q_xq_y ,\qquad
+q_x = n_{x\uparrow}+n_{x\downarrow}-1 ,\quad
+s_x = n_{x\uparrow}-n_{x\downarrow} ,\quad V_{xx}=U
+$$
+
+- Energies in units of $t$, $\beta$ in $1/t$, $\delta=\beta/N_t$.
+- $\lambda_k$, $v_k$: eigenvalues and eigenvectors of $V$, $k=0$ the largest (perylene: $\lambda=0.87\ldots20.7\,t$).
+- Benchmark and production parameters: screened Ohno, $t=2.4$ eV, $U=8$ eV ($U/t=3.33$),
+  $\epsilon=2$, bond length 1.4 Å.
+- Field `phi` has shape $(N_t, N_x)$; matrices act from the right, $\phi_t^T A \to$ `phi.matmul(A)`.
+
+## Terms used in the notes (1): model and ED
+
+Several of these are my own labels, not established terminology.
+
+| term | meaning | deck |
+|----------------------|----------------------------------------------------------------|------|
+| charge basis / spin basis | auxiliary field coupled to $q_x$ (`HubbardExp`, $e^{i\phi}$) or to $s_x$ (`HubbardExpSpinBasis`, $e^{\phi}$) | 1, 2 |
+| screened Ohno, MN | $V_{xy}=U/\sqrt{1+(U\epsilon r/e^2)^2}$; Mataga–Nishimoto $U/(1+U\epsilon r/e^2)$ | 1 |
+| $S_g$, $S_f$ | gauge action $\frac12\sum_t\phi_t^T(\delta V)^{-1}\phi_t$; fermion action $S-S_g=-\log(\det M_p\det M_h)$ | 1, 4 |
+| plain mode | driver with `HMC: autotune: false`: fixed $N_\text{md}$, all trajectories in one process | 1 |
+| sector $(N_\uparrow,N_\downarrow)$ | block of the Fock space with fixed particle numbers; $H$ and $W$ are block diagonal | 3 |
+| dense / low-lying backend | ED by full diagonalization of every sector / by Lanczos for only the states that contribute above `tol` | 3 |
+| deterministic check | NSL's stored `invM` against a dense numpy inverse of the same configuration | 3 |
+| distance classes | site pairs $(x,y)$ at equal distance; $G$ is averaged over each class for the χ² | 3 |
+
+## Terms used in the notes (2): HMC and analysis
+
+| term | meaning | deck |
+|----------------------|----------------------------------------------------------------|------|
+| mode amplitude $a_k$ | time-summed field along $v_k$, $a_k=\sum_t\phi_t\cdot v_k/\sqrt{N_t\delta\lambda_k}$; $\langle a_k^2\rangle=1$ without fermions | 4 |
+| uniform charge mode $a_0$ | $v_0$ is 98.7 % $(1,\dots,1)/\sqrt{N_x}$ and couples to the total charge; slowest mode for the leapfrog | 4 |
+| staggered mode | $v_{N_x-1}$, mostly $\pm$ on the two sublattices; smallest $\lambda$, stiffest mode | 4 |
+| $\omega_k$ | molecular-dynamics frequency of mode $k$: $(\delta\lambda_k)^{-1/2}$ with unit mass, 1 with EFA | 4 |
+| stiff | mode frequencies spread over a wide range (perylene: factor 4.9) | 4 |
+| EFA; $R$, $K$ | exact Fourier acceleration; exact rotation of the Gaussian part, kick by the fermion force | 4 |
+| Γ method, binned $\tau$ | $\tau_\text{int}$ with Wolff's automatic window; $\tau$ from bin variances, which also sees slow tails | 4 |
+| excursion | a stretch of hundreds to ≈ 2000 trajectories at larger $S_f$, seen with every integrator | 4 |
+| $G(n)$ | site-averaged particle propagator at $n$ time slices | 4 |
+
+## Rendering
+
+```sh
+cd Executables/PPP/notes
+quarto render                      # all decks → _slides/*.html
+quarto preview index.qmd           # live preview
+python3 scripts/make_figures.py    # only to rebuild images/
+```
+
+`_slides/` is in `.gitignore`. The figures in `images/` are PNG copies of `../figures/*.pdf` plus two new
+plots (`gauge_modes_perylene.png`, `perylene_modes.png`) made by `scripts/make_figures.py`.

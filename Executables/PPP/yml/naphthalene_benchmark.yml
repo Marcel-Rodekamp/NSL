@@ -1,0 +1,76 @@
+# naphthalene: 10 sites, 11 bonds, 2 rings, bipartite=True
+# ideal honeycomb geometry, bond length = 1 length unit (1.4 Angstrom)
+# energies in units of t = 2.4 eV: U = 8.0 eV / t = 3.33333333333
+
+system:
+  name: naphthalene
+  nions: 10
+  Nt: 80
+  beta: 20
+  U: 3.3333333333333335
+  mu: 0
+  offset: 0
+  positions:
+  - [-1.0000000000, 0.0000000000, 0.0]
+  - [-0.5000000000, -0.8660254038, 0.0]
+  - [-0.5000000000, 0.8660254038, 0.0]
+  - [0.5000000000, -0.8660254038, 0.0]
+  - [0.5000000000, 0.8660254038, 0.0]
+  - [1.0000000000, 0.0000000000, 0.0]
+  - [1.0000000000, 1.7320508076, 0.0]
+  - [2.0000000000, -0.0000000000, 0.0]
+  - [2.0000000000, 1.7320508076, 0.0]
+  - [2.5000000000, 0.8660254038, 0.0]
+  adjacency:
+  - [0, 1]
+  - [0, 2]
+  - [1, 3]
+  - [2, 4]
+  - [3, 5]
+  - [4, 5]
+  - [4, 6]
+  - [5, 7]
+  - [6, 8]
+  - [7, 9]
+  - [8, 9]
+  hopping:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+
+PPP:
+  form: ohno            # ohno | mataga-nishimoto | onsite | explicit
+  hopping energy: 2.4   # eV
+  length unit: 1.4      # Angstrom
+  dielectric: 2.0
+
+HMC:
+  autotune: false   # true: run via autotuner8/autotuner.py
+  seed: 2026
+  Ntherm: 500
+  Nconf: 10000
+  save frequency: 1
+  Nradial: 1
+  radial scale: 0.1
+  Nhmc: 1
+
+Leapfrog:
+  trajectory length: 1.0
+  Fourier acceleration: false   # the validation runs used the unit-mass leapfrog
+  Nmd: 12
+
+stability: QR
+
+measurements:
+  Number Time Sources: 4
+
+fileIO:
+  h5file: naphthalene_b20.h5

@@ -180,10 +180,13 @@ int main(int argc, char* argv[]){
     );
     
     // initialize 2 point correlation function <p^+_x p_y>
+    // FermionPropagator measures particle/hole propagators, i.e. it requires a
+    // CHARGE basis fermion matrix. (For spin-basis ensembles use
+    // propagatorSpinBasis, which uses FermionPropagatorSpinBasis.)
     NSL::Measure::Hubbard::FermionPropagator<
         Type,
         decltype(lattice),
-        NSL::FermionMatrix::HubbardExpSpinBasis<
+        NSL::FermionMatrix::HubbardExp<
             Type,decltype(lattice)
         >
     > invM(lattice, params, h5);

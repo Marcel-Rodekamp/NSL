@@ -185,14 +185,8 @@ class HMC{
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
 
-        // sample momentum 
-        NSL::Configuration<Type> momentum;
-        for(auto & [key,field]: state.configuration){
-            NSL::Tensor<Type> p = NSL::zeros_like(field);
-            p.randn();
-	    p.imag()=0;
-            momentum[key] = p; 
-        }
+        // sample momentum (unit mass unless the integrator defines a mass matrix)
+        NSL::Configuration<Type> momentum = NSL::Integrator::sampleMomentum(integrator_, state.configuration);
 
         // use integrator to generate proposal 
 	try{
@@ -201,19 +195,15 @@ class HMC{
         // compute the Action
         Type proposal_S = this->action_(proposal_config);
 
-        // compute the Hamiltonian H = p^2/2 + S
+        // compute the Hamiltonian H = K(p) + S, K(p) = p^2/2 for unit mass
         // Starting point of the trajectory
         Type starting_H = state.actionValue;
-        for( const auto& [key,field]: momentum){
-            starting_H += 0.5*(field * field).sum();
-        }
+        starting_H += NSL::Integrator::kineticEnergy(integrator_, momentum);
 
         
         // End point of the trajectory i.e. proposal
         Type proposal_H = proposal_S;
-        for( const auto& [key,field]: proposal_momentum){
-            proposal_H += 0.5*(field * field).sum();
-        }
+        proposal_H += NSL::Integrator::kineticEnergy(integrator_, proposal_momentum);
 
         // We always assume real part of the action, i.e. automatic reweighting
         // for complex actions!

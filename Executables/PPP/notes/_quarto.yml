@@ -1,0 +1,26 @@
+project:
+  type: default
+  output-dir: _slides
+  render:
+    - index.qmd
+    - 01-ppp-action.qmd
+    - 02-spin-basis.qmd
+    - 03-exact-diagonalization.qmd
+    - 04-fourier-acceleration.qmd
+    - 05-bugs-and-fixes.qmd
+
+date: 2026-11-17
+
+format:
+  revealjs:
+    theme: [default, notes.scss]
+    width: 1280
+    height: 720
+    margin: 0.05
+    slide-number: c/t
+    scrollable: true
+    html-math-method: mathjax
+    highlight-style: github
+    code-line-numbers: false
+    code-copy: false
+    footer: "NSL · PPP on perylene · notes on branch newMeasurements"

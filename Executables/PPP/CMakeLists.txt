@@ -1,0 +1,2 @@
+add_executable(autotune_RadialMCMC_PPP autotune_RadialMCMC_PPP.cpp)
+target_link_libraries(autotune_RadialMCMC_PPP NSL)

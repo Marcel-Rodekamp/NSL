@@ -46,9 +46,11 @@ add_NSL_test(test_identity Matrix/test_identity.cpp)
 add_NSL_test(test_configuration Configuration/test_configuration.cpp)
 add_NSL_test(test_typePromotion Helpers/test_typePromotion.cpp)
 add_NSL_test(test_leapfrog Integrator/test_leapfrog.cpp)
+add_NSL_test(test_exactFourierAcceleration Integrator/test_exactFourierAcceleration.cpp)
 
 add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
 
 add_NSL_test(test_force Action/test_force.cpp)
+add_NSL_test(test_PPPGaugeAction Action/test_PPPGaugeAction.cpp)
 
 add_NSL_test(test_parameter Parameter/test_parameter.cpp)

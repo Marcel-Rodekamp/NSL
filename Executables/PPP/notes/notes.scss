@@ -1,0 +1,29 @@
+/*-- scss:defaults --*/
+$presentation-font-size-root: 26px;
+$presentation-h1-font-size: 2.0em;
+$presentation-h2-font-size: 1.45em;
+$presentation-heading-color: #1b3a5c;
+$presentation-heading-font-weight: 600;
+$code-block-font-size: 0.68em;
+$link-color: #2a78d6;
+
+/*-- scss:rules --*/
+.reveal table {
+  font-size: 0.78em;
+}
+.reveal table th,
+.reveal table td {
+  padding: 0.25em 0.6em;
+}
+.reveal .small {
+  font-size: 0.82em;
+}
+.reveal .muted {
+  color: #52514e;
+}
+.reveal .slides section .callout {
+  font-size: 0.85em;
+}
+.reveal .footer {
+  font-size: 0.5em !important;
+}

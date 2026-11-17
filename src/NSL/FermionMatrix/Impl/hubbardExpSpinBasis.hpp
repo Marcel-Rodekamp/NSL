@@ -220,8 +220,13 @@ class HubbardExpSpinBasis : public FermionMatrix<Type,LatticeType> {
      * expanding the internal tensors to be (tensorShape,1). 
      * If this is desired, set reshape = True. 
      * Otherwise you can use either this function with reshape = False (default)
+     *
+     * Only an actual `bool` selects this overload, so an enum such as
+     * NSL::Hubbard::Species can not silently convert into `reshape` (that used
+     * to make FermionPropagator compute the spin-up propagator twice).
      * */
-    void populate(const NSL::Tensor<Type> & phi, bool reshape){
+    template<std::same_as<bool> Bool>
+    void populate(const NSL::Tensor<Type> & phi, Bool reshape){
         if (reshape and phi_.dim() < phi.dim()) {
             this->expandInternal_();
         } 

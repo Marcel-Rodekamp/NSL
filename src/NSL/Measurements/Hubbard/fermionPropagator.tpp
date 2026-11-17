@@ -25,11 +25,13 @@ class FermionPropagator: public Measurement {
                 params["Nx"].template to<NSL::size_t>(),
                 params["Nx"].template to<NSL::size_t>()
             ),
+            // momentum projected correlators (measureK) need wall sources; position
+            // space measurements (measure) do not, then a 1-band placeholder is used
             corrK_(
                 params["device"].template to<NSL::Device>(),
                 params["Nt"].template to<NSL::size_t>(),
-                params["wallSources"].shape(1).template to<NSL::size_t>(), // bands
-                params["wallSources"].shape(1).template to<NSL::size_t>() // bands
+                params.contains("wallSources") ? params["wallSources"].shape(1).template to<NSL::size_t>() : NSL::size_t(1), // bands
+                params.contains("wallSources") ? params["wallSources"].shape(1).template to<NSL::size_t>() : NSL::size_t(1)  // bands
             ),
             phi_(
                 params["device"].template to<NSL::Device>(),
@@ -83,7 +85,8 @@ class FermionPropagator: public Measurement {
     //! Propagators with averaged second time coordinate
     void measure() override;
     void measure(NSL::size_t NumberTimeSources, NSL::size_t config);
-    void measureK();
+    //! Momentum-projected propagators for all configurations with ID >= startConfig
+    void measureK(NSL::size_t startConfig = 0);
     void measureK(NSL::size_t NumberTimeSources, NSL::size_t config);
     
     void measureDiagonal();
@@ -619,7 +622,7 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
-void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(){
+void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_t startConfig){
     NSL::Logger::info("Start Measuring Momentum Hubbard::FermionPropagator");
 
     // This is the default basenode we used so far
@@ -681,18 +684,23 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureK(){
         minCfg, maxCfg, saveFreq
     );
 
-    for (NSL::size_t cfgID = minCfg; cfgID<=maxCfg; ++cfgID){
+    const NSL::size_t firstCfg = std::max<NSL::size_t>(minCfg, startConfig);
+    if (firstCfg != NSL::size_t(minCfg)) {
+        NSL::Logger::info("Starting measurements at configuration {}", firstCfg);
+    }
+
+    for (NSL::size_t cfgID = firstCfg; cfgID<=maxCfg; ++cfgID){
 
         NSL::Logger::info("Calculating Correlator on {}/{}", cfgID, maxCfg);
 
-        // read configuration 
+        // read configuration
         this->h5_.read(phi_,fmt::format("{}/markovChain/{}/phi",std::string(basenode_),cfgID));
 
         // compute the correlator for the differen time sources
         measureK(this->params_["Number Time Sources"], cfgID);
     } // for cfgID
 
-} // measureK()
+} // measureK(startConfig)
 
 
 template<

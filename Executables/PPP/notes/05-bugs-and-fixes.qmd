@@ -1,0 +1,203 @@
+---
+title: "5 · Bugs and fixes"
+subtitle: "Found in NSL, made by me, caused by the environment, and still open"
+---
+
+## Overview
+
+| group | what | items |
+|---|---|---|
+| **A** | bugs in NSL that I found and fixed | 9 |
+| **B** | bugs in my own code or analysis, caught during the work | 10 |
+| **C** | build and operational problems | 4 |
+| **D** | known problems I did not fix | 5 |
+
+For each A item: **symptom**, **cause**, **fix**, **how it is verified**, and whether earlier results are affected.
+
+One item needs your attention: **A3**. My change to `propagator.cpp` may conflict with what you intended in
+your last commit.
+
+# A · Bugs in NSL
+
+## A1 · `PPPGaugeAction`: $U$ truncated to an integer
+
+- **Symptom.** Two sites, $U=3.5$, random $\phi$. `eval` returned the hand-computed value for $U=3$ in the
+  off-diagonal elements, to all 12 printed digits:
+
+  ```text
+  PPP eval                      = (-1.56394404098, 4.36709983843)
+  expected (U=3.5 in off-diag)  = (-1.60888495368, 4.14792626984)
+  expected (U truncated to 3)   = (-1.56394404098, 4.36709983843)
+  ```
+- **Cause.** `U_(params["U"].template to<NSL::size_t>())`. The diagonal used `Utilde_` = $\delta U$ correctly;
+  only the off-diagonal $V_{xy}=U/(1+U_\text{int}\ldots)$ saw the integer.
+- **Fix.** Action rewritten (deck 1); $V$ now comes from `NSL::PPP` with $U$ as a `double`.
+- **Verified by** the test "gauge action of two sites with non-integer U" (analytic result).
+- **Earlier results:** none affected; nothing instantiated the action.
+
+## A2 · `PPPGaugeAction::grad()` returned a shared buffer
+
+- **Symptom.** `grad(0,0)` changed after an *unrelated* `eval` on another field:
+  `(0.6206, 1.1958)` before, `(-0.8796, -1.1465)` after.
+- **Cause.** `grad` returned the member tensor `invVtildePhi_` inside the `Configuration`. Torch tensors are
+  shared handles, so the caller's result and the member were the same storage, overwritten by the next call.
+  (`force` returned `-invVtildePhi_`, a new tensor, so it was safe.)
+- **Fix.** `eval`, `force`, `grad` now compute fresh tensors with one `mat_mul`; there is no member buffer.
+- **Verified by** "gauge force agrees with finite differences and is not aliased".
+- **Earlier results:** none (the HMC only calls `force`).
+
+## A3 · `propagator.cpp`: the "hole" propagator was spin up again
+
+- **Cause.** Commit 3a9b31f switched `propagator.cpp` to `FermionPropagator<…, HubbardExpSpinBasis>`.
+  `FermionPropagator` is a charge-basis measurement and calls `hfm_.populate(phi_, species_)`.
+  `Species{Particle, Hole}` is a plain enum, the spin-basis matrix has no `populate(phi, Species)`, so the
+  call converted to `populate(phi, bool reshape)`. That overload never changes the spin (default `Up`).
+- **Symptom.** With that build, `/propagator/hole/...` holds a second copy of the spin-up propagator.
+  Nothing after `populate` depends on the species.
+- **Fix.** `populate(phi, Bool)` now binds only a real `bool`, so this pairing no longer compiles. And I set
+  `propagator.cpp` back to `HubbardExp`.
+- **Verified by** compiling: the old pairing is now rejected at compile time.
+
+## A3 · Please check: was the spin basis intended?
+
+::: {.callout-warning}
+## My revert may be wrong for your use
+The switch to the spin basis in 3a9b31f looks deliberate: momentum propagators of **spin-basis** ensembles,
+starting at `--config`. For that use, my revert is wrong: `propagator` now evaluates *charge-basis*
+propagators, which mean nothing on spin-basis fields.
+:::
+
+- Spin-basis ensembles need `propagatorSpinBasis` (`FermionPropagatorSpinBasis` + `HubbardExpSpinBasis`). It
+  has no `--config` start option yet; I can add it.
+- If `propagator` was run on spin-basis ensembles on Jureca since 2026-08-26, their `hole` group repeats the
+  spin-up data.
+  - By the $\phi\to-\phi$ (spin-flip) symmetry of the ensemble, $\langle G_\downarrow\rangle=\langle G_\uparrow\rangle$,
+    so the averages still estimate the right quantity.
+  - But that channel holds no independent information: averaging the two channels double-counts.
+- Charge-basis ensembles (all PPP runs) use `propagatorChargeBasis`, which was correct throughout.
+
+## A4 · `propagator.cpp --config` did not compile · A5 · crash without `wallSources`
+
+**A4.** 3a9b31f calls `invM.measureK(startConfig)`, but `FermionPropagator` only had `measureK()` and
+`measureK(NumberTimeSources, config)`.
+
+- *Fix:* `void measureK(NSL::size_t startConfig = 0)` starts at `max(minCfg, startConfig)` and logs it.
+- *Note:* your Jureca working copy probably has an uncommitted version of this. Expect a merge conflict in
+  `fermionPropagator.tpp`.
+
+**A5.** `propagatorChargeBasis` (position space, no wall sources) crashed in the `FermionPropagator`
+constructor with `Can not invoke .shape(dim) on held type (bool)`.
+
+- *Cause:* the constructor sized `corrK_` from `params["wallSources"].shape(1)` unconditionally; `corrK_` is
+  used only by `measureK`.
+- *Fix:* one-band placeholder when `wallSources` is absent:
+  `params.contains("wallSources") ? params["wallSources"].shape(1)… : NSL::size_t(1)`.
+- *Verified by* the β = 4–20 benchmark measurements, all made with `propagatorChargeBasis`.
+
+## A6 · Basis chosen by a runtime string · A7 · `complex<float>` did not compile
+
+**A6.** `HubbardFermionAction` used `if (!hfm_.basis.compare("CHARGE"))`.
+
+- Correct at run time, but both branches were compiled for every matrix. They only compiled because of the
+  enum → `bool` conversion that caused A3.
+- *Fix:* concepts `ChargeBasis`/`SpinBasis` with `if constexpr` and a `static_assert` (deck 1). A wrong
+  pairing is a compile error.
+
+**A7.** `HubbardExp::gradLogDetM` divided a double literal by a single-precision tensor: `1./Dnewt_`.
+All `complex<float>` instantiations failed to compile, so the float test targets did not build.
+
+- *Fix:* `NSL::RealTypeOf<Type>(1.)/Dnewt_` (two places in `hubbardExp.tpp`).
+
+## A8 · Real-typed HMC momenta had variance 2
+
+- **Symptom** (`randn_check`, 200 000 samples):
+
+  ```text
+  real    Tensor<double>.randn():  var = 1.995
+  complex Tensor<complex>.randn(): var(Re) = 0.997  var(Im) = 0.999
+  ```
+- **Cause.** `Tensor::randn()` is `normal_(0, √2)`. For complex tensors torch splits $\sigma^2$ between real
+  and imaginary parts (variance 1 each, as intended). For real tensors the variance is 2. The HMC did
+  `p.randn(); p.imag()=0;`. For a real type `imag()` returns a temporary, so the assignment did nothing.
+- **Consequence.** $p\sim\mathcal N(0,2)$ while $K=\frac12p^2$. The momentum refresh is not drawn from
+  $e^{-K}$, so the chain's stationary distribution is not $e^{-S}$.
+- **Fix.** In the unit-mass `sampleMomentum` hook (deck 4): real types use `randn(0, 1/√2)`; the complex path
+  is unchanged, so complex runs stay bit-identical.
+- **Verified by** "Unit-mass momenta have unit variance for real and complex fields".
+- **Earlier results:** only HMC runs with a real `Type`. Your drivers use complex types.
+
+## A9 · `test_force` did not compile
+
+- **Cause.** `test_force` also instantiated `HubbardFermionAction<…, HubbardDiag>`. `HubbardDiag` lacks what
+  the action uses (`basis`, `bipartite_`, a public `mu_`).
+- **First fix (withdrawn).** I added those members to `HubbardDiag`.
+- **Final fix,** after you said `HubbardDiag` is outdated: `hubbardDiag.hpp` reverted to its original state,
+  and the `HubbardDiag` case removed from `test_force`, which now tests `HubbardExp` only.
+
+# B · Bugs in my own work
+
+## B · Caught during development
+
+| # | what went wrong | how it showed | fix |
+|----|------------------------------|--------------|--------------------------|
+| B1 | a leftover line in `ExactFourierAcceleration::setMassMatrix_` (`Qt.transpose…*0.`) | my diff review, before any test | `A_ = 0.5*(A + A.transpose(0,1))` |
+| B2 | ambiguous `index_put_` overload with a `long` index (Jacobian test) | compile error | `J.select(1,k).copy_(…)` |
+| B3 | second-order test at $N_\text{md}=10,20,40$: ratios 31 and 5.9 instead of 4 | test failure | inspected $\Delta H(N_\text{md})$: ratios 3.91, 3.98 from $N_\text{md}\ge40$; the small values were pre-asymptotic, the integrator was fine. Test now uses 40/80/160 |
+| B4 | first PPP test file: wrong tensor types, shallow copies | 4 compile errors | correct types; deep copies |
+| B5 | `ppp_compare.py` could not import `ppp_ed` under `python -I` | `ModuleNotFoundError` | inserts its own directory into `sys.path` |
+
+## B · Caught during the analysis
+
+| # | what went wrong | how it showed | fix |
+|----|------------------------------|--------------|--------------------------|
+| B6 | entries fixed by symmetry (e.g. $G_{xx}(0)=\frac12$) have zero error | huge $z$-scores from round-off | excluded from $z$, checked separately |
+| B7 | correlated χ² with 50 bins for 49 observables: covariance estimate nearly singular | meaningless χ² | distance-class averages, subsampled $t$, ≥ 8 bins per observable, Hotelling correction |
+| B8 | `spin_vs_charge.py` (the ED behind deck 2) built a dense 63,504² matrix | killed, out of memory | sparse path for sectors > 4000 states |
+| B9 | `ppp_autocorr.py` resolved the yml's relative `h5file` against the working directory | file not found | falls back to the yml's directory |
+| B10 | after one chain I wrote that EFA with $T=\pi/2$ shows no slow excursions | a second chain with $T=\pi/2$ (different seed) showed one | README rewritten: excursions occur with all integrators (deck 4) |
+
+B10 is the one that would have misled you. The README and the slides now state only what the second chains
+support.
+
+# C · Build and operations
+
+## C1–C2 · Build
+
+**C1. Your `build/` is stale.** Homebrew upgraded protobuf, abseil and pytorch after it was configured, so
+`libNSL.dylib` points to libraries that no longer exist. It is also a Debug configuration.
+
+- I did not touch it. All my builds are a separate Release build in my scratch folder.
+- `build/` needs a fresh CMake configure, and Jureca needs a rebuild of these sources.
+
+**C2. CMake failed on Boost.** HighFive looked for `boost_system`. Configured with
+`-DHIGHFIVE_USE_BOOST=OFF`; no Boost features are needed.
+
+## C3 · I filled your disk
+
+- **What happened.** On 2026-11-16 the propagator measurements of the step-4 benchmark ensembles in my
+  scratch folder grew to ≈ 330 GB. Around 15:32 the disk reached 100 % (135 MB free), and one measurement
+  stopped with HDF5 errno 28 (no space) at configuration 4739 of 5000. Other programs writing to disk in
+  that window may have failed.
+- **Fix.** Deleted the step-3 benchmark ensembles (45 GB; the ED results were kept), extracted compact
+  per-configuration observables from the step-4 ensembles, then deleted those too. 328 GB free by ≈ 15:55.
+  Your files and my edits were checked and intact. The scratch folder is excluded from Time Machine, so
+  nothing reached your backups.
+- **Lesson for Jureca.** ≈ 8.6 MB per perylene configuration ($N_t=80$, 4 sources), i.e. 43 GB per 5000
+  configurations. Check the quota before launching measurement batches, or reduce `Number Time Sources`.
+
+## C4 · Shell
+
+zsh does not split unquoted variables into words, and it reads `$N:l…` as a lowercase modifier. Compile
+commands went through `bash -c`; plot commands use `${N}`. No effect on results.
+
+# D · Known, not fixed
+
+## D · Open problems
+
+| # | problem | notes |
+|----|------------------------------------------|------------------------------|
+| D1 | `test_force` is flaky for `complex<double>` (≈ 2 of 29, later 4 of 30 runs) and always fails for `complex<float>` | unseeded random $\phi$ and a forward difference with $\epsilon=10^{-4}$. A seed and a central difference would fix it |
+| D2 | `complex<float>` precision failures in `test_Tensor_mat_exp`, `test_FermionMatrix_hermitian`, `test_fermionMatrixHubbardExp` (logDet), `test_BiCGStab` | tolerances too tight for single precision; none of them run code I changed |
+| D3 | `autotuner.py`: `optimal_acceptance = 0.75` (you aim for ≈ 0.70); `last_guess = res.x` keeps the *last* fit, not `best_res.x`; one process launch per trajectory | the last item is the "batching" part of step 4, still open |
+| D4 | `batch-scripts/env.sh` points to another user's paths and to `autotuner_hasenbusch.py`, which no longer exists; `submit_chain_batch.sh` takes a whole node per chain | 20-site matrices run best one thread per chain, many chains per node |
+| D5 | autotune mode has no seed; your local libtorch seeds randomly | runs are not reproducible; check the libtorch version on Jureca. The PPP driver's plain mode takes `HMC: seed` |

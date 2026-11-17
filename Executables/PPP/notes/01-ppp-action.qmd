@@ -1,0 +1,179 @@
+---
+title: "1 · The PPP action and driver"
+subtitle: "`PPP_Interaction.tpp`, `PPP_GaugeAction.tpp`, `hubbardFermiAction.tpp`, `autotune_RadialMCMC_PPP`"
+---
+
+## Model and decoupling
+
+$$
+H = -\sum_{xy,\sigma}\kappa_{xy}\,c^\dagger_{x\sigma}c_{y\sigma}
+  + \frac12\sum_{xy}V_{xy}\,q_xq_y ,\qquad
+q_x = n_{x\uparrow}+n_{x\downarrow}-1,\quad V_{xx}=U
+$$
+
+On every time slice, for symmetric positive-definite $V$:
+
+$$
+e^{-\delta H_V}\;\propto\;\int d\phi_t\; e^{-\frac12\phi_t^T(\delta V)^{-1}\phi_t\;+\;i\,\phi_t\cdot q}
+$$
+
+- The $q_x$ commute with each other, so the Gaussian identity holds for the operators. The only approximation
+  is the Trotter split of $e^{-\delta H}$ into kinetic and interaction factors.
+- Gauge action $S_g[\phi]=\frac12\sum_t\phi_t^T(\delta V)^{-1}\phi_t$. The field couples as $e^{\pm i\phi}$,
+  i.e. through the **charge-basis** fermion matrix `HubbardExp`.
+- $V=U\,\mathbb 1$ gives `HubbardGaugeAction` exactly (unit test).
+- The integral exists only for $V>0$. The PPP matrices here are positive definite (perylene:
+  $\lambda(V)=0.87\ldots20.7\,t$); the action now refuses any other $V$.
+
+## The original `PPPGaugeAction` (last commit, abridged)
+
+```cpp
+PPPGaugeAction(double **positions, NSL::Parameter & params) :
+    ...
+    Utilde_(NSL::Hubbard::tilde<Type>(params,"U")),     // δU: correct
+    U_(params["U"].template to<NSL::size_t>())           // U read as an integer
+{
+    for (int i=0;i<Nx_;i++) for (int j=0;j<Nx_;j++) {
+        R = |r_i - r_j|;                                 // units of a
+        invVtilde_(i,j) = Utilde_/(1+U_*R*t1_*a_/e2_);   // Mataga–Nishimoto, ε = 1
+    }
+    invVtilde_ = NSL::LinAlg::mat_inv(invVtilde_);
+}
+// eval/force/grad: loop over t, invVtildePhi_(t,...) = mat_vec(invVtilde_, phi(t,...)); grad returns invVtildePhi_
+```
+
+- **Bug:** `U_` is a `size_t` conversion. $U=3.33$ entered the off-diagonal elements as 3 (deck 5, A1).
+- **Bug:** `grad()` returned the member buffer `invVtildePhi_`, which the next call overwrites (deck 5, A2).
+- Hard-coded Mataga–Nishimoto with $t=2.7$ eV, $a=1.4$ Å, no dielectric screening; positions as `double**`.
+- CPU only (fails with `--GPU`); $N_t$ matrix–vector products per call; no check that $V>0$.
+- Nothing instantiated it. The production driver used the spin basis, which cannot work (deck 2).
+
+## The new structure
+
+```text
+yml:  PPP: {form, hopping energy, length unit, dielectric}     system: {U, positions}
+        │
+        ▼  NSL::PPP::interactionMatrixFromYAML                     (PPP_Interaction.tpp)
+V  (Nx × Nx, units of t, V_xx = U)
+        │
+        ▼  PPPGaugeAction(V, params)                               (PPP_GaugeAction.tpp)
+checks: square, matches Nx, symmetric, positive definite   → std::invalid_argument otherwise
+eigh(V) once, in double precision on the CPU  →  δV, (δV)^-1, (δV)^1/2  moved to params["device"]
+        │
+        ├─ eval / force / grad : one matmul each, fresh tensors
+        ├─ sample(phi)         : phi_t ~ N(0, δV), the initial field of the driver
+        └─ Vtilde(), invVtilde(), lambdaMin(), lambdaMax()   (used by exact Fourier acceleration)
+```
+
+```cpp
+// S = ½ Σ_t φ_t (δV)^{-1} φ_t ,  phi has shape (Nt, Nx), V symmetric
+return (phi * NSL::LinAlg::mat_mul(phi, invVtilde_)).sum() / 2.;                          // eval
+return Configuration<TensorType>{{this->configKey_, -NSL::LinAlg::mat_mul(phi, invVtilde_)}}; // force
+```
+
+The second constructor `PPPGaugeAction(const YAML::Node &, params)` reads $V$ directly from the yml file.
+
+## Interaction forms
+
+:::: {.columns}
+::: {.column width="48%"}
+```yaml
+PPP:
+  form: ohno           # ohno | mataga-nishimoto
+                       # | onsite | explicit
+  hopping energy: 2.4  # t in eV    (default 2.7)
+  length unit: 1.4     # Å per position unit
+  dielectric: 2.0      # ε for x ≠ y (default 1)
+  # e2: 14.399645      # e²/4πε₀ in eV Å
+  # V: [[...], ...]    # explicit form only
+```
+:::
+::: {.column width="52%"}
+| form | $V_{xy}$, $x\ne y$ |
+|---|---|
+| `ohno` | $U\big/\sqrt{1+(U\epsilon r/e^2)^2}$ |
+| `mataga-nishimoto` | $U\big/(1+U\epsilon r/e^2)$ |
+| `onsite` | $0$ (Hubbard) |
+| `explicit` | given matrix |
+
+$r$ in Å and $U$ in eV inside the formulas; the result is converted back to units of $t$.
+Both forms approach $e^2/(\epsilon r)$ at large $r$.
+:::
+::::
+
+- `U` stays in `system: U` (units of $t$), as for the Hubbard runs.
+- `ppp_ed.py` and the other Python tools read the same block, so NSL and ED always use the same $V$
+  (checked: $|V_\text{NSL}-V_\text{python}|\le 2\cdot10^{-16}$).
+
+## Why screened Ohno for the benchmarks
+
+You asked for the parameter set best suited to the benchmarks, with the forms kept switchable.
+Screened Ohno, $t=2.4$ eV, $U=8$ eV, $\epsilon=2$, bond 1.4 Å:
+
+- A standard set for π-conjugated hydrocarbons.
+- The long-range part is strong: nearest-neighbour $V\approx0.54\,U$. A benchmark only tests the PPP
+  implementation if the off-diagonal $V_{xy}$ matter, and here they do: the same NSL data compared with
+  on-site-only ED give $\langle z^2\rangle\approx400$–$650$ (deck 3).
+- $V$ is well conditioned (condition number ≈ 10–24 from benzene to perylene), so the HMC stays efficient.
+  The remaining stiffness is removed by exact Fourier acceleration (deck 4).
+
+Any other form or parameter set is one change in the yml file.
+
+## Choosing the basis at compile time
+
+**Before** (`hubbardFermiAction.tpp`), a runtime string comparison:
+
+```cpp
+if (!hfm_.basis.compare("CHARGE")) { hfm_.populate(phi, NSL::Hubbard::Species::Particle); ... }
+else                               { hfm_.populate(phi, NSL::Hubbard::Spin::Up);          ... }
+```
+
+Both branches are compiled for every fermion matrix. `Species` and `Spin` are plain enums, so the branch
+that does not fit the matrix still compiled: the enum converted to the `bool reshape` argument of
+`populate(phi, bool)`. The same silent conversion produced a wrong measurement in `propagator.cpp`
+(deck 5, A3).
+
+**After:**
+
+```cpp
+template<typename M, typename T>
+concept ChargeBasis = requires(M m, const NSL::Tensor<T> & phi) { m.populate(phi, NSL::Hubbard::Species::Particle); };
+
+if constexpr (NSL::FermionMatrix::ChargeBasis<FermionMatrixType,Type>) { /* particles, holes */ }
+else { static_assert(NSL::FermionMatrix::SpinBasis<FermionMatrixType,Type>, "..."); /* spin up, spin down */ }
+
+template<std::same_as<bool> Bool> void populate(const NSL::Tensor<Type> & phi, Bool reshape);  // HubbardExp(SpinBasis)
+```
+
+The two changes need each other: with the old `populate(phi, bool)`, *every* matrix would satisfy both
+concepts through the enum → `bool` conversion. Now a mismatched pairing is a compile error.
+
+## The driver `autotune_RadialMCMC_PPP`
+
+- `RadialHMC` with `PPPGaugeAction(V)` + `HubbardFermionAction<…, HubbardExp>`: charge basis only.
+- `HMC: autotune: true` (default): the protocol of `autotune_RadialMCMC`, one trajectory per call into
+  `/thermal`, `Nmd` read from the h5 file. `autotuner.py` works unchanged.
+- `HMC: autotune: false`: a plain run with `Leapfrog: Nmd`, `HMC: Ntherm`, `HMC: Nconf` and an optional
+  `HMC: seed`; rerunning on an existing file extends the chain.
+- `Leapfrog: Fourier acceleration: true|false` selects the integrator (deck 4).
+- Initial field from `S_gauge.sample()`; a warning for non-bipartite lattices (sign problem).
+- Meta data: `/Meta/action = "PPP/hubbardExp"` and `/Meta/PPP/{form, V, …}`, so every ensemble records its
+  interaction.
+- Measurements use the existing `propagatorChargeBasis`.
+
+`python/ppp_geometry.py` writes inputs for ideal benzenoids (benzene … perylene, coronene) with per-bond
+hopping lists; `--bridge-hopping` rescales the two perylene bonds that join the naphthalene units.
+
+## Tests: `Tests/Action/test_PPPGaugeAction.cpp`
+
+9 test cases, 153 assertions, all pass.
+
+| test case | catches |
+|---|---|
+| form names; matrix elements; interaction matrix from yml | wrong formula or units, parsing errors |
+| on-site interaction reproduces `HubbardGaugeAction` ($U=3.7$) | normalization: $\delta$, factor $\frac12$ |
+| two sites with non-integer $U=3.5$ against the analytic result | the integer truncation of $U$ |
+| gauge force vs finite differences, and not aliased | sign or factor errors; shared buffers |
+| invalid interaction matrices are rejected | non-symmetric or non-positive $V$ accepted silently |
+| `sample()` draws $\phi_t\sim\mathcal N(0,\delta V)$ | wrong initial distribution |
+| full action force (PPP gauge + charge-basis fermions) vs central finite differences, 4-site ring | the complete MD force |

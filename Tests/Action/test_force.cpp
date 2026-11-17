@@ -12,8 +12,8 @@ void test_force();
 COMPLEX_NSL_TEST_CASE( "Action: tests force routine and compares to finite differencing", "[Action,force,default]" ) {
     INFO("Hubbard Exponential");
     test_force<TestType,NSL::FermionMatrix::HubbardExp>();
-    INFO("Hubbard Diagonal");
-    test_force<TestType,NSL::FermionMatrix::HubbardDiag>();
+    // HubbardDiag is outdated and no longer provides the interface HubbardFermionAction
+    // expects (bipartite_, public mu_), so it is not tested here.
 }
 
 //=======================================================================

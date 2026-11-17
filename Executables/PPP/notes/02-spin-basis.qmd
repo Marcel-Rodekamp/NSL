@@ -1,0 +1,131 @@
+---
+title: "2 · Why the spin basis cannot simulate PPP"
+subtitle: "`HubbardExp` (charge, $e^{\\pm i\\phi}$) vs `HubbardExpSpinBasis` (spin, $e^{\\pm\\phi}$)"
+---
+
+## Short answer
+
+- The spin basis rewrites the Hubbard interaction as a spin–spin interaction, using an identity that holds
+  only **on a single site**.
+- The off-diagonal ($x\ne y$) PPP terms have no such identity.
+- A spin-channel field with the PPP gauge action therefore simulates a **long-range ferromagnetic Ising
+  coupling** $-\frac12\sum V_{xy}s_xs_y$ instead of the long-range **charge** repulsion
+  $+\frac12\sum V_{xy}q_xq_y$.
+- Only the charge basis (`HubbardExp`) reproduces PPP, and for perylene it has no sign problem.
+
+## The Gaussian identity
+
+For a symmetric positive-definite $A$ and commuting operators $J_x$:
+
+$$
+\int d\phi\; e^{-\frac12\phi^TA^{-1}\phi\;+\;\phi\cdot J}\;\propto\; e^{+\frac12 J^TAJ}
+$$
+
+With $A=\delta V$ (the PPP gauge action) on one time slice:
+
+| basis | NSL matrix | $J$ | result | Hamiltonian simulated |
+|---|---|---|---|---|
+| charge | `HubbardExp` | $i\,q$ | $e^{-\frac{\delta}{2}q^TVq}$ | $H_V=+\frac12\sum_{xy}V_{xy}q_xq_y$ ✓ |
+| spin | `HubbardExpSpinBasis` | $s$ | $e^{+\frac{\delta}{2}s^TVs}$ | $H_\text{spin}=-\frac12\sum_{xy}V_{xy}s_xs_y$ |
+
+The question is whether $H_\text{spin}$ and $H_V$ differ only by a constant.
+
+## On-site: both channels work
+
+On one site $n_\uparrow,n_\downarrow\in\{0,1\}$:
+
+| $n_\uparrow, n_\downarrow$ | $q$ | $s$ | $q^2+s^2$ |
+|---|---|---|---|
+| 0, 0 | −1 | 0 | 1 |
+| 1, 0 | 0 | 1 | 1 |
+| 0, 1 | 0 | −1 | 1 |
+| 1, 1 | 1 | 0 | 1 |
+
+$$
+\tfrac12Uq_x^2=\tfrac12U-\tfrac12Us_x^2
+$$
+
+The Hubbard interaction can be decoupled in either channel; the two differ by a constant. This is why NSL has
+both bases for the Hubbard model.
+
+## Off-site: only the charge channel works
+
+$$
+H_\text{spin}-H_V=-\frac12\sum_{xy}V_{xy}\,\big(s_xs_y+q_xq_y\big)
+$$
+
+- $x=y$: $s_x^2+q_x^2=1$, a constant ($-U/2$ per site).
+- $x\ne y$:
+$$
+s_xs_y+q_xq_y=2\big(n_{x\uparrow}n_{y\uparrow}+n_{x\downarrow}n_{y\downarrow}\big)-n_x-n_y+1
+$$
+  an operator. No constant shift or sign change removes it.
+
+Physically: PPP has charges on different sites interacting through $V_{xy}$, independent of spin. The
+spin-channel model has *no* interaction between charges on different sites, and instead a ferromagnetic
+coupling $-V_{xy}s_xs_y$.
+
+## Two sites, two electrons
+
+$V_{12}=V$; interaction energies with the common constant removed:
+
+| state | $q$ | $s$ | PPP | spin channel |
+|---|---|---|---|---|
+| ↑ , ↑ | (0, 0) | (1, 1) | $0$ | $-V$ |
+| ↑ , ↓ | (0, 0) | (1, −1) | $0$ | $+V$ |
+| ↑↓ , 0 | (1, −1) | (0, 0) | $U-V$ | $U$ |
+
+- PPP lowers the ionic state by $V$ (electron–hole attraction, i.e. exciton binding); the spin orientation does
+  not matter.
+- The spin-channel model loses the exciton binding and favours parallel spins by $2V$.
+
+## What it does to real molecules
+
+ED at half filling, benchmark parameters. Lowest energy in each $S_z$ sector relative to each model's ground
+state, in units of $t$:
+
+| $S_z$ | benzene PPP | benzene spin channel | naphthalene PPP | naphthalene spin channel |
+|---|---|---|---|---|
+| 0 | 0.000 | 19.98 | 0.000 | 46.14 |
+| 1 | 1.458 | 18.30 | 1.030 | 44.01 |
+| 2 | 3.171 | 11.21 | 2.695 | 39.09 |
+| 3 | 5.853 | **0.000** | 4.657 | 30.00 |
+| 4 | | | 6.886 | 17.16 |
+| 5 | | | 10.048 | **0.000** |
+
+- PPP: singlet ground state, triplet gap ≈ 1 $t$.
+- Spin channel: **fully polarized** ground state, the singlet tens of $t$ higher.
+- $V$ decays only like $1/r$, so $\frac12\sum_{x\ne y}V_{xy}$ grows with the molecule: the error gets worse,
+  not smaller, for perylene.
+
+## Could the spin basis be repaired?
+
+- **Imaginary coupling in the spin channel**, $e^{i\phi\cdot s}$: gives $e^{-\frac{\delta}{2}s^TVs}$, a
+  long-range *antiferromagnetic* Ising model. Still not PPP.
+- **Mixed basis (would work, not implemented).** Split $V=(V-\alpha\mathbb 1)+\alpha\mathbb 1$ with
+  $0\le\alpha<\lambda_\text{min}(V)$:
+  - $V-\alpha\mathbb 1>0$ goes into the charge channel;
+  - $\alpha\mathbb 1$ is on-site and can use the spin channel through $q^2=1-s^2$;
+  - needs two auxiliary fields (cf. Buividovich et al., PRB 98, 235129 (2018) for the extended Hubbard model).
+  - For perylene $\lambda_\text{min}(V)=0.87\,t$ against $U=3.33\,t$: at most ≈ 26 % of $U$ could move to the
+    spin channel. Not worth it now.
+
+## The charge basis costs nothing here
+
+- Perylene is bipartite. At $\mu=0$ with real $\phi$: $\det M_h=(\det M_p)^*$, so the weight
+  $\lvert\det M_p\rvert^2\ge0$. **No sign problem.**
+- The known difficulty of the charge basis is ergodicity: zeros of $\det M$ separate regions of field space
+  (Wynen et al., PRB 100, 075141 (2019)). NSL's radial updates address this (Temmen et al., PRB 112, 045134
+  (2025)); the PPP driver uses `RadialHMC`.
+
+## What this means in the code
+
+- `PPPGaugeAction` documents the restriction; the PPP driver is hard-wired to `HubbardExp`.
+- `HubbardFermionAction` chooses the basis at compile time from the matrix type (deck 1). Passing a `Species`
+  to a spin-basis matrix, or a `Spin` to a charge-basis matrix, is a compile error instead of a silent
+  `bool` conversion.
+- `Executables/Hubbard/propagator.cpp` paired the charge-basis measurement `FermionPropagator` with the
+  spin-basis matrix; its "hole" propagator was spin up again. It now uses `HubbardExp`. If you meant it for
+  spin-basis ensembles, see deck 5, A3.
+
+The longer written version is `Executables/PPP/spin_basis_note.md`.
