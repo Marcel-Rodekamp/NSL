@@ -64,9 +64,12 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
   `<build>/Executables/PPP/autotune_RadialMCMC_PPP --file yml/naphthalene_benchmark.yml`
 * **Measurements**: `<build>/Executables/Hubbard/propagator --file <yml> [--config N]`, with
   `measurements: basis: charge` (required; PPP ensembles exist only in the charge basis) and
-  `type: spatial | momentum | both` (default: momentum if `wallSources` are given, otherwise
-  spatial). `--config N` starts at configuration N; `--overwrite` recomputes existing results
-  (the ensemble itself is never modified). Position-space propagators are stored as
+  `type:` one of `spatial`, `momentum`, `eigenbasis` or a list of them (`both` = spatial and
+  momentum; default: momentum if `wallSources` are given, eigenbasis if `fermiWindow` or
+  `eigenvalueIndices` are given, otherwise spatial). `--config N` starts at configuration N;
+  `--overwrite` recomputes existing results (the ensemble itself is never modified). Propagators
+  are always measured with QR stabilization: the SVD path loses accuracy at low temperature
+  (6e-4 relative error for benzene at β = 20). Position-space propagators are stored as
 
   ```text
   <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,<s>]   (Nt, Nx, Nx)
@@ -79,7 +82,16 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
   `.../propagator/momentum/<species>/invM[...]/<kSink>-<kSrc>` (all pairs of the wall sources,
   each followed by its complex conjugate) and `.../propagator/momentum/<species>/Q`
   (1/Nt sum_t Tr invM[t,t]), with the sources used in `<name>/Meta/propagator/momentum/wallSources`.
-  Charge and spin basis measure the same quantities; see `Executables/Hubbard/propagator.cpp`.
+  The `eigenbasis` block holds the propagators projected on eigenvectors of the hopping matrix,
+  `.../propagator/eigenbasis/<species>/invM[...]` of shape (Nt, m, m) and `.../Q`. The m vectors
+  are selected around the Fermi level of the non-interacting filling, `fermiWindow: {below: 1,
+  above: 0}` (default: HOMO-1, HOMO and LUMO with their degenerate partners), or by
+  `eigenvalueIndices: [...]` (positions in ascending single-particle energy
+  eps = -(lambda + mu)); the selection and the vectors are recorded in
+  `<name>/Meta/propagator/eigenbasis` and reused on later runs. Charge and spin basis measure the
+  same quantities; see `Executables/Hubbard/propagator.cpp`. (Eigenbasis projection, GPU-safe
+  stabilization and the memory setting for long runs come from Petar Sinilkov's
+  `fix/spin-projection`.)
   `python/ppp_compare.py` and `python/ppp_autocorr.py` read this layout and the older one
   (`propagator/{particle,hole}/...`, from the former `propagatorChargeBasis`).
 

@@ -166,29 +166,40 @@ hopping lists; `--bridge-hopping` rescales the two perylene bonds that join the 
 
 ## Measuring propagators: `Executables/Hubbard/propagator`
 
-One program for both bases and both kinds of measurement (it replaces `propagatorChargeBasis` and
+One program for both bases and three kinds of measurement (it replaces `propagatorChargeBasis` and
 `propagatorSpinBasis`):
 
 ```yaml
 measurements:
-  basis: charge          # required: charge (HubbardExp, also PPP) or spin (HubbardExpSpinBasis)
-  type: spatial          # spatial | momentum | both; default: momentum if wallSources are given
+  basis: charge                       # required: charge (HubbardExp, also PPP) or spin (HubbardExpSpinBasis)
+  type: [spatial, eigenbasis]          # spatial | momentum | eigenbasis, or a list
   Number Time Sources: 4
-  wallSources: [...]     # momentum: blocks x bands x Nx entries [re, im]
-stability: QR            # QR or SVD
+  wallSources: [...]                   # momentum: blocks x bands x Nx entries [re, im]
+  fermiWindow: {below: 1, above: 0}    # eigenbasis: HOMO-1 .. LUMO (default)
+  eigenvalueIndices: [...]             # eigenbasis: explicit energy indices instead
 ```
 
-`propagator -f run.yml [--config N] [--overwrite]`; results go into the ensemble file:
+- `propagator -f run.yml [--config N] [--overwrite]`; results go into the ensemble file (next slide).
+- Default type: momentum with `wallSources`, eigenbasis with `fermiWindow`/`eigenvalueIndices`, else spatial.
+- Always QR stabilization: the SVD path loses accuracy at low temperature (deck 5, A10).
+- Errors (input, a basis or sources that contradict the file, non-finite results) end the run with a message.
+
+## Where the propagators go
 
 | path (under `<name>/`) | content |
 |---|---|
 | `markovChain/<n>/propagator/spatial/<species>/invM[t,s]`, `invM[s,t]`, `invM[t,t]` | position space, $(N_t,N_x,N_x)$ |
-| `markovChain/<n>/propagator/momentum/<species>/invM[t,s]/<kSink>-<kSrc>` …, `Q` | all pairs of wall sources (each followed by its conjugate); $\frac1{N_t}\sum_t\operatorname{Tr}\,\mathrm{invM}[t,t]$ |
-| `NonInteracting/propagator/{spatial,momentum}/…` | the same for $\phi=0$, $s=0$ |
-| `Meta/propagator/basis`, `Meta/propagator/momentum/wallSources` | basis; the sources `kSink`, `kSrc` refer to |
+| `markovChain/<n>/propagator/momentum/<species>/invM[t,s]/<kSink>-<kSrc>` …, `Q` | all pairs of wall sources, each followed by its conjugate |
+| `markovChain/<n>/propagator/eigenbasis/<species>/invM[t,s]` …, `Q` | projected on $m$ hopping eigenvectors, $(N_t,m,m)$ |
+| `NonInteracting/propagator/…` | the same for $\phi=0$, $s=0$ |
+| `Meta/propagator/basis`, `…/momentum/wallSources`, `…/eigenbasis/…` | basis; the sources; the selected eigenvectors |
 
-[`<species>`: `particle`/`hole` or `spinUp`/`spinDown`; both bases measure the same quantities. The program refuses a basis that contradicts the
-file, and wall sources that differ from those already used. Checked against exact inverses in both bases (deck 5, A10–A12).]{.small .muted}
+- `<species>`: `particle`/`hole` or `spinUp`/`spinDown`; both bases measure the same quantities.
+- $Q=\frac1{N_t}\sum_t\operatorname{Tr}\,\mathrm{invM}[t,t]$.
+- Eigenbasis: $K v_n=\lambda_n v_n$, single-particle energies $\varepsilon_n=-(\lambda_n+\mu)$; the vectors are
+  chosen around the Fermi level of the non-interacting filling and reused from the record on later runs.
+- The program refuses a basis that contradicts the file, and sources or eigenvectors that differ from
+  those already used. Checked against exact inverses in both bases (deck 5).
 
 ## Tests: `Tests/Action/test_PPPGaugeAction.cpp`
 

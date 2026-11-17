@@ -7,7 +7,7 @@ subtitle: "Found in NSL, made by me, caused by the environment, and still open"
 
 | group | what | items |
 |---|---|---|
-| **A** | bugs in NSL that I found and fixed | 12 |
+| **A** | bugs in NSL that I found and fixed (A10 corrected after Petar's tests) | 12 |
 | **B** | bugs in my own code or analysis, caught during the work | 10 |
 | **C** | build and operational problems | 4 |
 | **D** | known problems I did not fix | 5 |
@@ -134,9 +134,10 @@ All `complex<float>` instantiations failed to compile, so the float test targets
 
 **A10.** `stability:` had no effect in `propagatorChargeBasis` and `propagatorSpinBasis`: it was set on an
 action that was never used, so the measurement always used QR.
-*Fix:* `propagator` sets it on the measurement's fermion matrix (QR or SVD). *Verified:* with SVD all 108
-datasets of a test ensemble differ bitwise from QR, and both agree with exact inverses to $2\cdot10^{-14}$.
-*Earlier results:* only runs that asked for SVD (they got QR); all PPP inputs use QR.
+*Correction:* I first made `propagator` apply SVD when asked. But the SVD path of the propagator
+measurement loses accuracy at low temperature: relative error $6\cdot10^{-4}$ for benzene at $\beta=20$
+(QR: $9\cdot10^{-15}$), non-finite values at $\beta=90$ (found by P. Sinilkov). So `propagator` now always
+uses QR and warns if `stability:` asks for something else. *Earlier results:* none; QR was used throughout.
 
 **A11.** The free-theory propagators stored as `NonInteracting/.../invM[t,0]` and `invM[0,t]` were
 `invM[t,1]` and `invM[1,t]` (checked against a dense inverse, $8\cdot10^{-16}$); they were computed with
@@ -149,6 +150,21 @@ source time 1. The diagonal and all interacting data were right.
 
 Also: spatial and momentum results used the same HDF5 paths, so whichever ran second skipped every
 configuration. They now have separate `spatial` and `momentum` blocks (deck 1).
+
+## Merged from `fix/spin-projection` (P. Sinilkov)
+
+| his component | in the unified `propagator` |
+|---|---|
+| projection on hopping eigenvectors, selected by a Fermi window or energy indices (rule 4), recorded and reused | own `eigenbasis` block, both bases, one dataset per component; record in `Meta/propagator/eigenbasis` |
+| QR on the CPU for GPU tensors (the batched CUDA QR overflows) | shared helper, now also in the charge basis |
+| finiteness guard before writing | all blocks, both bases |
+| fixed glibc mmap threshold (memory grew per configuration on Jureca) | both bases |
+| skip missing configurations | kept; also fixed `getMinMaxConfigs`, whose minimum was always 0 |
+| strict checks of `fermiWindow`, `eigenvalueIndices`, `wallSources`; clean error exit | kept, one integer parser for both keys |
+| QR only | kept (A10) |
+
+Not taken: `Q` from the $t=0$ slice only ($\frac1{N_t}\sum_t$ is kept), and a file-wide projection mode: with
+separate `momentum` and `eigenbasis` blocks the two projections can no longer be mixed up.
 
 # B · Bugs in my own work
 
