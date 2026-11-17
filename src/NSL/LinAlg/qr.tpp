@@ -17,7 +17,7 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udt(const NSL:
     // Avoid pre-allocating zeros_like(t) — qr() already allocates its own output tensors.
     auto [Q, R] = NSL::LinAlg::qr( t );
     NSL::Tensor<Type> D = NSL::LinAlg::diagonal(R);
-    // NSL::Tensor<Type> V = NSL::LinAlg::mat_mul(NSL::LinAlg::diag_embed(1./D), R);
+    // R <- diag(1/D) R, the V of the QDV decomposition, without forming diag(1/D)
     R *= (1./D).expand_view(D.shape(D.dim()-1), R.dim()-1);
     return std::make_tuple( std::move(Q), std::move(D), std::move(R) );
 }

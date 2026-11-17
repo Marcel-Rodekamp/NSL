@@ -85,7 +85,6 @@ void test_honeycomb_dirac_points(const size_type & L1, const size_type & L2, con
 REAL_NSL_TEST_CASE( "Lattice: Honeycomb", "[Lattice, Honeycomb]" ) {
     const size_type L1 = GENERATE(2, 3, 4, 5, 6, 9, 12);
     const size_type L2 = GENERATE(2, 3, 4, 5, 6, 9, 12);
-    //const size_type L2 = L1;
 
     std::vector<size_type> L(2);
     L[0] = L1;
@@ -104,8 +103,6 @@ REAL_NSL_TEST_CASE( "Lattice: Honeycomb", "[Lattice, Honeycomb]" ) {
     INFO("-----------");
     INFO(lattice.coordinates());
     INFO("-----------");
-
-    // INFO("Adjacency matrix:\n" << lattice.adjacency_matrix());
 
     INFO("Energy eigenvalues");
     INFO("------------------");

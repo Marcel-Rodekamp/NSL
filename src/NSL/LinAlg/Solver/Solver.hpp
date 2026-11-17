@@ -95,10 +95,6 @@ class Solver{
             }
         }
 
-        //       NSL::Tensor<Type> (FermionMatrix<Type,LatticeType>::* function_ptr)(const NSL::Tensor<Type> &)) : 
-        //    M_(std::bind_front( function_ptr,&M ))
-        //{}
-
         //! Apply Solver
         /*!
          *  \param b, NSL::Tensor, RHS of the equation to be solved

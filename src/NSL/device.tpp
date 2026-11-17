@@ -117,7 +117,6 @@ class Device {
      *  - https://pytorch.org/cppdocs/notes/tensor_creation.html
      * */
     // we store this information immutable. A new Device object is needed to be created
-    //const c10::Device device;
     torch::TensorOptions dev_;
 
     std::string repr_;

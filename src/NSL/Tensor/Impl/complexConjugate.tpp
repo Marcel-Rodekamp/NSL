@@ -35,9 +35,7 @@ class TensorComplexConj:
             this->data_ = torch::resolve_conj(
                 torch::conj(this->data_)
             );
-        }// else{
-         // do nothing
-         // }
+        }
         
         return NSL::Tensor<Type>(this);
     }

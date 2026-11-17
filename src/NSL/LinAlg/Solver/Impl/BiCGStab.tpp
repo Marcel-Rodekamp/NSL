@@ -72,28 +72,6 @@ NSL::Tensor<Type> BiCGStab<Type>::solve_(const NSL::Tensor<Type> & b){
         phi = NSL::LinAlg::inner_product(y_, As_) / delta_p1;
 	delta = delta_p1;
 
-	/*
-
-
-
-        // compute the matrix vector product to determine the direction
-        // t = M @ p
-        t_ = this->M_(p_);
-
-        // determine the scale of the orthogonalization
-        //alpha{i} = (r{i},r{i})/(p{i},t{i}) (remember we stored (r{i},r{i}) in rsqr_prev)
-        Type alpha = rsqr_prev / NSL::LinAlg::inner_product(p_, t_);
-
-        // update the solution x according to the step
-        // x{i+1} = x{i} + alpha{i} * p{i}
-        x_ += alpha * p_;
-
-        // compute the residual 
-        // r{i+1} = r{i} - alpha{i} * t{i}
-        r_ -= alpha * t_;
-
-	*/
-
         // and the resulting error square
         // err = (r{i+1},r{i+1})
         NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
@@ -106,15 +84,8 @@ NSL::Tensor<Type> BiCGStab<Type>::solve_(const NSL::Tensor<Type> & b){
             return x_;
         }
 
-        // compute the momentum update scale
-        // beta{i} = (r{i+1},r{i+1})/(r{i},r{i}
-        typename NSL::RT_extractor<Type>::type beta = rsqr_curr / rsqr_prev;
-
         // now prepare the previous residual square for the next iteration
         rsqr_prev = rsqr_curr;
-
-        // On debug level we print the solver status every step
-        //NSL::Logger::debug("BiCGStab Iteration: {}/{} | α = {} | ε² = {} |  β = {}", count, maxIter_, NSL::to_string(alpha), rsqr_curr, beta);
     } // for(counter)
 
     NSL::Logger::error("Error BiCGStab did not converge within {} iterations! |r|^2 = {}", maxIter_, rsqr_prev);

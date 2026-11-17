@@ -42,7 +42,6 @@ int main(int argc, char* argv[]){
     // The trajectory length
     params["trajectory length"] = yml["Leapfrog"]["trajectory length"].as<double>();
     // The number of molecular dynamic steps
-    // params["Nmd"]               = yml["Leapfrog"]["Nmd"].as<NSL::size_t>();
     params["Nmd"]               = (NSL::size_t) 200;
     // The h5 file name to store the simulation results
     params["h5file"]            = yml["fileIO"]["h5file"].as<std::string>();
@@ -189,7 +188,6 @@ int main(int argc, char* argv[]){
         if (h5.exist(fmt::format("{}/thermal",BASENODE))) {
             auto [minConfigID, maxConfigID] = h5.getMinMaxConfigs(fmt::format("{}/thermal",BASENODE));
             n = maxConfigID + 2;
-            // h5.read(start_state, BASENODE+"/thermal"); // We might not need this line because it is read again in generate()
         }
 
         // We are thermalizing inbetween two stages of autotuning

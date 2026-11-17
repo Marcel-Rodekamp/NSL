@@ -70,7 +70,6 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void test_adjoint(SizeTypes ... Ns){
 
     NSL::Tensor<Type> A(Ns...);A.rand();
-    Type * addr_bak = A.data();
     NSL::Tensor<Type> B(A,true);
 
     for(NSL::size_t d1 = 0; d1 < sizeof...(Ns); ++d1){

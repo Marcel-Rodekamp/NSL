@@ -34,8 +34,6 @@ void test_Tensor_mat_exp(NSL::size_t Nx){
 
     NSL::Tensor<Type> C = NSL::LinAlg::mat_mul(A,B);  // exp(A)*exp(-A) = I
 
-    //INFO(C);
-
     REQUIRE( 
         almost_equal(
             C-NSL::Matrix::Identity<Type>(Nx),
@@ -51,7 +49,6 @@ void test_Tensor_mat_exp(NSL::size_t Nx){
 template<NSL::Concept::isComplex Type>
 void test_Tensor_mat_exp_pauli(){
     // This tests the relation exp(i theta (\hat{n}\cdot \vec{\sigma})) = I cos(theta)+ i(\hat{n}\cdot \vec{\sigma}) sin(theta)
-    const NSL::size_t Nx = 2;
 
     // first define the sigma matrices. . .
     NSL::Tensor<Type> sigma1(2,2);

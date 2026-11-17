@@ -45,7 +45,6 @@ class TensorBase {
                                torch::TensorOptions().dtype<Type>()
             ))
     {
-        //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
     }
 
     //! D-dimensional constructor
@@ -55,14 +54,12 @@ class TensorBase {
                                dev.device().dtype<Type>()
             ))
     {
-        //std::cout << "NSL::Tensor(const SizeTypes & ...)" << std::endl;
     }
 
     //! copy constructor given an std::vector
     explicit TensorBase( NSL::Device dev, const std::vector<Type> &phi) :
         data_(torch::from_blob(static_cast <void*> (phi.data()), {phi.size()}))
     {
-    //std::cout << "I did something!" << std::endl;
     }
 
     //! copy constructor
@@ -74,7 +71,6 @@ class TensorBase {
     constexpr TensorBase(const NSL::TensorImpl::TensorBase<Type>& other):
             data_(other.data_)
     {
-        // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
     }
 
     //! copy constructor
@@ -87,7 +83,6 @@ class TensorBase {
     constexpr TensorBase(const NSL::TensorImpl::TensorBase<OtherType>& other):
             data_(torch::Tensor(other).to(torch::TensorOptions().dtype<OtherType>()))
     {
-        // std::cout << "NSL::Tensor(const NSL::Tensor &)" << std::endl;
     }
 
     //! deep copy constructor
@@ -103,14 +98,12 @@ class TensorBase {
             // copy constructor is shallow
             this->data_ = other.data_;
         }
-        // std::cout << "NSL::Tensor(const NSL::Tensor &, bool deepcopy)" << std::endl;
     }
 
     //! move constructor
     constexpr TensorBase(NSL::TensorImpl::TensorBase<Type> && other):
         data_(std::move(other.data_))
     {
-        // std::cout << "NSL::Tensor(NSL::Tensor &&)" << std::endl;
     }
 
     //! type conversion
@@ -131,14 +124,12 @@ class TensorBase {
     constexpr TensorBase(const torch::Tensor & other) :
             data_(other)
     {
-        //std::cout << "NSL::Tensor(const torch::Tensor & other)" << std::endl;
     }
 
     //! move from `torch::Tensor` constructor
     constexpr TensorBase(torch::Tensor && other) :
         data_(std::move(other))
     {
-        //std::cout << "NSL::Tensor(torch::Tensor && other)" << std::endl;
     }
 
     //! conversion to `torch::Tensor` (creates a view on the underlying data)
@@ -168,13 +159,11 @@ class TensorBase {
     explicit TensorBase(TensorBase<Type> * other) : 
         TensorBase(*other)
     {
-        //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
     }
     template<NSL::Concept::isNumber OtherType>
     explicit TensorBase(TensorBase<OtherType> * other) : 
         TensorBase(*other)
     {
-        //std::cout << "NSL::Tensor(NSL::TensorBase *)" << std::endl;
     }
 
     protected:

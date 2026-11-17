@@ -58,12 +58,6 @@ int main(){
     //      Trajectory Length
     NSL::RealTypeOf<Type> trajectoryLength = 1.; // We ensure that this is a real number in case Type is complex
     
-    // Define the lattice geometry of interest
-    // ToDo: Required for more sophisticated actions
-    NSL::Lattice::Ring<Type> lattice(Nx); 
-
-    //std::cout   << "Setting up a Hubbard-Gauge action with beta=" << beta
-    //           << ", Nt=" << Nt << ", U=" << U << " on a ring with " << Nx << " sites." << std::endl;
     // Put the action parameters into the appropriate container
     NSL::Action::HubbardGaugeAction<Type>::Parameters params(
         /*beta=*/  beta,

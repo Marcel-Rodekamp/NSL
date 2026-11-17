@@ -21,10 +21,8 @@ void addPlus();
 NSL_TEST_CASE( "Configuration", "[Configuration]" ) {
     //useConfiguration<TestType>();
 
-    //if constexpr(!std::is_same_v<TestType,bool> and !std::is_same_v<TestType,int>){
-        addPlusEqual<TestType>();
-        addPlus<TestType>();
-    //}
+    addPlusEqual<TestType>();
+    addPlus<TestType>();
 }
 
 

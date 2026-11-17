@@ -63,8 +63,6 @@ NSL_TEST_CASE("Tensor 2D Mixed Slice/Random Access", "[Tensor,2D,Mixed Access]")
     NSL::size_t size0 = GENERATE(1,2,4,8);
     NSL::size_t size1 = GENERATE(1,2,4,8);
     mixedAccess<TestType>(size0,size1);
-    //sliceWriteAccess<TestType>(size0,size1);
-    // MARKER1
 }
 
 NSL_TEST_CASE("Tensor 3D Random Access", "[Tensor,3D,Random Access]"){
@@ -115,7 +113,6 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void indexAccess(SizeTypes ... sizes){
     std::array<NSL::size_t,sizeof...(sizes)> shape{sizes...};
     const NSL::size_t numElements = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<NSL::size_t>());
-    const NSL::size_t dim = sizeof...(sizes);
 
     // create a Tensor filled with zeros
     NSL::Tensor<Type> T(sizes...);
@@ -359,7 +356,6 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void indexWriteAccess(SizeTypes ... sizes){
     std::array<NSL::size_t,sizeof...(sizes)> shape{sizes...};
     const NSL::size_t numElements = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<NSL::size_t>());
-    const NSL::size_t dim = sizeof...(sizes);
 
     NSL::Tensor<Type> A(sizes...);
 
@@ -418,8 +414,6 @@ void indexWriteAccess(SizeTypes ... sizes){
 template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void sliceWriteAccess(SizeTypes ... sizes){
     std::array<NSL::size_t,sizeof...(sizes)> shape{sizes...};
-    const NSL::size_t numElements = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<NSL::size_t>());
-    const NSL::size_t dim = sizeof...(sizes);
 
     NSL::Tensor<Type> T(sizes...);
 
@@ -463,8 +457,6 @@ void sliceWriteAccess(SizeTypes ... sizes){
             for(NSL::size_t step1 = 1; step1 < stop1 - start1; ++step1){
                 NSL::size_t sliceSize1 = static_cast<NSL::size_t>(std::ceil(static_cast<float>(stop1-start1)/step1)); 
                 
-                std::array<NSL::size_t,2> sliceSize_arr{sliceSize0,sliceSize1};
-
                 INFO( "start1: " + std::to_string(start1) );
                 INFO( "stop1 : " + std::to_string(stop1) );
                 INFO( "step1 : " + std::to_string(step1) );
@@ -518,8 +510,6 @@ void sliceWriteAccess(SizeTypes ... sizes){
                     INFO( "step2 : " + std::to_string(step2) );
                     INFO( "size2 : " + std::to_string(sliceSize2) );
 
-                    std::array<NSL::size_t,3> sliceSize_arr{sliceSize0,sliceSize1,sliceSize2};
-                    
                     NSL::Tensor<Type> Tsliced = T(
                             NSL::Slice(start0,stop0,step0), 
                             NSL::Slice(start1,stop1,step1),

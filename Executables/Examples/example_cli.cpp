@@ -2,7 +2,6 @@
 
 int main(int argc, char ** argv){
     // define the general type for convinence
-    typedef NSL::complex<double> Type;
 
     // This line parses the command line options 
     // -f, --file A parameter file

@@ -126,7 +126,6 @@ int main(int argc, char* argv[]){
     NSL::Action::Action S_QR = Sg + Sf_QR;
     NSL::Action::Action S_SVD = Sg + Sf_SVD;
 
-    NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
 
 
@@ -192,7 +191,6 @@ int main(int argc, char* argv[]){
     double U = params["U"];
     double beta = params["beta"];
     double trajLength = 3.14159265*sqrt(U*beta/Nt)/2;
-    // std::cout << std::setprecision(15) << "traj. length = " << trajLength << std::endl;
     int Nmd = 1;
     std::cout << "Nmd = " << Nmd << std::endl;
     std::cout << "Lattice size = " << lattice.sites() << std::endl;

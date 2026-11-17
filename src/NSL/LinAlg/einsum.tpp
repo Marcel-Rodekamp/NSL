@@ -5,11 +5,6 @@
 
 namespace NSL::LinAlg{
 
-// template<NSL::Concept::isNumber Type>
-// NSL::Tensor<Type> einsum(const std::string &equation, const std::vector<NSL::Tensor<Type>> &operands) {
-//     return torch::einsum(equation, {operands});
-// }
-
 template<NSL::Concept::isNumber Type>
 NSL::Tensor<Type> einsum(const std::string &equation, const NSL::Tensor<Type>& left, const NSL::Tensor<Type>& right) {
     return torch::einsum(equation, {left,right});

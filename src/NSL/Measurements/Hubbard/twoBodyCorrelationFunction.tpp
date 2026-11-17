@@ -133,8 +133,6 @@ class TwoBodyCorrelator: public Measurement {
             double n = (diff(0) * C(1) - diff(1) * C(0)) / denominator;
 
             return (std::abs(std::round(m)- m) < eps && std::abs(std::round(n)- n) < eps);
-
-            // return false;
         }
 
         FermionMatrixType hfm_;
@@ -191,7 +189,6 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t NumberTimeSources) {
-    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
@@ -272,9 +269,7 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t 
         // shift t -> t - tsrc
         t = 0;
         for(NSL::size_t tsrc = 0; tsrc<Nt; tsrc+=tsrcStep){
-            // corrK_.shift( -tsrc, -2, -Type(1) );
             corrK_(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::shift(corrK_(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()), -tsrc, -2, -Type(1));
-            // corrKDag_.shift( -tsrc, -2, -Type(1) );
             corrKDag_(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()) = NSL::LinAlg::shift(corrKDag_(t,NSL::Slice(),NSL::Slice(),NSL::Slice(),NSL::Slice()), -tsrc, -2, -Type(1));
 
             for (int kSrc=0; kSrc<kDim; kSrc++ ) {
@@ -489,16 +484,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
-
-    // NSL::Tensor<Type> eye(params_["device"].template to<NSL::Device>(),kDim,kDim,Nt,bDim,bDim);
-    // for (int k=0; k<kDim; k++) {
-    //     for (int nt=0;nt<Nt; nt++){
-    //         eye(k,k,nt,NSL::Slice(), NSL::Slice()) = NSL::Matrix::Identity<Type> (bDim);
-    //     }
-    // }
 
     for ( const auto &[w, value1]: cI1S1Iz1Sz1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -518,8 +504,6 @@ void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz1_(NSL::siz
                                     - corrPoolDag_[NSL::Hubbard::Particle](NSL::Slice(),w,y,NSL::Slice(),i,k)
                                     * corrPoolDag_[NSL::Hubbard::Particle](NSL::Slice(),x,z,NSL::Slice(),j,l)).sum(0)
 
-                                    // + eye(x, y, NSL::Slice(), j, k) * corrPool_[NSL::Hubbard::Particle](w,z,NSL::Slice(),i,l)
-
                                     / Type(NumberTimeSources));
                                 }
                             }
@@ -537,9 +521,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Sz0_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Iz1Sz0_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -582,9 +564,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz1Szn1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Iz1Szn1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -621,9 +601,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Sz1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Iz0Sz1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -666,9 +644,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Iz0Szn1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Iz0Szn1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -711,9 +687,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Izn1Sz1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -750,9 +724,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Sz0_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Izn1Sz0_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -795,9 +767,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S1Izn1Szn1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S1Izn1Szn1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -834,9 +804,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Sz1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI0S1Iz0Sz1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -880,9 +848,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I0S1Iz0Szn1_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI0S1Iz0Szn1_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -926,9 +892,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Iz1Sz0_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S0Iz1Sz0_ ) {
         for ( const auto &[x, value2]: value1 ) {
@@ -971,9 +935,7 @@ template<
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
 void TwoBodyCorrelator<Type,LatticeType,FermionMatrixType>::I1S0Izn1Sz0_(NSL::size_t NumberTimeSources) {
-    int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
-    int Nt = params_["Nt"].template to<NSL::size_t>();
 
     for ( const auto &[w, value1]: cI1S0Izn1Sz0_ ) {
         for ( const auto &[x, value2]: value1 ) {

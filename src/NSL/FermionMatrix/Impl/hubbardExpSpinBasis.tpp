@@ -361,7 +361,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
 
       // first do t=Nt-1 case
       pi_dot_(Nt-1,NSL::Slice()) = NSL::LinAlg::diag(
-          // NSL::LinAlg::mat_mul( FkFkFk_(0,NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
           NSL::LinAlg::mat_mul( Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()), invAp1F_(0,NSL::Ellipsis()) )
       );
 
@@ -468,18 +467,6 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExpSpinBasis<Type,LatticeType>::gra
                                 );
 
       return pi_dot_;
-
-      /*
-       * note the line below would be appropriate if we had used SVD to stabilize the inverse
-
-       std::tie( Qnew_ , Dnew_ , Vnew_ ) = NSL::LinAlg::svd(
-      		NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Fkt_U_(0,NSL::Ellipsis())), NSL::LinAlg::adjoint(Fkt_V_(0,NSL::Ellipsis())) )
-		+ NSL::LinAlg::diag(Fkt_D_(0,NSL::Ellipsis())) );
-
-      
-      invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( NSL::LinAlg::mat_mul(NSL::LinAlg::mat_mul(NSL::LinAlg::adjoint(Fkt_V_(0,NSL::Ellipsis()) ), Vnew_) , NSL::LinAlg::diag(1./Dnew_) ) , NSL::LinAlg::adjoint(NSL::LinAlg::mat_mul( Fkt_U_(0,NSL::Ellipsis()), Qnew_ )) );  // V * (1/(1+A^{-1})) * V^{-1}
-      */
-
 
     }
     else {

@@ -34,8 +34,6 @@ class TensorMatmul:
         //!        is still real.
         } else if constexpr(!NSL::is_complex<Type>() && NSL::is_complex<OtherType>()){
             throw std::runtime_error("NSL::Tensor<real>::mat_mul(NSL::Tensor<complex>) can not be inplace.");
-            //this->data_ = torch::matmul(static_cast<NSL::Tensor<OtherType>>(*this),other);
-            //return std::move(NSL::Tensor<OtherType>(this));
         } else{
             this->data_ = torch::matmul(this->data_,other);
             return NSL::Tensor<Type>(this);

@@ -83,16 +83,6 @@ int main(int argc, char** argv){
       }
       params["momenta"]=mblocks;
     }
-    // if (yml["measurements"]["momenta"]){
-    //   momenta = yml["measurements"]["momenta"].as<std::vector<std::vector<double>>>();
-    //   NSL::Tensor<double> mblocks(momenta.size(),momenta[0].size());
-    //   for (int i=0;i<momenta.size(); i++){
-    //     for (int j=0;j<momenta[0].size();j++){
-    //       mblocks(i,j) = momenta[i][j];
-    //     }
-    //   }
-    //   params["momenta"]=momenta;
-    // }
     if (yml["measurements"]["wallSources"]){
       kblocks2d = yml["measurements"]["wallSources"].as<std::vector<std::vector<std::vector<std::vector<double>>>>>();
       NSL::Tensor<NSL::complex<double>> kblocks(kblocks2d.size(),kblocks2d[0].size(),kblocks2d[0][0].size());
@@ -113,18 +103,12 @@ int main(int argc, char** argv){
     }
 
     
-    //    exit(0);
-    
     // create an H5 object to store data
-    // NSL::H5IO h5(params["h5file"], params["overwrite"]);
     NSL::H5IO h5(
     params["h5file"], 
     bool (params["overwrite"]) ? NSL::File::Truncate : NSL::File::ReadWrite | NSL::File::OpenOrCreate
     );
 
-    // define the basenode for the h5file, everything is stored in 
-    // params["h5Filename"]/BASENODE/
-    std::string BASENODE(fmt::format("{}",std::string(params["name"])));
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
 

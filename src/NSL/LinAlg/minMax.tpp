@@ -30,7 +30,6 @@ NSL::Tensor<Type> min_with_scalar(const NSL::Tensor<Type>& tensor, NSL::RealType
 
 template<NSL::Concept::isNumber Type>
 NSL::Tensor<Type> max_with_scalar(const NSL::Tensor<Type>& tensor, NSL::RealTypeOf<Type> value) {
-    // return NSL::Tensor<Type> (torch::clamp(NSL::Tensor<NSL::RealTypeOf<Type>> (tensor), value, c10::nullopt));
     return torch::clamp(NSL::real(tensor), value, c10::nullopt).to(torch::kComplexDouble);
 }
 

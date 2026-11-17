@@ -50,16 +50,8 @@ int main(int argc, char ** argv){
         NSL::Logger::info( "{}: {}", key, value);
     }
 
-    // create an H5 object to store data
-    NSL::H5IO h5(params["h5file"].to<std::string>(),NSL::File::Truncate);
-
-    // define the basenode for the h5file, everything is stored in 
-    // params["h5Filename"]/BASENODE/
-    std::string BASENODE;
-
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
-    NSL::size_t dim = lattice.sites();
 
     // Put the lattice on the device. (copy to GPU)
     lattice.to(params["device"]);

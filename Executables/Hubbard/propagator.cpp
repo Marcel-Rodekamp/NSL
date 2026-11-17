@@ -149,30 +149,6 @@ int main(int argc, char* argv[]){
     }
 
 
-    NSL::size_t Nx =  NSL::size_t(params["Nx"]);
-    NSL::size_t Nt =  NSL::size_t(params["Nt"]);
-
-
-    NSL::Configuration<Type> config{
-        {"phi",
-            NSL::Tensor<Type>(
-                NSL::Device(params["device"]),
-                NSL::size_t(params["Nt"]),
-                NSL::size_t(params["Nx"])
-            )
-        }
-    };
-
-    // set seed if desired
-    NSL::setSeed(1234);
-    
-    //! \todo: we really need a proper random interface...
-    std::complex<double> I = std::complex<double> (0.0,1.0);
-
-    config["phi"].randn();
-    config["phi"] *= NSL::Hubbard::tilde<Type>(params, "U");
-    config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
-
     // create an H5 object to store data
     NSL::H5IO h5(
         params["h5file"].to<std::string>(), 

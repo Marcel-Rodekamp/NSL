@@ -13,11 +13,6 @@ int main(int argc, char* argv[]){
     //    Number of ions (spatial sites)
     NSL::size_t Nx =  2;
 
-    NSL::size_t Nt = 32;
-
-    // inverse temperature
-    Type beta = 10.0;
-
     // Define the lattice geometry of interest
     // ToDo: Required for more sophisticated actions
     NSL::Lattice::Ring<Type> lattice(Nx); 

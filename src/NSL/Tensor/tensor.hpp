@@ -106,7 +106,6 @@ class Tensor:
         } else {
             // \todo: Implement Type conversion
             throw std::runtime_error("Type conversion not implemented yet");
-            // this->data_ = torch::clone(static_cast<NSL::Tensor<Type>>(other));
         }
         return *this;
     }
@@ -145,7 +144,6 @@ class Tensor:
 
   
   NSL::Tensor<Type> & operator=(const std::vector<Type> & other){
-    //    this->data_ = torch::from_blob((void*) other.data(), {other.size()});
     for (NSL::size_t i=0;i<other.size();i++)
       { this->data_.index_put_({i},other[i]); }
     

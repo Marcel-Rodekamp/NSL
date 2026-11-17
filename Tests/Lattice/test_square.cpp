@@ -24,9 +24,6 @@ void test_square(const std::vector<size_type> & size, T kappa = 1.){
     for(const auto& value: size) volume*=value;
     REQUIRE(lattice.sites() == volume);
 
-    //INFO(lattice.coordinates());
-    //INFO(lattice.adjacency_matrix());
-
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
 
 }
@@ -46,9 +43,6 @@ void test_cube(const size_type & size, T kappa = 1.){
 
     size_t volume=size * size * size;
     REQUIRE(lattice.sites() == volume);
-
-    //INFO(lattice.coordinates());
-    //INFO(lattice.adjacency_matrix());
 
     //! \todo Require that FT * hopping * FT† is diagonal and sensible.
 }

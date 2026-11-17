@@ -148,7 +148,6 @@ void test_pythagoras_sec_csc(SizeTypes ... Ns){
 template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
 void test_half_periods(SizeTypes ... Ns){
     NSL::Tensor<Type> A(Ns...);A.rand();
-    Type * addr_bak = A.data();
 
     // sine
     {
@@ -179,7 +178,6 @@ void test_half_periods(SizeTypes ... Ns){
 template<NSL::Concept::isComplex Type, NSL::Concept::isIntegral ... SizeTypes>
 void test_euler(SizeTypes ... Ns){
     NSL::Tensor<Type> A(Ns...);A.rand();
-    Type * addr_bak = A.data();
 
     NSL::Tensor<Type> s(A, true);
     NSL::Tensor<Type> c(A, true);

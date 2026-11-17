@@ -75,9 +75,6 @@ int main(int argc, char ** argv){
     // create an H5 object to store data
     NSL::H5IO h5(params["h5file"].template to<std::string>(),NSL::File::Truncate);
 
-    // define the basenode for the h5file, everything is stored in 
-    std::string BASENODE;
-
     // initialize the lattice 
     NSL::Lattice::Generic<Type> lattice(yml);
 
@@ -194,7 +191,6 @@ int main(int argc, char ** argv){
 
         // loop until flow time is reached
         for(tIDX=1; tIDX < numMaxFlowStep+1; ++tIDX){ 
-        //while(flowTime < params["max flow time"].template to<double>()){
             // check that the tries do not run to large
             if(tries >= 1000){
                 NSL::Logger::debug("Max tries {} exceeded", tries);

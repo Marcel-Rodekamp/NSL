@@ -49,7 +49,6 @@ class TensorRandomAccess:
                     torch::indexing::TensorIndex(indices)...
                 }
         );
-        //return this->data_.template data_ptr<Type>()[this->linearIndex_(indices...)];
     }
 
 

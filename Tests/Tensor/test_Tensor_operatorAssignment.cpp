@@ -57,7 +57,6 @@ template<NSL::Concept::isNumber Type, NSL::Concept::isIntegral ... SizeTypes>
 void assignment(SizeTypes ... sizes){
     std::array<NSL::size_t,sizeof...(sizes)> shape{sizes...};
     const NSL::size_t numElements = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<NSL::size_t>());
-    const NSL::size_t dim = sizeof...(sizes);
 
     NSL::Tensor<Type> T(sizes...);
     NSL::Tensor<Type> Tassigned(sizes...);

@@ -10,7 +10,6 @@
 #include "../LinAlg/diag.tpp"
 #include "../LinAlg/mat_mul.tpp"
 #include "../LinAlg/qr.tpp"
-// #include "../LinAlg.hpp"
 
 namespace NSL::Lattice {
 
@@ -35,10 +34,6 @@ const NSL::Tensor<double> NSL::Lattice::SpatialLattice<Type>::operator()(size_t 
             "Spatial lattice site out of bounds.");
     return this->sites_.slice(0,index,index+1,1);
 }
-
-//size_t SpatialLattice::operator()(const & NSL::Site x){
-//  TODO
-//}
 
 template <typename Type>
 size_t NSL::Lattice::SpatialLattice<Type>::sites(){ return sites_.shape(0); }

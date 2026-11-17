@@ -33,14 +33,11 @@ NSL::Tensor<Type> CGpreconditioned<Type>::solve_(const NSL::Tensor<Type> & b ){
     // error (this is a simple efficiency optimization)
     // inner_product returns a number of type `Type` from which the real 
     // part is extracted, the imaginary part is 0 by construction
-    // typename NSL::RT_extractor<Type>::type rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
-    // typename NSL::RT_extractor<Type>::type rsqr_prev = rsqr_curr;
     NSL::RealTypeOf<Type> rsqr_curr = NSL::real( NSL::LinAlg::inner_product(r_,r_) );
     NSL::RealTypeOf<Type> rz_prev   = NSL::real( NSL::LinAlg::inner_product(r_,z_) );
     
     // if the guess is already good enough return
     if (rsqr_curr <= errSq_) {
-        // NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),0);
         NSL::Logger::info("CG Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(rsqr_curr),NSL::LinAlg::sqrt(errSq_),0);
         return x_;
     }

@@ -128,7 +128,6 @@ COMPLEX_NSL_TEST_CASE( "fermionMatrixHubbardDiag: logDetM_noninteracting", "[fer
 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardDiag_M_dense(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -164,7 +163,6 @@ void test_fermionMatrixHubbardDiag_M_dense(const NSL::size_t nt, LatticeType & L
 //Test for the function Mdagger(psi)
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardDiag_Mdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -206,7 +204,6 @@ void test_fermionMatrixHubbardDiag_Mdagger(const NSL::size_t nt, LatticeType & L
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardDiag_MMdagger(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx);
@@ -216,11 +213,9 @@ void test_fermionMatrixHubbardDiag_MMdagger(const NSL::size_t nt, LatticeType & 
 
     NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
     M.populate(phi);
-    ComplexType I={0,1};
  
     auto direct = M.MMdagger(psi);
     auto indirect = M.M(M.Mdagger(psi));
-    auto diff = direct - indirect;
 
     INFO("nt: "+NSL::to_string(nt)+" nx: "+NSL::to_string(nx));
     REQUIRE( almost_equal(direct,indirect, std::numeric_limits<Type>::digits10-1).all() );
@@ -233,7 +228,6 @@ void test_fermionMatrixHubbardDiag_MMdagger(const NSL::size_t nt, LatticeType & 
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_fermionMatrixHubbardDiag_MdaggerM(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     //hardcoding the calculation done in the method MdaggerM of fermionMatrixHubbardDiag class
@@ -244,7 +238,6 @@ void test_fermionMatrixHubbardDiag_MdaggerM(const NSL::size_t nt, LatticeType & 
 
     NSL::FermionMatrix::HubbardDiag M(Lattice,nt,beta);
     M.populate(phi,NSL::Hubbard::Particle);
-    ComplexType I={0,1};
  
     auto direct = M.MdaggerM(psi);
     auto indirect = M.Mdagger(M.M(psi));
@@ -265,13 +258,10 @@ void test_logDetM_time_shift_invariance(const NSL::size_t nt, LatticeType & Latt
     // We should find that shifting phi in time doesn't change the determinant.
     int slices_to_shift_by=4;
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     size_t nx = Lattice.sites();
     NSL::Tensor<Type> phi(nt, nx), phiShift(nt, nx);
     phi.rand();
     phiShift=NSL::LinAlg::shift(phi,slices_to_shift_by);
-
-    Type delta = beta/nt;
 
     NSL::FermionMatrix::HubbardDiag<Type,LatticeType> M     (Lattice,nt     ,beta);
     M.populate(phi);
@@ -302,9 +292,7 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
     // We should find that by shifting any element of phi by 2π the real part of the determinant doesn't change.
 
     typedef typename NSL::RT_extractor<Type>::value_type RealType;
-    typedef NSL::complex<RealType> ComplexType;
     NSL::size_t nx = Lattice.sites();
-    Type delta = beta/nt;
 
     NSL::Tensor<Type> phi(nt, nx), phiShift(nt, nx), random(nt, nx);
     phi.rand();
@@ -360,7 +348,6 @@ void test_logDetM_phi_plus_two_pi(const NSL::size_t nt, LatticeType & Lattice, c
 template<NSL::Concept::isNumber Type, NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType>
 void test_logDetM_noninteracting(const NSL::size_t nt, LatticeType & Lattice, const Type & beta) {
 
-    typedef NSL::complex<typename NSL::RT_extractor<Type>::value_type> ComplexType;
     NSL::size_t nx = Lattice.sites();
 
     NSL::Tensor<Type> phi(nt, nx), sausage = NSL::Matrix::Identity<Type>(nx);

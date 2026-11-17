@@ -156,8 +156,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measure(NSL::size_t
         corr_ += invM.transpose(0,1).transpose(1,2); 
 
         // reset source vector
-        // Slice: same as above
-        //srcVec_(tsrc,NSL::Slice(x,x+1)) = Type(0);
         srcVec_ = Type(0);
     } // tsrc
 
@@ -181,7 +179,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     // - Source vector
     srcVecK_ = Type(0);
 
-    NSL::size_t Nx = this->params_["Nx"].template to<NSL::size_t>();
     NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
 
     NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
@@ -217,7 +214,6 @@ void TwoPointCorrelator<Type,LatticeType,FermionMatrixType>::measureK(NSL::size_
     int kDim = params_["wallSources"].shape(0).template to<NSL::size_t>();
     int bDim = params_["wallSources"].shape(1).template to<NSL::size_t>();
 
-    // for (int t = 0;t< Nt;t++){
     for (int k=0; k<kDim; k++) {
         for(int sigmaSink=0; sigmaSink<bDim; sigmaSink++){
             NSL::Tensor<Type> wallSource = NSL::Tensor<Type> (params_["wallSources"])(k,sigmaSink,NSL::Slice()).expand(Nt, 0);

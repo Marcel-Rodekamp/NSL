@@ -24,7 +24,6 @@ class Generic: public NSL::Lattice::SpatialLattice<Type> {
         Type kappa;
     private:
 
-        //  inline int unit_cells_(const std::vector<int> &L);
         inline int get_number_of_sites_(const YAML::Node &system);
         void init_(const YAML::Node &system);
 };

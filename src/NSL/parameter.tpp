@@ -365,7 +365,7 @@ class GeneralType{
     //! An implementation that puts the content of `GeneralType` to the out stream `os`
     friend std::ostream & operator<< (std::ostream & os, GeneralType<Types_...> genT){
         std::visit(
-            [&os,&genT](auto & arg){
+            [&os](auto & arg){
                 if constexpr (hasStreamingOperator<decltype(arg)>){
                     os << arg;
                 } else {

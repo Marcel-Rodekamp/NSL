@@ -15,10 +15,6 @@ NSL::Lattice::Complete<Type>::Complete(const std::size_t n, const Type &kappa, c
                 NSL::Tensor<double>(n,3)
         )
 {
-    //! todo
-    //if(constexpr(is_complex(Type))){
-    //    // fail.  raise an exception?
-    //}
 
     double theta = 2 * std::numbers::pi / n;
 

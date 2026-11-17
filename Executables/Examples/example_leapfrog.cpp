@@ -1,7 +1,5 @@
 #include "Action/Implementations/hubbardGaugeAction.tpp"
 #include "Action/Implementations/hubbardFermiAction.tpp"
-//#include "Integrator/Impl/leapfrog.tpp"
-//#include "Integrator/Impl/leapfrogRealForce.tpp"
 #include "NSL.hpp"
 #include <ctime>
 
@@ -123,7 +121,6 @@ int main(int argc, char* argv[]){
     // Initialize the action being the sum of the gauge action & fermion action
     NSL::Action::Action S = S_gauge + S_fermion;
 
-    NSL::size_t Nx =  NSL::size_t(params["Nx"]);
     NSL::size_t Nt =  NSL::size_t(params["Nt"]);
 
 
