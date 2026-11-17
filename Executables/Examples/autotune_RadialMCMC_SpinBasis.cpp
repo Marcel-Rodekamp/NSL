@@ -329,8 +329,8 @@ void writeMeta(LatticeType lat, NSL::Parameter & params, NSL::H5IO & h5, std::st
     );
     dataset.write(NSL::RealTypeOf<Type>(params["trajectory length"]));
 
-    // action type
-    std::string action = "hubbardExp";
+    // action type (the propagator program checks the basis against it)
+    std::string action = "hubbardExpSpinBasis";
     dataset = h5file.createDataSet<std::string>(BASENODE+"/Meta/action",HighFive::DataSpace::From(action));
     dataset.write(action);
 

@@ -330,7 +330,7 @@ For production:
 
 ## Practical notes
 
-- **Disk space.** `propagatorChargeBasis` stores `invM[t,s]`, `invM[s,t]`, `invM[t,t]` for every source and
+- **Disk space.** The spatial measurement of `propagator` stores `invM[t,s]`, `invM[s,t]`, `invM[t,t]` for every source and
   species: ≈ 8.6 MB per perylene configuration at $N_t=80$ with 4 sources, i.e. 43 GB per 5000
   configurations (naphthalene 2.1 MB). Plan Jureca storage, or reduce `Number Time Sources`.
 - **Autocorrelation analysis:**

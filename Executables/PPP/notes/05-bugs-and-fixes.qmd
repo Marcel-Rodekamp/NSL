@@ -7,15 +7,15 @@ subtitle: "Found in NSL, made by me, caused by the environment, and still open"
 
 | group | what | items |
 |---|---|---|
-| **A** | bugs in NSL that I found and fixed | 9 |
+| **A** | bugs in NSL that I found and fixed | 12 |
 | **B** | bugs in my own code or analysis, caught during the work | 10 |
 | **C** | build and operational problems | 4 |
 | **D** | known problems I did not fix | 5 |
 
 For each A item: **symptom**, **cause**, **fix**, **how it is verified**, and whether earlier results are affected.
 
-One item needs your attention: **A3**. My change to `propagator.cpp` may conflict with what you intended in
-your last commit.
+A3 (the spin-basis question about `propagator.cpp`) is resolved: `propagator` now handles both bases.
+A10–A12 were found while unifying the propagator programs.
 
 # A · Bugs in NSL
 
@@ -58,23 +58,19 @@ your last commit.
   `propagator.cpp` back to `HubbardExp`.
 - **Verified by** compiling: the old pairing is now rejected at compile time.
 
-## A3 · Please check: was the spin basis intended?
+## A3 · Resolved: one `propagator` for both bases
 
-::: {.callout-warning}
-## My revert may be wrong for your use
-The switch to the spin basis in 3a9b31f looks deliberate: momentum propagators of **spin-basis** ensembles,
-starting at `--config`. For that use, my revert is wrong: `propagator` now evaluates *charge-basis*
-propagators, which mean nothing on spin-basis fields.
-:::
-
-- Spin-basis ensembles need `propagatorSpinBasis` (`FermionPropagatorSpinBasis` + `HubbardExpSpinBasis`). It
-  has no `--config` start option yet; I can add it.
-- If `propagator` was run on spin-basis ensembles on Jureca since 2026-08-26, their `hole` group repeats the
-  spin-up data.
+- The basis is now stated in the parameter file, `measurements: basis: charge | spin`, and `propagator`
+  uses the matching pair: `FermionPropagator` + `HubbardExp`, or `FermionPropagatorSpinBasis` +
+  `HubbardExpSpinBasis`. `--config` works in both bases and for spatial and momentum measurements.
+- The program checks the basis against the file: PPP ensembles are rejected in the spin basis, ensembles
+  from the spin-basis HMC driver (which now records `Meta/action = "hubbardExpSpinBasis"`) in the charge
+  basis, and a file whose propagators were measured in the other basis.
+- Data already measured: if the old `propagator` ran on spin-basis ensembles on Jureca since 2026-08-26,
+  their `hole` group repeats the spin-up data.
   - By the $\phi\to-\phi$ (spin-flip) symmetry of the ensemble, $\langle G_\downarrow\rangle=\langle G_\uparrow\rangle$,
     so the averages still estimate the right quantity.
   - But that channel holds no independent information: averaging the two channels double-counts.
-- Charge-basis ensembles (all PPP runs) use `propagatorChargeBasis`, which was correct throughout.
 
 ## A4 · `propagator.cpp --config` did not compile · A5 · crash without `wallSources`
 
@@ -92,7 +88,7 @@ constructor with `Can not invoke .shape(dim) on held type (bool)`.
   used only by `measureK`.
 - *Fix:* one-band placeholder when `wallSources` is absent:
   `params.contains("wallSources") ? params["wallSources"].shape(1)… : NSL::size_t(1)`.
-- *Verified by* the β = 4–20 benchmark measurements, all made with `propagatorChargeBasis`.
+- *Verified by* the β = 4–20 benchmark measurements, all made with `propagatorChargeBasis` (now `propagator`).
 
 ## A6 · Basis chosen by a runtime string · A7 · `complex<float>` did not compile
 
@@ -133,6 +129,26 @@ All `complex<float>` instantiations failed to compile, so the float test targets
 - **First fix (withdrawn).** I added those members to `HubbardDiag`.
 - **Final fix,** after you said `HubbardDiag` is outdated: `hubbardDiag.hpp` reverted to its original state,
   and the `HubbardDiag` case removed from `test_force`, which now tests `HubbardExp` only.
+
+## A10–A12 · Found while unifying the propagator programs
+
+**A10.** `stability:` had no effect in `propagatorChargeBasis` and `propagatorSpinBasis`: it was set on an
+action that was never used, so the measurement always used QR.
+*Fix:* `propagator` sets it on the measurement's fermion matrix (QR or SVD). *Verified:* with SVD all 108
+datasets of a test ensemble differ bitwise from QR, and both agree with exact inverses to $2\cdot10^{-14}$.
+*Earlier results:* only runs that asked for SVD (they got QR); all PPP inputs use QR.
+
+**A11.** The free-theory propagators stored as `NonInteracting/.../invM[t,0]` and `invM[0,t]` were
+`invM[t,1]` and `invM[1,t]` (checked against a dense inverse, $8\cdot10^{-16}$); they were computed with
+source time 1. The diagonal and all interacting data were right.
+*Fix:* the free theory goes through the same code with source time 0. *Earlier results:* existing
+`NonInteracting` columns and rows in old files are shifted by one time slice.
+
+**A12.** `--overwrite` opened the ensemble file with `Truncate`, deleting the Markov chain before measuring.
+*Fix:* the file is opened read-write; `--overwrite` replaces only the measured results.
+
+Also: spatial and momentum results used the same HDF5 paths, so whichever ran second skipped every
+configuration. They now have separate `spatial` and `momentum` blocks (deck 1).
 
 # B · Bugs in my own work
 

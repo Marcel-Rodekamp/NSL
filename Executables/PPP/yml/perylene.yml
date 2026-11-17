@@ -105,7 +105,9 @@ Leapfrog:
 
 stability: QR
 
-measurements:
+measurements:                     # Executables/Hubbard/propagator
+  basis: charge                   # PPP ensembles exist only in the charge basis
+  type: spatial                   # spatial | momentum | both (momentum needs wallSources)
   Number Time Sources: 4
 
 fileIO:

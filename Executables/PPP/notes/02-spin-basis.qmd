@@ -125,7 +125,7 @@ state, in units of $t$:
   to a spin-basis matrix, or a `Spin` to a charge-basis matrix, is a compile error instead of a silent
   `bool` conversion.
 - `Executables/Hubbard/propagator.cpp` paired the charge-basis measurement `FermionPropagator` with the
-  spin-basis matrix; its "hole" propagator was spin up again. It now uses `HubbardExp`. If you meant it for
-  spin-basis ensembles, see deck 5, A3.
+  spin-basis matrix; its "hole" propagator was spin up again. `propagator` now takes the basis from the
+  parameter file (`measurements: basis: charge | spin`) and uses the matching measurement (deck 1).
 
 The longer written version is `Executables/PPP/spin_basis_note.md`.

@@ -159,10 +159,36 @@ concepts through the enum → `bool` conversion. Now a mismatched pairing is a c
 - Initial field from `S_gauge.sample()`; a warning for non-bipartite lattices (sign problem).
 - Meta data: `/Meta/action = "PPP/hubbardExp"` and `/Meta/PPP/{form, V, …}`, so every ensemble records its
   interaction.
-- Measurements use the existing `propagatorChargeBasis`.
+- Measurements: `Executables/Hubbard/propagator` with `measurements: basis: charge` (next slide).
 
 `python/ppp_geometry.py` writes inputs for ideal benzenoids (benzene … perylene, coronene) with per-bond
 hopping lists; `--bridge-hopping` rescales the two perylene bonds that join the naphthalene units.
+
+## Measuring propagators: `Executables/Hubbard/propagator`
+
+One program for both bases and both kinds of measurement (it replaces `propagatorChargeBasis` and
+`propagatorSpinBasis`):
+
+```yaml
+measurements:
+  basis: charge          # required: charge (HubbardExp, also PPP) or spin (HubbardExpSpinBasis)
+  type: spatial          # spatial | momentum | both; default: momentum if wallSources are given
+  Number Time Sources: 4
+  wallSources: [...]     # momentum: blocks x bands x Nx entries [re, im]
+stability: QR            # QR or SVD
+```
+
+`propagator -f run.yml [--config N] [--overwrite]`; results go into the ensemble file:
+
+| path (under `<name>/`) | content |
+|---|---|
+| `markovChain/<n>/propagator/spatial/<species>/invM[t,s]`, `invM[s,t]`, `invM[t,t]` | position space, $(N_t,N_x,N_x)$ |
+| `markovChain/<n>/propagator/momentum/<species>/invM[t,s]/<kSink>-<kSrc>` … | projected on wall sources |
+| `NonInteracting/propagator/{spatial,momentum}/…` | the same for $\phi=0$, $s=0$ |
+| `Meta/propagator/basis`, `Meta/propagator/momentum/wallSources` | basis; the sources `kSink`, `kSrc` refer to |
+
+[`<species>`: `particle`/`hole` or `spinUp`/`spinDown`. The program refuses a basis that contradicts the
+file, and wall sources that differ from those already used. Checked against exact inverses in both bases (deck 5, A10–A12).]{.small .muted}
 
 ## Tests: `Tests/Action/test_PPPGaugeAction.cpp`
 

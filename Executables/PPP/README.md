@@ -59,9 +59,22 @@ python python/ppp_geometry.py perylene --bridge-hopping 0.9 ...   # rescale the 
 * **Plain run** (`HMC: autotune: false`): uses `Leapfrog: Nmd`, `HMC: Ntherm`, `HMC: Nconf`
   and the optional `HMC: seed`; rerunning on an existing h5 file extends the chain.
   `<build>/Executables/PPP/autotune_RadialMCMC_PPP --file yml/naphthalene_benchmark.yml`
-* **Measurements**: `<build>/Executables/Hubbard/propagatorChargeBasis --file <yml>` stores
-  `invM[t,tsrc]`, `invM[tsrc,t]` and `invM[t,t]` for particles and holes
-  (`Number Time Sources` sources per configuration).
+* **Measurements**: `<build>/Executables/Hubbard/propagator --file <yml> [--config N]`, with
+  `measurements: basis: charge` (required; PPP ensembles exist only in the charge basis) and
+  `type: spatial | momentum | both` (default: momentum if `wallSources` are given, otherwise
+  spatial). `--config N` starts at configuration N; `--overwrite` recomputes existing results
+  (the ensemble itself is never modified). Position-space propagators are stored as
+
+      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,<s>]   (Nt, Nx, Nx)
+      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[<s>,t]
+      <name>/markovChain/<n>/propagator/spatial/{particle,hole}/invM[t,t]
+
+  for `Number Time Sources` source times s, and the free theory (phi = 0, s = 0) in
+  `<name>/NonInteracting/propagator/spatial/...`. Momentum-projected propagators go to
+  `.../propagator/momentum/<species>/invM[...]/<kSink>-<kSrc>`, with the wall sources used in
+  `<name>/Meta/propagator/momentum/wallSources`; see `Executables/Hubbard/propagator.cpp`.
+  `python/ppp_compare.py` and `python/ppp_autocorr.py` read this layout and the older one
+  (`propagator/{particle,hole}/...`, from the former `propagatorChargeBasis`).
 
 The meta data of an ensemble contains the interaction (`<name>/Meta/PPP/{form,V,...}`).
 
@@ -150,7 +163,7 @@ being uncertain by ~25%). Unit tests: `Tests/Integrator/test_exactFourierAcceler
 (exact free flow, reversibility, offset kept fixed, second order energy violation,
 phase-space volume, momentum distribution).
 
-**Disk space:** `propagatorChargeBasis` stores `invM[t,s]`, `invM[s,t]` and `invM[t,t]` for
+**Disk space:** the spatial propagator measurement stores `invM[t,s]`, `invM[s,t]` and `invM[t,t]` for
 every time source and species, about 8.6 MB per perylene configuration at Nt = 80 with 4
 time sources (43 GB for 5000 configurations; naphthalene 2.1 MB). Plan storage accordingly,
 or reduce `Number Time Sources`.

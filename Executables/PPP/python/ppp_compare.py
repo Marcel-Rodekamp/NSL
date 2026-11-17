@@ -32,10 +32,26 @@ def config_ids(group):
     return sorted(int(k) for k in group.keys())
 
 
+def spatial_group(cfg_group, species):
+    """position-space propagators of one configuration (or of NonInteracting):
+    propagator/spatial/<species> as written by Executables/Hubbard/propagator, or
+    propagator/<species> in files measured before the spatial/momentum split"""
+    if f"propagator/spatial/{species}" in cfg_group:
+        return cfg_group[f"propagator/spatial/{species}"]
+    return cfg_group[f"propagator/{species}"]
+
+
+def has_spatial(cfg_group, species="particle"):
+    """True if position-space propagators were measured on this configuration"""
+    return f"propagator/spatial/{species}" in cfg_group or (
+        f"propagator/{species}" in cfg_group and "invM[t,t]" in cfg_group[f"propagator/{species}"]
+        and isinstance(cfg_group[f"propagator/{species}/invM[t,t]"], h5py.Dataset))
+
+
 def source_columns(cfg_group, species):
     """{tsrc: invM[t, tsrc]} for the stored columns of one configuration"""
     out = {}
-    g = cfg_group[f"propagator/{species}"]
+    g = spatial_group(cfg_group, species)
     for key in g.keys():
         m = re.fullmatch(r"invM\[t,(\d+)\]", key)
         if m:
@@ -73,7 +89,7 @@ def deterministic_check(f, name, K, beta, Nt, ids, species_list=("particle", "ho
         phi = read_tensor(cfg["phi"])
         for sp in species_list:
             Minv = np.linalg.inv(ppp_ed.fermion_matrix(K, phi, delta, sp)).reshape(Nt, n, Nt, n)
-            g = cfg[f"propagator/{sp}"]
+            g = spatial_group(cfg, sp)
             for key in g.keys():
                 nsl = read_tensor(g[key])
                 if key == "invM[t,t]":
@@ -115,7 +131,7 @@ def main(argv=None):
         V_nsl = read_tensor(f[f"{name}/Meta/PPP/V"])
         dV = np.abs(V_nsl - V).max()
         print(f"# {name}: n={n}, beta={beta}, Nt={Nt};  |V_NSL - V_python| = {dV:.2e}")
-        ids = [i for i in config_ids(f[f"{name}/markovChain"]) if "propagator" in f[f"{name}/markovChain/{i}"]]
+        ids = [i for i in config_ids(f[f"{name}/markovChain"]) if has_spatial(f[f"{name}/markovChain/{i}"])]
         ids = ids[args.discard:]
         acc = np.mean([f[f"{name}/markovChain/{i}/acceptanceRate"][()] for i in ids])
         print(f"# {len(ids)} measured configurations (ids {ids[0]}..{ids[-1]}), HMC acceptance {acc:.3f}")

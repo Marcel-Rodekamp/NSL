@@ -12,7 +12,8 @@ Observables, as functions of the Markov time (one stored configuration = one ste
   a_k, a_k^2 amplitude of the time-summed field along the k-th eigenvector v_k of V,
              a_k = sum_t phi_t . v_k / sqrt(Nt delta lambda_k)   (k = 0: largest lambda),
              normalized to unit variance for the gauge action alone
-  G(tau)     if propagators were measured (propagatorChargeBasis): the site-averaged
+  G(tau)     if position-space propagators were measured (Executables/Hubbard/propagator,
+             measurements: type: spatial or both): the site-averaged
              particle propagator Re 1/Nx sum_x G_xx(tau), averaged over time sources
 
 The integrated autocorrelation time is also estimated from bin averages (bins of N/40, N/20,
@@ -96,7 +97,7 @@ def observables(yml, h5file, discard=0, chain="markovChain"):
             obs[f"a_{k}"] = amp[:, k]
             obs[f"a_{k}^2"] = amp[:, k] ** 2
 
-        measured = [i for i in ids if "propagator" in g[f"{i}"]]
+        measured = [i for i in ids if pc.has_spatial(g[f"{i}"])]
         if len(measured) == len(ids) and measured:
             G = np.array([pc.averaged_column(pc.source_columns(g[f"{i}"], "particle"), Nt) for i in ids])
             Gloc = np.einsum("ntxx->nt", G).real / G.shape[-1]

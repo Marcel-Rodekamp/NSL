@@ -36,7 +36,7 @@ Bugs met along the way, in NSL and in my own code, are collected in deck 5.
 | `Action/Implementations/hubbardFermiAction.tpp` | modified | basis chosen at compile time (concepts, `if constexpr`) |
 | `FermionMatrix/Impl/hubbardExp.hpp`, `hubbardExpSpinBasis.hpp` | modified | `populate(phi, reshape)` binds only a genuine `bool` |
 | `FermionMatrix/Impl/hubbardExp.tpp` | modified | `complex<float>` compile fix |
-| `Measurements/Hubbard/fermionPropagator.tpp` | modified | `measureK(startConfig)`; `wallSources` optional |
+| `Measurements/Hubbard/fermionPropagator.tpp`, `fermionPropagatorSpinBasis.tpp` | modified | new HDF5 layout (spatial/momentum blocks), start configuration for both modes, `wallSources` optional |
 | `Integrator/Impl/exactFourierAcceleration.tpp` | new | the EFA integrator |
 | `Integrator/integrator.tpp` | modified | `sampleMomentum` / `kineticEnergy` hooks |
 | `MarkovChain/HMC.tpp`, `MarkovChain/RadialHMC.tpp` | modified | use the hooks |
@@ -51,7 +51,7 @@ Bugs met along the way, in NSL and in my own code, are collected in deck 5.
 | `Executables/PPP/python/ppp_compare.py` | new | NSL vs ED: deterministic and statistical checks |
 | `Executables/PPP/python/ppp_autocorr.py` | new | integrated autocorrelation times (Γ method and binning) |
 | `Executables/PPP/yml/*.yml` | new | benzene and naphthalene benchmarks, perylene template |
-| `Executables/Hubbard/propagator.cpp` | modified | uses the charge-basis matrix it needs |
+| `Executables/Hubbard/propagator.cpp` | rewritten | one program for both bases, spatial and momentum; replaces `propagatorChargeBasis` and `propagatorSpinBasis` (removed) |
 | `Tests/Action/test_PPPGaugeAction.cpp` | new | 9 test cases |
 | `Tests/Integrator/test_exactFourierAcceleration.cpp` | new | 8 test cases |
 | `Tests/Action/test_force.cpp` | modified | `HubbardDiag` case removed |

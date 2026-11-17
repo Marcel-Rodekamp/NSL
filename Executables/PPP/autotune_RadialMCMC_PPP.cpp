@@ -23,8 +23,8 @@
  *   `Leapfrog: Nmd` (or the autotuned value) is the number of steps: Nmd+1 fermion
  *   force evaluations per trajectory for the leapfrog, Nmd for Fourier acceleration.
  *
- *  Measurements: Executables/Hubbard/propagatorChargeBasis (or propagator for
- *  momentum projected propagators) work unchanged on the produced ensembles.
+ *  Measurements: Executables/Hubbard/propagator with `measurements: basis: charge`
+ *  (position-space and/or momentum-projected propagators).
  */
 
 #include <chrono>
