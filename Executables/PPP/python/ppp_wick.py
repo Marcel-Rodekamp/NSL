@@ -70,6 +70,32 @@ def hh(B_sink, B_src, Gb):
     return np.einsum("xy,...ax,ab,...by->...", np.conj(B_sink), Gb, B_src, Gb)
 
 
+# --- the same contractions for operator bases of orbital pairs (fast; checked against the general ones) ----
+# Fo = U^T G(t, t0) U, Bo = U^T G(t0, t) U, Eo = U^T E(t) U in the orbital basis U (real orthogonal); c, v, a, b are
+# integer arrays of orbital indices, one entry per operator of the basis.
+
+def exciton_pairs(Fo, Bo, c, v):
+    """connected exciton correlator matrix of O^+_i = c^+_{c_i} c_{v_i} (spin as in `exciton`):
+    X[..., i, j] = -Fo[..., c_i, c_j] Bo[..., v_j, v_i] = triplet (any S_z); singlet = X + 2 <O_i(t)><O^+_j(t0)>"""
+    c, v = np.asarray(c), np.asarray(v)
+    return -Fo[..., c[:, None], c[None, :]] * Bo[..., v[None, :], v[:, None]]
+
+
+def exciton_expectations(Eo, c, v):
+    """(<O_i>, <O^+_i>) = (<c^+_{v_i} c_{c_i}>, <c^+_{c_i} c_{v_i}>) from the density matrix Eo(t) = <c^+ c> per spin"""
+    return Eo[..., v, c], Eo[..., c, v]
+
+
+def pp_pairs(Fo, a, b, sign):
+    """pp correlator matrix of P^+_i = (c^+_{a_i,up} c^+_{b_i,down} + sign c^+_{b_i,up} c^+_{a_i,down}) / sqrt(2)
+    (a_i != b_i), or c^+_{a,up} c^+_{a,down} for a_i == b_i (sign = +1): singlet for sign = +1, S_z = 0 triplet
+    for sign = -1. P_ij = 2 al_i al_j [Fo(a_i,a_j) Fo(b_i,b_j) + sign Fo(a_i,b_j) Fo(b_i,a_j)], al = 1/sqrt(2) or 1/2."""
+    a, b = np.asarray(a), np.asarray(b)
+    al = np.where(a == b, 0.5, 1 / np.sqrt(2.0))
+    F = lambda p, q: Fo[..., p[:, None], q[None, :]]           # noqa: E731
+    return 2 * al[:, None] * al[None, :] * (F(a, a) * F(b, b) + sign * F(a, b) * F(b, a))
+
+
 def pair_matrix(u, v, sign=+1):
     """(u v^T + sign v u^T)/sqrt(2) for u != v, u u^T for u == v: B of a pp/hh pair of orbitals"""
     if u is v or np.allclose(u, v):
