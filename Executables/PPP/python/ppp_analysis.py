@@ -9,7 +9,9 @@ Data model
 Statistics
   Configurations are averaged in bins of `binsize` consecutive configurations of a chain; the bins of
   all chains of a run are the samples of a jackknife (jackknife, jk_error, jk_apply). Choose the bin
-  size from the integrated autocorrelation times (tau_int) so that bins are independent.
+  size from the integrated autocorrelation times (tau_int) so that bins are independent. Files reduced
+  with --bin B hold bins of B configurations already: binsize must then be a multiple of B, and
+  `discard` is rounded up to whole bins of the file for the correlators (the history keeps it exactly).
 
 Single-particle correlators (charge basis, orbital basis of ppp_reduce.py, per symmetry class)
   addition  A_ab(t) = <c_a(t) c^+_b(0)>   ~ sum_n e^{-(E_{N+1,n} - E_N) t}   (electron added)
@@ -20,7 +22,8 @@ Single-particle correlators (charge basis, orbital basis of ppp_reduce.py, per s
   At mu = 0 on a bipartite lattice, particle-hole conjugation gives, on every configuration,
   R_{v v'}(t) = A_{c c'}(t)^* for the valence orbitals v = (-1)^x c (checked to 1e-14 on the data):
   the removal spectrum of a class is the addition spectrum of the partner class.
-  Energies are in units of the hopping t, times in units of 1/t (t * delta).
+  Energies are ratios E / kappa with the hopping kappa; imaginary time tau = delta * t in [0, beta)
+  (t the time slice, delta = beta / Nt), in units of 1 / kappa.
 """
 
 import glob
@@ -86,7 +89,8 @@ def addition_removal(F, B):
 
 class Chain:
     """One reduced file. Monte Carlo history is loaded at once; correlators on request, binned.
-    The first `discard` configurations are left out everywhere."""
+    The first `discard` configurations are left out everywhere (for files with bins of B configurations,
+    the correlators drop the first ceil(discard / B) bins)."""
 
     def __init__(self, path, discard=0):
         self.path = path
@@ -99,6 +103,9 @@ class Chain:
             self.name, self.Nt, self.Nx = str(a["name"]), int(a["Nt"]), int(a["Nx"])
             self.beta, self.delta, self.mu = float(a["beta"]), float(a["delta"]), float(a["mu"])
             self.sources = np.array(a["sources"])
+            self.bin = int(a.get("bin", 1))                  # configurations per stored bin (stage 1 --bin)
+            self.skip = -(-d // self.bin)                    # bins dropped at the start (ceil)
+            self.nbins_file = int(a.get("n_bins", a["n_configs"])) - self.skip
             self.yml_text = str(a["input_yml_text"])
             self.K, self.V = f["lattice/K"][()], f["lattice/V"][()]
             self.positions = f["lattice/positions"][()]
@@ -120,20 +127,43 @@ class Chain:
             self.detsign = cfg["detsign"][d:]
             self.checks = dict(f["checks"].attrs)
             self.has_noninteracting = "noninteracting" in f
+            c0 = next(iter(f["onebody"]))
+            self.probe_slices = (f["onebody"].attrs["probe_slices"][()]
+                                 if f"onebody/{c0}/addition_probe" in f else np.array([], int))
         self.n = len(self.ids)
+
+    def rebin(self, binsize):
+        """binsize (configurations) in units of the stored bins; it must be a multiple of the file's bin"""
+        if binsize % self.bin:
+            raise ValueError(f"{self.tag}: bin size {binsize} is not a multiple of the {self.bin} configurations "
+                             f"per bin of the reduced file")
+        return binsize // self.bin
+
+    def nbins(self, binsize):
+        return self.nbins_file // self.rebin(binsize)
 
     def __repr__(self):
         return f"Chain({self.tag}, {self.n} configurations)"
 
     def onebody(self, cls, binsize):
         """binned addition and removal correlators of a symmetry class, each (nbins, Nt, m, m)"""
+        r = self.rebin(binsize)
         with h5py.File(self.path, "r") as f:
-            F = _binned_dataset(f[f"onebody/{cls}/forward"], binsize, self.discard)
-            B = _binned_dataset(f[f"onebody/{cls}/backward"], binsize, self.discard)
+            F = _binned_dataset(f[f"onebody/{cls}/forward"], r, self.skip)
+            B = _binned_dataset(f[f"onebody/{cls}/backward"], r, self.skip)
         return addition_removal(F, B)
 
     def onebody_element(self, cls, a, t, kind="addition"):
-        """per-configuration A_aa(t) or R_aa(t) of the a-th orbital of the class (for tau_int)"""
+        """per-configuration A_aa(t) or R_aa(t) of the a-th orbital of the class (for tau_int); from the
+        stored correlators if they are per configuration, otherwise from the probes (addition only, t one
+        of probe_slices)"""
+        if self.bin > 1:
+            if kind != "addition" or t not in self.probe_slices:
+                raise ValueError(f"{self.tag}: correlators are stored in bins of {self.bin}; per configuration only "
+                                 f"the addition probes at t = {list(self.probe_slices)} exist")
+            k = int(np.nonzero(self.probe_slices == t)[0][0])
+            with h5py.File(self.path, "r") as f:
+                return np.asarray(f[f"onebody/{cls}/addition_probe"][self.discard:, k, a], float)
         with h5py.File(self.path, "r") as f:
             F, B, d = f[f"onebody/{cls}/forward"], f[f"onebody/{cls}/backward"], self.discard
             if kind == "addition":
@@ -150,8 +180,9 @@ class Chain:
 
     def equaltime(self, binsize):
         """binned equal-time G = <c c^+>, <s_x s_y>, <q_x q_y> (real parts), each (nbins, Nx, Nx)"""
+        r = self.rebin(binsize)
         with h5py.File(self.path, "r") as f:
-            return tuple(np.real(_binned_dataset(f[f"equaltime/{k}"], binsize, self.discard)) for k in ("G", "ss", "qq"))
+            return tuple(np.real(_binned_dataset(f[f"equaltime/{k}"], r, self.skip)) for k in ("G", "ss", "qq"))
 
 
 class Run:
@@ -186,7 +217,7 @@ class Run:
         return tuple(np.concatenate([p[k] for p in parts]) for k in range(3))
 
     def chain_of_bins(self, binsize):
-        return np.concatenate([np.full(c.n // binsize, i) for i, c in enumerate(self.chains)])
+        return np.concatenate([np.full(c.nbins(binsize), i) for i, c in enumerate(self.chains)])
 
 
 def load_runs(data_dir, order=None, discard=0):
@@ -399,6 +430,13 @@ class TwoBodyChain:
         self.skip = -(-int(discard) // self.bin)            # bins dropped at the start (ceil)
         self.nbins = len(self.first_id) - self.skip
 
+    def rebin(self, binsize):
+        """binsize (configurations) in units of the stored bins; it must be a multiple of the file's bin"""
+        if binsize % self.bin:
+            raise ValueError(f"{self.tag}: bin size {binsize} is not a multiple of the {self.bin} configurations "
+                             f"per bin of the stage-2 file")
+        return binsize // self.bin
+
     def _read(self, node, rebin):
         with h5py.File(self.path, "r") as f:
             return _binned_dataset(f[node], rebin, self.skip)
@@ -448,7 +486,7 @@ def exciton_bins(chains, sector, channel, binsize):
     """binned exciton correlator matrices of a run (all chains): triplet = X, singlet = X + 2 (D - <O><O^+>),
     with the ensemble averages <O>, <O^+> (vacuum subtraction; zero in expectation outside the vacuum sector).
     Real symmetric part; returns (nbins, Nt, n, n)."""
-    parts = [c.exciton(sector, max(1, binsize // c.bin)) for c in chains]
+    parts = [c.exciton(sector, c.rebin(binsize)) for c in chains]
     X = np.concatenate([p[0] for p in parts])
     if channel == "triplet":
         C = X
@@ -461,5 +499,5 @@ def exciton_bins(chains, sector, channel, binsize):
 
 
 def pp_bins(chains, kind, sector, binsize):
-    C = np.real(np.concatenate([c.pp(kind, sector, max(1, binsize // c.bin)) for c in chains]))
+    C = np.real(np.concatenate([c.pp(kind, sector, c.rebin(binsize)) for c in chains]))
     return 0.5 * (C + np.swapaxes(C, -1, -2))

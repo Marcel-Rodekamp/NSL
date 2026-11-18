@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Stage-1 reduction of a measured PPP (or Hubbard) ensemble: one chain file in, one small file out.
 
-    python ppp_reduce.py chain.yml [-o reduced.h5] [--h5 chain.h5] [--orbitals N] [--single]
-                         [--detsign-every K] [--max-configs N] [--overwrite]
+    python ppp_reduce.py chain.yml [-o reduced.h5] [--h5 chain.h5] [--orbitals N] [--bin B] [--single]
+                         [--probe-slices 4,8,16,32] [--detsign-every K] [--max-configs N] [--overwrite]
 
 Input: the yml file of the run and its h5 file (fileIO: h5file, relative to the working directory,
 as for the NSL programs), with position-space propagators measured by Executables/Hubbard/propagator
@@ -12,11 +12,15 @@ particle ones on the first configurations as a check of the stored data.
 
 Everything that needs products of propagators of the same configuration at the same time is
 computed here (equal-time spin and charge correlations); what stays linear is stored per
-configuration so that the analysis can bin and resample freely. Two-body (exciton, pp, hh)
-correlators need products of propagators of different times and come with stage 2.
+configuration (--bin 1, the default) or averaged over bins of B consecutive configurations (--bin B; the
+analysis can then only use bins of multiples of B). The Monte Carlo history (config/...) and the probes stay
+per configuration, for autocorrelation times. Two-body (exciton, pp, hh) correlators need products of
+propagators of different times and come with stage 2 (ppp_reduce2.py).
 
-Output (plain h5py; c = configuration index, t = Nt time separations, sizes in the attributes):
-  attrs                          name, Nt, beta, delta, Nx, mu, sources, n_configs, input_h5, input_yml_text, ...
+Output (plain h5py; c = configuration index, b = bin index (= c for --bin 1), t = Nt time separations,
+sizes in the attributes):
+  attrs                          name, Nt, beta, delta, Nx, mu, sources, n_configs, bin, n_bins, input_h5,
+                                 input_yml_text, ...  (n_configs = n_bins * bin: a remainder is not reduced)
   lattice/{K, V, positions, sublattice, V_eigenvalues, V_eigenvectors}
   orbitals/U                     (Nx, No) hopping orbitals as columns: symmetry adapted (site permutations that
                                  leave K and V invariant), sorted by eps; on a bipartite lattice the orbital
@@ -30,13 +34,16 @@ Output (plain h5py; c = configuration index, t = Nt time separations, sizes in t
                                  the region of phi = 0); 0 where not computed. config/detsign_residual = |Im|.
                                  Computed from the stabilized transfer-matrix product (logdet_particle; agrees
                                  with the dense determinant of ppp_ed.fermion_matrix to 1e-14, ~15 ms per config)
-  onebody/<class>/forward        (c, t, n, n) sum over sources s of sign * U^T G(s+t, s) U / #sources,
+  onebody/<class>/forward        (b, t, n, n) sum over sources s of sign * U^T G(s+t, s) U / #sources,
                                  restricted to the orbitals of the class (the ensemble average is block diagonal)
-  onebody/<class>/backward       (c, t, n, n) the same for G(s, s+t); sign = -1 where s+t wraps around Nt
+  onebody/<class>/backward       (b, t, n, n) the same for G(s, s+t); sign = -1 where s+t wraps around Nt
   onebody/<class>/orbitals       indices of the class orbitals in orbitals/U
-  equaltime/{G, ss, qq}          (c, Nx, Nx) site basis, averaged over the Nt time slices: G(t,t) = <c c^+>,
+  onebody/<class>/addition_probe (c, p, n) per configuration: real part of the diagonal addition correlator
+                                 A_aa(t) = [F_aa(t) - B_aa(Nt - t)] / 2 (t > 0; F_aa(0) at t = 0) at the time
+                                 slices onebody/attrs/probe_slices (for tau_int of the correlators)
+  equaltime/{G, ss, qq}          (b, Nx, Nx) site basis, averaged over the Nt time slices: G(t,t) = <c c^+>,
                                  <s_x s_y> and <q_x q_y> (s = n_up - n_down, q = n_up + n_down - 1)
-  noninteracting/...             the same quantities for phi = 0 (if measured), without the config axis
+  noninteracting/...             the same quantities for phi = 0 (if measured), without the config axis (double)
   checks/attrs                   hole_relation_max_dev, ...
 
 The file is written as <out>.tmp and renamed when complete; an existing output is skipped unless
@@ -59,7 +66,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ppp_ed  # noqa: E402
 import ppp_wick as wick  # noqa: E402
 
-VERSION = 1
+VERSION = 2          # 2: --bin, addition_probe
 
 
 # ----------------------------------------------------------------------------------------------
@@ -314,7 +321,11 @@ def main(argv=None):
     p.add_argument("--h5", help="ensemble file (default: fileIO: h5file of the yml)")
     p.add_argument("--orbitals", type=int, default=0,
                    help="keep only the N orbitals closest to the Fermi level (default: all)")
+    p.add_argument("--bin", type=int, default=1,
+                   help="average correlators and equal-time data over B consecutive configurations [1]")
     p.add_argument("--single", action="store_true", help="store correlators in single precision")
+    p.add_argument("--probe-slices", default="4,8,16,32",
+                   help="time slices of the per-configuration addition probes [4,8,16,32]")
     p.add_argument("--detsign-every", type=int, default=1, help="compute the determinant sign on every K-th config")
     p.add_argument("--max-configs", type=int, default=0, help="reduce only the first N configurations (tests)")
     p.add_argument("--check-hole", type=int, default=2, help="configurations used to check the hole relation")
@@ -367,9 +378,18 @@ def main(argv=None):
         ids = measured[: args.max_configs] if args.max_configs > 0 else measured
         if not ids:
             raise SystemExit(f"no configuration with propagator/spatial/particle in {h5in}")
+        B = max(1, args.bin)
+        nb = len(ids) // B
+        if nb == 0:
+            raise SystemExit(f"{len(ids)} configurations are fewer than one bin of {B}")
+        if nb * B < len(ids):
+            print(f"# {len(ids) - nb * B} configurations after the last complete bin of {B} are not reduced")
+        ids = ids[: nb * B]
         sources = sources_of(chain[f"{ids[0]}/propagator/spatial/particle"])
         nc = len(ids)
-        print(f"{h5in}: {name}, Nt = {Nt}, Nx = {Nx}, {nc} configurations, sources {sources}, "
+        probe = np.array(sorted({int(x) for x in args.probe_slices.split(",") if x.strip() and 0 <= int(x) < Nt}), int)
+        print(f"{h5in}: {name}, Nt = {Nt}, Nx = {Nx}, {nc} configurations"
+              f"{f' in {nb} bins of {B}' if B > 1 else ''}, sources {sources}, "
               f"orbital classes {', '.join(f'{c} ({len(v)})' for c, v in classes.items())}"
               f"{' (symmetry: ' + ', '.join(orb['operations']) + ')' if orb['operations'] else ''}")
 
@@ -380,7 +400,7 @@ def main(argv=None):
                           sources=np.array(sources), n_configs=nc, input_h5=os.path.abspath(h5in),
                           input_yml=os.path.abspath(args.yml), input_yml_text=yml_text, version=VERSION,
                           created=datetime.datetime.now().isoformat(timespec="seconds"),
-                          precision="single" if args.single else "double"))
+                          precision="single" if args.single else "double", bin=B, n_bins=nb))
             fo["lattice/K"], fo["lattice/V"], fo["lattice/positions"] = K, V, pos
             fo["lattice/V_eigenvalues"], fo["lattice/V_eigenvectors"] = lamV, QV
             if orb["sublattice"] is not None:
@@ -400,16 +420,21 @@ def main(argv=None):
             dA = cfg.create_dataset("field_modes", (nc, Nx), float)
             dSign = cfg.create_dataset("detsign", (nc,), np.int8)
             dRes = cfg.create_dataset("detsign_residual", (nc,), float)
-            ob = {}
+            ob, prb = {}, {}
+            rtype = np.float32 if args.single else np.float64
             for c, idx in classes.items():
                 g = fo.create_group(f"onebody/{c}")
                 g["orbitals"] = np.array(idx)
                 m = len(idx)
-                ob[c] = (g.create_dataset("forward", (nc, Nt, m, m), ctype, chunks=(1, Nt, m, m)),
-                         g.create_dataset("backward", (nc, Nt, m, m), ctype, chunks=(1, Nt, m, m)))
-            eqG = fo.create_dataset("equaltime/G", (nc, Nx, Nx), ctype)
-            eqS = fo.create_dataset("equaltime/ss", (nc, Nx, Nx), ctype)
-            eqQ = fo.create_dataset("equaltime/qq", (nc, Nx, Nx), ctype)
+                ob[c] = (g.create_dataset("forward", (nb, Nt, m, m), ctype, chunks=(1, Nt, m, m)),
+                         g.create_dataset("backward", (nb, Nt, m, m), ctype, chunks=(1, Nt, m, m)))
+                prb[c] = g.create_dataset("addition_probe", (nc, len(probe), m), rtype)
+            fo["onebody"].attrs["probe_slices"] = probe
+            eqG = fo.create_dataset("equaltime/G", (nb, Nx, Nx), ctype)
+            eqS = fo.create_dataset("equaltime/ss", (nb, Nx, Nx), ctype)
+            eqQ = fo.create_dataset("equaltime/qq", (nb, Nx, Nx), ctype)
+            back = (Nt - probe) % Nt                   # B(Nt - t); unused at t = 0
+            acc = None                                 # sums over the configurations of the current bin
 
             def project(M):                    # U^T M U for (Nt, Nx, Nx)
                 return U.T @ M @ U
@@ -418,11 +443,11 @@ def main(argv=None):
             ni = f"{name}/NonInteracting/propagator/spatial/particle"
             if ni in fin:
                 gi = fin[ni]
-                F, B, Gtt = onebody(gi, sources_of(gi), Nt)
-                Fo, Bo = project(F), project(B)
+                F, Bk, Gtt = onebody(gi, sources_of(gi), Nt)
+                Fo, Bo = project(F), project(Bk)
                 for c, idx in classes.items():
-                    fo[f"noninteracting/onebody/{c}/forward"] = Fo[:, idx][:, :, idx].astype(ctype)
-                    fo[f"noninteracting/onebody/{c}/backward"] = Bo[:, idx][:, :, idx].astype(ctype)
+                    fo[f"noninteracting/onebody/{c}/forward"] = Fo[:, idx][:, :, idx]      # double: one entry
+                    fo[f"noninteracting/onebody/{c}/backward"] = Bo[:, idx][:, :, idx]
                 _, ss, qq = wick.equal_time(Gtt)
                 fo["noninteracting/equaltime/G"] = Gtt.mean(axis=0)
                 fo["noninteracting/equaltime/ss"] = ss.mean(axis=0)
@@ -450,13 +475,22 @@ def main(argv=None):
                     else:
                         dRes[n] = np.nan
                 gp = g["propagator/spatial/particle"]
-                F, B, Gtt = onebody(gp, sources, Nt)
-                Fo, Bo = project(F), project(B)
-                for c, idx in classes.items():
-                    ob[c][0][n] = Fo[:, idx][:, :, idx]
-                    ob[c][1][n] = Bo[:, idx][:, :, idx]
+                F, Bk, Gtt = onebody(gp, sources, Nt)
+                Fo, Bo = project(F), project(Bk)
                 _, ss, qq = wick.equal_time(Gtt)
-                eqG[n], eqS[n], eqQ[n] = Gtt.mean(axis=0), ss.mean(axis=0), qq.mean(axis=0)
+                cur = {("eq", 0): Gtt.mean(axis=0), ("eq", 1): ss.mean(axis=0), ("eq", 2): qq.mean(axis=0)}
+                for c, idx in classes.items():
+                    Fc, Bc = Fo[:, idx][:, :, idx], Bo[:, idx][:, :, idx]
+                    cur[(c, 0)], cur[(c, 1)] = Fc, Bc
+                    dF = np.real(np.diagonal(Fc[probe], axis1=1, axis2=2))
+                    dB = np.real(np.diagonal(Bc[back], axis1=1, axis2=2))
+                    prb[c][n] = np.where((probe > 0)[:, None], 0.5 * (dF - dB), dF)
+                acc = cur if n % B == 0 else {k: acc[k] + v for k, v in cur.items()}
+                if n % B == B - 1:
+                    b = n // B
+                    for c in classes:
+                        ob[c][0][b], ob[c][1][b] = acc[(c, 0)] / B, acc[(c, 1)] / B
+                    eqG[b], eqS[b], eqQ[b] = (acc[("eq", k)] / B for k in range(3))
                 if n < args.check_hole and "propagator/spatial/hole" in g:
                     hole_dev = max(hole_dev, hole_relation_deviation(gp, g["propagator/spatial/hole"], sources, Nt))
                 if time.time() - last > 60 or n == nc - 1:

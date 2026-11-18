@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Tests of ppp_analysis.py on synthetic data, and (if given) on a reduced file of ppp_reduce.py.
 
-    python test_ppp_analysis.py [reduced.h5]       # exit code 1 on failure
+    python test_ppp_analysis.py [reduced.h5 [reduced_binned.h5]]       # exit code 1 on failure
 
 With a reduced file, the phi = 0 (non-interacting) correlators are checked: the addition correlator
 of a conduction orbital and the removal correlator of a valence orbital decay exactly like
-e^{-|eps| t}, and the free closed-shell ground state has <Q> = 0 and <S^2> = 0.
+e^{-|eps| t}, and the free closed-shell ground state has <Q> = 0 and <S^2> = 0. With a second file,
+reduced from the same chain with --bin B (and possibly --single), its binned correlators, equal-time
+data and per-configuration probes are compared with those of the first (unbinned) file.
 """
 
 import os
@@ -77,12 +79,15 @@ def main(argv):
             # grand canonical at mu = 0: <S^2> = 3/2 sum_k f_k (1 - f_k), f_k = 1/(1 + e^{beta eps_k})
             fk = 1 / (1 + np.exp(ch.beta * ch.eps))
             check(res, "phi = 0: <S^2> = 3/2 sum f(1-f) (thermal)", abs(obs["S2"][0] / (1.5 * np.sum(fk * (1 - fk))) - 1), 1e-8)
-        A, R = ch.onebody(next(iter(ch.classes)), binsize=10)
+        import h5py
+        with h5py.File(argv[1], "r") as f:
+            single = str(f.attrs.get("precision", "double")) == "single"
+        tol_ph = 1e-6 if single else 1e-12
+        A, R = ch.onebody(next(iter(ch.classes)), binsize=ch.bin if ch.bin > 1 else 10)
         check(res, f"interacting addition/removal symmetric ({ch.tag})",
               np.max(np.abs(A - np.swapaxes(A, -1, -2))) + np.max(np.abs(R - np.swapaxes(R, -1, -2))), 1e-14)
 
-        # particle-hole identity per configuration (complex data): R of the partner orbitals = A^*
-        import h5py
+        # particle-hole identity per configuration (or bin; complex data): R of the partner orbitals = A^*
         worst, scale = 0.0, 0.0
         with h5py.File(argv[1], "r") as f:
             for cls, idx in ch.classes.items():
@@ -99,7 +104,29 @@ def main(argv):
                 Ac = 0.5 * (F[:, 1:] - B[:, back])[:, :, ia][:, :, :, ia]
                 Rc = 0.5 * (-np.swapaxes(Bp[:, 1:], -1, -2) + np.swapaxes(Fp[:, back], -1, -2))[:, :, ib][:, :, :, ib]
                 worst, scale = max(worst, np.abs(Rc - Ac.conj()).max()), max(scale, np.abs(Ac).max())
-        check(res, f"per configuration: R(partner orbitals) = A^* ({ch.tag})", worst / scale, 1e-12)
+        check(res, f"per configuration: R(partner orbitals) = A^* ({ch.tag})", worst / scale, tol_ph)
+
+    if len(argv) > 2:
+        # the same chain reduced with --bin B: bins of the per-configuration data, probes
+        c1, cb = pa.Chain(argv[1]), pa.Chain(argv[2])
+        assert c1.bin == 1 and cb.bin > 1, "the second file must be the binned one"
+        with h5py.File(argv[2], "r") as f:
+            tol = 1e-6 if str(f.attrs.get("precision", "double")) == "single" else 1e-12
+        worst = 0.0
+        for cls in c1.classes:
+            for X1, X2 in zip(c1.onebody(cls, 2 * cb.bin), cb.onebody(cls, 2 * cb.bin)):
+                worst = max(worst, np.abs(X1 - X2).max() / np.abs(X1).max())
+        check(res, f"--bin {cb.bin}: binned correlators = bins of the unbinned ones", worst, tol)
+        worst = max(np.abs(a - b).max() / np.abs(a).max() for a, b in zip(c1.equaltime(cb.bin), cb.equaltime(cb.bin)))
+        check(res, f"--bin {cb.bin}: binned equal-time data", worst, tol)
+        worst = 0.0
+        for cls, idx in cb.classes.items():
+            for t in cb.probe_slices:
+                for a in range(len(idx)):
+                    x1, x2 = c1.onebody_element(cls, a, int(t)), cb.onebody_element(cls, a, int(t))
+                    worst = max(worst, np.abs(x1 - x2).max() / max(np.abs(x1).max(), 1e-300))
+        check(res, f"--bin {cb.bin}: per-configuration probes = A_aa(t)", worst, tol)
+        check(res, f"--bin {cb.bin}: Monte Carlo history unchanged", float(np.abs(c1.S - cb.S).max()), 1e-12)
 
     failed = False
     for name, val, ok in res:
