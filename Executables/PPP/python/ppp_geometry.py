@@ -143,7 +143,7 @@ def yml_text(name, args):
         "  save frequency: 1",
         f"  Nradial: {args.Nradial}",
         (f"  radial scale: {args.radial_scale!r}" if args.radial_scale is not None
-         else f"  radial scale: {1.0 / (args.Nt * n)!r}   # 1/(Nt*Nx) = 1/({args.Nt}*{n})"),
+         else f"  radial scale: {1.0 / math.sqrt(args.Nt * n)!r}   # 1/sqrt(Nt*Nx) = 1/sqrt({args.Nt}*{n})"),
         "  Nhmc: 1",
         "",
         "Leapfrog:",
@@ -192,7 +192,7 @@ def main(argv=None):
     p.add_argument("--trajectory-length", type=float, default=None,
                    help="MD trajectory length (default: pi/2 with Fourier acceleration, else 1)")
     p.add_argument("--Nradial", type=int, default=1)
-    p.add_argument("--radial-scale", type=float, default=None, help="default: 1/(Nt*Nx)")
+    p.add_argument("--radial-scale", type=float, default=None, help="default: 1/sqrt(Nt*Nx) (arXiv:2504.01575)")
     p.add_argument("--time-sources", type=int, default=4)
     p.add_argument("--h5file", default=None)
     args = p.parse_args(argv)

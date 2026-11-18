@@ -106,8 +106,8 @@ static int runHMC(int argc, char* argv[]){
     if (yml["HMC"]["radial scale"]){
         params["radial scale"]    = yml["HMC"]["radial scale"].as<double>();
     } else {
-        // DEFAULT: radialScale = 1/Volume
-        params["radial scale"]    = 1./(params["Nt"].to<double>()*params["Nx"].to<double>()); 
+        // DEFAULT: radialScale = 1/sqrt(Volume), the starting value recommended in arXiv:2504.01575
+        params["radial scale"]    = 1./std::sqrt(params["Nt"].to<double>()*params["Nx"].to<double>());
     }
 
     if (params["radial scale"].to<double>()==0.0){

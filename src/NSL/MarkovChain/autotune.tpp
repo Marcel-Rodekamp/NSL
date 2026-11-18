@@ -8,9 +8,10 @@
  *  (NSL::Stop) and continued by running the same command again; the checkpoint is kept in
  *  <base>/thermalization until the production has started.
  *
- *  1. Thermalization: Ntherm combined updates (radial + HMC). When Nmd is tuned, Nmd doubles after
- *     `escalate after` rejections with dH > `spike threshold` in a row, so that a start far from
- *     equilibrium does not get stuck. With a fixed Nmd (plain run) only a warning is given.
+ *  1. Thermalization: Ntherm combined updates (radial + HMC). When Nmd is tuned, Nmd doubles when at
+ *     most 5% of the last `escalate after` trajectories at the current Nmd were accepted (see
+ *     `stalled`), so that a start far from equilibrium does not get stuck. With a fixed Nmd (plain
+ *     run) only a warning is given.
  *  2. Tuning (only if Nmd is tuned), on equilibrium data. A trajectory with dH > `spike threshold`
  *     is a "spike"; the others form the "bulk". For a second-order integrator the bulk acceptance
  *     follows P_b(Nmd) = erfc((N0/Nmd)^2/2) with one constant N0, the "step scale" (found constant
@@ -38,7 +39,7 @@
  *    Leapfrog: Nmd [10 when tuned; required otherwise]
  *    Autotune: target bulk acceptance [0.85], spike threshold [3], batch [20],
  *              min trajectories [50], tolerance [0.1], max trajectories [2000],
- *              spike fraction [0.1], escalate after [3], max Nmd [4096], checkpoint every [10]
+ *              spike fraction [0.1], escalate after [50], max Nmd [4096], checkpoint every [10]
  *  `autotune: legacy`, or the environment variable NSL_AUTOTUNE_PROTOCOL=legacy (set by
  *  autotuner8/autotuner.py), selects the protocol of autotuner8/autotuner.py instead.
  */
@@ -146,7 +147,7 @@ struct Options {
     double tolerance = 0.1;
     NSL::size_t maxTrajectories = 2000;
     double spikeFraction = 0.1;
-    NSL::size_t escalateAfter = 3;
+    NSL::size_t escalateAfter = 50;
     NSL::size_t maxNmd = 4096;
     NSL::size_t checkpointEvery = 10;
 
@@ -222,6 +223,28 @@ struct Record {
         file.getDataSet(node + "/stage").read(stage);
     }
 };
+
+/*! Escalation rule of the thermalization: true if the last `window` trajectories of the record are
+ *  thermalization trajectories (stage 0) with Nmd = nmd and at most 5% of them were accepted;
+ *  `accepted` is set to the number accepted among them.
+ *
+ *  It asks whether the chain moves, not whether it has spikes. Spikes come in clusters, which a
+ *  larger Nmd does not remove: equilibrium perylene chains (beta = 20, Nt = 80) had up to 27
+ *  trajectories in a row without an acceptance, and up to 10 rejections with dH > 3 in a row at a
+ *  spike fraction of 19%, but accepted at least 4 of any 50 trajectories. Stuck chains (perylene at
+ *  Nmd 2 and 3, benzene at Nmd 2) accepted 0 of 50. With window 3 the rule is "3 rejections in a row".
+ *  The window holds only trajectories at the current Nmd, so it starts again after a doubling, and
+ *  it continues after a stop because the record is stored with the checkpoint.
+ */
+inline bool stalled(const Record & r, NSL::size_t nmd, NSL::size_t window, NSL::size_t & accepted){
+    NSL::size_t n = 0;
+    accepted = 0;
+    for (std::size_t i = r.size(); i > 0 && n < window; --i, ++n) {
+        if (int(r.stage[i - 1]) != 0 || NSL::size_t(r.nmd[i - 1]) != nmd) { break; }
+        if (r.accepted[i - 1] > 0.5) { ++accepted; }
+    }
+    return n == window && 20 * accepted <= window;
+}
 
 //! Statistics of the trajectories at one Nmd.
 struct Stats {
@@ -399,7 +422,6 @@ struct ChainRun {
 
     //! Thermalization; false if stopped on a signal
     bool thermalize(bool escalate){
-        NSL::size_t largeInARow = 0;
         bool warned = false;
         const NSL::size_t logEvery = std::max<NSL::size_t>(1, rp.Ntherm / 20);
         if (cp.completedSteps < rp.Ntherm) {
@@ -408,23 +430,22 @@ struct ChainRun {
         while (cp.completedSteps < rp.Ntherm) {
             trajectory(cp.nmd, 0);
             ++cp.completedSteps;
-            const bool large = !state.accepted && !(record.p.back() >= std::exp(-opt.spikeThreshold));
-            largeInARow = large ? largeInARow + 1 : 0;
-            if (largeInARow >= opt.escalateAfter) {
+            NSL::size_t accepted = 0;
+            if (stalled(record, cp.nmd, opt.escalateAfter, accepted)) {
                 if (escalate) {
                     if (cp.nmd >= opt.maxNmd) {
-                        throw std::runtime_error(fmt::format("Thermalization: rejected with dH > {} even at Nmd = {} (max Nmd)",
-                                                             opt.spikeThreshold, cp.nmd));
+                        throw std::runtime_error(fmt::format("Thermalization: {} of the last {} trajectories accepted even at Nmd = {} (max Nmd)",
+                                                             accepted, opt.escalateAfter, cp.nmd));
                     }
+                    const NSL::size_t before = cp.nmd;
                     cp.nmd = std::min(2 * cp.nmd, opt.maxNmd);
-                    NSL::Logger::warn("Thermalization: {} rejections with dH > {} in a row; Nmd -> {}",
-                                      largeInARow, opt.spikeThreshold, cp.nmd);
+                    NSL::Logger::warn("Thermalization: {} of the last {} trajectories at Nmd = {} accepted; Nmd -> {}",
+                                      accepted, opt.escalateAfter, before, cp.nmd);
                 } else if (!warned) {
-                    NSL::Logger::warn("Thermalization: {} rejections with dH > {} in a row at the fixed Nmd = {}; "
-                                      "consider `HMC: start: cold` or a larger Nmd.", largeInARow, opt.spikeThreshold, cp.nmd);
+                    NSL::Logger::warn("Thermalization: {} of the last {} trajectories accepted at the fixed Nmd = {}; "
+                                      "consider `HMC: start: cold` or a larger Nmd.", accepted, opt.escalateAfter, cp.nmd);
                     warned = true;
                 }
-                largeInARow = 0;
             }
             if (cp.completedSteps % logEvery == 0 || cp.completedSteps == rp.Ntherm) {
                 NSL::Logger::info("Thermalization {}/{} (Nmd {}): S = {:.6g}, e^-dH = {:.3g}, accepted {}",

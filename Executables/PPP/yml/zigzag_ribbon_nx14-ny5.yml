@@ -563,7 +563,7 @@ HMC:
   Nconf: 1000
   save frequency: 1
   Nradial: 1
-  radial scale: 8.928571428571429e-05   # 1/(Nt*Nx) = 1/(80*140)
+  radial scale: 0.00944911182523068   # 1/sqrt(Nt*Nx) = 1/sqrt(80*140)
   Nhmc: 1
 
 Leapfrog:

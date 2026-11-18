@@ -68,6 +68,45 @@ TEST_CASE( "Autotune: the proposal reaches the target bulk acceptance", "[Autotu
     REQUIRE( std::abs(AT::pooledStepScale(S).first - N0) < 1e-9 );
 }
 
+TEST_CASE( "Autotune: escalation in the thermalization", "[Autotune]" ) {
+    const double spike = std::exp(-5.);   // e^{-dH} of a rejected spike
+    NSL::size_t acc = 99;
+    // a decision needs `window` thermalization trajectories at the current Nmd
+    AT::Record r;
+    for (int i = 0; i < 49; ++i) { r.add(10, spike, false, 1., 0); }
+    REQUIRE_FALSE( AT::stalled(r, 10, 50, acc) );
+    r.add(10, spike, false, 1., 0);
+    REQUIRE( AT::stalled(r, 10, 50, acc) );
+    REQUIRE( acc == 0 );
+    // after a doubling the window starts again
+    REQUIRE_FALSE( AT::stalled(r, 20, 50, acc) );
+    for (int i = 0; i < 50; ++i) { r.add(20, spike, false, 1., 0); }
+    REQUIRE( AT::stalled(r, 20, 50, acc) );
+
+    // at most 5%: 2 of 50 accepted is stalled, 3 of 50 is not, however long the runs of rejections
+    AT::Record m;
+    for (int i = 0; i < 50; ++i) { m.add(6, 0.5, i == 7 || i == 30, 1., 0); }
+    REQUIRE( AT::stalled(m, 6, 50, acc) );
+    REQUIRE( acc == 2 );
+    m.add(6, 0.9, true, 1., 0);   // the window is now trajectories 1..50, with 3 accepted
+    REQUIRE_FALSE( AT::stalled(m, 6, 50, acc) );
+    REQUIRE( acc == 3 );
+
+    // tuning trajectories are not part of the thermalization
+    AT::Record t;
+    for (int i = 0; i < 50; ++i) { t.add(10, spike, false, 1., 1); }
+    REQUIRE_FALSE( AT::stalled(t, 10, 50, acc) );
+
+    // window 3: three rejections in a row
+    AT::Record w;
+    w.add(10, spike, false, 1., 0); w.add(10, 0.9, true, 1., 0); w.add(10, spike, false, 1., 0);
+    REQUIRE_FALSE( AT::stalled(w, 10, 3, acc) );
+    w.add(10, spike, false, 1., 0); w.add(10, spike, false, 1., 0);
+    REQUIRE( AT::stalled(w, 10, 3, acc) );
+
+    REQUIRE( AT::Options::fromYAML(YAML::Load("HMC: {Nconf: 1}")).escalateAfter == 50 );
+}
+
 TEST_CASE( "Autotune: yml interface", "[Autotune]" ) {
     unsetenv("NSL_AUTOTUNE_PROTOCOL");
     REQUIRE( AT::modeFromYAML(YAML::Load("HMC: {Nconf: 1}")) == AT::Mode::Tune );

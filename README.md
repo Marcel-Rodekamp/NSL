@@ -254,8 +254,10 @@ it thermalizes, tunes Nmd on the thermalized chain, and generates the Markov cha
      part does not average out and grows like V·ε²: ΔH ≈ 4 for perylene at Nmd = 10, with no trajectory accepted.
      When Nmd is tuned, one doubling of Nmd removes this.
 
-   The run then performs `HMC: Ntherm` updates, beginning at `Leapfrog: Nmd` (default 10). Nmd doubles after 3
-   rejections in a row with an energy error ΔH > 3.
+   The run then performs `HMC: Ntherm` updates, beginning at `Leapfrog: Nmd` (default 10). Nmd doubles when at
+   most 5% (2 of 50) of the last 50 trajectories at the current Nmd were accepted, i.e. when the chain does not
+   move. Clusters of spikes do not trigger it: equilibrium perylene chains had up to 27 rejections in a row, but
+   accepted at least 4 of any 50 trajectories, and a larger Nmd does not remove such clusters.
 2. **Tuning.** A trajectory with ΔH > 3 is a *spike*; the others form the *bulk*.
    * For a second-order integrator, the bulk acceptance follows P_b = erfc((N₀/Nmd)²/2), with one constant
      *step scale* N₀. It was found constant over Nmd for benzene, perylene and a 140-site zigzag ribbon.
@@ -287,7 +289,8 @@ Autotune:
   tolerance: 0.1              # the search stops when the proposed Nmd is within 10% of the current one
   max trajectories: 2000      # budget of tuning trajectories
   spike fraction: 0.1         # above it, Nmd and 1.5 Nmd are compared by cost
-  escalate after: 3           # thermalization: double Nmd after this many large-dH rejections in a row
+  escalate after: 50          # thermalization: double Nmd when at most 5% of the last 50 trajectories at
+                              # the current Nmd were accepted
   max Nmd: 4096
   checkpoint every: 10        # trajectories between checkpoints
 ```

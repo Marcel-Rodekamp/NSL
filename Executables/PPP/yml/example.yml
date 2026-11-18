@@ -56,7 +56,8 @@ HMC:
   Nconf: 1000                   # required; configurations stored in <name>/markovChain
   save frequency: 1             # required; updates between stored configurations
   Nradial: 1                    # radial updates per update [0]
-  radial scale: 0.010416666666666666   # width of log r for the radial update [1/(Nt*Nx)]; here 1/(16*6)
+  radial scale: 0.10206207261596577    # width of log r for the radial update [1/sqrt(Nt*Nx)]; here 1/sqrt(16*6)
+                                       # (arXiv:2504.01575: start there, aim at ~30% radial acceptance)
   Nhmc: 1                       # HMC trajectories per update [1]
 
 Leapfrog:
@@ -73,7 +74,8 @@ Autotune:                       # optional; the values shown are the defaults (s
   tolerance: 0.1                # stop when the proposed Nmd is within 10% of the current one
   max trajectories: 2000        # budget of tuning trajectories
   spike fraction: 0.1           # above it, Nmd and 1.5 Nmd are compared by cost
-  escalate after: 3             # thermalization: double Nmd after this many dH > spike threshold in a row
+  escalate after: 50            # thermalization: double Nmd when at most 5% of the last 50 trajectories
+                                # at the current Nmd were accepted (the chain does not move)
   max Nmd: 4096
   checkpoint every: 10          # trajectories between checkpoints (safe stop and resume)
 
