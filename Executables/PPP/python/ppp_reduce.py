@@ -1,0 +1,480 @@
+#!/usr/bin/env python3
+"""Stage-1 reduction of a measured PPP (or Hubbard) ensemble: one chain file in, one small file out.
+
+    python ppp_reduce.py chain.yml [-o reduced.h5] [--h5 chain.h5] [--orbitals N] [--single]
+                         [--detsign-every K] [--max-configs N] [--overwrite]
+
+Input: the yml file of the run and its h5 file (fileIO: h5file, relative to the working directory,
+as for the NSL programs), with position-space propagators measured by Executables/Hubbard/propagator
+(measurements: basis: charge, type: spatial). Only the particle species is read: for a fixed
+auxiliary field the hole propagators are redundant (see ppp_wick.py); they are compared with the
+particle ones on the first configurations as a check of the stored data.
+
+Everything that needs products of propagators of the same configuration at the same time is
+computed here (equal-time spin and charge correlations); what stays linear is stored per
+configuration so that the analysis can bin and resample freely. Two-body (exciton, pp, hh)
+correlators need products of propagators of different times and come with stage 2.
+
+Output (plain h5py; c = configuration index, t = Nt time separations, sizes in the attributes):
+  attrs                          name, Nt, beta, delta, Nx, mu, sources, n_configs, input_h5, input_yml_text, ...
+  lattice/{K, V, positions, sublattice, V_eigenvalues, V_eigenvectors}
+  orbitals/U                     (Nx, No) hopping orbitals as columns: symmetry adapted (site permutations that
+                                 leave K and V invariant), sorted by eps; on a bipartite lattice the orbital
+                                 with -eps is (-1)^x times the one with +eps (sublattice sign)
+  orbitals/{eps, class, partner} eps = -(lambda + mu); class index into orbitals/class_names;
+                                 partner = index of the orbital with -eps (-1: none)
+  config/{id, S, acceptanceProbability, markovTime}    as stored by the HMC
+  config/{S_gauge, field_modes}  1/2 sum_t phi_t (delta V)^-1 phi_t and a_k = sum_t phi_t.v_k / sqrt(Nt delta lambda_k)
+                                 (k = 0: largest eigenvalue of V), as in ppp_autocorr.py
+  config/detsign                 sign of det M_p e^{-i sum phi/2} (real at mu = 0 on a bipartite lattice; +1 in
+                                 the region of phi = 0); 0 where not computed. config/detsign_residual = |Im|.
+                                 Computed from the stabilized transfer-matrix product (logdet_particle; agrees
+                                 with the dense determinant of ppp_ed.fermion_matrix to 1e-14, ~15 ms per config)
+  onebody/<class>/forward        (c, t, n, n) sum over sources s of sign * U^T G(s+t, s) U / #sources,
+                                 restricted to the orbitals of the class (the ensemble average is block diagonal)
+  onebody/<class>/backward       (c, t, n, n) the same for G(s, s+t); sign = -1 where s+t wraps around Nt
+  onebody/<class>/orbitals       indices of the class orbitals in orbitals/U
+  equaltime/{G, ss, qq}          (c, Nx, Nx) site basis, averaged over the Nt time slices: G(t,t) = <c c^+>,
+                                 <s_x s_y> and <q_x q_y> (s = n_up - n_down, q = n_up + n_down - 1)
+  noninteracting/...             the same quantities for phi = 0 (if measured), without the config axis
+  checks/attrs                   hole_relation_max_dev, ...
+
+The file is written as <out>.tmp and renamed when complete; an existing output is skipped unless
+--overwrite is given.
+"""
+
+import argparse
+import datetime
+import os
+import sys
+import time
+from collections import deque
+
+import numpy as np
+import scipy.linalg as sla
+import h5py
+import yaml
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ppp_ed  # noqa: E402
+import ppp_wick as wick  # noqa: E402
+
+VERSION = 1
+
+
+# ----------------------------------------------------------------------------------------------
+# lattice, symmetry and orbitals
+# ----------------------------------------------------------------------------------------------
+
+def interaction(yml, n):
+    if "PPP" in yml:
+        return ppp_ed.interaction_matrix(yml)
+    return float(yml["system"]["U"]) * np.eye(n)          # Hubbard programs: on-site U only
+
+
+def sublattice(K):
+    """+-1 per site from a two-colouring of the hopping graph, or None if it is not bipartite"""
+    n = len(K)
+    col = np.zeros(n, dtype=int)
+    for s in range(n):
+        if col[s]:
+            continue
+        col[s] = 1
+        queue = deque([s])
+        while queue:
+            x = queue.popleft()
+            for y in np.nonzero(K[x])[0]:
+                if y == x:
+                    continue
+                if col[y] == 0:
+                    col[y] = -col[x]
+                    queue.append(y)
+                elif col[y] == col[x]:
+                    return None
+    return col.astype(float)
+
+
+def site_permutation(pos, f, tol=1e-6):
+    q = f(pos)
+    perm = np.empty(len(pos), dtype=int)
+    for i in range(len(pos)):
+        d = np.linalg.norm(pos - q[i], axis=1)
+        j = int(np.argmin(d))
+        if d[j] > tol:
+            return None
+        perm[i] = j
+    if len(set(perm)) != len(pos):
+        return None
+    P = np.zeros((len(pos), len(pos)))
+    P[perm, np.arange(len(pos))] = 1.0
+    return P
+
+
+def symmetry_operations(pos, K, V):
+    """Commuting reflections (site permutations) that leave K and V invariant.
+
+    Mirrors through the centroid along the coordinate axes; if none is found, along the
+    principal axes of the positions. Returns a list of (name, P)."""
+    pos = np.asarray(pos, float)
+    pos = pos - pos.mean(axis=0)
+    frames = [np.eye(pos.shape[1])]
+    if pos.shape[1] >= 2:
+        w, R = np.linalg.eigh(np.cov(pos.T))
+        frames.append(R[:, ::-1])
+    for R in frames:
+        p = pos @ R
+        ops = []
+        for ax in range(min(2, p.shape[1])):
+            s = np.ones(p.shape[1])
+            s[ax] = -1
+            P = site_permutation(p, lambda x, s=s: x * s)
+            if P is not None and np.allclose(P @ K @ P.T, K) and np.allclose(P @ V @ P.T, V):
+                ops.append((f"mirror {'xyz'[ax]}", P))
+        if ops:
+            return ops
+    return []
+
+
+def orbital_basis(K, V, pos, mu=0.0, tol=1e-8):
+    """Symmetry-adapted hopping orbitals, sorted by eps = -(lambda + mu); see the module doc."""
+    n = len(K)
+    lam, W = np.linalg.eigh(K)
+    ops = symmetry_operations(pos, K, V)
+    chars = [np.array(c) for c in np.ndindex(*([2] * len(ops)))]           # 0 -> +1, 1 -> -1
+    chars = [1 - 2 * c for c in chars]
+    projs = []
+    for c in chars:
+        Pc = np.eye(n)
+        for (name, P), s in zip(ops, c):
+            Pc = Pc @ (np.eye(n) + s * P) / 2
+        projs.append(Pc)
+    names = ["".join("+" if s > 0 else "-" for s in c) for c in chars] if ops else ["all"]
+    if not ops:
+        projs = [np.eye(n)]
+    r2 = np.sum((np.asarray(pos, float) - np.mean(pos, axis=0)) ** 2, axis=1)
+
+    def fix_sign(u):
+        k = int(np.argmax(np.abs(u) > np.abs(u).max() - 1e-9))
+        return u if u[k] > 0 else -u
+
+    def adapt(Wc):
+        """symmetry-adapted, deterministic orthonormal basis of the space spanned by Wc"""
+        vecs, cls = [], []
+        for ci, Pc in enumerate(projs):
+            M = Pc @ Wc
+            u, s, _ = np.linalg.svd(M, full_matrices=False)
+            B = u[:, s > 1e-8]
+            if B.shape[1] == 0:
+                continue
+            if B.shape[1] > 1:                                  # fix the basis inside the subspace
+                _, ev = np.linalg.eigh(B.T @ np.diag(r2) @ B)
+                B = B @ ev
+            for k in range(B.shape[1]):
+                vecs.append(fix_sign(B[:, k]))
+                cls.append(ci)
+        assert len(vecs) == Wc.shape[1], "symmetry adaptation lost or gained vectors"
+        return vecs, cls
+
+    clusters, start = [], 0
+    for k in range(1, n + 1):
+        if k == n or abs(lam[k] - lam[start]) > 1e-8 * max(1.0, abs(lam[start])):
+            clusters.append(list(range(start, k)))
+            start = k
+    U, cls, eps = [], [], []
+    for cl in clusters:
+        vecs, cc = adapt(W[:, cl])
+        U += vecs
+        cls += cc
+        eps += [-(lam[cl[0]] + mu)] * len(vecs)
+    U, cls, eps = np.array(U).T, np.array(cls), np.array(eps)
+
+    partner = -np.ones(n, dtype=int)
+    sub = sublattice(K)
+    if sub is not None and abs(mu) < tol:
+        # valence orbitals := sublattice partners of the conduction orbitals (u_{-p} = (-1)^x u_p)
+        cond = np.nonzero(eps > tol)[0]
+        val = np.nonzero(eps < -tol)[0]
+        if len(cond) == len(val):
+            # orbitals with eps >= 0 stay; the valence ones are replaced by the partners of the conduction ones
+            keep_idx = [k for k in range(n) if eps[k] >= -tol]
+            cols = [U[:, k] for k in keep_idx] + [sub * U[:, i] for i in cond]
+            new_eps = [eps[k] for k in keep_idx] + [-eps[i] for i in cond]
+            new_cls = [cls[k] for k in keep_idx] + [int(np.argmax([np.linalg.norm(Pc @ (sub * U[:, i])) for Pc in projs]))
+                                                     for i in cond]
+            pair_of = {len(keep_idx) + j: keep_idx.index(i) for j, i in enumerate(cond)}   # new valence -> its conduction
+            order = np.argsort(np.array(new_eps), kind="stable")
+            inv = np.empty(n, dtype=int)
+            inv[order] = np.arange(n)
+            U, eps, cls = np.array(cols).T[:, order], np.array(new_eps)[order], np.array(new_cls)[order]
+            for v, cnd in pair_of.items():
+                partner[inv[v]], partner[inv[cnd]] = inv[cnd], inv[v]
+        else:
+            print("# warning: unequal numbers of positive and negative eps; no partner orbitals")
+    order = np.argsort(eps, kind="stable")
+    if not np.all(order == np.arange(n)):
+        inv = np.empty(n, dtype=int)
+        inv[order] = np.arange(n)
+        U, cls, eps = U[:, order], cls[order], eps[order]
+        partner = np.where(partner[order] >= 0, inv[partner[order]], -1)
+
+    # checks
+    assert np.allclose(U.T @ U, np.eye(n), atol=1e-10), "orbitals not orthonormal"
+    assert np.allclose(U.T @ K @ U, np.diag(-(eps + mu)), atol=1e-9), "orbitals do not diagonalize K"
+    for k in range(n):
+        assert np.linalg.norm(projs[cls[k]] @ U[:, k]) > 1 - 1e-8, "orbital not in a single class"
+        if partner[k] >= 0:
+            assert np.allclose(U[:, partner[k]], sub * U[:, k]), "partner is not the sublattice image"
+    if sub is not None and np.any(np.abs(eps) < tol):
+        print("# warning: zero modes; they have no partner orbitals")
+    return dict(U=U, eps=eps, cls=cls, class_names=names, partner=partner, sublattice=sub,
+                operations=[name for name, _ in ops])
+
+
+# ----------------------------------------------------------------------------------------------
+# fermion determinant
+# ----------------------------------------------------------------------------------------------
+
+def logdet_particle(K, phi, delta, eK=None):
+    """complex log det M_p of NSL's HubbardExp particle matrix (= ppp_ed.fermion_matrix), from the
+    transfer matrices: det M_p = det(1 + b_0 b_{Nt-1} ... b_1), b_t = e^{delta K} diag(e^{i phi_{t-1}}),
+    with the product kept as Q D T (pivoted QR at every step; D splits into large and small parts)."""
+    Nt, n = phi.shape
+    if eK is None:
+        eK = sla.expm(delta * K)
+    Q, D, T = np.eye(n, dtype=complex), np.ones(n), np.eye(n, dtype=complex)
+    for t in list(range(1, Nt)) + [0]:
+        b = eK * np.exp(1j * phi[(t - 1) % Nt])[None, :]
+        Qn, R, piv = sla.qr((b @ Q) * D[None, :], pivoting=True)
+        d = np.abs(np.diag(R))
+        # (b Q D)[:, piv] = Qn R, so b Q D T = Qn diag(d) (R/d) T[piv]
+        T, Q, D = (R / d[:, None]) @ T[piv], Qn, d
+    Db, Ds = np.maximum(D, 1.0), np.minimum(D, 1.0)
+    X = (Q.conj().T @ np.linalg.inv(T)) / Db[:, None] + np.diag(Ds)
+    out = np.sum(np.log(Db))
+    with np.errstate(divide="ignore", invalid="ignore"):   # spurious LAPACK warnings (Accelerate)
+        for M in (Q, T, X):
+            s, l = np.linalg.slogdet(M)
+            out = out + l + np.log(s)
+    return out
+
+
+# ----------------------------------------------------------------------------------------------
+# reading NSL data
+# ----------------------------------------------------------------------------------------------
+
+def read_tensor(ds):
+    return ds[()].reshape(tuple(ds.attrs["shape"]))
+
+
+def sources_of(group):
+    out = []
+    for key in group.keys():
+        if key.startswith("invM[t,") and key != "invM[t,t]":
+            out.append(int(key[len("invM[t,"):-1]))
+    return sorted(out)
+
+
+def onebody(group, sources, Nt):
+    """source-averaged forward G(s+t, s) and backward G(s, s+t), antiperiodic, and G(t, t)"""
+    F = 0.0
+    B = 0.0
+    tt = np.arange(Nt)
+    for s in sources:
+        idx = (s + tt) % Nt
+        sign = np.where(s + tt >= Nt, -1.0, 1.0)[:, None, None]
+        F = F + sign * read_tensor(group[f"invM[t,{s}]"])[idx]
+        B = B + sign * read_tensor(group[f"invM[{s},t]"])[idx]
+    return F / len(sources), B / len(sources), read_tensor(group["invM[t,t]"])
+
+
+def hole_relation_deviation(group_p, group_h, sources, Nt):
+    """max relative deviation from G_h(s,t)^T = -G_p(t,s) (t > s) and G_h(t,t)^T = 1 - G_p(t,t)"""
+    worst = 0.0
+    for s in sources:
+        col_p = read_tensor(group_p[f"invM[t,{s}]"])        # G_p(t, s)
+        row_h = read_tensor(group_h[f"invM[{s},t]"])        # G_h(s, t)
+        t = np.arange(s + 1, Nt)
+        if len(t):
+            a, b = np.swapaxes(row_h[t], 1, 2), -col_p[t]
+            worst = max(worst, np.abs(a - b).max() / np.abs(b).max())
+    Gp, Gh = read_tensor(group_p["invM[t,t]"]), read_tensor(group_h["invM[t,t]"])
+    ref = np.eye(Gp.shape[-1]) - Gp
+    worst = max(worst, np.abs(np.swapaxes(Gh, 1, 2) - ref).max() / np.abs(ref).max())
+    return float(worst)
+
+
+# ----------------------------------------------------------------------------------------------
+# main
+# ----------------------------------------------------------------------------------------------
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("yml")
+    p.add_argument("-o", "--output", help="default: reduced/<yml name>.h5")
+    p.add_argument("--h5", help="ensemble file (default: fileIO: h5file of the yml)")
+    p.add_argument("--orbitals", type=int, default=0,
+                   help="keep only the N orbitals closest to the Fermi level (default: all)")
+    p.add_argument("--single", action="store_true", help="store correlators in single precision")
+    p.add_argument("--detsign-every", type=int, default=1, help="compute the determinant sign on every K-th config")
+    p.add_argument("--max-configs", type=int, default=0, help="reduce only the first N configurations (tests)")
+    p.add_argument("--check-hole", type=int, default=2, help="configurations used to check the hole relation")
+    p.add_argument("--overwrite", action="store_true")
+    args = p.parse_args(argv)
+
+    with open(args.yml) as fy:
+        yml_text = fy.read()
+    yml = yaml.safe_load(yml_text)
+    sysyml = yml["system"]
+    name, Nt, beta = sysyml["name"], int(sysyml["Nt"]), float(sysyml["beta"])
+    Nx, mu = int(sysyml["nions"]), float(sysyml.get("mu", 0.0))
+    offset = float(sysyml.get("offset", 0.0))
+    delta = beta / Nt
+    h5in = args.h5 or yml["fileIO"]["h5file"]
+    out = args.output or os.path.join("reduced", os.path.splitext(os.path.basename(args.yml))[0] + ".h5")
+    if os.path.exists(out) and not args.overwrite:
+        print(f"{out} exists; skipped (use --overwrite to redo)")
+        return 0
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+
+    K = ppp_ed.hopping_matrix(sysyml)
+    V = interaction(yml, Nx)
+    pos = np.array(sysyml["positions"], float)
+    orb = orbital_basis(K, V, pos, mu)
+    U, eps, cls, partner = orb["U"], orb["eps"], orb["cls"], orb["partner"]
+    keep = np.arange(Nx)
+    if 0 < args.orbitals < Nx:
+        keep = np.sort(np.argsort(np.abs(eps), kind="stable")[: args.orbitals])
+    classes = {}
+    for k in keep:
+        classes.setdefault(orb["class_names"][cls[k]], []).append(int(k))
+
+    lamV, QV = np.linalg.eigh(V)
+    order = np.argsort(lamV)[::-1]
+    lamV, QV = lamV[order], QV[:, order]
+    Ainv = np.linalg.inv(delta * V)
+    ctype = np.complex64 if args.single else np.complex128
+    do_sign = abs(mu) < 1e-12 and abs(offset) < 1e-12 and orb["sublattice"] is not None
+    eK = sla.expm(delta * K)
+
+    t_start = time.time()
+    with h5py.File(h5in, "r") as fin:
+        chain = fin[f"{name}/markovChain"]
+        ids = sorted(int(k) for k in chain.keys() if k.isdigit())
+        measured = [i for i in ids if f"{i}/propagator/spatial/particle" in chain]
+        if len(measured) < len(ids):
+            print(f"# warning: propagators measured on {len(measured)} of {len(ids)} configurations; "
+                  f"only those are reduced")
+        ids = measured[: args.max_configs] if args.max_configs > 0 else measured
+        if not ids:
+            raise SystemExit(f"no configuration with propagator/spatial/particle in {h5in}")
+        sources = sources_of(chain[f"{ids[0]}/propagator/spatial/particle"])
+        nc = len(ids)
+        print(f"{h5in}: {name}, Nt = {Nt}, Nx = {Nx}, {nc} configurations, sources {sources}, "
+              f"orbital classes {', '.join(f'{c} ({len(v)})' for c, v in classes.items())}"
+              f"{' (symmetry: ' + ', '.join(orb['operations']) + ')' if orb['operations'] else ''}")
+
+        tmp = out + ".tmp"
+        with h5py.File(tmp, "w") as fo:
+            a = fo.attrs
+            a.update(dict(name=name, Nt=Nt, beta=beta, delta=delta, Nx=Nx, mu=mu, offset=offset,
+                          sources=np.array(sources), n_configs=nc, input_h5=os.path.abspath(h5in),
+                          input_yml=os.path.abspath(args.yml), input_yml_text=yml_text, version=VERSION,
+                          created=datetime.datetime.now().isoformat(timespec="seconds"),
+                          precision="single" if args.single else "double"))
+            fo["lattice/K"], fo["lattice/V"], fo["lattice/positions"] = K, V, pos
+            fo["lattice/V_eigenvalues"], fo["lattice/V_eigenvectors"] = lamV, QV
+            if orb["sublattice"] is not None:
+                fo["lattice/sublattice"] = orb["sublattice"]
+            fo["orbitals/U"], fo["orbitals/eps"], fo["orbitals/class"] = U, eps, cls
+            fo["orbitals/partner"] = partner
+            fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
+            fo["orbitals/symmetry_operations"] = np.array(orb["operations"] or ["none"], dtype="S")
+            fo["orbitals/kept"] = keep
+
+            cfg = fo.create_group("config")
+            cfg["id"] = np.array(ids)
+            dS = cfg.create_dataset("S", (nc,), complex)
+            dP = cfg.create_dataset("acceptanceProbability", (nc,), float)
+            dT = cfg.create_dataset("markovTime", (nc,), float)
+            dSg = cfg.create_dataset("S_gauge", (nc,), float)
+            dA = cfg.create_dataset("field_modes", (nc, Nx), float)
+            dSign = cfg.create_dataset("detsign", (nc,), np.int8)
+            dRes = cfg.create_dataset("detsign_residual", (nc,), float)
+            ob = {}
+            for c, idx in classes.items():
+                g = fo.create_group(f"onebody/{c}")
+                g["orbitals"] = np.array(idx)
+                m = len(idx)
+                ob[c] = (g.create_dataset("forward", (nc, Nt, m, m), ctype, chunks=(1, Nt, m, m)),
+                         g.create_dataset("backward", (nc, Nt, m, m), ctype, chunks=(1, Nt, m, m)))
+            eqG = fo.create_dataset("equaltime/G", (nc, Nx, Nx), ctype)
+            eqS = fo.create_dataset("equaltime/ss", (nc, Nx, Nx), ctype)
+            eqQ = fo.create_dataset("equaltime/qq", (nc, Nx, Nx), ctype)
+
+            def project(M):                    # U^T M U for (Nt, Nx, Nx)
+                return U.T @ M @ U
+
+            # phi = 0 (NonInteracting), if measured
+            ni = f"{name}/NonInteracting/propagator/spatial/particle"
+            if ni in fin:
+                gi = fin[ni]
+                F, B, Gtt = onebody(gi, sources_of(gi), Nt)
+                Fo, Bo = project(F), project(B)
+                for c, idx in classes.items():
+                    fo[f"noninteracting/onebody/{c}/forward"] = Fo[:, idx][:, :, idx].astype(ctype)
+                    fo[f"noninteracting/onebody/{c}/backward"] = Bo[:, idx][:, :, idx].astype(ctype)
+                _, ss, qq = wick.equal_time(Gtt)
+                fo["noninteracting/equaltime/G"] = Gtt.mean(axis=0)
+                fo["noninteracting/equaltime/ss"] = ss.mean(axis=0)
+                fo["noninteracting/equaltime/qq"] = qq.mean(axis=0)
+
+            hole_dev = 0.0
+            nsign = {1: 0, -1: 0}
+            last = time.time()
+            for n, i in enumerate(ids):
+                g = chain[str(i)]
+                phi = read_tensor(g["phi"])
+                dS[n] = complex(np.asarray(g["actVal"][()]))
+                dP[n] = float(np.real(np.asarray(g["acceptanceProbability"][()]))) if "acceptanceProbability" in g else np.nan
+                dT[n] = float(np.real(np.asarray(g["markovTime"][()]))) if "markovTime" in g else np.nan
+                pr = phi.real
+                dSg[n] = 0.5 * np.einsum("tx,xy,ty->", pr, Ainv, pr)
+                dA[n] = pr.sum(axis=0) @ QV / np.sqrt(Nt * delta * lamV)
+                if do_sign and n % args.detsign_every == 0:
+                    logdet = logdet_particle(K, phi, delta, eK)
+                    r = np.exp(1j * logdet.imag - 0.5j * pr.sum())
+                    if np.isfinite(logdet) and np.isfinite(r):
+                        dSign[n] = 1 if r.real > 0 else -1
+                        dRes[n] = abs(r.imag)
+                        nsign[int(dSign[n])] += 1
+                    else:
+                        dRes[n] = np.nan
+                gp = g["propagator/spatial/particle"]
+                F, B, Gtt = onebody(gp, sources, Nt)
+                Fo, Bo = project(F), project(B)
+                for c, idx in classes.items():
+                    ob[c][0][n] = Fo[:, idx][:, :, idx]
+                    ob[c][1][n] = Bo[:, idx][:, :, idx]
+                _, ss, qq = wick.equal_time(Gtt)
+                eqG[n], eqS[n], eqQ[n] = Gtt.mean(axis=0), ss.mean(axis=0), qq.mean(axis=0)
+                if n < args.check_hole and "propagator/spatial/hole" in g:
+                    hole_dev = max(hole_dev, hole_relation_deviation(gp, g["propagator/spatial/hole"], sources, Nt))
+                if time.time() - last > 60 or n == nc - 1:
+                    last = time.time()
+                    print(f"  {n + 1}/{nc} configurations, {last - t_start:.0f} s", flush=True)
+            chk = fo.create_group("checks")
+            chk.attrs["hole_relation_max_dev"] = hole_dev
+            chk.attrs["hole_relation_configs"] = min(args.check_hole, nc)
+            chk.attrs["detsign_max_residual"] = float(np.max(dRes[()])) if do_sign else np.nan
+    os.replace(tmp, out)
+    size = os.path.getsize(out) / 2**20
+    print(f"wrote {out} ({size:.0f} MB) in {time.time() - t_start:.0f} s")
+    print(f"  hole relation (first {min(args.check_hole, nc)} configs): max deviation {hole_dev:.1e}")
+    if do_sign:
+        which = "all configurations" if args.detsign_every == 1 else f"every {args.detsign_every}th configuration"
+        print(f"  determinant sign: {nsign[1]} x +1, {nsign[-1]} x -1 ({which})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
