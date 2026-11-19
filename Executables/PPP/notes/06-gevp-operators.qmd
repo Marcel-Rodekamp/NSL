@@ -1,0 +1,351 @@
+---
+title: "6 · Operators and Wick contractions for the GEVP"
+subtitle: "Single-particle and two-body correlator matrices: `ppp_wick.py`, `ppp_reduce.py`, `ppp_reduce2.py`, `ppp_analysis.py`"
+date: 2026-11-18
+---
+
+## Overview
+
+Every energy in the analysis notebook comes from the same three steps:
+
+1. **Operator basis.** Interpolating operators $\mathcal O^\dagger_j$ with common quantum numbers
+   (symmetry class or sector, spin, particle–hole parity $C$).
+2. **Correlators, one configuration at a time.** For a fixed auxiliary field $\phi$ the fermions are free, so
+   $\langle\mathcal O_i(\tau)\,\mathcal O^\dagger_j(0)\rangle_\phi$ is a sum of products of NSL's propagator
+   $G=M_p^{-1}$ (Wick). The reductions store these per configuration (or bin); the analysis averages them into $C_{ij}(\tau)$.
+3. **GEVP** on the ensemble mean; the eigenvectors are then fixed and projected on every jackknife sample;
+   one exponential per state.
+
+| | operators | blocks (perylene) | matrix sizes |
+|---|---|---|---|
+| single particle | $a^\dagger_{p,s}$, every $p$ with $\epsilon_p>0$ | 4 symmetry classes | 3, 2, 3, 2 |
+| excitons | $a^\dagger_{p,s}\,b^\dagger_{-q,s'}$, $p,q$ in the window | 4 sectors × {singlet, triplet} × $C=\pm1$ | 1, 3 or 6 |
+| pp pairs | $a^\dagger_{p,\uparrow}a^\dagger_{q,\downarrow}$, spin adapted | 4 sectors × {singlet, triplet} | 1, 3 or 6 |
+
+Electron removal and hh pairs are not computed separately: on every configuration they are the complex
+conjugates of electron addition and of pp pairs (see *Single particle: removal = holes* and *pp operators*).
+
+## Conventions (from your tube notes)
+
+$$
+H_0=-\sum_{x,y,s}c^\dagger_{x,s}\,\kappa_{x,y}\,c_{y,s},\qquad
+O\,(-\kappa)\,O^{-1}=\operatorname{diag}(\epsilon_k),\qquad
+c_{k,s}=\sum_x O_{k;x}\,c_{x,s}
+$$
+
+- In the code $O=U^T$: the columns of `orbitals/U` are the orbitals $u_k(x)=O_{k;x}$ (real, orthonormal), and
+  $\epsilon_k$ is `orbitals/eps` ($\mu=0$).
+- Particles: $a_{p,s}=c_{p,s}$ for $\epsilon_p>0$. Holes: $b^\dagger_{-p,s}$ removes a spin-$s$ electron from the
+  valence orbital $-p$, i.e. $b^\dagger_{-p,s}\equiv c_{-p,s}$. I read your notes this way because
+  $b^\dagger_{-p_1}a^\dagger_{p_2}\lvert\Omega\rangle$ costs $\epsilon_{p_1}+\epsilon_{p_2}$.
+- **The valence orbital $-p$ is fixed as the sublattice image of $p$:** $u_{-p}(x)=(-1)^x\,u_p(x)$,
+  $\epsilon_{-p}=-\epsilon_p$ (bipartite). `ppp_reduce.orbital_basis` builds the valence orbitals this way and
+  records the pairs in `orbitals/partner`. The signs of the particle–hole combinations below rely on it.
+- Pseudospin $I$ and spin $S$ as in your notes. In the spectral sums, $\lvert\Omega\rangle$ is the *interacting*
+  $N$-electron ground state (your notes use it for the non-interacting one).
+- Energies $E/\kappa$. Imaginary time $\tau=\delta\,t\in[0,\beta)$, $t$ the time slice,
+  $\delta=\beta/N_t=0.25$ for the production runs.
+
+## Symmetry classes and sectors
+
+- `orbital_basis` finds the site permutations that leave $\kappa$ and $V$ invariant. For perylene these are the
+  mirrors $x\to-x$ and $y\to-y$.
+- Every orbital is even or odd under each mirror: class `++`, `+-`, `-+`, `--` (mirror $x$ first). The
+  ensemble-averaged single-particle correlators are block diagonal in the classes.
+- A product of two orbitals transforms with the product of their characters, e.g. `+-`·`--` = `-+`. This is the
+  **sector** of a pair: the symmetry of the two-body state relative to the ground state.
+- The sublattice sign $(-1)^x$ is odd under mirror $x$ and even under mirror $y$, so
+  **class($-p$) = class($p$)·`-+`**.
+- Degenerate levels: the fourfold $\epsilon=\kappa$ level splits 2 + 1 + 1 over `++`, `-+`, `--`. Inside the
+  two-dimensional `++` subspace the basis is a convention (eigenvectors of $\sum_x r_x^2$ there, deterministic).
+  The GEVP spectrum does not depend on it.
+
+| class | conduction orbitals, $\epsilon_p/\kappa$ | single-particle matrix |
+|---|---|---|
+| `++` | 1, 1, 2.182 | 3×3 |
+| `+-` | **0.347** (LUMO), 1.532 | 2×2 |
+| `-+` | 1, 1.594, 2.588 | 3×3 |
+| `--` | 1, 1.879 | 2×2 |
+
+## Propagators on one configuration
+
+The charge-basis measurement (`Executables/Hubbard/propagator`) stores, per configuration,
+
+$$
+G_{xy}(t,t_0)=\big[M_p^{-1}\big]_{(t,x),(t_0,y)}=
+\begin{cases}
+\phantom{-}\langle c_{x,s}(t)\,c^\dagger_{y,s}(t_0)\rangle_\phi & t>t_0\\
+\phantom{-}\langle c_{x,s}\,c^\dagger_{y,s}\rangle_\phi & t=t_0\\
+-\langle c^\dagger_{y,s}(t_0)\,c_{x,s}(t)\rangle_\phi & t<t_0
+\end{cases}
+$$
+
+- $\langle\cdot\rangle_\phi$ is the expectation value for the fixed field $\phi$; the ensemble average
+  $\langle\cdot\rangle$ comes later, in the analysis.
+- The field couples to the charge, so **both spins see the same $G$**. The hole species in the file is redundant,
+  $G_h(t_0,t)^T=-G(t,t_0)$ and $G_h(t,t)^T=1-G(t,t)$, so only the particle species is read.
+- In the orbital basis, $G_{kk'}(t,t_0)=\sum_{xy}O_{k;x}\,G_{xy}(t,t_0)\,O_{k';y}=\langle c_k(t)\,c^\dagger_{k'}(t_0)\rangle_\phi$,
+  i.e. $U^TGU$.
+- Stored: four source slices $s$, as columns `invM[t,s]` and rows `invM[s,t]`, plus the diagonal `invM[t,t]`.
+  The reductions use $F(t)=G(s+t,s)$ and $B(t)=G(s,s+t)$, averaged over the sources, with a sign $-1$ where
+  $s+t$ wraps around $N_t$.
+- Density matrix per spin: $E_{xy}=\langle c^\dagger_x c_y\rangle_\phi=\delta_{xy}-G_{yx}(t,t)$.
+
+## Single particle: addition
+
+Basis in class $X$: $\{a^\dagger_{p,s}:\ \epsilon_p>0,\ \text{class}(p)=X\}$, i.e. *every* conduction orbital
+of the class, not only the two-body window.
+
+$$
+A_{pp'}(\tau)=\langle a_{p,s}(\tau)\,a^\dagger_{p',s}(0)\rangle=\big\langle G_{pp'}(\tau,0)\big\rangle
+\;\xrightarrow{\ \beta\to\infty\ }\;
+\sum_n\langle\Omega\vert a_{p}\vert n\rangle\langle n\vert a^\dagger_{p'}\vert\Omega\rangle\,
+e^{-(E^{N+1}_n-E^N_\Omega)\,\tau}
+$$
+
+- A single contraction. The code uses both stored time directions (antiperiodicity):
+  $A(t)=\tfrac12\big[F(t)-B(N_t-t)\big]$ in `ppp_analysis.addition_removal`.
+- Only the real, symmetric part is kept: $\phi\to-\phi$ is a symmetry of the ensemble and conjugates $G$, and the
+  orbitals are real.
+- One GEVP per class (3, 2, 3, 2 operators for perylene). The lowest `+-` state is the LUMO-like quasiparticle.
+
+## Single particle: removal = holes
+
+$$
+R_{-p,-p'}(\tau)=\langle b_{-p,s}(\tau)\,b^\dagger_{-p',s}(0)\rangle
+=\langle c^\dagger_{-p,s}(\tau)\,c_{-p',s}(0)\rangle
+=-\big\langle G_{-p',-p}(0,\tau)\big\rangle
+$$
+
+In the code: $R(t)=\tfrac12\big[-B(t)^T+F(N_t-t)^T\big]$.
+
+**Particle–hole conjugation** $\mathcal P:\ c_{x,s}\to(-1)^x\,c^\dagger_{x,s}$ (both spins) maps
+$c_{p,s}\to c^\dagger_{-p,s}$ for this choice of $-p$. At $\mu=0$ on a bipartite lattice it leaves the hopping
+and $\tfrac12\sum V_{xy}q_xq_y$ invariant ($q\to-q$). On every configuration
+
+$$
+R_{-p,-p'}(\tau)=A_{pp'}(\tau)^*\qquad\text{(checked to }10^{-14}\text{ on the data, }\texttt{test\_ppp\_analysis.py}\text{)}
+$$
+
+- The hole spectrum of class $X\cdot$`-+` is the particle spectrum of class $X$, so removal needs no GEVP of its own.
+- Charge gap $E^{N+1}_0+E^{N-1}_0-2E^N_0=2\times$ (lowest addition energy).
+
+## The two-body window
+
+`ppp_reduce2.py --window-energy 1.0` keeps the conduction orbitals with $0<\epsilon_p\le\kappa$ and their partners.
+
+| orbital | $\epsilon_p/\kappa$ | class($p$) | class($-p$) |
+|---|---|---|---|
+| $p_0$ (LUMO; $-p_0$ = HOMO) | 0.347 | `+-` | `--` |
+| $p_1$ | 1 | `++` | `-+` |
+| $p_2$ | 1 | `++` | `-+` |
+| $p_3$ | 1 | `-+` | `++` |
+| $p_4$ | 1 | `--` | `+-` |
+
+This gives 25 exciton pairs $(p_i,-p_j)$ and 15 pp pairs $p_i\le p_j$, grouped by sector.
+
+## Exciton operators (pair basis)
+
+For a conduction orbital $p$ and a valence orbital $-q$, both in the window:
+
+$$
+\begin{aligned}
+\text{singlet:}\quad & \mathcal O^\dagger_{(p,-q)}=\tfrac1{\sqrt2}\sum_s a^\dagger_{p,s}\,b^\dagger_{-q,s}
+  =\tfrac1{\sqrt2}\sum_s c^\dagger_{p,s}\,c_{-q,s}\\
+\text{triplet},\ S_z=0:\quad & \mathcal T^\dagger_{(p,-q)}=\tfrac1{\sqrt2}\sum_s \sigma_s\,c^\dagger_{p,s}\,c_{-q,s},
+  \qquad\sigma_\uparrow=+1,\ \sigma_\downarrow=-1\\
+\text{triplet},\ S_z=+1:\quad & a^\dagger_{p,\uparrow}\,b^\dagger_{-q,\downarrow}=c^\dagger_{p,\uparrow}\,c_{-q,\downarrow}
+\end{aligned}
+$$
+
+- Sector of $(p,-q)$: class($p$)·class($-q$) = class($p$)·class($q$)·`-+`. All pairs $(p,-p)$ are in `-+`.
+- Correlator $C_{ij}(\tau)=\langle\mathcal O_i(\tau)\,\mathcal O^\dagger_j(0)\rangle$, with
+  $\mathcal O_i=(\mathcal O^\dagger_i)^\dagger=\tfrac1{\sqrt2}\sum_s c^\dagger_{-q_i,s}\,c_{p_i,s}$.
+- `ppp_wick.exciton` has the general form $\mathcal O^\dagger=\sum_{xy}A_{xy}\,c^\dagger_x c_y$. The pair basis is
+  $A=u_p\,u_{-q}^T$.
+
+## Exciton: the connected contraction
+
+Triplet $S_z=+1$, sink $(p,-q)$, source $(p',-q')$:
+
+$$
+\big\langle c^\dagger_{-q,\downarrow}(\tau)\,c_{p,\uparrow}(\tau)\;c^\dagger_{p',\uparrow}(0)\,c_{-q',\downarrow}(0)\big\rangle_\phi
+=\underbrace{\langle c_{p,\uparrow}(\tau)\,c^\dagger_{p',\uparrow}(0)\rangle_\phi}_{G_{pp'}(\tau,0)}\;
+ \underbrace{\langle c^\dagger_{-q,\downarrow}(\tau)\,c_{-q',\downarrow}(0)\rangle_\phi}_{-G_{-q',-q}(0,\tau)}
+$$
+
+$$
+X_{ij}(\tau)\equiv-\,G_{p_ip_j}(\tau,0)\;G_{-q_j,-q_i}(0,\tau)
+$$
+
+This is a particle and a hole propagating on the same configuration.
+
+- The two spins differ, so this is the only contraction: there is no disconnected term.
+- For general operators: $X=-\operatorname{Tr}\big[A_i^\dagger\,G(\tau,0)\,A_j\,G(0,\tau)\big]$.
+- In the code (`exciton_pairs`): `X[i,j] = -Fo[c_i,c_j] * Bo[v_j,v_i]`, averaged over the 4 sources.
+
+## Exciton: singlet and the disconnected part
+
+Expanding $\tfrac12\sum_{s,s'}\big\langle c^\dagger_{-q,s}c_{p,s}(\tau)\;c^\dagger_{p',s'}c_{-q',s'}(0)\big\rangle_\phi$:
+
+- connected terms: only $s=s'$, giving $2\times\tfrac12\,X=X$;
+- disconnected terms: every $(s,s')$, giving $4\times\tfrac12=2$ products of one-body expectation values.
+
+$$
+C^{S}_{ij}(\tau)=\Big\langle X_{ij}(\tau)+2\,o_i(\tau)\,\bar o_j(0)\Big\rangle-2\,\langle o_i\rangle\langle\bar o_j\rangle,
+\qquad
+o_i=\langle c^\dagger_{-q_i}c_{p_i}\rangle_\phi=E_{-q_i,p_i},\quad
+\bar o_j=\langle c^\dagger_{p_j}c_{-q_j}\rangle_\phi=E_{p_j,-q_j}
+$$
+
+- Triplet $S_z=0$: $\sum_{s,s'}\sigma_s\sigma_{s'}=0$, so there is no disconnected part. **All three $S_z$
+  members give $X$ on every configuration**, and $C^T=\langle X\rangle$.
+- The disconnected product needs only $G(t,t)$, so it is averaged over all $N_t$ source slices rather than just
+  the 4 sources: $D_{ij}(t)=\frac1{N_t}\sum_{t_0}o_i(t_0+t)\,\bar o_j(t_0)$, computed as an FFT cross-correlation.
+- The last term subtracts the vacuum. It is non-zero only for operators with the quantum numbers of
+  $\lvert\Omega\rangle$: sector `++`, singlet, $C=+1$.
+- Stored: `connected` = $X$, `disconnected` = $D$, `expectation` = time averages of $o,\bar o$. They are combined
+  in `ppp_analysis.exciton_bins`.
+
+## Particle–hole parity $C$
+
+With $\mathcal P$ from the removal slide ($c_{p,s}\to c^\dagger_{-p,s}$, $c_{-q,s}\to c^\dagger_{q,s}$):
+
+$$
+c^\dagger_{p,s}\,c_{-q,s}\;\to\;c_{-p,s}\,c^\dagger_{q,s}=-c^\dagger_{q,s}\,c_{-p,s}
+\qquad\Rightarrow\qquad
+\mathcal O^\dagger_{(p,-q)}\to-\mathcal O^\dagger_{(q,-p)}
+$$
+
+I call $(q,-p)$ the **partner pair** of $(p,-q)$. The combinations
+$\tfrac1{\sqrt2}\big(\mathcal O^\dagger_{(p,-q)}\pm\mathcal O^\dagger_{(q,-p)}\big)$ have $\mathcal P=\mp1$, for
+singlet and triplet alike.
+
+$\mathcal P$ also acts on spin like a rotation by $\pi$ about $y$ ($S^z\to-S^z$, $S^+\to-S^-$), which gives
+$(-1)^S$ on the $S_z=0$ member. I define $C=\mathcal P\,e^{i\pi S_y}$, which commutes with every spin rotation,
+with the phase chosen so that $C\lvert\Omega\rangle=\lvert\Omega\rangle$:
+
+| | $+$ | $-$ | self-partner $(p,-p)$ |
+|---|---|---|---|
+| singlet | $C=-1$ | $C=+1$ | $C=-1$ |
+| triplet | $C=+1$ | $C=-1$ | $C=+1$ |
+
+- In the Hubbard model $C=(-1)^I$. In PPP, $V_{xy}q_xq_y$ is invariant under $q\to-q$, so $C$ stays exact
+  while the pseudospin SU(2) is broken.
+- In the code, `parity_transform` builds the rows $M$, and the GEVP is solved on $M\,C\,M^T$ for each $C$.
+
+## Comparison with your $I_z=0$ operators
+
+Your states rewritten with $a^\dagger_{p,s}b^\dagger_{-q,s}=c^\dagger_{p,s}c_{-q,s}$ and
+$b^\dagger_{-p_1,s}a^\dagger_{p_2,s}=-a^\dagger_{p_2,s}b^\dagger_{-p_1,s}$:
+
+| your state (acting on $\lvert\Omega\rangle$) | your $(I,S)$; LO shift | mine | $C$ |
+|---|---|---|---|
+| $\tfrac12\sum_s\big(a^\dagger_{p_1,s}b^\dagger_{-p_2,s}+b^\dagger_{-p_1,s}a^\dagger_{p_2,s}\big)$ | (0, 0); 0 | singlet, $\mathcal O_{(p_1,-p_2)}-\mathcal O_{(p_2,-p_1)}$ | $+1$ |
+| $\tfrac12\sum_s\big(a^\dagger_{p_1,s}b^\dagger_{-p_2,s}-b^\dagger_{-p_1,s}a^\dagger_{p_2,s}\big)$ | (1, 0); $+2V_{p_1,p_1,p_2,p_2}$ | singlet, $\mathcal O_{(p_1,-p_2)}+\mathcal O_{(p_2,-p_1)}$ | $-1$ |
+| $\tfrac1{\sqrt2}\big(a^\dagger_{p_1,\uparrow}b^\dagger_{-p_2,\downarrow}-b^\dagger_{-p_1,\downarrow}a^\dagger_{p_2,\uparrow}\big)$ | (0, 1); $-2V_{p_1,p_1,p_2,p_2}$ | triplet, $+$ | $+1$ |
+| $\tfrac1{\sqrt2}\big(a^\dagger_{p_1,\uparrow}b^\dagger_{-p_2,\downarrow}+b^\dagger_{-p_1,\downarrow}a^\dagger_{p_2,\uparrow}\big)$ | (1, 1); 0 | triplet, $-$ | $-1$ |
+| $\tfrac12\sum_s\big(a^\dagger_{p_1,s}b^\dagger_{-p_1,s}\pm a^\dagger_{p_2,s}b^\dagger_{-p_2,s}\big)$ | (1, 0) | singlets of self-partner pairs | $-1$ |
+
+All five agree with $C=(-1)^I$. I also checked this independently for this deck, in the Fock space of a 4-site
+chain (256 states). With $\eta^\dagger=\sum_x(-1)^x c^\dagger_{x\uparrow}c^\dagger_{x\downarrow}$, the Casimir
+double commutators $\sum_a[J_a,[J_a,\mathcal O]]=J(J+1)\,\mathcal O$ ($J=\eta$ and $J=S$) give $C=(-1)^I$ and the
+expected $S$ for every combination, and $I=1$ for every pp operator.
+
+## Perylene: exciton blocks
+
+$\pm$ denotes $\mathcal O_{(p,-q)}\pm\mathcal O_{(q,-p)}$.
+
+| sector | pairs | singlet $C=-1$ (= triplet $C=+1$) | singlet $C=+1$ (= triplet $C=-1$) |
+|---|---|---|---|
+| `-+` | 7 | $(p_0,-p_0)$, $(p_1,-p_1)$, $(p_2,-p_2)$, $(p_3,-p_3)$, $(p_4,-p_4)$, $(p_1,-p_2)+$ | $(p_1,-p_2)-$ |
+| `+-` | 6 | $(p_0,-p_3)+$, $(p_1,-p_4)+$, $(p_2,-p_4)+$ | the same with $-$ |
+| `--` | 6 | $(p_0,-p_1)+$, $(p_0,-p_2)+$, $(p_3,-p_4)+$ | the same with $-$ |
+| `++` | 6 | $(p_0,-p_4)+$, $(p_1,-p_3)+$, $(p_2,-p_3)+$ | the same with $-$ |
+
+- Singlet $C$ and triplet $-C$ use the same operator list; their correlators differ by the $2D$ term.
+- Bright (dipole-allowed) singlets have $C=-1$ and the symmetry of $x$ or $y$: sectors `-+` ($x$) and `+-` ($y$).
+  The HOMO→LUMO exciton $(p_0,-p_0)$ is in `-+`.
+- GEVP sizes: 6 and 1 in `-+`, 3 everywhere else.
+
+## pp operators
+
+$$
+\mathcal P^\dagger_{(p,q)}=\tfrac1{\sqrt2}\big(a^\dagger_{p,\uparrow}a^\dagger_{q,\downarrow}\pm a^\dagger_{q,\uparrow}a^\dagger_{p,\downarrow}\big)\quad(p<q),
+\qquad
+\mathcal P^\dagger_{(p,p)}=a^\dagger_{p,\uparrow}a^\dagger_{p,\downarrow}
+$$
+
+$+$: spin singlet, your $\tfrac1{\sqrt2}\big(a^\dagger_{p,\uparrow}a^\dagger_{q,\downarrow}-a^\dagger_{p,\downarrow}a^\dagger_{q,\uparrow}\big)$
+($I=1$, $I_z=+1$, $S=0$). $-$: triplet $S_z=0$ ($I=1$, $S=1$). Sector: class($p$)·class($q$). Charge 2 and
+two different spins, so no disconnected terms. With $\mathcal P^\dagger=\sum_{xy}B_{xy}\,c^\dagger_{x\uparrow}c^\dagger_{y\downarrow}$:
+
+$$
+\langle\mathcal P_i(\tau)\,\mathcal P^\dagger_j(0)\rangle_\phi
+=\operatorname{Tr}\big[B_i^\dagger\,G(\tau,0)\,B_j\,G(\tau,0)^T\big]
+=2\alpha_i\alpha_j\big[G_{p_ip_j}G_{q_iq_j}\pm G_{p_iq_j}G_{q_ip_j}\big](\tau,0)
+$$
+
+with $\alpha=1/\sqrt2$ for $p\ne q$ and $1/2$ for $p=q$: two particles propagating on the same configuration.
+
+- hh pairs give $\operatorname{Tr}\big[B_i^\dagger\,G(0,\tau)^T B_j\,G(0,\tau)\big]$. They are the $\mathcal P$ images
+  of pp pairs, complex conjugates on every configuration (like $R$ and $A$), so they are not stored.
+- Perylene: singlet `++` 6 ($p_0p_0$, $p_1p_1$, $p_1p_2$, $p_2p_2$, $p_3p_3$, $p_4p_4$), other sectors 3; triplet
+  `++` 1 ($p_1p_2$), other sectors 3.
+
+## Pseudospin partners
+
+$\eta^\dagger=\sum_x(-1)^x c^\dagger_{x\uparrow}c^\dagger_{x\downarrow}$ carries the character of $(-1)^x$, i.e.
+`-+`. In the Hubbard model $[H,\eta^\dagger]=0$ at half filling, so the members of an $I=1$ multiplet are
+degenerate: pp in sector $X$ ($I_z=+1$), the $C=-1$ exciton in sector $X\cdot$`-+` ($I_z=0$) and hh in sector $X$
+($I_z=-1$). The pp and exciton blocks match one to one:
+
+| pp block | size | exciton block, $C=-1$ | size |
+|---|---|---|---|
+| singlet `++` | 6 | singlet `-+` | 6 |
+| singlet `+-` / `--` / `-+` | 3 | singlet `--` / `+-` / `++` | 3 |
+| triplet `++` | 1 | triplet `-+` | 1 |
+| triplet `+-` / `--` / `-+` | 3 | triplet `--` / `+-` / `++` | 3 |
+
+- **Hubbard:** each pair of blocks must give the same spectrum. The notebook tests only the diagonal ratio
+  $(p_0,p_0)$ pp / $(p_0,-p_0)$ exciton; comparing whole blocks would be a stronger test.
+- **PPP:** the long-range part of $V$ breaks the SU(2) pseudospin, so the splitting within these pairs measures it.
+  $C$ still separates the $I_z=0$ states.
+
+## GEVP and fits
+
+$$
+C(t_D)\,v_n=\lambda_n\,C(t_0)\,v_n,\qquad v_n^T C(t_0)\,v_n=1,\qquad
+c_n(t)=v_n^T C(t)\,v_n\simeq Z_n\,e^{-E_n\,\delta t}
+$$
+
+- $C$ is the real symmetric part of the block (after $M\,C\,M^T$ for excitons), taken on the **ensemble mean**.
+  The $v_n$ are then fixed and projected on every jackknife sample (`gevp_vectors`, `gevp_project`).
+- Single particle: $(t_0,t_D)=(2,6)$, i.e. $(\tau_0,\tau_D)=(0.5,1.5)$. Two-body: $(2,4)$, i.e. $(0.5,1.0)$.
+- Fit: one exponential per state on `FIT_WINDOW` (8–48 slices for single particles, 4–32 for two-body), cut where
+  the relative error of $c_n$ exceeds `MAX_REL_ERR` (`state_energies`). If $C(t_0)$ is not positive definite,
+  the block is skipped.
+- Exciton correlators are used only from $t\ge1$. The stored $t=0$ entries contain contact terms, because the
+  backward propagator at equal times is taken as $\langle c\,c^\dagger\rangle$, not $-\langle c^\dagger c\rangle$.
+- Plots stop at $\tau=\beta/2$, beyond which the backward-propagating (thermal) contributions take over.
+
+## Limits of the bases
+
+- **Single particle:** bare orbitals only, with no $c^\dagger c^\dagger c$ operators. The GEVP sees the states that
+  overlap with one added electron.
+- **Two-body:** one orbital pair from the window $|\epsilon|\le\kappa$ per operator. States dominated by orbitals
+  outside the window (e.g. $\epsilon=1.53$, $1.59$) are poorly represented. `--window-energy` widens the window,
+  at a cost growing with the square of the number of pairs.
+- **No multi-pair operators** (e.g. two particle–hole pairs). The spectrum is the part that the single-pair
+  operators overlap with.
+
+## Where it is in the code
+
+| formula | function | test |
+|---|---|---|
+| $G$, $F$, $B$, hole relations | `ppp_reduce.onebody` | `test_ppp_wick.py`: exact Fock-space traces, 4-site chain, one fixed field |
+| $A$, $R$ | `ppp_analysis.addition_removal` | `test_ppp_analysis.py` ($R=A^*$ on the data) |
+| classes, sectors, partners | `ppp_reduce.orbital_basis`, `ppp_reduce2.operator_bases` | asserts in `orbital_basis` |
+| $X$, $D$, $o$, pp | `ppp_wick.exciton_pairs`, `exciton_expectations`, `pp_pairs`, in `ppp_reduce2` | `test_ppp_wick.py` (pair forms = general forms, FFT = direct sum) |
+| $C$ combinations | `ppp_analysis.parity_transform` | Casimir check for this deck (not in the repository) |
+| GEVP, fits | `gevp_vectors`, `gevp_project`, `state_energies` | — |

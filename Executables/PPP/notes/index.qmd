@@ -12,6 +12,7 @@ subtitle: "Notes on the changes on branch `newMeasurements`, 2026-11-16/17"
 | [3 · Exact diagonalization](03-exact-diagonalization.html) | `ppp_ed.py`: exact propagators at the *same* $N_t$, and how NSL is compared with them |
 | [4 · Exact Fourier acceleration](04-fourier-acceleration.html) | the new integrator, the HMC hooks, tests and benchmarks |
 | [5 · Bugs and fixes](05-bugs-and-fixes.html) | bugs found in NSL, bugs in my own code, operational problems, open issues |
+| [6 · Operators and Wick contractions for the GEVP](06-gevp-operators.html) | single-particle and two-body operator bases, their contractions, particle–hole parity $C$, pseudospin partners |
 
 Everything described here is **uncommitted** on `newMeasurements`.
 

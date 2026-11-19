@@ -8,6 +8,7 @@ project:
     - 03-exact-diagonalization.qmd
     - 04-fourier-acceleration.qmd
     - 05-bugs-and-fixes.qmd
+    - 06-gevp-operators.qmd
 
 date: 2026-11-17
 
