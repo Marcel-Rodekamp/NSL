@@ -637,13 +637,16 @@ def level_diagram(ax, groups, colors, tol=0.05, width=1.0, gap=0.7, spacing=1.0)
     return centres
 
 
-def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops=None, panel=1.9):
+def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops=None, panel=1.9, ylim=None):
     """matrix of correlators C_ij(tau) on a log scale, one panel per (i, j).
 
     series: [(name, colour, mean (Nt, n, n), error (Nt, n, n))]; the absolute value of the (real) mean is shown,
     filled markers where it is positive and open markers where it is negative, and only time slices where the error
     is smaller than the absolute value; free: optional (Nt, n, n) shown as a dashed grey line; max_ops: show
-    only the first max_ops operators. Returns the figure."""
+    only the first max_ops operators. All panels share one y range, set by the data shown: from half the smallest
+    value shown (the statistical resolution, since a value is shown only when it exceeds its error, which falls
+    like 1/sqrt(number of measurements)) to twice the largest value plus error; the non-interacting line and the
+    lower ends of error bars are clipped there. ylim = (low, high) overrides it. Returns the figure."""
     import textwrap
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
@@ -653,6 +656,7 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
                              sharex=True, sharey=True, squeeze=False, constrained_layout=True)
     Nt = series[0][2].shape[0]
     tau = np.arange(Nt) * delta
+    lo, hi = np.inf, 0.0
     for i in range(n):
         for j in range(n):
             ax = axes[i, j]
@@ -664,6 +668,8 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
             for name, c, m, e in series:
                 y, s = np.real(m[:, i, j]), np.real(e[:, i, j])
                 ok = np.isfinite(y) & (s < np.abs(y))
+                if ok.any():
+                    lo, hi = min(lo, np.abs(y[ok]).min()), max(hi, (np.abs(y[ok]) + s[ok]).max())
                 for mask, face in ((ok & (y > 0), c), (ok & (y < 0), "none")):
                     if mask.any():
                         ax.errorbar(tau[mask], np.abs(y[mask]), s[mask], fmt="o", ms=2.2, lw=0.6, color=c, mfc=face,
@@ -675,6 +681,10 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
                 ax.set_xlabel(r"$\tau$", fontsize=8)
             if j == 0:
                 ax.set_ylabel(f"$|{ylabel}_{{ij}}(\\tau)|$", fontsize=8)
+    if ylim is not None:
+        axes[0, 0].set_ylim(*ylim)
+    elif np.isfinite(lo) and hi > 0:
+        axes[0, 0].set_ylim(0.5 * lo, 2 * hi)                 # shared by all panels
     handles = [Line2D([], [], color=c, marker="o", ls="none", ms=4, label=name) for name, c, _, _ in series]
     handles.append(Line2D([], [], color="#5c5c57", marker="o", mfc="none", ls="none", ms=4, label="negative value"))
     if free is not None:
