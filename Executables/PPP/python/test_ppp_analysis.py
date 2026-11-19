@@ -58,6 +58,31 @@ def main(argv):
     check(res, "consistency: weighted mean", abs(m - 1.0), 1e-12)
     check(res, "consistency: chi2/dof", abs(chi2 - 1.0), 1e-12)
 
+    # tail exponents: Student t with nu degrees of freedom has P(|x| > y) ~ y^-nu
+    for nu in (1.5, 3.0):
+        st = pa.tail_stats(rng.standard_t(nu, 400000), frac=0.002)
+        check(res, f"tail exponent of Student t (nu = {nu}): relative error", abs(st["alpha"] / nu - 1), 0.15)
+    st = pa.tail_stats(np.r_[rng.normal(size=999), 1e3])
+    check(res, "tail_stats: largest deviation found", abs(st["argmax"] - 999), 0.5)
+
+    # binned h5 reads of one time slice = time slice of the binned read
+    import h5py
+    with h5py.File("tail_test.h5", "w", driver="core", backing_store=False) as f:
+        ds = f.create_dataset("x", data=rng.normal(size=(23, 7, 3, 3)) + 1j * rng.normal(size=(23, 7, 3, 3)))
+        check(res, "binned read of one time slice", np.abs(pa._binned_dataset(ds, 4, 2, t=5)
+                                                            - pa._binned_dataset(ds, 4, 2)[:, 5]).max(), 1e-14)
+
+    # level slots, free two-body energies
+    sl = pa._slots([(1.0, "--", "a"), (1.0, "++", "b"), (1.02, "-+", "c"), (1.5, "+-", "d")], tol=0.05)
+    check(res, "level slots: degenerate levels side by side", float(sl != {1: (0, 3), 2: (1, 3), 0: (2, 3), 3: (0, 1)}), 0.5)
+    eps = np.array([-1.0, -0.3, 0.3, 1.0])
+    pe = pa.pair_energies([(2, 1), (3, 0), (3, 1)], eps, "exciton")
+    pp = pa.pair_energies([(2, 2), (2, 3)], eps, "pp_singlet")
+    M = np.array([[0, 1 / np.sqrt(2), -1 / np.sqrt(2)], [1, 0, 0]])
+    check(res, "free pair energies (exciton, pp, combinations)",
+          np.abs(pe - [0.6, 2.0, 1.3]).max() + np.abs(pp - [0.6, 1.3]).max()
+          + np.abs(pa.combination_energies(M, pe) - [2.0, 0.6]).max(), 1e-14)
+
     if len(argv) > 1:
         ch = pa.Chain(argv[1])
         if ch.has_noninteracting:

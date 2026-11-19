@@ -12,6 +12,9 @@ Statistics
   size from the integrated autocorrelation times (tau_int) so that bins are independent. Files reduced
   with --bin B hold bins of B configurations already: binsize must then be a multiple of B, and
   `discard` is rounded up to whole bins of the file for the correlators (the history keeps it exactly).
+  Jackknife errors need a finite variance. Near zeros of the fermion determinant, observables quadratic
+  in G (equal-time spin/charge correlations, all two-body correlators) can have tails P(|O| > y) ~ y^-3/2,
+  i.e. infinite variance; tail_stats and tail_curve measure the tail exponent.
 
 Single-particle correlators (charge basis, orbital basis of ppp_reduce.py, per symmetry class)
   addition  A_ab(t) = <c_a(t) c^+_b(0)>   ~ sum_n e^{-(E_{N+1,n} - E_N) t}   (electron added)
@@ -65,11 +68,14 @@ def bin_mean(x, binsize):
     return np.asarray(x[: nb * binsize]).reshape(nb, binsize, *np.shape(x)[1:]).mean(axis=1)
 
 
-def _binned_dataset(ds, binsize, start=0):
+def _binned_dataset(ds, binsize, start=0, t=None):
+    """bin averages of an h5 dataset along axis 0 (from `start`); with t, only that index of axis 1 (time slice)"""
     nb = (ds.shape[0] - start) // binsize
-    out = np.empty((nb, *ds.shape[1:]), dtype=np.result_type(ds.dtype, np.float64))
+    shape = ds.shape[1:] if t is None else ds.shape[2:]
+    out = np.empty((nb, *shape), dtype=np.result_type(ds.dtype, np.float64))
     for b in range(nb):
-        out[b] = ds[start + b * binsize:start + (b + 1) * binsize].mean(axis=0)
+        rows = slice(start + b * binsize, start + (b + 1) * binsize)
+        out[b] = (ds[rows] if t is None else ds[rows, t]).mean(axis=0)
     return out
 
 
@@ -437,16 +443,18 @@ class TwoBodyChain:
                              f"per bin of the stage-2 file")
         return binsize // self.bin
 
-    def _read(self, node, rebin):
+    def _read(self, node, rebin, t=None):
         with h5py.File(self.path, "r") as f:
-            return _binned_dataset(f[node], rebin, self.skip)
+            return _binned_dataset(f[node], rebin, self.skip, t)
 
-    def exciton(self, sector, rebin=1):
-        """binned (connected X, disconnected D, expectation (2, n)) of an exciton sector (complex)"""
-        return tuple(self._read(f"exciton/{sector}/{k}", rebin) for k in ("connected", "disconnected", "expectation"))
+    def exciton(self, sector, rebin=1, t=None):
+        """binned (connected X, disconnected D, expectation (2, n)) of an exciton sector (complex);
+        with t, X and D at that time slice only"""
+        return (self._read(f"exciton/{sector}/connected", rebin, t), self._read(f"exciton/{sector}/disconnected", rebin, t),
+                self._read(f"exciton/{sector}/expectation", rebin))
 
-    def pp(self, kind, sector, rebin=1):
-        return self._read(f"{kind}/{sector}/correlator", rebin)
+    def pp(self, kind, sector, rebin=1, t=None):
+        return self._read(f"{kind}/{sector}/correlator", rebin, t)
 
 
 def load_two_body(data_dir, order=None, discard=0):
@@ -482,22 +490,198 @@ def parity_transform(pairs, partner, channel):
     return {C: np.array(rows[C]).reshape(-1, n) for C in (+1, -1)}, labels
 
 
-def exciton_bins(chains, sector, channel, binsize):
+def exciton_bins(chains, sector, channel, binsize, t=None):
     """binned exciton correlator matrices of a run (all chains): triplet = X, singlet = X + 2 (D - <O><O^+>),
     with the ensemble averages <O>, <O^+> (vacuum subtraction; zero in expectation outside the vacuum sector).
-    Real symmetric part; returns (nbins, Nt, n, n)."""
-    parts = [c.exciton(sector, c.rebin(binsize)) for c in chains]
+    Real symmetric part; returns (nbins, Nt, n, n), or (nbins, n, n) at time slice t."""
+    parts = [c.exciton(sector, c.rebin(binsize), t) for c in chains]
     X = np.concatenate([p[0] for p in parts])
     if channel == "triplet":
         C = X
     else:
         D = np.concatenate([p[1] for p in parts])
         ex = np.concatenate([p[2] for p in parts]).mean(axis=0)
-        C = X + 2 * (D - np.outer(ex[0], ex[1])[None, None])
+        C = X + 2 * (D - np.outer(ex[0], ex[1]))
     C = np.real(C)
     return 0.5 * (C + np.swapaxes(C, -1, -2))
 
 
-def pp_bins(chains, kind, sector, binsize):
-    C = np.real(np.concatenate([c.pp(kind, sector, c.rebin(binsize)) for c in chains]))
+def pp_bins(chains, kind, sector, binsize, t=None):
+    C = np.real(np.concatenate([c.pp(kind, sector, c.rebin(binsize), t) for c in chains]))
     return 0.5 * (C + np.swapaxes(C, -1, -2))
+
+
+def pair_energies(pairs, eps, channel):
+    """non-interacting energies of the pair operators: exciton (c, v): eps_c - eps_v; pp (a, b): eps_a + eps_b"""
+    p = np.asarray(pairs, int).reshape(-1, 2)
+    return eps[p[:, 0]] - eps[p[:, 1]] if channel == "exciton" else eps[p[:, 0]] + eps[p[:, 1]]
+
+
+def combination_energies(M, pair_e):
+    """non-interacting energies of the rows of a combination matrix M (n_rows, n_pairs); the pairs combined in
+    one row (a pair and its particle-hole partner) have the same energy"""
+    M = np.asarray(M)
+    return np.asarray(pair_e)[np.argmax(np.abs(M), axis=1)] if len(M) else np.zeros(0)
+
+
+# ----------------------------------------------------------------------------------------------
+# heavy tails
+# ----------------------------------------------------------------------------------------------
+
+def tail_stats(x, frac=0.02, kmin=20):
+    """heavy-tail summary of the samples x (configurations or bins, 1d).
+
+    dev = |x - median| / IQR (interquartile range). The tail exponent alpha of P(dev > y) ~ y^-alpha is the
+    Hill estimate from the k = max(kmin, frac n) largest deviations: alpha < 2 means infinite variance (error
+    estimates from the sample variance are then unreliable), alpha < 1 infinite mean. Consecutive samples of a
+    Markov chain are correlated, so alpha is a rough estimate. Returns dict(n, k, alpha, max_dev, argmax)."""
+    x = np.asarray(x, float)
+    good = np.nonzero(np.isfinite(x))[0]
+    n = len(good)
+    out = dict(n=n, k=0, alpha=np.nan, max_dev=np.nan, argmax=-1)
+    if n < 10:
+        return out
+    v = x[good]
+    q75, q25 = np.percentile(v, [75, 25])
+    if not q75 > q25:
+        return out
+    dev = np.abs(v - np.median(v)) / (q75 - q25)
+    order = np.argsort(dev)[::-1]
+    k = int(min(n - 1, max(kmin, frac * n)))
+    top = dev[order[:k + 1]]
+    out.update(k=k, max_dev=float(top[0]), argmax=int(good[order[0]]))
+    if top[k] > 0:
+        out["alpha"] = float(1 / np.mean(np.log(top[:k] / top[k])))
+    return out
+
+
+def tail_curve(x):
+    """(y, P(dev >= y)) for dev = |x - median| / IQR, sorted by increasing y (for a log-log survival plot)"""
+    v = np.asarray(x, float)
+    v = v[np.isfinite(v)]
+    q75, q25 = np.percentile(v, [75, 25])
+    dev = np.sort(np.abs(v - np.median(v)) / max(q75 - q25, np.finfo(float).tiny))
+    return dev, 1.0 - np.arange(len(dev)) / len(dev)
+
+
+# ----------------------------------------------------------------------------------------------
+# figures shared by the one- and two-body parts of the notebook
+# ----------------------------------------------------------------------------------------------
+
+SYMMETRY_ORDER = ["++", "+-", "-+", "--"]
+
+
+def sym_label(s):
+    """symmetry class or sector for figure text: '--' -> '− −' (two hyphens print as one dash)"""
+    return " ".join("−" if ch == "-" else ch for ch in str(s))
+
+
+def _slots(levels, tol):
+    """side-by-side slots for levels closer than tol: levels = [(E, sym, key)] -> {index: (slot, cluster size)}"""
+    order = sorted(range(len(levels)), key=lambda i: levels[i][0])
+    out, cluster = {}, []
+
+    def flush():
+        cl = sorted(cluster, key=lambda i: (SYMMETRY_ORDER.index(levels[i][1]) if levels[i][1] in SYMMETRY_ORDER
+                                            else 9, levels[i][0]))
+        for s, i in enumerate(cl):
+            out[i] = (s, len(cl))
+
+    for i in order:
+        if cluster and levels[i][0] - levels[cluster[0]][0] > tol:
+            flush()
+            cluster = []
+        cluster.append(i)
+    if cluster:
+        flush()
+    return out
+
+
+def level_diagram(ax, groups, colors, tol=0.05, width=1.0, gap=0.7, spacing=1.0):
+    """correlation diagram: for every group a column of non-interacting levels (left) and one of interacting levels
+    (right), with dashed lines joining the levels with the same key.
+
+    groups: list of (title, free, interacting); free = [(E, sym, key)], interacting = [(E, dE, sym, key)];
+    colors: {sym: colour}. Levels closer than tol are drawn side by side. Returns the column centres."""
+    from matplotlib.patches import Rectangle
+    centres, x0 = [], 0.0
+    pad = 0.06 * width
+    for title, free, inter in groups:
+        xf, xi = x0, x0 + width + gap
+        ends = {}
+        for col, (xc, levels) in enumerate(((xf, [(E, s, k) for E, s, k in free]),
+                                            (xi, [(E, s, k) for E, dE, s, k in inter]))):
+            slots = _slots(levels, tol)
+            for i, (E, sym, key) in enumerate(levels):
+                s, m = slots[i]
+                a, b = xc + s * width / m + pad / 2, xc + (s + 1) * width / m - pad / 2
+                c = colors.get(sym, "#5c5c57")
+                ax.plot([a, b], [E, E], color=c, lw=2.0, solid_capstyle="butt")
+                if col == 1:
+                    dE = inter[i][1]
+                    if np.isfinite(dE) and dE > 0:
+                        ax.add_patch(Rectangle((a, E - dE), b - a, 2 * dE, color=c, alpha=0.22, lw=0))
+                ends.setdefault(key, {})[col] = (b if col == 0 else a, E, c)
+        for key, e in ends.items():
+            if 0 in e and 1 in e:
+                (xa, Ea, c), (xb, Eb, _) = e[0], e[1]
+                ax.plot([xa, xb], [Ea, Eb], color=c, lw=0.7, ls=(0, (3, 2)), alpha=0.7)
+        centres.append((xf + width / 2, xi + width / 2, title))
+        x0 = xi + width + spacing
+    ax.set_xlim(-0.3, x0 - spacing + 0.3)
+    ax.set_xticks([c for a, b, _ in centres for c in (a, b)])
+    ax.set_xticklabels(["free", "interacting"] * len(centres), fontsize=7)
+    ax.grid(axis="x", visible=False)
+    for a, b, title in centres:
+        ax.text((a + b) / 2, 1.01, title, transform=ax.get_xaxis_transform(), ha="center", va="bottom", fontsize=8)
+    return centres
+
+
+def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops=None, panel=1.9):
+    """matrix of correlators C_ij(tau) on a log scale, one panel per (i, j).
+
+    series: [(name, colour, mean (Nt, n, n), error (Nt, n, n))]; the absolute value of the (real) mean is shown,
+    filled markers where it is positive and open markers where it is negative, and only time slices where the error
+    is smaller than the absolute value; free: optional (Nt, n, n) shown as a dashed grey line; max_ops: show
+    only the first max_ops operators. Returns the figure."""
+    import textwrap
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    n = len(labels) if max_ops is None else min(len(labels), max_ops)
+    width = max(4.2, panel * n + 0.8)
+    fig, axes = plt.subplots(n, n, figsize=(width, max(2.8, panel * 0.8 * n + 1.2)),
+                             sharex=True, sharey=True, squeeze=False, constrained_layout=True)
+    Nt = series[0][2].shape[0]
+    tau = np.arange(Nt) * delta
+    for i in range(n):
+        for j in range(n):
+            ax = axes[i, j]
+            if free is not None:
+                f = np.abs(free[:, i, j])
+                ok = f > 1e-12 * np.abs(free).max()             # smaller: round-off of the stored M^-1
+                if ok.any():
+                    ax.plot(tau[ok], f[ok], color="#8a8a85", lw=0.8, ls="--")
+            for name, c, m, e in series:
+                y, s = np.real(m[:, i, j]), np.real(e[:, i, j])
+                ok = np.isfinite(y) & (s < np.abs(y))
+                for mask, face in ((ok & (y > 0), c), (ok & (y < 0), "none")):
+                    if mask.any():
+                        ax.errorbar(tau[mask], np.abs(y[mask]), s[mask], fmt="o", ms=2.2, lw=0.6, color=c, mfc=face,
+                                    mew=0.6)
+            ax.set_yscale("log")
+            ax.set_title(f"{i},{j}", fontsize=7, pad=2)
+            ax.tick_params(labelsize=7)
+            if i == n - 1:
+                ax.set_xlabel(r"$\tau$", fontsize=8)
+            if j == 0:
+                ax.set_ylabel(f"$|{ylabel}_{{ij}}(\\tau)|$", fontsize=8)
+    handles = [Line2D([], [], color=c, marker="o", ls="none", ms=4, label=name) for name, c, _, _ in series]
+    handles.append(Line2D([], [], color="#5c5c57", marker="o", mfc="none", ls="none", ms=4, label="negative value"))
+    if free is not None:
+        handles.append(Line2D([], [], color="#8a8a85", ls="--", label="non-interacting"))
+    fig.suptitle(textwrap.fill(title, int(13 * width)), x=0.01, ha="left", fontsize=9)
+    try:
+        fig.legend(handles=handles, loc="outside lower center", ncol=len(handles), fontsize=7)
+    except ValueError:                                     # matplotlib < 3.7
+        axes[0, -1].legend(handles=handles, fontsize=6)
+    return fig
