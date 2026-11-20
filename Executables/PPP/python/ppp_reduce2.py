@@ -24,12 +24,15 @@ Per configuration (contractions in ppp_wick.py, tested against exact Fock-space 
                 2 <O_i><O^+_j> (ensemble averages of `expectation`) in the analysis
   expectation   time averages of <O_i> and <O^+_i> (shape (2, n))
   pp            sum over sources of Tr[B_i^+ Fo B_j Fo^T] / #sources
-Products of two propagators are periodic in time, so no antiperiodic signs enter. The t = 0 entries of the exciton
-correlators are not the operator-ordered equal-time values (the backward propagator at equal time is taken as
-<c c^+> instead of -<c^+ c>): use t >= 1 (spectroscopy does anyway).
+Products of two propagators are periodic in time, so no antiperiodic signs enter. At t = 0 the backward
+propagator is G(s, s) - 1 = -<c^+ c>^T (ppp_wick.backward_equal_time), not M^-1[s, s] = <c c^+>: this contact
+term, + delta_{v_i v_j} G(s, s)_{c_i c_j} in X, makes every stored t = 0 entry the operator-ordered equal-time
+value <O_i O^+_j> (attribute contact_terms = 1). D and the pp correlators need none: D is built from equal-time
+expectation values, and pp uses forward propagators only. Files of VERSION 1 lack the term in X(0); ppp_analysis
+adds it from the stage-1 file of the same chain.
 
 Output (plain h5py; b = bin of `--bin` consecutive configurations):
-  attrs                                 as in stage 1, plus stage = 2, window_energy, bin, n_bins
+  attrs                                 as in stage 1, plus stage = 2, window_energy, bin, n_bins, contact_terms
   orbitals/{U, eps, class, class_names, partner, window}
   config/first_id                       first configuration id of every bin
   exciton/<sector>/pairs                (n, 2) orbital indices (c, v)
@@ -54,7 +57,7 @@ import ppp_ed  # noqa: E402
 import ppp_wick as wick  # noqa: E402
 import ppp_reduce as r1  # noqa: E402
 
-VERSION = 1
+VERSION = 2                     # 2: contact term in the exciton X(0)
 
 
 def sector_name(names, ca, cb):
@@ -156,6 +159,7 @@ def main(argv=None):
         with h5py.File(tmp, "w") as fo:
             fo.attrs.update(dict(name=name, Nt=Nt, beta=beta, delta=delta, Nx=Nx, mu=mu, stage=2, version=VERSION,
                                  sources=np.array(sources), window_energy=args.window_energy, bin=B, n_bins=nb,
+                                 contact_terms=1,
                                  n_configs=nb * B, input_h5=os.path.abspath(h5in), input_yml=os.path.abspath(args.yml),
                                  input_yml_text=yml_text, precision="single" if args.single else "double",
                                  created=datetime.datetime.now().isoformat(timespec="seconds")))
@@ -188,6 +192,7 @@ def main(argv=None):
                     idx = (s_src + tt) % Nt
                     Fo = Uw.T @ r1.read_tensor(gp[f"invM[t,{s_src}]"])[idx] @ Uw     # U^T G(s+t, s) U
                     Bo = Uw.T @ r1.read_tensor(gp[f"invM[{s_src},t]"])[idx] @ Uw     # U^T G(s, s+t) U
+                    Bo[0] -= np.eye(len(window))                                    # t = 0: U^T (G(s,s) - 1) U
                     for s, pairs in exc.items():
                         X = wick.exciton_pairs(Fo, Bo, loc(pairs[:, 0]), loc(pairs[:, 1]))
                         res[("exc", s)] = res.get(("exc", s), 0) + X / len(sources)
@@ -205,9 +210,9 @@ def main(argv=None):
                 if n_cfg < args.check:                                                  # general contractions, site basis
                     s0 = sources[0]
                     col, row = r1.read_tensor(gp[f"invM[t,{s0}]"]), r1.read_tensor(gp[f"invM[{s0},t]"])
-                    for t in (1, Nt // 4, Nt // 2):
+                    for t in (0, 1, Nt // 4, Nt // 2):
                         tg = (s0 + t) % Nt
-                        Gf, Gb = col[tg], row[tg]
+                        Gf, Gb = col[tg], (row[tg] if t else wick.backward_equal_time(row[tg]))
                         s, pairs = next(iter(exc.items()))
                         c0, v0 = pairs[0]
                         A = np.outer(U[:, c0], U[:, v0])

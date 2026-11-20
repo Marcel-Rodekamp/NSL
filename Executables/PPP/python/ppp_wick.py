@@ -15,6 +15,14 @@ Conventions (HubbardExp, charge basis):
   Below Gf = G(t, t0) and Gb = G(t0, t) are (..., Nx, Nx) matrices for t > t0 (leading axes,
   e.g. the time t, broadcast), Gt = G(t, t) and Gt0 = G(t0, t0).
 
+Equal times (t = t0, tau = 0): the product keeps its operator order, sink left of source. A sink c
+contracted with a source c^+ gives <c c^+> = G(t0, t0), the t -> t0 limit of the forward propagator, as
+stored in M^-1[t0, t0]. A sink c^+ contracted with a source c gives -<c^+ c>^T = G(t0, t0) - 1, the limit of
+the backward propagator (backward_equal_time). So at t = t0 pass Gf = G(t0, t0) and Gb = G(t0, t0) - 1.
+The extra -1 per backward propagator is the contact term: the exciton gains + Tr[A_i^+ G(t0, t0) A_j],
+hh gains a delta-delta term and two delta-G terms, and pp has none (forward propagators only). With M^-1
+for a backward propagator at t = t0, the correlator is not <O O^+> at tau = 0.
+
 Operators (A, B are Nx x Nx coefficient matrices, e.g. outer products of hopping orbitals):
   exciton    O^+ = sum_xy A_xy c^+_{x,s} c_{y,s'}      (electron into A's row space, out of its column space)
              triplet: s != s' (S_z = +-1), or the S_z = 0 combination of s = s' (identical per configuration)
@@ -36,6 +44,12 @@ def density_matrix(Gt):
     return np.eye(Gt.shape[-1]) - np.swapaxes(Gt, -1, -2)
 
 
+def backward_equal_time(Gt0):
+    """the backward propagator G(t0, t) for t -> t0 from above: -<c^+_y c_x> = G(t0, t0) - 1 (see the module doc).
+    Use it as Gb (or, in an orthonormal orbital basis U, Bo = U^T G U - 1) at t = t0."""
+    return Gt0 - np.eye(Gt0.shape[-1])
+
+
 def equal_time(Gt):
     """Equal-time two-body observables of one configuration from Gt = G(t, t), shape (..., Nx, Nx).
 
@@ -51,7 +65,8 @@ def exciton(A_sink, A_src, Gf, Gb, Gt=None, Gt0=None):
     """Exciton correlators <O_i(t) O^+_j(t0)>; returns (triplet, singlet).
 
     triplet = -Tr[A_i^+ Gf A_j Gb] (no disconnected part); singlet = triplet + 2 <O_i(t)> <O^+_j(t0)>.
-    The singlet needs the equal-time Gt, Gt0; without them only the triplet is returned (singlet None)."""
+    The singlet needs the equal-time Gt, Gt0; without them only the triplet is returned (singlet None).
+    At t = t0: Gf = Gt0, Gb = backward_equal_time(Gt0)."""
     X = -np.einsum("xy,...xa,ab,...by->...", np.conj(A_sink), Gf, A_src, Gb)
     if Gt is None or Gt0 is None:
         return X, None
@@ -66,7 +81,8 @@ def pp(B_sink, B_src, Gf):
 
 
 def hh(B_sink, B_src, Gb):
-    """Two removed electrons: <H_i(t) H^+_j(t0)> = Tr[B_i^+ Gb^T B_j Gb] with Gb = G(t0, t)"""
+    """Two removed electrons: <H_i(t) H^+_j(t0)> = Tr[B_i^+ Gb^T B_j Gb] with Gb = G(t0, t)
+    (at t = t0: Gb = backward_equal_time(Gt0))"""
     return np.einsum("xy,...ax,ab,...by->...", np.conj(B_sink), Gb, B_src, Gb)
 
 
@@ -76,7 +92,8 @@ def hh(B_sink, B_src, Gb):
 
 def exciton_pairs(Fo, Bo, c, v):
     """connected exciton correlator matrix of O^+_i = c^+_{c_i} c_{v_i} (spin as in `exciton`):
-    X[..., i, j] = -Fo[..., c_i, c_j] Bo[..., v_j, v_i] = triplet (any S_z); singlet = X + 2 <O_i(t)><O^+_j(t0)>"""
+    X[..., i, j] = -Fo[..., c_i, c_j] Bo[..., v_j, v_i] = triplet (any S_z); singlet = X + 2 <O_i(t)><O^+_j(t0)>.
+    At t = t0: Bo = U^T G(t0, t0) U - 1, which adds the contact term delta_{v_i v_j} Fo[c_i, c_j]."""
     c, v = np.asarray(c), np.asarray(v)
     return -Fo[..., c[:, None], c[None, :]] * Bo[..., v[None, :], v[:, None]]
 

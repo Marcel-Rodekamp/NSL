@@ -90,6 +90,37 @@ def main(argv):
           np.abs(pe - [0.6, 2.0, 1.3]).max() + np.abs(pp - [0.6, 1.3]).max()
           + np.abs(pa.combination_energies(M, pe) - [2.0, 0.6]).max(), 1e-14)
 
+    # t = 0 contact term of old stage-2 files from a stage-1 file: delta_{v_i v_j} F(0)_{c_i c_j}, bin by bin
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        p1, p2, p3 = (os.path.join(tmp, f"{k}.h5") for k in ("one", "two", "other"))
+        F = {"A": rng.normal(size=(6, 4, 2, 2)), "B": rng.normal(size=(6, 4, 2, 2))}       # 6 stage-1 bins of 1
+        for p, first in ((p1, 100), (p3, 200)):
+            with h5py.File(p, "w") as f:
+                f.attrs.update(dict(bin=1, n_bins=6, n_configs=6, sources=[0, 2]))
+                f["config/id"], f["orbitals/U"] = np.arange(6) + first, np.eye(4)
+                for cls, orbs in (("A", [0, 1]), ("B", [2, 3])):
+                    f[f"onebody/{cls}/orbitals"], f[f"onebody/{cls}/forward"] = orbs, F[cls]
+        pairs = np.array([[0, 2], [1, 2], [0, 3]])                       # conduction 0, 1 (class A), valence 2, 3
+        with h5py.File(p2, "w") as f:                                    # 3 stage-2 bins of 2, without contact_terms
+            f.attrs.update(dict(Nt=4, delta=0.5, bin=2, window_energy=1.0, sources=[0, 2]))
+            f["orbitals/U"], f["orbitals/eps"], f["orbitals/partner"] = np.eye(4), [1.0, 0.5, -0.5, -1.0], [3, 2, 1, 0]
+            f["orbitals/class_names"], f["orbitals/class"] = np.array([b"A", b"B"]), [0, 0, 1, 1]
+            f["config/first_id"], f["exciton/s/pairs"] = [100, 102, 104], pairs
+            f["exciton/s/connected"] = f["exciton/s/disconnected"] = np.zeros((3, 4, 3, 3))
+            f["exciton/s/expectation"] = np.zeros((3, 2, 3))
+        F0 = F["A"][:, 0].reshape(3, 2, 2, 2).mean(axis=1)[1:]           # stage-1 bins in pairs, first one discarded
+        want = np.zeros((2, 3, 3))
+        want[:, :2, :2], want[:, 2, 2] = F0, F0[:, 0, 0]                  # v_i = v_j: pairs 0, 1 (v = 2) and pair 2 (v = 3)
+        X = pa.TwoBodyChain(p2, discard=2, onebody_path=p1).exciton("s", 1)[0]
+        check(res, "t = 0 contact term from stage 1 (old stage-2 files)", np.abs(X[:, 0] - want).max() + np.abs(X[:, 1:]).max(), 1e-14)
+        try:
+            pa.TwoBodyChain(p2, onebody_path=p3)
+            refused = 0.0
+        except ValueError:
+            refused = 1.0
+        check(res, "stage-1 file of another chain refused", 1.0 - refused, 0.5)
+
     if len(argv) > 1:
         ch = pa.Chain(argv[1])
         if ch.has_noninteracting:

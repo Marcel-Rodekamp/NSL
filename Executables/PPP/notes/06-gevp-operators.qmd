@@ -207,6 +207,26 @@ $$
 - Stored: `connected` = $X$, `disconnected` = $D$, `expectation` = time averages of $o,\bar o$. They are combined
   in `ppp_analysis.exciton_bins`.
 
+## $\tau=0$: contact terms
+
+At equal times the product keeps its operator order, sink left of source:
+
+$$
+\text{sink }c\text{, source }c^\dagger:\ \langle c\,c^\dagger\rangle=G(t,t)=M^{-1}[t,t],\qquad
+\text{sink }c^\dagger\text{, source }c:\ -\langle c^\dagger c\rangle^T=G(t,t)-1
+$$
+
+- The second is the $\tau\to0^+$ limit of the backward propagator $G(0,\tau)$; $M^{-1}[t,t]$ is the limit of the
+  forward one. The $-1$ is the contact term.
+- Exciton: $X_{ij}(0)=-G_{p_ip_j}\,\big[G-1\big]_{-q_j,-q_i}=-G_{p_ip_j}\,G_{-q_j,-q_i}+\delta_{q_iq_j}\,G_{p_ip_j}$
+  (all at $(t,t)$).
+- pp: forward propagators only, no contact term. hh: two backward propagators, so $\delta\delta$ and $\delta G$
+  terms. $D$: equal-time expectation values, no contact term.
+- Stage 2 (version 2) stores $X(0)$ with it (`ppp_wick.backward_equal_time`). For version-1 files,
+  `ppp_analysis` adds it from the stage-1 file of the same chain. Tested against exact Fock-space traces.
+- This is the rule behind the contact terms of the hubbard-excitons notebook (particle/hole basis): every term
+  with a backward propagator at $t_{\rm src}$ gets $-1$ there.
+
 ## Particle–hole parity $C$
 
 With $\mathcal P$ from the removal slide ($c_{p,s}\to c^\dagger_{-p,s}$, $c_{-q,s}\to c^\dagger_{q,s}$):
@@ -325,8 +345,6 @@ $$
 - Fit: one exponential per state on `FIT_WINDOW` (8–48 slices for single particles, 4–32 for two-body), cut where
   the relative error of $c_n$ exceeds `MAX_REL_ERR` (`state_energies`). If $C(t_0)$ is not positive definite,
   the block is skipped.
-- Exciton correlators are used only from $t\ge1$. The stored $t=0$ entries contain contact terms, because the
-  backward propagator at equal times is taken as $\langle c\,c^\dagger\rangle$, not $-\langle c^\dagger c\rangle$.
 - Plots stop at $\tau=\beta/2$, beyond which the backward-propagating (thermal) contributions take over.
 
 ## Limits of the bases
@@ -346,6 +364,6 @@ $$
 | $G$, $F$, $B$, hole relations | `ppp_reduce.onebody` | `test_ppp_wick.py`: exact Fock-space traces, 4-site chain, one fixed field |
 | $A$, $R$ | `ppp_analysis.addition_removal` | `test_ppp_analysis.py` ($R=A^*$ on the data) |
 | classes, sectors, partners | `ppp_reduce.orbital_basis`, `ppp_reduce2.operator_bases` | asserts in `orbital_basis` |
-| $X$, $D$, $o$, pp | `ppp_wick.exciton_pairs`, `exciton_expectations`, `pp_pairs`, in `ppp_reduce2` | `test_ppp_wick.py` (pair forms = general forms, FFT = direct sum) |
+| $X$, $D$, $o$, pp | `ppp_wick.exciton_pairs`, `exciton_expectations`, `pp_pairs`, in `ppp_reduce2` | `test_ppp_wick.py` (pair forms = general forms, FFT = direct sum, $\tau=0$ against Fock space) |
 | $C$ combinations | `ppp_analysis.parity_transform` | Casimir check for this deck (not in the repository) |
 | GEVP, fits | `gevp_vectors`, `gevp_project`, `state_energies` | — |

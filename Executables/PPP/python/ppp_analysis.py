@@ -425,9 +425,14 @@ def shell_average(M, r, shells):
 # ----------------------------------------------------------------------------------------------
 
 class TwoBodyChain:
-    """One stage-2 file: exciton (connected, disconnected, expectation) and pp correlators per sector."""
+    """One stage-2 file: exciton (connected, disconnected, expectation) and pp correlators per sector.
 
-    def __init__(self, path, discard=0):
+    tau = 0: files with the attribute contact_terms (stage-2 VERSION >= 2) store the operator-ordered equal-time
+    values. Older files lack the contact term delta_{v_i v_j} G(s, s)_{c_i c_j} of the exciton X(0); with
+    `onebody_path` (the stage-1 file of the same chain: same orbitals, sources and configurations) it is added
+    from that file's onebody/<class>/forward at t = 0, bin by bin. t0_valid tells whether X(0) is right."""
+
+    def __init__(self, path, discard=0, onebody_path=None):
         self.path = path
         self.tag = os.path.splitext(os.path.basename(path))[0]
         m = RUN_RE.match(self.tag)
@@ -436,6 +441,9 @@ class TwoBodyChain:
             a = f.attrs
             self.Nt, self.delta, self.bin = int(a["Nt"]), float(a["delta"]), int(a["bin"])
             self.window_energy = float(a["window_energy"])
+            self.contact_terms = bool(a.get("contact_terms", 0))
+            self.sources = np.array(a["sources"])
+            self.U = f["orbitals/U"][()]
             self.eps, self.partner = f["orbitals/eps"][()], f["orbitals/partner"][()]
             names = [s.decode() for s in f["orbitals/class_names"][()]]
             self.orbital_class = np.array([names[c] for c in f["orbitals/class"][()]])
@@ -444,6 +452,34 @@ class TwoBodyChain:
             self.first_id = f["config/first_id"][()]
         self.skip = -(-int(discard) // self.bin)            # bins dropped at the start (ceil)
         self.nbins = len(self.first_id) - self.skip
+        self.onebody_path = None if self.contact_terms else onebody_path
+        if self.onebody_path is not None:
+            self._check_onebody()
+        self.t0_valid = self.contact_terms or self.onebody_path is not None
+
+    def _check_onebody(self):
+        """the stage-1 file must have the same orbitals, sources and configurations, in bins that divide ours"""
+        with h5py.File(self.onebody_path, "r") as f:
+            b1 = int(f.attrs.get("bin", 1))
+            ids = f["config/id"][()]
+            why = None
+            if not np.allclose(f["orbitals/U"][()], self.U, atol=1e-12):
+                why = "other orbitals"
+            elif not np.array_equal(np.array(f.attrs["sources"]), self.sources):
+                why = "other source times"
+            elif self.bin % b1:
+                why = f"its bins of {b1} do not divide the {self.bin} configurations per stage-2 bin"
+            elif (int(f.attrs.get("n_bins", f.attrs["n_configs"])) * b1 < len(self.first_id) * self.bin
+                  or not np.array_equal(ids[::self.bin][:len(self.first_id)], self.first_id)):
+                why = "other configurations"
+            else:
+                stored = set(int(o) for c in f["onebody"] for o in f[f"onebody/{c}/orbitals"][()])
+                needed = set(int(o) for (ch, _), p in self.pairs.items() if ch == "exciton" for o in p[:, 0])
+                if not needed <= stored:
+                    why = f"orbitals {sorted(needed - stored)} are not stored (stage-1 --orbitals)"
+        if why:
+            raise ValueError(f"{self.tag}: stage-1 file {self.onebody_path} cannot supply the t = 0 contact term: {why}")
+        self.onebody_bin = b1
 
     def rebin(self, binsize):
         """binsize (configurations) in units of the stored bins; it must be a multiple of the file's bin"""
@@ -458,20 +494,48 @@ class TwoBodyChain:
 
     def exciton(self, sector, rebin=1, t=None):
         """binned (connected X, disconnected D, expectation (2, n)) of an exciton sector (complex);
-        with t, X and D at that time slice only"""
-        return (self._read(f"exciton/{sector}/connected", rebin, t), self._read(f"exciton/{sector}/disconnected", rebin, t),
-                self._read(f"exciton/{sector}/expectation", rebin))
+        with t, X and D at that time slice only. X(0) includes the contact term whenever t0_valid."""
+        X = self._read(f"exciton/{sector}/connected", rebin, t)
+        if self.onebody_path is not None and (t is None or t == 0):
+            X, K = X.astype(complex), self.exciton_contact(sector, rebin)
+            if t is None:
+                X[:, 0] += K
+            else:
+                X += K
+        return X, self._read(f"exciton/{sector}/disconnected", rebin, t), self._read(f"exciton/{sector}/expectation", rebin)
+
+    def exciton_contact(self, sector, rebin=1):
+        """(nbins, n, n) t = 0 contact term delta_{v_i v_j} G(s, s)_{c_i c_j} of X from the stage-1 file, binned as
+        X. Within a sector, v_i = v_j puts c_i and c_j in one symmetry class, whose block stage 1 stores."""
+        pairs = self.pairs[("exciton", sector)]
+        c, v = pairs[:, 0], pairs[:, 1]
+        r1 = rebin * self.bin // self.onebody_bin                     # stage-1 bins per bin here
+        nb = self.nbins // rebin
+        out = np.zeros((nb, len(pairs), len(pairs)), complex)
+        with h5py.File(self.onebody_path, "r") as f:
+            for cls in sorted(set(self.orbital_class[c])):
+                orbs = list(f[f"onebody/{cls}/orbitals"][()])
+                F0 = _binned_dataset(f[f"onebody/{cls}/forward"], r1, self.skip * self.bin // self.onebody_bin, t=0)[:nb]
+                for i in np.nonzero(self.orbital_class[c] == cls)[0]:
+                    for j in np.nonzero(v == v[i])[0]:
+                        out[:, i, j] = F0[:, orbs.index(c[i]), orbs.index(c[j])]
+        return out
 
     def pp(self, kind, sector, rebin=1, t=None):
         return self._read(f"{kind}/{sector}/correlator", rebin, t)
 
 
-def load_two_body(data_dir, order=None, discard=0):
-    """{run: [TwoBodyChain]} for the stage-2 files in data_dir (same naming as stage 1)"""
+def load_two_body(data_dir, order=None, discard=0, onebody_dir=None):
+    """{run: [TwoBodyChain]} for the stage-2 files in data_dir (same naming as stage 1). Files without the t = 0
+    contact term take it from the stage-1 file of the same name in onebody_dir, if there is one."""
     found = find_runs(data_dir)
     names = [n for n in (order or []) if n in found] + sorted(n for n in found if n not in (order or []))
     disc = discard if isinstance(discard, dict) else {n: discard for n in names}
-    return {n: [TwoBodyChain(p, disc.get(n, 0)) for p in found[n]] for n in names}
+
+    def partner(p):
+        q = os.path.join(onebody_dir, os.path.basename(p)) if onebody_dir else None
+        return q if q and os.path.exists(q) else None
+    return {n: [TwoBodyChain(p, disc.get(n, 0), partner(p)) for p in found[n]] for n in names}
 
 
 def parity_transform(pairs, partner, channel):

@@ -156,6 +156,35 @@ def main():
     results["pp (singlet, triplet, same orbital; all sink/source pairs)"] = rel(pw, pf)
     results["hh (singlet, triplet, same orbital; all sink/source pairs)"] = rel(hw, hf)
 
+    # equal times, tau = 0 (every time slice): <O O^+> in operator order, sink left of source, from
+    # Gf = G(t,t) and the backward propagator G(t,t) - 1 (backward_equal_time: the contact terms)
+    dev0 = {k: 0.0 for k in ("triplet S_z=+1", "triplet S_z=0", "singlet")}
+    pw0, pf0, hw0, hf0 = [], [], [], []
+    for tt in range(Nt):
+        Gt = G[tt, :, tt, :]
+        Gb0 = wick.backward_equal_time(Gt)
+        for Ai in ops.values():
+            for Aj in ops.values():
+                X, S = wick.exciton(Ai, Aj, Gt, Gb0, Gt, Gt)
+                Tp = corr(exc(Ai, "u", "d").conj().T, tt, exc(Aj, "u", "d"), tt)
+                T0 = corr((exc(Ai, "u", "u") - exc(Ai, "d", "d")).conj().T / np.sqrt(2), tt,
+                          (exc(Aj, "u", "u") - exc(Aj, "d", "d")) / np.sqrt(2), tt)
+                Sf = corr((exc(Ai, "u", "u") + exc(Ai, "d", "d")).conj().T / np.sqrt(2), tt,
+                          (exc(Aj, "u", "u") + exc(Aj, "d", "d")) / np.sqrt(2), tt)
+                for k, w, f in (("triplet S_z=+1", X, Tp), ("triplet S_z=0", X, T0), ("singlet", S, Sf)):
+                    dev0[k] = max(dev0[k], rel(w, f))
+        for B in Bs.values():
+            for B2 in Bs.values():
+                pw0.append(wick.pp(B, B2, Gt))
+                pf0.append(corr(pp_op(B).conj().T, tt, pp_op(B2), tt))
+        for B in Bv.values():
+            for B2 in Bv.values():
+                hw0.append(wick.hh(B, B2, Gb0))
+                hf0.append(corr(hh_op(B).conj().T, tt, hh_op(B2), tt))
+    results.update({f"tau = 0: exciton {k}": v for k, v in dev0.items()})
+    results["tau = 0: pp (forward only, no contact term)"] = rel(pw0, pf0)
+    results["tau = 0: hh (two backward propagators)"] = rel(hw0, hf0)
+
     # vectorized call over t (leading axis) agrees with single calls; G[t0, :, Ts, :] has shape (len(Ts), n, n)
     Ts = np.arange(t0 + 1, Nt)
     Xv, Sv = wick.exciton(ops["pair (0,1)"], ops["pair (0,1)"], G[Ts, :, t0, :], G[t0, :, Ts, :],
@@ -185,6 +214,13 @@ def main():
             Xg[:, i, j], Sg[:, i, j] = wick.exciton(Ai, Aj, G[Ts, :, t0, :], G[t0, :, Ts, :], G[Ts, :, Ts, :], G[t0, :, t0, :])
     results["exciton_pairs (triplet) = exciton"] = rel(Xp, Xg)
     results["exciton_pairs + expectations (singlet) = exciton"] = rel(Sp, Sg)
+    # tau = 0 as in stage 2: Bo = U^T G(t0,t0) U - 1 in the orbital basis, against Fock space directly
+    Fo0 = U4.T @ G[t0, :, t0, :] @ U4
+    Xp0 = wick.exciton_pairs(Fo0, Fo0 - np.eye(n), ci, vi)
+    Xf0 = np.array([[corr(exc(np.outer(U4[:, ci[i]], U4[:, vi[i]]), "u", "d").conj().T, t0,
+                          exc(np.outer(U4[:, ci[j]], U4[:, vi[j]]), "u", "d"), t0) for j in range(len(ci))]
+                    for i in range(len(ci))])
+    results["tau = 0: exciton_pairs with Bo = U^T G U - 1 (stage 2)"] = rel(Xp0, Xf0)
     for sgn, name in ((+1, "singlet"), (-1, "triplet")):
         a = np.array([0, 0, 1] if sgn > 0 else [0])
         b = np.array([0, 1, 1] if sgn > 0 else [1])
