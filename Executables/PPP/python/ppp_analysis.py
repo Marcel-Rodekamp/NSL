@@ -315,6 +315,12 @@ def gevp_project(C, v):
     return np.einsum("an,...tab,bn->...tn", v, C, v)
 
 
+def particle_hole_symmetric(run, tol=1e-12):
+    """True at mu = 0 on a bipartite lattice. Then R_vv'(t) = A_cc'(t)^* on every configuration for v = (-1)^x c,
+    so the removal spectrum is the mirror image of the addition spectrum and need not be analyzed separately."""
+    return abs(run.mu) < tol and run.sublattice is not None
+
+
 def orbital_selection(run, cls, kind):
     """indices (within the class block) of the orbitals used for addition (eps > 0) or removal (eps < 0)"""
     eps = run.eps[run.classes[cls]]
@@ -354,7 +360,9 @@ def state_energies(C_bins, delta, t0, td, window, select=None, max_rel_err=0.25,
     diagonal correlators fitted with one exponential. The fit window of state n is overrides[n] if given,
     otherwise `window` cut where the relative error of the state's correlator exceeds max_rel_err
     (signal_window). Returns dict with E, dE and the windows (per state), the projected mean correlators
-    and their errors (Nt, nstates), the effective energies with errors (nstates, Nt-1), and the vectors."""
+    and their errors (Nt, nstates), the effective energies with errors (nstates, Nt-1), and the vectors. E_jk
+    (nstates, nbins) are the jackknife samples of E: errors of combinations of fits on the same bins (e.g. addition +
+    removal energy) are jk_error of the combined samples."""
     if select is not None:
         if len(select) == 0:
             return None
@@ -366,13 +374,14 @@ def state_energies(C_bins, delta, t0, td, window, select=None, max_rel_err=0.25,
     cm, ce = gevp_project(mean, v), jk_error(jk)
     ns = v.shape[1]
     windows = [(overrides or {}).get(n) or signal_window(cm[:, n], ce[:, n], window, max_rel_err) for n in range(ns)]
-    E, dE = np.full(ns, np.nan), np.full(ns, np.nan)
+    E, dE, E_jk = np.full(ns, np.nan), np.full(ns, np.nan), np.full((ns, len(jk)), np.nan)
     for n, w in enumerate(windows):
         if w is None:
             continue
         E[n] = fit_exp(cm[:, n], ce[:, n], delta, w)[0]
-        dE[n] = jk_error(np.array([fit_exp(s[:, n], ce[:, n], delta, w)[0] for s in jk]))
-    return dict(E=E, dE=dE, windows=windows, corr=cm, corr_err=ce, vectors=v,
+        E_jk[n] = [fit_exp(s[:, n], ce[:, n], delta, w)[0] for s in jk]
+        dE[n] = jk_error(E_jk[n])
+    return dict(E=E, dE=dE, E_jk=E_jk, windows=windows, corr=cm, corr_err=ce, vectors=v,
                 Eeff=effective_energy(cm.T, delta), Eeff_err=jk_error(effective_energy(np.swapaxes(jk, 1, 2), delta)))
 
 

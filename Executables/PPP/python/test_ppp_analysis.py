@@ -58,6 +58,13 @@ def main(argv):
     check(res, "consistency: weighted mean", abs(m - 1.0), 1e-12)
     check(res, "consistency: chi2/dof", abs(chi2 - 1.0), 1e-12)
 
+    # particle-hole symmetry: mu = 0 on a bipartite lattice only
+    from types import SimpleNamespace as NS
+    sub = np.array([0, 1, 0, 1])
+    cases = [(NS(mu=0.0, sublattice=sub), True), (NS(mu=0.1, sublattice=sub), False),
+             (NS(mu=0.0, sublattice=None), False)]
+    check(res, "particle-hole symmetry test", sum(pa.particle_hole_symmetric(r) != want for r, want in cases), 0.5)
+
     # tail exponents: Student t with nu degrees of freedom has P(|x| > y) ~ y^-nu
     for nu in (1.5, 3.0):
         st = pa.tail_stats(rng.standard_t(nu, 400000), frac=0.002)
