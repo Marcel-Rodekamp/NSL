@@ -38,6 +38,36 @@ def main(argv):
     check(res, "effective energy of an exponential", np.max(np.abs(pa.effective_energy(c, delta) - E)), 1e-12)
     check(res, "exponential fit", abs(pa.fit_exp(c, 0.01 * c, delta, (4, 20))[0] - E), 1e-12)
 
+    # settings in tau -> time slices of runs at different delta (same physical times)
+    bad = 0
+    bad += (pa.tau_slice(1.5, 0.25), pa.tau_slice(1.5, 0.125), pa.tau_slice(1.5, 1 / 6)) != (6, 12, 9)
+    try:
+        pa.tau_slice(0.5, 1 / 3, "TAU0")
+        bad += 1
+    except ValueError as e:
+        bad += "TAU0" not in str(e)
+    bad += (pa.tau_window((2.0, 12.0), 0.25), pa.tau_window((2.0, 12.0), 0.125)) != ((8, 48), (16, 96))
+    bad += pa.tau_window((0.5, 2.0), 1 / 3) != (2, 6)                       # inside the requested window
+
+    class _Chain:                                                           # probe lookup needs bin, delta, probe_slices
+        def __init__(self, b, d, p):
+            self.bin, self.delta, self.probe_slices = b, d, np.array(p)
+    bad += pa.probe_slice(_Chain(50, 0.125, [4, 8, 16, 32]), 2.0) != 16
+    bad += pa.probe_slice(_Chain(50, 1 / 6, [4, 8, 16, 32]), 2.0) != 16    # nearest stored probe (tau = 2.67)
+    bad += pa.probe_slice(_Chain(1, 1 / 6, []), 2.0) != 12
+    check(res, "tau settings -> time slices (tau_slice, tau_window, probe_slice)", bad, 0.5)
+
+    # intensive action: without fermions <S_gauge> = Nx Nt / 2, so s = 0 on average at every Nt
+    worst = 0.0
+    for Nt in (64, 128, 256):
+        ch = _Chain(1, 32.0 / Nt, [])
+        ch.Nx, ch.Nt, ch.beta = 4, Nt, 32.0
+        ch.S_fermion = np.zeros(4000)
+        ch.S = 0.5 * np.sum(rng.normal(size=(4000, 4 * Nt)) ** 2, axis=1)  # Gaussian field in its own units
+        s, s_F = pa.action_densities(ch)
+        worst = max(worst, abs(s.mean()) / (s.std() / np.sqrt(len(s))), np.abs(s_F).max())
+    check(res, "action_densities: s = 0 without fermions (sigma)", worst, 4.0)
+
     # GEVP: two states with non-orthogonal overlaps in a 3-operator basis
     Es = np.array([0.4, 0.9, 1.6])
     Zm = rng.normal(size=(3, 3))

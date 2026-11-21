@@ -34,7 +34,9 @@ Single-particle correlators (charge basis, orbital basis of ppp_reduce.py, per s
   R_{v v'}(t) = A_{c c'}(t)^* for the valence orbitals v = (-1)^x c (checked to 1e-14 on the data):
   the removal spectrum of a class is the addition spectrum of the partner class.
   Energies are ratios E / kappa with the hopping kappa; imaginary time tau = delta * t in [0, beta)
-  (t the time slice, delta = beta / Nt), in units of 1 / kappa.
+  (t the time slice, delta = beta / Nt), in units of 1 / kappa. The functions take time slices; the notebook's
+  settings are times tau, converted per run by tau_slice, tau_window and probe_slice, so that runs at several
+  delta (several Nt, for the continuum limit) are analysed at the same physical times.
 """
 
 import glob
@@ -60,10 +62,17 @@ COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#62
 # loading
 # ----------------------------------------------------------------------------------------------
 
+def _dirs(data_dir):
+    """a directory or a list of directories -> list"""
+    return [data_dir] if isinstance(data_dir, (str, os.PathLike)) else list(data_dir)
+
+
 def find_runs(data_dir):
-    """{run: [reduced files]} for the files <run>_cNN.h5 (or <run>.h5) in data_dir, sorted"""
+    """{run: [reduced files]} for the files <run>_cNN.h5 (or <run>.h5) in data_dir (a directory or a list of
+    directories, e.g. the same system at several Nt), sorted"""
     runs = {}
-    for path in sorted(glob.glob(os.path.join(os.path.expanduser(data_dir), "*.h5"))):
+    paths = [p for d in _dirs(data_dir) for p in glob.glob(os.path.join(os.path.expanduser(d), "*.h5"))]
+    for path in sorted(paths):
         tag = os.path.splitext(os.path.basename(path))[0]
         m = RUN_RE.match(tag)
         runs.setdefault(m.group("run") if m else tag, []).append(path)
@@ -436,6 +445,46 @@ def signal_window(c, err, window, max_rel_err):
     return (t1, end) if end - t1 >= 2 else None
 
 
+# Analysis settings are imaginary times tau in units of 1/kappa, the same physical times at every Nt (needed to
+# compare runs at several delta, e.g. for the continuum limit); these convert them to the time slices of one run.
+
+def tau_slice(tau, delta, setting="tau"):
+    """time slice t = tau / delta; tau must lie on the time grid of the run (ValueError otherwise, naming the
+    setting): a rounded GEVP time would differ between runs at different delta"""
+    t = float(tau) / delta
+    k = int(round(t))
+    if abs(t - k) > 1e-6:
+        raise ValueError(f"{setting} = {tau:g} is not a multiple of delta = {delta:g} (tau / delta = {t:.4g}); "
+                         f"choose a time on the grid of every run")
+    return k
+
+
+def tau_window(window, delta):
+    """fit window (first tau, last tau) -> the time slices inside it, (ceil(first / delta), floor(last / delta))"""
+    a, b = window
+    return int(np.ceil(a / delta - 1e-6)), int(np.floor(b / delta + 1e-6))
+
+
+def probe_slice(chain, tau):
+    """time slice of the per-configuration correlator nearest to tau: for files reduced with --bin, the stored
+    probe slice nearest to tau (only those exist per configuration); otherwise round(tau / delta)"""
+    probes = np.asarray(getattr(chain, "probe_slices", ()), int)          # stage-2 chains: every slice is stored
+    if chain.bin > 1 and len(probes):
+        return int(probes[np.argmin(np.abs(probes * chain.delta - tau))])
+    return int(round(tau / chain.delta))
+
+
+def action_densities(chain):
+    """intensive forms of the action per configuration, comparable between runs at different Nt (and Nx):
+      s   = (S - Nx Nt / 2) / (Nx beta)   S = S_gauge + S_fermion relative to the value Nx Nt / 2 of S_gauge without
+                                          fermions (Nx Nt independent Gaussian components), per site and unit of tau
+      s_F = S_fermion / (Nx beta)         -log|det M|^2 per site and unit of tau
+    Both scale with Nx beta and converge at fixed beta as delta -> 0, while S / (Nx Nt) does not (it approaches
+    1/2 + O(delta)). Units of kappa."""
+    v = chain.Nx * chain.beta
+    return (chain.S - 0.5 * chain.Nx * chain.Nt) / v, chain.S_fermion / v
+
+
 def state_energies(C_bins, delta, t0, td, window, select=None, max_rel_err=0.25, overrides=None):
     """GEVP energies of a correlator matrix: C_bins (nbins, Nt, m, m), optional orbital selection.
 
@@ -616,15 +665,19 @@ class TwoBodyChain:
 
 
 def load_two_body(data_dir, order=None, discard=0, onebody_dir=None):
-    """{run: [TwoBodyChain]} for the stage-2 files in data_dir (same naming as stage 1). Files without the t = 0
-    contact term take it from the stage-1 file of the same name in onebody_dir, if there is one."""
+    """{run: [TwoBodyChain]} for the stage-2 files in data_dir (same naming as stage 1; a directory or a list).
+    Files without the t = 0 contact term take it from the stage-1 file of the same name in onebody_dir (a
+    directory or a list), if there is one."""
     found = find_runs(data_dir)
     names = [n for n in (order or []) if n in found] + sorted(n for n in found if n not in (order or []))
     disc = discard if isinstance(discard, dict) else {n: discard for n in names}
 
     def partner(p):
-        q = os.path.join(onebody_dir, os.path.basename(p)) if onebody_dir else None
-        return q if q and os.path.exists(q) else None
+        for d in (_dirs(onebody_dir) if onebody_dir else []):
+            q = os.path.join(os.path.expanduser(d), os.path.basename(p))
+            if os.path.exists(q):
+                return q
+        return None
     return {n: [TwoBodyChain(p, disc.get(n, 0), partner(p)) for p in found[n]] for n in names}
 
 
@@ -805,9 +858,11 @@ def level_diagram(ax, groups, colors, tol=0.05, width=1.0, gap=0.7, spacing=1.0)
 def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops=None, panel=1.9, ylim=None):
     """matrix of correlators C_ij(tau) on a log scale, one panel per (i, j).
 
-    series: [(name, colour, mean (Nt, n, n), error (Nt, n, n))]; the absolute value of the (real) mean is shown,
+    series: [(name, colour, mean (Nt, n, n), error (Nt, n, n))], or with a fifth entry, the delta of that series
+    (runs at different Nt in one figure; otherwise `delta`); the absolute value of the (real) mean is shown,
     filled markers where it is positive and open markers where it is negative, and only time slices where the error
-    is smaller than the absolute value; free: optional (Nt, n, n) shown as a dashed grey line; max_ops: show
+    is smaller than the absolute value; free: optional (Nt, n, n), or (array, its delta), shown as a dashed grey
+    line; max_ops: show
     only the first max_ops operators. All panels share one y range, set by the data shown: from half the smallest
     value shown (the statistical resolution, since a value is shown only when it exceeds its error, which falls
     like 1/sqrt(number of measurements)) to twice the largest value plus error; the non-interacting line and the
@@ -819,8 +874,11 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
     width = max(4.2, panel * n + 0.8)
     fig, axes = plt.subplots(n, n, figsize=(width, max(2.8, panel * 0.8 * n + 1.2)),
                              sharex=True, sharey=True, squeeze=False, constrained_layout=True)
-    Nt = series[0][2].shape[0]
-    tau = np.arange(Nt) * delta
+    series = [tuple(s) if len(s) == 5 else (*s, delta) for s in series]
+    if free is not None and isinstance(free, tuple):
+        free, free_delta = free
+    else:
+        free_delta = delta
     lo, hi = np.inf, 0.0
     for i in range(n):
         for j in range(n):
@@ -829,8 +887,9 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
                 f = np.abs(free[:, i, j])
                 ok = f > 1e-12 * np.abs(free).max()             # smaller: round-off of the stored M^-1
                 if ok.any():
-                    ax.plot(tau[ok], f[ok], color="#8a8a85", lw=0.8, ls="--")
-            for name, c, m, e in series:
+                    ax.plot((np.arange(len(f)) * free_delta)[ok], f[ok], color="#8a8a85", lw=0.8, ls="--")
+            for name, c, m, e, dlt in series:
+                tau = np.arange(m.shape[0]) * dlt
                 y, s = np.real(m[:, i, j]), np.real(e[:, i, j])
                 ok = np.isfinite(y) & (s < np.abs(y))
                 if ok.any():
@@ -850,7 +909,7 @@ def correlator_grid(series, labels, delta, title, free=None, ylabel="C", max_ops
         axes[0, 0].set_ylim(*ylim)
     elif np.isfinite(lo) and hi > 0:
         axes[0, 0].set_ylim(0.5 * lo, 2 * hi)                 # shared by all panels
-    handles = [Line2D([], [], color=c, marker="o", ls="none", ms=4, label=name) for name, c, _, _ in series]
+    handles = [Line2D([], [], color=c, marker="o", ls="none", ms=4, label=name) for name, c, *_ in series]
     handles.append(Line2D([], [], color="#5c5c57", marker="o", mfc="none", ls="none", ms=4, label="negative value"))
     if free is not None:
         handles.append(Line2D([], [], color="#8a8a85", ls="--", label="non-interacting"))
