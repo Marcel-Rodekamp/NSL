@@ -248,6 +248,50 @@ def main(argv):
         summ = pa.bridge_summary(run.chains[0])
         check(res, "bridge_summary: N_eff/N", abs(summ["neff_frac"] - data[0][0].sum() ** 2 / (data[0][0] ** 2).sum() / nbins), 1e-12)
 
+    # reweighted per-configuration series: mean = ratio, bin error = delta-method error of the ratio
+    xs, ws = rng.normal(1.0, 0.5, 20000), rng.uniform(0.1, 2.0, 20000)
+    u = pa.reweighted_series(xs, ws)
+    R = np.sum(ws * xs) / np.sum(ws)
+    xb, wb = pa.bin_mean(ws * xs, 100), pa.bin_mean(ws, 100)
+    loo = (xb.sum() - xb) / (wb.sum() - wb)                       # leave-one-bin-out ratios
+    err_u = pa.mean_error(u, 100)[1]
+    check(res, "reweighted_series: mean = sum w x / sum w", abs(u.mean() - R), 1e-12)
+    check(res, "reweighted_series: bin error = jackknife error of the ratio", abs(err_u / pa.jk_error(loo) - 1), 1e-2)
+    check(res, "reweighted_series: unchanged without weights", np.abs(pa.reweighted_series(xs, None) - xs).max(), 1e-15)
+
+    # run mean of chains: pooled mean (configuration counts) or run-wide ratio (sums of weights)
+    chains_x = [rng.normal(1.0, 0.3, n) for n in (200, 350, 500)]
+    chains_w = [rng.uniform(0.2, 2.0, len(x)) for x in chains_x]
+    ms = [x.mean() for x in chains_x]
+    es = [pa.mean_error(x, 10)[1] for x in chains_x]
+    mean, err, chi2, pulls = pa.chain_agreement(ms, es, [len(x) for x in chains_x])
+    allx = np.concatenate(chains_x)
+    loo = [np.concatenate([x for j, x in enumerate(chains_x) if j != i]).mean() for i in range(3)]
+    check(res, "chain_agreement: pooled mean and jackknife over chains",
+          abs(mean - allx.mean()) + abs(err - pa.jk_error(np.array(loo))), 1e-12)
+    check(res, "chain_agreement: chi2/dof and pulls",
+          abs(chi2 - np.sum(((np.array(ms) - mean) / es) ** 2) / 2) + np.abs(pulls - (np.array(ms) - mean) / es).max(), 1e-12)
+    rs = [pa.reweighted_series(x, w).mean() for x, w in zip(chains_x, chains_w)]
+    ratio_all = sum((w * x).sum() for x, w in zip(chains_x, chains_w)) / sum(w.sum() for w in chains_w)
+    check(res, "chain_agreement: reweighted chain means -> run-wide ratio",
+          abs(pa.chain_agreement(rs, es, [w.sum() for w in chains_w])[0] - ratio_all), 1e-12)
+
+    # sign fraction: plain counts, reweighted with the bridge link, jackknife over chains
+    class FakeChain:
+        def __init__(self, sign, lam):
+            self.detsign, self.bridge_lambda, self.n = np.asarray(sign), lam, len(sign)
+    signs = [rng.choice([1, -1, 0], 300, p=[0.6, 0.3, 0.1]) for _ in range(5)]
+    lams = [rng.uniform(0.5, 5.0, 300) for _ in range(5)]
+    f_plain, e_plain = pa.minus_fraction([FakeChain(s, None) for s in signs])
+    f_bridge, _ = pa.minus_fraction([FakeChain(s, l) for s, l in zip(signs, lams)])
+    alls, allw = np.concatenate(signs), 1 / np.concatenate(lams)
+    per = np.array([np.mean(s[s != 0] < 0) * np.sum(s != 0) for s in signs]), np.array([np.sum(s != 0) for s in signs])
+    jk = (per[0].sum() - per[0]) / (per[1].sum() - per[1])
+    check(res, "minus_fraction: plain = count fraction, jackknife over chains",
+          abs(f_plain - np.mean(alls[alls != 0] < 0)) + abs(e_plain - pa.jk_error(jk)), 1e-12)
+    check(res, "minus_fraction: bridge = weighted fraction",
+          abs(f_bridge - np.sum(allw[alls < 0]) / np.sum(allw[alls != 0])), 1e-12)
+
     if len(argv) > 1:
         ch = pa.Chain(argv[1])
         if ch.has_noninteracting:

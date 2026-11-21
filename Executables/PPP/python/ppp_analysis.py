@@ -353,11 +353,66 @@ def consistency(means, errors):
     return m, 1 / np.sqrt(np.sum(w)), (chi2 / dof if dof else np.nan), dof
 
 
+def chain_agreement(means, errors, weights):
+    """run mean of independent chains and the agreement of their means. The mean is sum_c W_c m_c / sum_c W_c with
+    W_c the number of configurations of chain c (then it is the mean over all configurations), or its sum of
+    bridge-link weights 1/Lambda for chain means that are reweighted means (then it is the run-wide ratio). Returns
+    (mean, jackknife error over chains, chi^2/dof of the chain means about the mean, pulls (m_c - mean)/e_c).
+    Unlike the error-weighted mean of `consistency`, it is not biased when the chain errors come from few bins
+    (they then fluctuate with the chain means)."""
+    m, e, W = (np.asarray(a, float) for a in (means, errors, weights))
+    mean = float(np.sum(W * m) / np.sum(W))
+    if len(m) < 2:
+        return mean, float(e[0]), np.nan, np.zeros(1)
+    jk = (np.sum(W * m) - W * m) / (np.sum(W) - W)
+    pulls = (m - mean) / e
+    return mean, float(jk_error(jk)), float(np.sum(pulls ** 2) / (len(m) - 1)), pulls
+
+
 def sign_census(chain):
-    """counts of determinant signs and number of sign changes along the chain (computed configurations only)"""
+    """counts of determinant signs and number of sign changes along the chain (computed configurations only;
+    with the bridge link: counts of the sampled ensemble, see minus_fraction)"""
     s = chain.detsign[chain.detsign != 0]
     return dict(chain=chain.tag, computed=len(s), plus=int(np.sum(s > 0)), minus=int(np.sum(s < 0)),
                 changes=int(np.sum(s[1:] != s[:-1])) if len(s) > 1 else 0)
+
+
+def config_weights(chain):
+    """bridge-link weights w = 1/Lambda per configuration, (n,); None without the bridge link"""
+    return None if chain.bridge_lambda is None else 1 / np.asarray(chain.bridge_lambda, float)
+
+
+def reweighted_series(x, w):
+    """per-configuration series of a reweighted mean (bridge link): u = R + w (x - R) / mean(w) with
+    R = sum w x / sum w. The plain mean of u is R exactly, and its fluctuations are those of the ratio estimator
+    to first order, so autocorrelation times, bin errors and tails computed from u are those of the reweighted mean.
+    Without weights (w = None) x itself."""
+    if w is None:
+        return np.asarray(x)
+    x, w = np.asarray(x, float), np.asarray(w, float)
+    R = np.sum(w * x) / np.sum(w)
+    return R + w * (x - R) / w.mean()
+
+
+def minus_fraction(chains):
+    """fraction of the computed configurations at determinant sign -1 over the chains of a run, reweighted by
+    1/Lambda with the bridge link (the fraction in the target ensemble), and its jackknife error over chains
+    (nan for a single chain)"""
+    num, den = [], []
+    for c in chains:
+        ok = c.detsign != 0
+        w = config_weights(c)
+        w = np.ones(c.n) if w is None else w
+        num.append(np.sum(w[ok] * (c.detsign[ok] < 0)))
+        den.append(np.sum(w[ok]))
+    num, den = np.array(num), np.array(den)
+    if den.sum() <= 0:
+        return np.nan, np.nan
+    if len(num) < 2:
+        return float(num.sum() / den.sum()), np.nan
+    with np.errstate(divide="ignore", invalid="ignore"):
+        jk = (num.sum() - num) / (den.sum() - den)
+    return float(num.sum() / den.sum()), float(jk_error(jk))
 
 
 def bridge_summary(chain):
