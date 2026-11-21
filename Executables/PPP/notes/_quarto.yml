@@ -9,6 +9,7 @@ project:
     - 04-fourier-acceleration.qmd
     - 05-bugs-and-fixes.qmd
     - 06-gevp-operators.qmd
+    - 07-bridge-link.qmd
 
 date: 2026-11-17
 
