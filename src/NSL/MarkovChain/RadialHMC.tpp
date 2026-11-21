@@ -20,18 +20,33 @@ namespace NSL::MCMC{
 
 // enum Chain{ AllStates, LastState }; Already defined in HMC.tpp in NSL::MCMC namespace
 
+//! The default update before every HMC trajectory: none.
+/*!
+ * A pre-trajectory update is a callable `bool(NSL::Configuration<Type> &)` run at the start of every HMC
+ * trajectory (RadialHMC::generate_). It may change the action through shared state (e.g. the field shift of
+ * NSL::MCMC::BridgeLink, a heat-bath update of an auxiliary discrete variable) but not the configuration;
+ * returning true makes the trajectory start from the action re-evaluated with the change.
+ * */
+struct NoPreTrajectory {
+    template<typename ConfigurationType>
+    bool operator()(ConfigurationType &) { return false; }
+};
+
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
-          NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType
+          NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType,
+          typename PreTrajectoryType = NoPreTrajectory
 >
 class RadialHMC{
     public:
 
-    RadialHMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5): 
+    RadialHMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5,
+              PreTrajectoryType preTrajectory = PreTrajectoryType{}): 
         r_(1),
         rscaleTensor_(1),
         integrator_(integrator),
         action_(action),
-	    h5_(h5)
+	    h5_(h5),
+        preTrajectory_(std::move(preTrajectory))
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -290,7 +305,13 @@ class RadialHMC{
 
     //! Implementation of the HMC
     template<NSL::Concept::isNumber Type>
-    NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & state){
+    NSL::MCMC::MarkovState<Type> generate_(const NSL::MCMC::MarkovState<Type> & stateIn){
+
+        // update before the trajectory (e.g. the bridge link heat bath); it may change the action
+        NSL::MCMC::MarkovState<Type> state = stateIn;
+        if (preTrajectory_(state.configuration)) {
+            state.actionValue = this->action_(state.configuration);
+        }
 
         // sample momentum (unit mass unless the integrator defines a mass matrix)
         NSL::Configuration<Type> momentum = NSL::Integrator::sampleMomentum(integrator_, state.configuration);
@@ -458,6 +479,7 @@ class RadialHMC{
     ActionType action_;
 
     NSL::H5IO h5_;
+    PreTrajectoryType preTrajectory_;
 
     //! combined update steps of the last generate<Chain::LastState> call
     NSL::size_t completedSteps_ = 0;

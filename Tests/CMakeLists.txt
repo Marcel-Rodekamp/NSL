@@ -48,6 +48,7 @@ add_NSL_test(test_typePromotion Helpers/test_typePromotion.cpp)
 add_NSL_test(test_leapfrog Integrator/test_leapfrog.cpp)
 add_NSL_test(test_exactFourierAcceleration Integrator/test_exactFourierAcceleration.cpp)
 add_NSL_test(test_autotune MarkovChain/test_autotune.cpp)
+add_NSL_test(test_bridgeLink MarkovChain/test_bridgeLink.cpp)
 
 add_NSL_test(test_IO_H5 IO/test_IO_h5io.cpp)
 

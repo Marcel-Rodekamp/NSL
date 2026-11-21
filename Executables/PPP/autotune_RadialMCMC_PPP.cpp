@@ -26,6 +26,11 @@
  *   `Leapfrog: Nmd` (or the autotuned value) is the number of steps: Nmd+1 fermion
  *   force evaluations per trajectory for the leapfrog, Nmd for Fourier acceleration.
  *
+ *  Bridge link (optional; mu = 0, bipartite lattice): `HMC: bridge: {theta: 1.5707963, slice: 0}` samples with
+ *  a weight without the zeros of det M_p, which makes the variance of observables quadratic in the propagator
+ *  (equal-time correlations, two-body correlators) finite; every measurement must then be reweighted by
+ *  1/Lambda, computed from the equal-time propagator at the bridge slice (src/NSL/MarkovChain/bridgeLink.tpp).
+ *
  *  Measurements: Executables/Hubbard/propagator with `measurements: basis: charge`
  *  (position-space and/or momentum-projected propagators).
  *
@@ -36,6 +41,7 @@
  */
 
 #include <chrono>
+#include <optional>
 #include "NSL.hpp"
 #include "highfive/H5File.hpp"
 #include <yaml-cpp/yaml.h>
@@ -203,6 +209,54 @@ static int runPPP(int argc, char* argv[]){
       S_fermion.hfm_.stabilityMethod = stabilityMethod;// "QR", "DIRECTINVERSE", "SVD"
     }
 
+    // Bridge link (optional, `HMC: bridge:`): heat bath of a field shift before every trajectory, so that the
+    // sampled weight has no zeros where det M_p vanishes; measurements are reweighted by 1/Lambda in the
+    // analysis (see src/NSL/MarkovChain/bridgeLink.tpp). It must be set up before S_fermion is copied into S.
+    using FermionActionType = decltype(S_fermion);
+    std::optional<NSL::MCMC::BridgeLink<Type, FermionActionType>> bridge;
+    if (yml["HMC"]["bridge"]) {
+        const YAML::Node b = yml["HMC"]["bridge"];
+        const double theta = b["theta"] ? b["theta"].as<double>() : M_PI / 2;
+        const NSL::size_t slice = b["slice"] ? b["slice"].as<NSL::size_t>() : NSL::size_t(0);
+        if (!lattice.bipartite() || params["mu"].to<double>() != 0.0 || params["offset"].to<double>() != 0.0) {
+            throw std::runtime_error("`HMC: bridge` needs a bipartite lattice, mu = 0 and offset = 0 "
+                                     "(there |det M_p|^2 is the sign-free fermion weight)");
+        }
+        bridge.emplace(S_fermion, params["Nt"].to<NSL::size_t>(), params["Nx"].to<NSL::size_t>(), theta, slice);
+        params["bridge theta"] = theta;
+        params["bridge slice"] = slice;
+        NSL::Logger::info("Bridge link: theta = {}, time slice {}; reweight measurements by 1/Lambda", theta, slice);
+    }
+
+    // Record the bridge settings with the chain: the analysis (ppp_reduce.py) reweights by them. A chain keeps
+    // them for its whole life; continuing it with other settings would mix two ensembles in one chain.
+    {
+        HighFive::File h5file = h5.getFile();
+        const std::string node = BASENODE + "/Meta/bridge";
+        const bool hasChain = h5.exist(BASENODE + "/thermal") || h5.exist(BASENODE + "/markovChain");
+        if (h5.exist(node)) {
+            double theta = 0;
+            NSL::size_t slice = 0;
+            h5file.getDataSet(node + "/theta").read(theta);
+            h5file.getDataSet(node + "/slice").read(slice);
+            if (!bridge || theta != bridge->theta() || slice != bridge->slice()) {
+                throw std::runtime_error(fmt::format(
+                    "{} was generated with the bridge link (theta = {}, slice {}); continue it with the same "
+                    "`HMC: bridge` settings", BASENODE, theta, slice));
+            }
+        } else if (bridge) {
+            if (hasChain) {
+                throw std::runtime_error(fmt::format(
+                    "{} was generated without the bridge link; continuing it with `HMC: bridge` would mix two "
+                    "ensembles (start a new chain)", BASENODE));
+            }
+            const double theta = bridge->theta();
+            const NSL::size_t slice = bridge->slice();
+            h5file.createDataSet<double>(node + "/theta", HighFive::DataSpace::From(theta)).write(theta);
+            h5file.createDataSet<NSL::size_t>(node + "/slice", HighFive::DataSpace::From(slice)).write(slice);
+        }
+    }
+
     NSL::Action::Action S = S_gauge + S_fermion;
 
     // seed (not for the legacy protocol: autotuner.py calls this executable once per
@@ -233,8 +287,8 @@ static int runPPP(int argc, char* argv[]){
     config["phi"].imag() = NSL::RealTypeOf<Type>(params["offset"]);
 
     // Everything below only depends on the type of the integrator
-    auto simulate = [&](auto & integrator) -> int {
-        NSL::MCMC::RadialHMC hmc(integrator, S, h5);
+    auto simulate = [&](auto & integrator, auto preTrajectory) -> int {
+        NSL::MCMC::RadialHMC hmc(integrator, S, h5, preTrajectory);
         NSL::Logger::stop_profile(init_time);
 
         // Wraps the initial configuration into a Markov state (no update is performed).
@@ -305,7 +359,7 @@ static int runPPP(int argc, char* argv[]){
             /*trajectoryLength*/trajectoryLength,
             /*numberSteps*/Nmd
         );
-        return simulate(integrator);
+        return bridge ? simulate(integrator, *bridge) : simulate(integrator, NSL::MCMC::NoPreTrajectory{});
     } else {
         NSL::Logger::info("Setting up a leapfrog integrator with trajectory length {} and {} MD steps.", trajectoryLength, Nmd);
         // equations of motion via the real part of the force
@@ -314,7 +368,7 @@ static int runPPP(int argc, char* argv[]){
             /*trajectoryLength*/NSL::RealTypeOf<Type>(trajectoryLength),
             /*numberSteps*/Nmd
         );
-        return simulate(integrator);
+        return bridge ? simulate(integrator, *bridge) : simulate(integrator, NSL::MCMC::NoPreTrajectory{});
     }
 }
 

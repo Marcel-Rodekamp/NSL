@@ -8,6 +8,8 @@
 #include "FermionMatrix/fermionMatrix.hpp"
 #include "hubbard.tpp"
 
+#include <memory>
+
 namespace NSL::FermionMatrix {
 
 //! A charge (particle/hole) basis fermion matrix is populated per NSL::Hubbard::Species
@@ -71,10 +73,23 @@ class HubbardFermionAction :
 	Configuration<TensorType> grad(const Tensor<TensorType>& phi);
 	Type eval(const Tensor<TensorType>& phi);
 
+    //! Evaluate the fermion determinants at phi + shift instead of phi (eval, grad and force).
+    /*!
+     * The shift is shared by all copies of this action (an NSL::Action::Action and the integrators keep
+     * copies), so it can be changed between HMC trajectories, e.g. by NSL::MCMC::BridgeLink. The gradient
+     * is taken with respect to phi at fixed shift. nullptr (the default) means no shift.
+     * */
+    void setShift(std::shared_ptr<Tensor<TensorType>> shift) { shift_ = std::move(shift); }
+    const std::shared_ptr<Tensor<TensorType>> & shift() const { return shift_; }
+
     FermionMatrixType hfm_;
 
     protected:
     NSL::Parameter params_;
+    std::shared_ptr<Tensor<TensorType>> shift_;
+
+    //! the field the determinants are evaluated at
+    Tensor<TensorType> shifted_(const Tensor<TensorType>& phi) const { return shift_ ? Tensor<TensorType>(phi + *shift_) : phi; }
 
 }; // class HubbardFermiAction
 
@@ -86,17 +101,18 @@ template<
 >
 Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(const Tensor<TensorType>& phi){
     Type logDetMpMh = 0;
+    const Tensor<TensorType> phiS = shifted_(phi);
 
     // The basis is a property of the fermion-matrix type, so it is resolved at
     // compile time (see ChargeBasis/SpinBasis above).
     if constexpr (NSL::FermionMatrix::ChargeBasis<FermionMatrixType,Type>) {
 
      // particle contribution
-     hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+     hfm_.populate(phiS, NSL::Hubbard::Species::Particle);
      logDetMpMh+= hfm_.logDetM();
 
      // hole contribution
-     hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+     hfm_.populate(phiS, NSL::Hubbard::Species::Hole);
      logDetMpMh+= hfm_.logDetM();
 
     } else {
@@ -104,11 +120,11 @@ Type HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::eval(c
         "HubbardFermionAction: fermion matrix must provide populate(phi, Species) (charge basis) or populate(phi, Spin) (spin basis)");
 
      // spin up contribution
-     hfm_.populate(phi, NSL::Hubbard::Spin::Up);
+     hfm_.populate(phiS, NSL::Hubbard::Spin::Up);
      logDetMpMh+= hfm_.logDetM();
 
      // spin down contribution
-     hfm_.populate(phi, NSL::Hubbard::Spin::Down);
+     hfm_.populate(phiS, NSL::Hubbard::Spin::Down);
      logDetMpMh+= hfm_.logDetM();
 
     }
@@ -137,23 +153,24 @@ template<
 Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixType,TensorType>::grad(const Tensor<TensorType>& phi){
 
     NSL::Configuration<TensorType> dS{{ this->configKey_, NSL::zeros_like(phi) }};
+    const Tensor<TensorType> phiS = shifted_(phi);
 
     if constexpr (NSL::FermionMatrix::ChargeBasis<FermionMatrixType,Type>) {
 
      if(hfm_.bipartite_ && hfm_.mu_.real() == 0 && hfm_.mu_.imag() == 0) {;
         // 2x real part of particle contribution
 
-        hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+        hfm_.populate(phiS, NSL::Hubbard::Species::Particle);
         dS[this->configKey_]+= 2*hfm_.gradLogDetM().real();
 
      } else {
 
        // particle contribution
-       hfm_.populate(phi, NSL::Hubbard::Species::Particle);
+       hfm_.populate(phiS, NSL::Hubbard::Species::Particle);
        dS[this->configKey_]+= hfm_.gradLogDetM();
 
        // hole contribution
-       hfm_.populate(phi, NSL::Hubbard::Species::Hole);
+       hfm_.populate(phiS, NSL::Hubbard::Species::Hole);
        dS[this->configKey_]-= hfm_.gradLogDetM();
 
      }
@@ -162,11 +179,11 @@ Configuration<TensorType> HubbardFermionAction<Type,LatticeType,FermionMatrixTyp
         "HubbardFermionAction: fermion matrix must provide populate(phi, Species) (charge basis) or populate(phi, Spin) (spin basis)");
 
       // spin up contribution
-      hfm_.populate(phi, NSL::Hubbard::Spin::Up);
+      hfm_.populate(phiS, NSL::Hubbard::Spin::Up);
       dS[this->configKey_]+= hfm_.gradLogDetM();
 
       // spin down contribution
-      hfm_.populate(phi, NSL::Hubbard::Spin::Down);
+      hfm_.populate(phiS, NSL::Hubbard::Spin::Down);
       dS[this->configKey_]-= hfm_.gradLogDetM();
 
    }
