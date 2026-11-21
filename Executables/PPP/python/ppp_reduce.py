@@ -13,14 +13,26 @@ particle ones on the first configurations as a check of the stored data.
 Everything that needs products of propagators of the same configuration at the same time is
 computed here (equal-time spin and charge correlations); what stays linear is stored per
 configuration (--bin 1, the default) or averaged over bins of B consecutive configurations (--bin B; the
-analysis can then only use bins of multiples of B). The Monte Carlo history (config/...) and the probes stay
+analysis can then only use bins of multiples of B).
+
+Bridge link (chains generated with `HMC: bridge:`, notes deck 7): the configurations are distributed with
+w(phi) Lambda(phi) instead of the target w(phi). Every per-configuration quantity O is multiplied by the weight
+1/Lambda before it is binned, and the bins of the weight are stored in `weights`: the estimate of <O> is
+sum_b O_b / sum_b weights_b (ppp_analysis does this). Lambda = 1/(2 Nx) sum_{i, x = +-1}
+|1 + (e^{i theta x} - 1) n_i(b)|^2 with n_i(b) = 1 - G_ii(b, b) at the bridge slice b. theta and b come from
+<name>/Meta/bridge of the ensemble file (written by autotune_RadialMCMC_PPP) or `HMC: bridge` of the yml.
+Without the bridge every weight is 1 and the stored bins are plain averages, as before. The Monte Carlo history (config/...) and the probes stay
 per configuration, for autocorrelation times. Two-body (exciton, pp, hh) correlators need products of
 propagators of different times and come with stage 2 (ppp_reduce2.py).
 
 Output (plain h5py; c = configuration index, b = bin index (= c for --bin 1), t = Nt time separations,
 sizes in the attributes):
   attrs                          name, Nt, beta, delta, Nx, mu, sources, n_configs, bin, n_bins, input_h5,
-                                 input_yml_text, ...  (n_configs = n_bins * bin: a remainder is not reduced)
+                                 input_yml_text, bridge (0/1), bridge_theta, bridge_slice, ...
+                                 (n_configs = n_bins * bin: a remainder is not reduced)
+  weights                        (b,) bin averages of the weight 1/Lambda (all 1 without the bridge link); the
+                                 binned datasets below (onebody, equaltime) are bin averages of weight * O
+  config/bridge_lambda           (c,) Lambda of every configuration (bridge link only)
   lattice/{K, V, positions, sublattice, V_eigenvalues, V_eigenvectors}
   orbitals/U                     (Nx, No) hopping orbitals as columns: symmetry adapted (site permutations that
                                  leave K and V invariant), sorted by eps; on a bipartite lattice the orbital
@@ -38,7 +50,7 @@ sizes in the attributes):
                                  restricted to the orbitals of the class (the ensemble average is block diagonal)
   onebody/<class>/backward       (b, t, n, n) the same for G(s, s+t); sign = -1 where s+t wraps around Nt
   onebody/<class>/orbitals       indices of the class orbitals in orbitals/U
-  onebody/<class>/addition_probe (c, p, n) per configuration: real part of the diagonal addition correlator
+  onebody/<class>/addition_probe (c, p, n) per configuration, not weighted: real part of the diagonal addition correlator
                                  A_aa(t) = [F_aa(t) - B_aa(Nt - t)] / 2 (t > 0; F_aa(0) at t = 0) at the time
                                  slices onebody/attrs/probe_slices (for tau_int of the correlators)
   equaltime/{G, ss, qq}          (b, Nx, Nx) site basis, averaged over the Nt time slices: G(t,t) = <c c^+>,
@@ -66,7 +78,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ppp_ed  # noqa: E402
 import ppp_wick as wick  # noqa: E402
 
-VERSION = 2          # 2: --bin, addition_probe
+VERSION = 3          # 2: --bin, addition_probe; 3: bridge-link weights
 
 
 # ----------------------------------------------------------------------------------------------
@@ -269,6 +281,43 @@ def logdet_particle(K, phi, delta, eK=None):
 # reading NSL data
 # ----------------------------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------------------------
+# bridge link (notes deck 7; src/NSL/MarkovChain/bridgeLink.tpp)
+# ----------------------------------------------------------------------------------------------
+
+def bridge_settings(yml, meta=None):
+    """(theta, slice) of a chain generated with the bridge link, or None.
+
+    Sources: `meta`, the group <name>/Meta/bridge of the ensemble file written by autotune_RadialMCMC_PPP (None if
+    absent), and `HMC: bridge:` of the yml (defaults theta = pi/2, slice 0, as in the driver). The record in the
+    ensemble file wins; a yml that disagrees with it is an error, because it is not the yml of this chain."""
+    hmc = yml.get("HMC") or {}
+    from_yml = None
+    if "bridge" in hmc:
+        b = hmc["bridge"] or {}
+        from_yml = (float(b.get("theta", np.pi / 2)), int(b.get("slice", 0)))
+    from_h5 = None if meta is None else (float(np.real(meta["theta"][()])), int(meta["slice"][()]))
+    if from_h5 is not None:
+        if from_yml is None or abs(from_yml[0] - from_h5[0]) > 1e-12 or from_yml[1] != from_h5[1]:
+            raise SystemExit(f"the ensemble was generated with the bridge link theta = {from_h5[0]}, slice "
+                             f"{from_h5[1]} (Meta/bridge), but the yml says {from_yml or 'no bridge'}")
+        return from_h5
+    if from_yml is not None:
+        print(f"# warning: `HMC: bridge` in the yml but no Meta/bridge in the ensemble file (generated before it "
+              f"was recorded?); using theta = {from_yml[0]}, slice {from_yml[1]} from the yml")
+    return from_yml
+
+
+def bridge_lambda(Gbb, theta):
+    """Lambda = 1/(2 Nx) sum_{i, x = +-1} |1 + (e^{i theta x} - 1) n_i|^2 of one configuration, n_i = 1 - G_ii(b, b)
+    the generalized density at the bridge slice (G = M_p^-1, particles), and max_i |Re n_i - 1/2| / max(1, |n_i|),
+    which vanishes up to rounding at mu = 0 on a bipartite lattice (a check of the conventions; relative, because
+    |n| grows like 1/det near a zero of the determinant)."""
+    n = 1.0 - np.diagonal(Gbb)
+    lam = 0.5 * np.mean(np.abs(1 + (np.exp(1j * theta) - 1) * n) ** 2 + np.abs(1 + (np.exp(-1j * theta) - 1) * n) ** 2)
+    return float(lam), float(np.max(np.abs(n.real - 0.5) / np.maximum(1.0, np.abs(n))))
+
+
 def read_tensor(ds):
     return ds[()].reshape(tuple(ds.attrs["shape"]))
 
@@ -387,11 +436,15 @@ def main(argv=None):
         ids = ids[: nb * B]
         sources = sources_of(chain[f"{ids[0]}/propagator/spatial/particle"])
         nc = len(ids)
+        bridge = bridge_settings(yml, fin.get(f"{name}/Meta/bridge"))
+        if bridge is not None and not do_sign:
+            raise SystemExit("the bridge link needs mu = 0, offset = 0 and a bipartite lattice")
         probe = np.array(sorted({int(x) for x in args.probe_slices.split(",") if x.strip() and 0 <= int(x) < Nt}), int)
         print(f"{h5in}: {name}, Nt = {Nt}, Nx = {Nx}, {nc} configurations"
               f"{f' in {nb} bins of {B}' if B > 1 else ''}, sources {sources}, "
               f"orbital classes {', '.join(f'{c} ({len(v)})' for c, v in classes.items())}"
-              f"{' (symmetry: ' + ', '.join(orb['operations']) + ')' if orb['operations'] else ''}")
+              f"{' (symmetry: ' + ', '.join(orb['operations']) + ')' if orb['operations'] else ''}"
+              + (f"; bridge link theta = {bridge[0]:.6g}, slice {bridge[1]}: weights 1/Lambda" if bridge else ""))
 
         tmp = out + ".tmp"
         with h5py.File(tmp, "w") as fo:
@@ -400,7 +453,9 @@ def main(argv=None):
                           sources=np.array(sources), n_configs=nc, input_h5=os.path.abspath(h5in),
                           input_yml=os.path.abspath(args.yml), input_yml_text=yml_text, version=VERSION,
                           created=datetime.datetime.now().isoformat(timespec="seconds"),
-                          precision="single" if args.single else "double", bin=B, n_bins=nb))
+                          precision="single" if args.single else "double", bin=B, n_bins=nb,
+                          bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
+                          bridge_slice=bridge[1] if bridge else -1))
             fo["lattice/K"], fo["lattice/V"], fo["lattice/positions"] = K, V, pos
             fo["lattice/V_eigenvalues"], fo["lattice/V_eigenvectors"] = lamV, QV
             if orb["sublattice"] is not None:
@@ -420,6 +475,9 @@ def main(argv=None):
             dA = cfg.create_dataset("field_modes", (nc, Nx), float)
             dSign = cfg.create_dataset("detsign", (nc,), np.int8)
             dRes = cfg.create_dataset("detsign_residual", (nc,), float)
+            dLam = cfg.create_dataset("bridge_lambda", (nc,), float) if bridge else None
+            dW = fo.create_dataset("weights", (nb,), float)
+            re_n_dev, wsum = 0.0, 0.0
             ob, prb = {}, {}
             rtype = np.float32 if args.single else np.float64
             for c, idx in classes.items():
@@ -478,10 +536,15 @@ def main(argv=None):
                 F, Bk, Gtt = onebody(gp, sources, Nt)
                 Fo, Bo = project(F), project(Bk)
                 _, ss, qq = wick.equal_time(Gtt)
-                cur = {("eq", 0): Gtt.mean(axis=0), ("eq", 1): ss.mean(axis=0), ("eq", 2): qq.mean(axis=0)}
+                w = 1.0
+                if bridge:
+                    lam, dev = bridge_lambda(Gtt[bridge[1]], bridge[0])
+                    dLam[n], w, re_n_dev = lam, 1.0 / lam, max(re_n_dev, dev)
+                wsum = w if n % B == 0 else wsum + w
+                cur = {("eq", 0): w * Gtt.mean(axis=0), ("eq", 1): w * ss.mean(axis=0), ("eq", 2): w * qq.mean(axis=0)}
                 for c, idx in classes.items():
                     Fc, Bc = Fo[:, idx][:, :, idx], Bo[:, idx][:, :, idx]
-                    cur[(c, 0)], cur[(c, 1)] = Fc, Bc
+                    cur[(c, 0)], cur[(c, 1)] = w * Fc, w * Bc
                     dF = np.real(np.diagonal(Fc[probe], axis1=1, axis2=2))
                     dB = np.real(np.diagonal(Bc[back], axis1=1, axis2=2))
                     prb[c][n] = np.where((probe > 0)[:, None], 0.5 * (dF - dB), dF)
@@ -491,6 +554,7 @@ def main(argv=None):
                     for c in classes:
                         ob[c][0][b], ob[c][1][b] = acc[(c, 0)] / B, acc[(c, 1)] / B
                     eqG[b], eqS[b], eqQ[b] = (acc[("eq", k)] / B for k in range(3))
+                    dW[b] = wsum / B
                 if n < args.check_hole and "propagator/spatial/hole" in g:
                     hole_dev = max(hole_dev, hole_relation_deviation(gp, g["propagator/spatial/hole"], sources, Nt))
                 if time.time() - last > 60 or n == nc - 1:
@@ -500,6 +564,7 @@ def main(argv=None):
             chk.attrs["hole_relation_max_dev"] = hole_dev
             chk.attrs["hole_relation_configs"] = min(args.check_hole, nc)
             chk.attrs["detsign_max_residual"] = float(np.max(dRes[()])) if do_sign else np.nan
+            chk.attrs["bridge_re_n_max_dev"] = re_n_dev if bridge else np.nan
     os.replace(tmp, out)
     size = os.path.getsize(out) / 2**20
     print(f"wrote {out} ({size:.0f} MB) in {time.time() - t_start:.0f} s")
@@ -507,6 +572,12 @@ def main(argv=None):
     if do_sign:
         which = "all configurations" if args.detsign_every == 1 else f"every {args.detsign_every}th configuration"
         print(f"  determinant sign: {nsign[1]} x +1, {nsign[-1]} x -1 ({which})")
+    if bridge:
+        with h5py.File(out, "r") as f:
+            lam = f["config/bridge_lambda"][()]
+        w = 1 / lam
+        print(f"  bridge link: 1/Lambda in [{w.min():.3g}, {w.max():.3g}] (bound {1 / np.cos(bridge[0] / 2) ** 2:.3g}), "
+              f"mean {w.mean():.4f}, N_eff/N = {w.sum() ** 2 / (w ** 2).sum() / len(w):.3f}; max |Re n - 1/2| / max(1, |n|) = {re_n_dev:.1e}")
     return 0
 
 

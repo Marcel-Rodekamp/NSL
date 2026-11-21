@@ -121,6 +121,103 @@ def main(argv):
             refused = 1.0
         check(res, "stage-1 file of another chain refused", 1.0 - refused, 0.5)
 
+    # bridge link: pseudo-bins of a ratio estimator reproduce the leave-one-out ratios exactly
+    num, w = rng.normal(1.0, 1.0, (50, 4, 3)), rng.uniform(0.1, 2.0, 50)
+    P = pa.reweight(num, w)
+    loo = (num.sum(0)[None] - num) / (w.sum() - w)[:, None, None]
+    check(res, "reweight: leave-one-out means = leave-one-out ratios", np.abs(pa.jackknife(P) - loo).max(), 1e-12)
+    check(res, "reweight: mean = ratio (second order)", np.abs(P.mean(0) - num.sum(0) / w.sum()).max(), 1e-3)
+    check(res, "reweight: weights 1 leave the bins unchanged", float(pa.reweight(num, np.ones(50)) is not num), 0.5)
+
+    # bridge link: Lambda from G(b, b) = mean of the determinant ratios |det M_p(phi + c_k)|^2 / |det M_p(phi)|^2
+    import ppp_ed
+    import ppp_reduce
+    Nx, Nt_b, delta_b, theta, b_sl = 4, 8, 0.25, np.pi / 2, 3
+    Kc = np.diag(np.ones(Nx - 1), 1) + np.diag(np.ones(Nx - 1), -1)
+    worst, worst_re = 0.0, 0.0
+    for _ in range(3):
+        phi = rng.normal(0, 1.0, (Nt_b, Nx))
+        M = ppp_ed.fermion_matrix(Kc, phi, delta_b, "particle")
+        Gbb = np.linalg.inv(M).reshape(Nt_b, Nx, Nt_b, Nx)[b_sl, :, b_sl, :]
+        lam, dev = ppp_reduce.bridge_lambda(Gbb, theta)
+        ld = np.linalg.slogdet(M)[1]
+        ratios = []
+        for i in range(Nx):
+            for x in (1, -1):
+                ph = phi.copy()
+                ph[b_sl, i] += theta * x
+                ratios.append(np.exp(2 * (np.linalg.slogdet(ppp_ed.fermion_matrix(Kc, ph, delta_b, "particle"))[1] - ld)))
+        worst, worst_re = max(worst, abs(lam / np.mean(ratios) - 1)), max(worst_re, dev)
+    check(res, "bridge_lambda = mean determinant ratio (NSL convention)", worst, 1e-10)
+    check(res, "bridge: Re n = 1/2 (open chain, mu = 0)", worst_re, 1e-12)
+    check(res, "bridge_settings: yml defaults", abs(ppp_reduce.bridge_settings({"HMC": {"bridge": None}})[0] - np.pi / 2)
+          + ppp_reduce.bridge_settings({"HMC": {"bridge": None}})[1] + (ppp_reduce.bridge_settings({"HMC": {}}) is not None), 1e-15)
+
+    # bridge link in the accessors: fake weighted stage-1 and stage-2 files of two chains (Run-wide ratios)
+    with tempfile.TemporaryDirectory() as tmp:
+        nbins, Ntf, nx = 8, 4, 2
+        data = []
+        for k in range(2):
+            path1 = os.path.join(tmp, f"one/r_c0{k}.h5")
+            path2 = os.path.join(tmp, f"two/r_c0{k}.h5")
+            os.makedirs(os.path.dirname(path1), exist_ok=True)
+            os.makedirs(os.path.dirname(path2), exist_ok=True)
+            wk = rng.uniform(0.2, 2.0, nbins)
+            eq = {q: rng.normal(size=(nbins, nx, nx)) for q in ("G", "ss", "qq")}
+            Xc, Dc = rng.normal(size=(nbins, Ntf, 1, 1)), rng.normal(size=(nbins, Ntf, 1, 1))
+            Ex, Pc = rng.normal(size=(nbins, 2, 1)), rng.normal(size=(nbins, Ntf, 1, 1))
+            data.append((wk, eq, Xc, Dc, Ex, Pc))
+            with h5py.File(path1, "w") as f:
+                f.attrs.update(dict(name="r", Nt=Ntf, Nx=nx, beta=1.0, delta=0.25, mu=0.0, sources=[0], bin=1,
+                                    n_bins=nbins, n_configs=nbins, input_yml_text="", bridge=1,
+                                    bridge_theta=theta, bridge_slice=0))
+                for q in ("K", "V", "positions", "V_eigenvalues"):
+                    f[f"lattice/{q}"] = np.eye(nx)
+                f["orbitals/U"], f["orbitals/eps"], f["orbitals/partner"] = np.eye(nx), [-1.0, 1.0], [1, 0]
+                f["orbitals/class_names"], f["orbitals/class"] = np.array([b"all"]), [0, 0]
+                f["onebody/all/orbitals"] = [0, 1]
+                f["onebody/all/forward"] = f["onebody/all/backward"] = np.zeros((nbins, Ntf, nx, nx))
+                for q in ("id", "S", "S_gauge", "acceptanceProbability", "detsign"):
+                    f[f"config/{q}"] = np.zeros(nbins)
+                f["config/field_modes"] = np.zeros((nbins, nx))
+                f["config/bridge_lambda"] = 1 / wk
+                f["weights"] = wk
+                for q, v in eq.items():
+                    f[f"equaltime/{q}"] = v
+                f.create_group("checks")
+            with h5py.File(path2, "w") as f:
+                f.attrs.update(dict(Nt=Ntf, delta=0.25, bin=1, window_energy=1.0, sources=[0], contact_terms=1,
+                                    bridge=1, bridge_theta=theta, bridge_slice=0))
+                f["orbitals/U"], f["orbitals/eps"], f["orbitals/partner"] = np.eye(nx), [-1.0, 1.0], [1, 0]
+                f["orbitals/class_names"], f["orbitals/class"] = np.array([b"all"]), [0, 0]
+                f["config/first_id"], f["weights"] = np.arange(nbins), wk
+                f["exciton/all/pairs"], f["pp_singlet/all/pairs"] = [[1, 0]], [[1, 1]]
+                f["exciton/all/connected"], f["exciton/all/disconnected"] = Xc, Dc
+                f["exciton/all/expectation"], f["pp_singlet/all/correlator"] = Ex, Pc
+        W = np.concatenate([d[0] for d in data])
+        ratio = lambda num: (num.sum(0) / W.sum())                       # noqa: E731
+        run = pa.load_runs(os.path.join(tmp, "one"))["r"]
+        ss = run.equaltime(1)[1]
+        want = ratio(np.concatenate([d[1]["ss"] for d in data]))
+        check(res, "bridge: Run.equaltime = run-wide ratio", np.abs(ss.mean(0) - want).max(), 1e-2 * np.abs(want).max())
+        loo_ss = (np.concatenate([d[1]["ss"] for d in data]).sum(0)[None] - np.concatenate([d[1]["ss"] for d in data])) \
+            / (W.sum() - W)[:, None, None]
+        check(res, "bridge: Run.equaltime jackknife = leave-one-out ratios", np.abs(pa.jackknife(ss) - loo_ss).max(), 1e-12)
+        chains2 = pa.load_two_body(os.path.join(tmp, "two"))["r"]
+        Xall = np.concatenate([d[2] for d in data])
+        Dall, Eall = np.concatenate([d[3] for d in data]), np.concatenate([d[4] for d in data])
+        C = pa.exciton_bins(chains2, "all", "singlet", 1)
+        ex = pa.reweight(Eall, W).mean(0)
+        want_loo = ((Xall.sum(0)[None] - Xall) + 2 * (Dall.sum(0)[None] - Dall)) / (W.sum() - W)[:, None, None, None] \
+            - 2 * np.outer(ex[0], ex[1])
+        check(res, "bridge: exciton_bins jackknife = leave-one-out ratios", np.abs(pa.jackknife(C) - want_loo).max(), 1e-12)
+        Pall = np.concatenate([d[5] for d in data])
+        Pb = pa.pp_bins(chains2, "pp_singlet", "all", 1)
+        check(res, "bridge: pp_bins jackknife = leave-one-out ratios",
+              np.abs(pa.jackknife(Pb) - (Pall.sum(0)[None] - Pall) / (W.sum() - W)[:, None, None, None]).max(), 1e-12)
+        summ = pa.bridge_summary(run.chains[0])
+        check(res, "bridge_summary: N_eff/N", abs(summ["neff_frac"] - data[0][0].sum() ** 2 / (data[0][0] ** 2).sum() / nbins), 1e-12)
+
     if len(argv) > 1:
         ch = pa.Chain(argv[1])
         if ch.has_noninteracting:

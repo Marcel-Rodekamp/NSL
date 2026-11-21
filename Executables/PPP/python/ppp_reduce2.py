@@ -31,8 +31,14 @@ value <O_i O^+_j> (attribute contact_terms = 1). D and the pp correlators need n
 expectation values, and pp uses forward propagators only. Files of VERSION 1 lack the term in X(0); ppp_analysis
 adds it from the stage-1 file of the same chain.
 
+Bridge link (chains generated with `HMC: bridge:`): as in stage 1, every per-configuration quantity is multiplied
+by the weight 1/Lambda before binning, and `weights` holds the bin averages of the weight (all 1 without the bridge
+link); ppp_analysis forms the ratios.
+
 Output (plain h5py; b = bin of `--bin` consecutive configurations):
-  attrs                                 as in stage 1, plus stage = 2, window_energy, bin, n_bins, contact_terms
+  attrs                                 as in stage 1, plus stage = 2, window_energy, bin, n_bins, contact_terms,
+                                        bridge, bridge_theta, bridge_slice
+  weights                               (b,) bin averages of 1/Lambda; the datasets below are bin averages of weight * O
   orbitals/{U, eps, class, class_names, partner, window}
   config/first_id                       first configuration id of every bin
   exciton/<sector>/pairs                (n, 2) orbital indices (c, v)
@@ -57,7 +63,7 @@ import ppp_ed  # noqa: E402
 import ppp_wick as wick  # noqa: E402
 import ppp_reduce as r1  # noqa: E402
 
-VERSION = 2                     # 2: contact term in the exciton X(0)
+VERSION = 3                     # 2: contact term in the exciton X(0); 3: bridge-link weights
 
 
 def sector_name(names, ca, cb):
@@ -150,16 +156,21 @@ def main(argv=None):
         if nb == 0:
             raise SystemExit(f"fewer than {B} measured configurations in {h5in}")
         sources = r1.sources_of(chain[f"{ids[0]}/propagator/spatial/particle"])
+        bridge = r1.bridge_settings(yml, fin.get(f"{name}/Meta/bridge"))
+        if bridge is not None and abs(float(sysyml.get("offset", 0.0))) > 1e-12:
+            raise SystemExit("the bridge link needs offset = 0")
         print(f"{h5in}: {name}, {len(ids)} configurations -> {nb} bins of {B}; window {len(window)} orbitals "
               f"(|eps| <= {args.window_energy}); exciton sectors "
               f"{', '.join(f'{k} ({len(v)})' for k, v in exc.items())}; pp singlet {sum(map(len, pps.values()))}, "
-              f"triplet {sum(map(len, ppt.values()))}")
+              f"triplet {sum(map(len, ppt.values()))}"
+              + (f"; bridge link theta = {bridge[0]:.6g}, slice {bridge[1]}: weights 1/Lambda" if bridge else ""))
 
         tmp = out + ".tmp"
         with h5py.File(tmp, "w") as fo:
             fo.attrs.update(dict(name=name, Nt=Nt, beta=beta, delta=delta, Nx=Nx, mu=mu, stage=2, version=VERSION,
                                  sources=np.array(sources), window_energy=args.window_energy, bin=B, n_bins=nb,
-                                 contact_terms=1,
+                                 contact_terms=1, bridge=int(bridge is not None),
+                                 bridge_theta=bridge[0] if bridge else np.nan, bridge_slice=bridge[1] if bridge else -1,
                                  n_configs=nb * B, input_h5=os.path.abspath(h5in), input_yml=os.path.abspath(args.yml),
                                  input_yml_text=yml_text, precision="single" if args.single else "double",
                                  created=datetime.datetime.now().isoformat(timespec="seconds")))
@@ -167,6 +178,8 @@ def main(argv=None):
             fo["orbitals/partner"], fo["orbitals/window"] = orb["partner"], window
             fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
             fo["config/first_id"] = np.array(ids[: nb * B : B])
+            dW = fo.create_dataset("weights", (nb,), float)
+            wsum = 0.0
 
             dsets = {}
             for s, pairs in exc.items():
@@ -230,10 +243,13 @@ def main(argv=None):
                         Pf = wick.pp_pairs(Fo1, loc([a0]), loc([b0]), +1)[0, 0]
                         worst["pp"] = max(worst["pp"], abs(Pg - Pf) / abs(Pg))
 
+                w = 1.0 / r1.bridge_lambda(Gtt[bridge[1]], bridge[0])[0] if bridge else 1.0
                 if acc is None:
                     acc = {k: np.zeros_like(v) for k, v in res.items()}
+                    wsum = 0.0
                 for k, v in res.items():
-                    acc[k] += v / B
+                    acc[k] += w * v / B
+                wsum += w
                 if (n_cfg + 1) % B == 0:
                     b = n_cfg // B
                     for s in exc:
@@ -243,6 +259,7 @@ def main(argv=None):
                     for kind, basis in (("pp_singlet", pps), ("pp_triplet", ppt)):
                         for s in basis:
                             dsets[(kind, s)][b] = acc[(kind, s)]
+                    dW[b] = wsum / B
                     acc = None
                     if b % max(1, nb // 10) == 0 or b == nb - 1:
                         print(f"  bin {b + 1}/{nb}, {time.time() - t_start:.0f} s", flush=True)

@@ -16,6 +16,14 @@ Statistics
   in G (equal-time spin/charge correlations, all two-body correlators) can have tails P(|O| > y) ~ y^-3/2,
   i.e. infinite variance; tail_stats and tail_curve measure the tail exponent.
 
+Bridge link (chains generated with `HMC: bridge:`; notes deck 7)
+  The reduced files then hold bins of weight * O with the weight 1/Lambda of every configuration, and the bins
+  of the weight (`weights`). The estimate is the ratio sum_b (wO)_b / sum_b w_b over all bins of a run. Every
+  accessor that returns bins (Chain/Run.onebody, .equaltime, exciton_bins, pp_bins) returns pseudo-bins of that
+  ratio (reweight): their leave-one-out means are the leave-one-out ratios, so the mean, jk_apply and every
+  function of bin averages (GEVP, fits) need no change. Files without weights (or all weights 1) are returned
+  as they are. bridge_check compares <1/Lambda> with 1/<Lambda-operator> (built-in consistency check).
+
 Single-particle correlators (charge basis, orbital basis of ppp_reduce.py, per symmetry class)
   addition  A_ab(t) = <c_a(t) c^+_b(0)>   ~ sum_n e^{-(E_{N+1,n} - E_N) t}   (electron added)
   removal   R_ab(t) = <c^+_a(t) c_b(0)>   ~ sum_n e^{-(E_{N-1,n} - E_N) t}   (electron removed)
@@ -66,6 +74,24 @@ def bin_mean(x, binsize):
     """average consecutive blocks of `binsize` along axis 0 (a remainder is dropped)"""
     nb = len(x) // binsize
     return np.asarray(x[: nb * binsize]).reshape(nb, binsize, *np.shape(x)[1:]).mean(axis=1)
+
+
+def reweight(num, w):
+    """pseudo-bins of the reweighted estimator sum_b num_b / sum_b w_b (bridge link).
+
+    num: (n, ...) bins of weight * O; w: (n,) bins of the weight. With r_(j) = (sum num - num_j) / (sum w - w_j),
+    the ratio without bin j, the pseudo-bins p_j = n mean_k r_(k) - (n - 1) r_(j) have leave-one-out means equal to
+    r_(j) exactly; their mean, the mean of the r_(j), differs from the full ratio only at second order. num is
+    returned unchanged if every weight is 1."""
+    w = np.asarray(w, float)
+    if np.all(w == 1.0):
+        return num
+    num = np.asarray(num)
+    if len(w) != len(num):
+        raise ValueError(f"{len(num)} bins but {len(w)} weights")
+    n = len(w)
+    r = (num.sum(axis=0)[None] - num) / (w.sum() - w).reshape((n,) + (1,) * (num.ndim - 1))
+    return n * r.mean(axis=0)[None] - (n - 1) * r
 
 
 def _binned_dataset(ds, binsize, start=0, t=None):
@@ -131,6 +157,9 @@ class Chain:
             self.field_modes = cfg["field_modes"][d:]
             self.acceptance = cfg["acceptanceProbability"][d:]
             self.detsign = cfg["detsign"][d:]
+            self.has_weights = "weights" in f
+            self.bridge = (float(a["bridge_theta"]), int(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
+            self.bridge_lambda = cfg["bridge_lambda"][d:] if "bridge_lambda" in cfg else None
             self.checks = dict(f["checks"].attrs)
             self.has_noninteracting = "noninteracting" in f
             c0 = next(iter(f["onebody"]))
@@ -151,13 +180,27 @@ class Chain:
     def __repr__(self):
         return f"Chain({self.tag}, {self.n} configurations)"
 
-    def onebody(self, cls, binsize):
-        """binned addition and removal correlators of a symmetry class, each (nbins, Nt, m, m)"""
+    def weights(self, binsize):
+        """bin averages of the bridge-link weight 1/Lambda, (nbins,); ones without the bridge link"""
+        r = self.rebin(binsize)
+        if not self.has_weights:
+            return np.ones(self.nbins_file // r)
+        with h5py.File(self.path, "r") as f:
+            return _binned_dataset(f["weights"], r, self.skip)
+
+    def onebody_raw(self, cls, binsize):
+        """binned forward and backward correlators as stored (bins of weight * O), each (nbins, Nt, m, m)"""
         r = self.rebin(binsize)
         with h5py.File(self.path, "r") as f:
-            F = _binned_dataset(f[f"onebody/{cls}/forward"], r, self.skip)
-            B = _binned_dataset(f[f"onebody/{cls}/backward"], r, self.skip)
-        return addition_removal(F, B)
+            return (_binned_dataset(f[f"onebody/{cls}/forward"], r, self.skip),
+                    _binned_dataset(f[f"onebody/{cls}/backward"], r, self.skip))
+
+    def onebody(self, cls, binsize):
+        """binned addition and removal correlators of a symmetry class, each (nbins, Nt, m, m) (pseudo-bins of
+        this chain alone with the bridge link)"""
+        F, B = self.onebody_raw(cls, binsize)
+        w = self.weights(binsize)
+        return addition_removal(reweight(F, w), reweight(B, w))
 
     def onebody_element(self, cls, a, t, kind="addition"):
         """per-configuration A_aa(t) or R_aa(t) of the a-th orbital of the class (for tau_int); from the
@@ -184,11 +227,17 @@ class Chain:
             g = f[f"noninteracting/onebody/{cls}"]
             return addition_removal(g["forward"][()], g["backward"][()])
 
-    def equaltime(self, binsize):
-        """binned equal-time G = <c c^+>, <s_x s_y>, <q_x q_y> (real parts), each (nbins, Nx, Nx)"""
+    def equaltime_raw(self, binsize):
+        """binned equal-time G, ss, qq as stored (bins of weight * O; real parts), each (nbins, Nx, Nx)"""
         r = self.rebin(binsize)
         with h5py.File(self.path, "r") as f:
             return tuple(np.real(_binned_dataset(f[f"equaltime/{k}"], r, self.skip)) for k in ("G", "ss", "qq"))
+
+    def equaltime(self, binsize):
+        """binned equal-time G = <c c^+>, <s_x s_y>, <q_x q_y> (real parts), each (nbins, Nx, Nx) (pseudo-bins of
+        this chain alone with the bridge link)"""
+        w = self.weights(binsize)
+        return tuple(reweight(x, w) for x in self.equaltime_raw(binsize))
 
 
 class Run:
@@ -201,8 +250,10 @@ class Run:
         for c in self.chains[1:]:
             assert (c.Nt, c.Nx, c.beta) == (c0.Nt, c0.Nx, c0.beta), f"{c.tag} differs from {c0.tag}"
             assert np.allclose(c.U, c0.U), f"{c.tag}: orbital basis differs from {c0.tag}"
+        for c in self.chains[1:]:
+            assert c.bridge == c0.bridge, f"{c.tag}: bridge link {c.bridge} differs from {c0.tag} ({c0.bridge})"
         for k in ("Nt", "Nx", "beta", "delta", "mu", "U", "eps", "orbital_class", "partner", "classes",
-                  "positions", "sublattice", "K", "V", "V_eigenvalues", "yml_text", "has_noninteracting"):
+                  "positions", "sublattice", "K", "V", "V_eigenvalues", "yml_text", "has_noninteracting", "bridge"):
             setattr(self, k, getattr(c0, k))
         self.label = name
 
@@ -213,14 +264,22 @@ class Run:
     def n(self):
         return sum(c.n for c in self.chains)
 
+    def weights(self, binsize):
+        """bridge-link weights of all bins (chain order); ones without the bridge link"""
+        return np.concatenate([c.weights(binsize) for c in self.chains])
+
     def onebody(self, cls, binsize):
-        """binned (A, R) of all chains, concatenated: (nbins_total, Nt, m, m) each"""
-        parts = [c.onebody(cls, binsize) for c in self.chains]
-        return np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts])
+        """binned (A, R) of all chains, concatenated: (nbins_total, Nt, m, m) each (with the bridge link: pseudo-bins
+        of the ratio over all bins of the run)"""
+        parts = [c.onebody_raw(cls, binsize) for c in self.chains]
+        w = self.weights(binsize)
+        F, B = (reweight(np.concatenate([p[k] for p in parts]), w) for k in range(2))
+        return addition_removal(F, B)
 
     def equaltime(self, binsize):
-        parts = [c.equaltime(binsize) for c in self.chains]
-        return tuple(np.concatenate([p[k] for p in parts]) for k in range(3))
+        parts = [c.equaltime_raw(binsize) for c in self.chains]
+        w = self.weights(binsize)
+        return tuple(reweight(np.concatenate([p[k] for p in parts]), w) for k in range(3))
 
     def chain_of_bins(self, binsize):
         return np.concatenate([np.full(c.nbins(binsize), i) for i, c in enumerate(self.chains)])
@@ -290,6 +349,30 @@ def sign_census(chain):
     s = chain.detsign[chain.detsign != 0]
     return dict(chain=chain.tag, computed=len(s), plus=int(np.sum(s > 0)), minus=int(np.sum(s < 0)),
                 changes=int(np.sum(s[1:] != s[:-1])) if len(s) > 1 else 0)
+
+
+def bridge_summary(chain):
+    """bridge-link weights 1/Lambda of a chain, per configuration: range, bound 1/cos^2(theta/2), mean and
+    N_eff / N = (sum w)^2 / (N sum w^2); None without the bridge link"""
+    if chain.bridge_lambda is None:
+        return None
+    w = 1 / np.asarray(chain.bridge_lambda, float)
+    return dict(chain=chain.tag, theta=chain.bridge[0], slice=chain.bridge[1], n=len(w), w_min=float(w.min()),
+                w_max=float(w.max()), w_bound=float(1 / np.cos(chain.bridge[0] / 2) ** 2), w_mean=float(w.mean()),
+                neff_frac=float(w.sum() ** 2 / (w ** 2).sum() / len(w)))
+
+
+def bridge_check(run, binsize):
+    """built-in check of the bridge link: the sampled ensemble has <1/Lambda> = 1 / <Lambda-op> of the target, with
+    Lambda-op = cos(theta) + (1 - cos(theta)) mean_x s_x^2 (the local moment at theta = pi/2). Returns
+    ((<1/Lambda>, error), (1/<Lambda-op>, error)); the two estimates use the same data, so they are correlated."""
+    theta = run.bridge[0]
+    w = run.weights(binsize)
+    direct = (float(w.mean()), float(w.std(ddof=1) / np.sqrt(len(w))))
+    _, ss, _ = run.equaltime(binsize)
+    s2 = np.real(np.trace(ss, axis1=1, axis2=2)) / run.Nx
+    est, err, _ = jk_apply(lambda m: 1 / (np.cos(theta) + (1 - np.cos(theta)) * m), s2)
+    return direct, (float(est), float(err))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -450,6 +533,8 @@ class TwoBodyChain:
             self.pairs = {(ch, s): f[f"{ch}/{s}/pairs"][()] for ch in ("exciton", "pp_singlet", "pp_triplet")
                           if ch in f for s in f[ch]}
             self.first_id = f["config/first_id"][()]
+            self.has_weights = "weights" in f
+            self.bridge = (float(a["bridge_theta"]), int(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
         self.skip = -(-int(discard) // self.bin)            # bins dropped at the start (ceil)
         self.nbins = len(self.first_id) - self.skip
         self.onebody_path = None if self.contact_terms else onebody_path
@@ -492,9 +577,14 @@ class TwoBodyChain:
         with h5py.File(self.path, "r") as f:
             return _binned_dataset(f[node], rebin, self.skip, t)
 
+    def weights(self, rebin=1):
+        """bin averages of the bridge-link weight, (nbins,); ones without the bridge link"""
+        return self._read("weights", rebin) if self.has_weights else np.ones(self.nbins // rebin)
+
     def exciton(self, sector, rebin=1, t=None):
-        """binned (connected X, disconnected D, expectation (2, n)) of an exciton sector (complex);
-        with t, X and D at that time slice only. X(0) includes the contact term whenever t0_valid."""
+        """binned (connected X, disconnected D, expectation (2, n)) of an exciton sector (complex), as stored (with
+        the bridge link: bins of weight * O; exciton_bins forms the ratios); with t, X and D at that time slice
+        only. X(0) includes the contact term whenever t0_valid."""
         X = self._read(f"exciton/{sector}/connected", rebin, t)
         if self.onebody_path is not None and (t is None or t == 0):
             X, K = X.astype(complex), self.exciton_contact(sector, rebin)
@@ -568,19 +658,21 @@ def exciton_bins(chains, sector, channel, binsize, t=None):
     with the ensemble averages <O>, <O^+> (vacuum subtraction; zero in expectation outside the vacuum sector).
     Real symmetric part; returns (nbins, Nt, n, n), or (nbins, n, n) at time slice t."""
     parts = [c.exciton(sector, c.rebin(binsize), t) for c in chains]
-    X = np.concatenate([p[0] for p in parts])
+    w = np.concatenate([c.weights(c.rebin(binsize)) for c in chains])
+    X = reweight(np.concatenate([p[0] for p in parts]), w)
     if channel == "triplet":
         C = X
     else:
-        D = np.concatenate([p[1] for p in parts])
-        ex = np.concatenate([p[2] for p in parts]).mean(axis=0)
+        D = reweight(np.concatenate([p[1] for p in parts]), w)
+        ex = reweight(np.concatenate([p[2] for p in parts]), w).mean(axis=0)
         C = X + 2 * (D - np.outer(ex[0], ex[1]))
     C = np.real(C)
     return 0.5 * (C + np.swapaxes(C, -1, -2))
 
 
 def pp_bins(chains, kind, sector, binsize, t=None):
-    C = np.real(np.concatenate([c.pp(kind, sector, c.rebin(binsize), t) for c in chains]))
+    w = np.concatenate([c.weights(c.rebin(binsize)) for c in chains])
+    C = np.real(reweight(np.concatenate([c.pp(kind, sector, c.rebin(binsize), t) for c in chains]), w))
     return 0.5 * (C + np.swapaxes(C, -1, -2))
 
 
