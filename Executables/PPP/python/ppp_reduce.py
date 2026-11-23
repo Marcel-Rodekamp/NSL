@@ -46,7 +46,14 @@ sizes in the attributes):
                                  the region of phi = 0); 0 where not computed. config/detsign_residual = |Im|.
                                  Computed from the stabilized transfer-matrix product (logdet_particle; agrees
                                  with the dense determinant of ppp_ed.fermion_matrix to 1e-14, ~15 ms per config)
-  onebody/<class>/forward        (b, t, n, n) sum over sources s of sign * U^T G(s+t, s) U / #sources,
+  config/S_fermion_phi           -log|det M_p|^2 = -2 Re log det M_p at the stored field phi, from the same product
+                                 (mu = 0, bipartite; NaN where not computed). Without the bridge link it equals
+                                 S - S_gauge (checks/attrs S_fermion_phi_max_dev). With it, S of the HMC holds the
+                                 fermion action at the shifted field phi + c_k, so S - S_gauge is a quantity of the
+                                 sampled ensemble, and S_gauge + S_fermion_phi is the action of the target ensemble
+                                 (to be reweighted with 1/Lambda like every other observable). Bridge-link runs
+                                 compute it, and the sign, on every configuration, whatever --detsign-every.
+  onebody/<class>/forward       (b, t, n, n) sum over sources s of sign * U^T G(s+t, s) U / #sources,
                                  restricted to the orbitals of the class (the ensemble average is block diagonal)
   onebody/<class>/backward       (b, t, n, n) the same for G(s, s+t); sign = -1 where s+t wraps around Nt
   onebody/<class>/orbitals       indices of the class orbitals in orbitals/U
@@ -78,7 +85,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ppp_ed  # noqa: E402
 import ppp_wick as wick  # noqa: E402
 
-VERSION = 3          # 2: --bin, addition_probe; 3: bridge-link weights
+VERSION = 4          # 2: --bin, addition_probe; 3: bridge-link weights; 4: config/S_fermion_phi
 
 
 # ----------------------------------------------------------------------------------------------
@@ -475,6 +482,8 @@ def main(argv=None):
             dA = cfg.create_dataset("field_modes", (nc, Nx), float)
             dSign = cfg.create_dataset("detsign", (nc,), np.int8)
             dRes = cfg.create_dataset("detsign_residual", (nc,), float)
+            dSF = cfg.create_dataset("S_fermion_phi", (nc,), float, fillvalue=np.nan) if do_sign else None
+            sf_dev = 0.0                               # max |S - S_gauge - S_fermion_phi| (without the bridge link)
             dLam = cfg.create_dataset("bridge_lambda", (nc,), float) if bridge else None
             dW = fo.create_dataset("weights", (nb,), float)
             re_n_dev, wsum = 0.0, 0.0
@@ -523,13 +532,16 @@ def main(argv=None):
                 pr = phi.real
                 dSg[n] = 0.5 * np.einsum("tx,xy,ty->", pr, Ainv, pr)
                 dA[n] = pr.sum(axis=0) @ QV / np.sqrt(Nt * delta * lamV)
-                if do_sign and n % args.detsign_every == 0:
+                if do_sign and (n % args.detsign_every == 0 or bridge):
                     logdet = logdet_particle(K, phi, delta, eK)
                     r = np.exp(1j * logdet.imag - 0.5j * pr.sum())
                     if np.isfinite(logdet) and np.isfinite(r):
                         dSign[n] = 1 if r.real > 0 else -1
                         dRes[n] = abs(r.imag)
                         nsign[int(dSign[n])] += 1
+                        dSF[n] = -2.0 * logdet.real
+                        if not bridge:
+                            sf_dev = max(sf_dev, abs(dS[n].real - dSg[n] - dSF[n]))
                     else:
                         dRes[n] = np.nan
                 gp = g["propagator/spatial/particle"]
@@ -565,13 +577,19 @@ def main(argv=None):
             chk.attrs["hole_relation_configs"] = min(args.check_hole, nc)
             chk.attrs["detsign_max_residual"] = float(np.max(dRes[()])) if do_sign else np.nan
             chk.attrs["bridge_re_n_max_dev"] = re_n_dev if bridge else np.nan
+            chk.attrs["S_fermion_phi_max_dev"] = sf_dev if do_sign and not bridge else np.nan
     os.replace(tmp, out)
     size = os.path.getsize(out) / 2**20
     print(f"wrote {out} ({size:.0f} MB) in {time.time() - t_start:.0f} s")
     print(f"  hole relation (first {min(args.check_hole, nc)} configs): max deviation {hole_dev:.1e}")
     if do_sign:
-        which = "all configurations" if args.detsign_every == 1 else f"every {args.detsign_every}th configuration"
+        which = ("all configurations" if args.detsign_every == 1 or bridge
+                 else f"every {args.detsign_every}th configuration")
         print(f"  determinant sign: {nsign[1]} x +1, {nsign[-1]} x -1 ({which})")
+        if bridge:
+            print("  S_fermion_phi: fermion action at the unshifted field (the HMC's S holds it at phi + c_k)")
+        else:
+            print(f"  S_fermion_phi vs S - S_gauge of the HMC: max deviation {sf_dev:.1e}")
     if bridge:
         with h5py.File(out, "r") as f:
             lam = f["config/bridge_lambda"][()]
