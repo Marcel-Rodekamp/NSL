@@ -73,15 +73,15 @@ class TensorBase {
     {
     }
 
-    //! copy constructor
+    //! converting copy constructor
     /*!
-     * Copy the data from other into this new instance. 
-     * The copy constructor creates a shallow copy, i.e. the two tensors
-     * share the underlying data.
+     * Copy the data of other, of another scalar type, into this new instance, converted to Type (a deep copy,
+     * as the type of the data changes). GCC 14 selects this constructor for NSL::Tensor<Type>(NSL::Tensor<OtherType>)
+     * where clang and GCC 13 use the conversion operator of NSL::Tensor; both must give a tensor of Type.
      * */
     template<NSL::Concept::isNumber OtherType>
     constexpr TensorBase(const NSL::TensorImpl::TensorBase<OtherType>& other):
-            data_(torch::Tensor(other).to(torch::TensorOptions().dtype<OtherType>()))
+            data_(torch::Tensor(other).to(torch::TensorOptions().dtype<Type>()))
     {
     }
 

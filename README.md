@@ -102,6 +102,34 @@ random input.
 The Python tools in `Executables/PPP/python` need
 `python3 -m pip install numpy scipy h5py pyyaml matplotlib`.
 
+### Build on JURECA (JSC, project cjjsc37)
+
+The NSL environment on JURECA is `nsl_v2`: the modules of the current software stage, Stages/2026 (GCC 14.3,
+Python 3.13 with numpy, scipy, h5py and matplotlib, PyTorch 2.9.1, HDF5 1.14.6, Jupyter, CMake, Ninja), and a
+Python venv on top of them. Load it in every shell and job script that builds or runs NSL or its Python tools:
+
+```sh
+source /p/project1/cjjsc37/software/venvs/nsl_v2/bin/activate
+```
+
+A Release build with it (tested on 2026-11-24; configuring needs a login node, because CMake downloads the
+dependencies and the compute nodes have no internet access):
+
+```sh
+source /p/project1/cjjsc37/software/venvs/nsl_v2/bin/activate
+cmake -S path/to/NSL -B /p/project1/cjjsc37/$USER/NSL/build_stage2026 -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DTorch_DIR="$(python3 -c 'import torch, os; print(os.path.join(os.path.dirname(torch.__file__), "share/cmake/Torch"))')" \
+      -DHIGHFIVE_USE_BOOST=OFF \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build /p/project1/cjjsc37/$USER/NSL/build_stage2026 -j 16
+```
+
+`/p/project1/cjjsc37/software/venvs/build_nsl_stage2026.sh configure|build` runs the same steps (with the HighFive
+examples, documentation and tests switched off), and `make_nsl_v2.sh` in the same directory shows how the
+environment was made. When JSC replaces the software stage, make a new venv and build directory in the same way
+instead of changing `nsl_v2`; `nsl_v1` (Stages/2025) stays for the builds made with it.
+
 ### Prerequisites
 
 Sometimes a few things are needed before the build can work.
