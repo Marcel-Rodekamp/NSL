@@ -32,21 +32,37 @@ struct NoPreTrajectory {
     bool operator()(ConfigurationType &) { return false; }
 };
 
-template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType, 
+//! The default step after every stored configuration: none.
+/*!
+ * A post-store step is a callable `void(NSL::size_t n, const NSL::MCMC::MarkovState<Type> & state)` that
+ * generate<Chain::AllStates> runs right after configuration n of the chain is written to the h5 file (also for
+ * the first configuration of a new chain, n = 0; configurations already stored when a chain is continued are not
+ * passed again). It is meant for measurements on the fly; it must not draw random numbers, or the chain would
+ * differ from one generated without it.
+ * */
+struct NoPostStore {
+    template<typename StateType>
+    void operator()(NSL::size_t, const StateType &) {}
+};
+
+template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType,
           NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType,
-          typename PreTrajectoryType = NoPreTrajectory
+          typename PreTrajectoryType = NoPreTrajectory,
+          typename PostStoreType = NoPostStore
 >
 class RadialHMC{
     public:
 
     RadialHMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5,
-              PreTrajectoryType preTrajectory = PreTrajectoryType{}): 
+              PreTrajectoryType preTrajectory = PreTrajectoryType{},
+              PostStoreType postStore = PostStoreType{}):
         r_(1),
         rscaleTensor_(1),
         integrator_(integrator),
         action_(action),
 	    h5_(h5),
-        preTrajectory_(std::move(preTrajectory))
+        preTrajectory_(std::move(preTrajectory)),
+        postStore_(std::move(postStore))
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -135,6 +151,7 @@ class RadialHMC{
                 MC[nstart] = state;
                 NSL::Logger::info("HMC: Starting new Markov Chain");
                 h5_.write(MC[nstart],fmt::format("{}/{}",baseNode,nstart));
+                postStore_(nstart, MC[nstart]);
             }
 
             double runningAcceptance = 0;
@@ -172,9 +189,9 @@ class RadialHMC{
                 }
                 MC[n] = this->generate_(tmp);
                 h5_.write(MC[n],fmt::format("{}/{}",baseNode,n));
+                postStore_(n, MC[n]);
                 runningAcceptance += static_cast<double>(MC[n].accepted);
 
-                // ToDo: have a proper hook being called here
                 if (n % logFrequency == 0){
                     if (Nradial != 0){
                         NSL::Logger::info("HMC: {}/{}; Running Radial Acceptance Rate {:.6}%", n, Nconf, runningRadialAcceptance*100./((n-nstart)*saveFrequency*Nradial));
@@ -480,6 +497,7 @@ class RadialHMC{
 
     NSL::H5IO h5_;
     PreTrajectoryType preTrajectory_;
+    PostStoreType postStore_;
 
     //! combined update steps of the last generate<Chain::LastState> call
     NSL::size_t completedSteps_ = 0;

@@ -118,6 +118,29 @@ class FermionPropagator: public Measurement {
     //! Eigenbasis projections of the configuration in phi_ (phi_ = 0: free theory)
     void measureEigenbasis(NSL::size_t NumberTimeSources, NSL::size_t cfgID);
     
+    //! Spatial propagators of one configuration and species (see compute)
+    struct Spatial {
+        std::vector<NSL::size_t> sources;        //!< source times s
+        std::vector<NSL::Tensor<Type>> column;   //!< invM[t, s] for every source, (Nt, Nx, Nx) each
+        std::vector<NSL::Tensor<Type>> row;      //!< invM[s, t] for every source, (Nt, Nx, Nx) each
+        NSL::Tensor<Type> diagonal;              //!< invM[t, t], (Nt, Nx, Nx)
+    };
+
+    /*! The spatial propagators of the field phi (Nt, Nx) and one species, computed in memory: nothing is read
+     *  from or written to the h5 file. Same components, layout and arithmetic as measure() (the datasets
+     *  invM[t,<s>], invM[<s>,t] and invM[t,t]), for the source times in `sources`; the diagonal uses the
+     *  products of source time 0, as in measure(). For measurements on the fly.
+     */
+    Spatial compute(const NSL::Tensor<Type> & phi, NSL::Hubbard::Species species, const std::vector<NSL::size_t> & sources);
+
+    //! The source times of measure() for NumberTimeSources sources: 0, step, 2 step, ... < Nt, step = ceil(Nt / NumberTimeSources)
+    static std::vector<NSL::size_t> sourceTimes(NSL::size_t Nt, NSL::size_t NumberTimeSources){
+        const NSL::size_t step = ceil((Nt+0.0)/NumberTimeSources);
+        std::vector<NSL::size_t> out;
+        for (NSL::size_t tsrc = 0; tsrc < Nt; tsrc += step) { out.push_back(tsrc); }
+        return out;
+    }
+
     void measureDiagonal();
     void measureRow(NSL::size_t tsrc);
     void measureColumn(NSL::size_t tsrc);
@@ -171,11 +194,18 @@ class FermionPropagator: public Measurement {
     }
 
     //! true if the node exists and is kept; with params["overwrite"] an existing node is
-    //! deleted (and false returned) so that it is computed and written again
-    bool skip_(const std::string & node){
+    //! deleted (and false returned) so that it is computed and written again. An incomplete node
+    //! (PropagatorTools::complete; `leaves` datasets expected in a group, 0: any number) is
+    //! deleted and measured again as well.
+    bool skip_(const std::string & node, std::size_t leaves = 0){
         const std::string full = std::string(basenode_) + node;
         if (!this->h5_.exist(full)) { return false; }
         if (this->params_["overwrite"].template to<bool>()) {
+            this->h5_.deleteData(full);
+            return false;
+        }
+        if (!PropagatorTools::complete(this->h5_.getFile(), full, leaves)) {
+            NSL::Logger::warn("{} is incomplete (an interrupted write?): measured again", full);
             this->h5_.deleteData(full);
             return false;
         }
@@ -365,11 +395,51 @@ template<
     NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
     NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
 >
+typename FermionPropagator<Type,LatticeType,FermionMatrixType>::Spatial
+FermionPropagator<Type,LatticeType,FermionMatrixType>::compute(const NSL::Tensor<Type> & phi, NSL::Hubbard::Species species, const std::vector<NSL::size_t> & sources){
+    const NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
+    Spatial out;
+    out.sources = sources;
+    species_ = species;
+    corr_ = Type(0);
+    // the same sequence as measure(): per source time the fermion matrix and the prefix/suffix
+    // products, then column, row and (source time 0) the diagonal; the results are deep copies of corr_
+    bool haveDiagonal = false;
+    for (const NSL::size_t tsrc: sources) {
+        if (tsrc >= Nt) { throw std::invalid_argument(fmt::format("FermionPropagator::compute: source time {} >= Nt = {}", tsrc, Nt)); }
+        hfm_.populate(phi, species_);
+        calcPiSigma(tsrc);
+        measureColumn(tsrc);
+        out.column.push_back(NSL::Tensor<Type>(corr_, true));
+        measureRow(tsrc);
+        out.row.push_back(NSL::Tensor<Type>(corr_, true));
+        if (tsrc == 0) {
+            measureDiagonal();
+            out.diagonal = NSL::Tensor<Type>(corr_, true);
+            haveDiagonal = true;
+        }
+    }
+    if (!haveDiagonal) {
+        hfm_.populate(phi, species_);
+        calcPiSigma(0);
+        measureDiagonal();
+        out.diagonal = NSL::Tensor<Type>(corr_, true);
+    }
+    return out;
+} // compute(phi, species, sources)
+
+template<
+    NSL::Concept::isNumber Type,
+    NSL::Concept::isDerived<NSL::Lattice::SpatialLattice<Type>> LatticeType,
+    NSL::Concept::isDerived<NSL::FermionMatrix::FermionMatrix<Type,LatticeType>> FermionMatrixType
+>
 void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureProjected_(const std::string & block, NSL::Tensor<Type> & w, NSL::size_t NumberTimeSources, NSL::size_t cfgID){
     const bool free = (phi_ == Type(0)).all();
     const NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     const NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
     NSL::size_t kept = 0;
+    // a momentum component is a group with one dataset per (kSink, kSrc) pair of the wall sources w
+    const std::size_t leaves = block == "momentum" ? std::size_t(w.shape(0) * w.shape(0)) : 0;
 
     corr_ = Type(0);
     for (const NSL::Hubbard::Species species: {NSL::Hubbard::Particle, NSL::Hubbard::Hole}) {
@@ -386,7 +456,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureProjected_(co
             };
             auto component = [&](const std::string & name, auto && compute){
                 const std::string node = node_(block, free, cfgID, name);
-                if (skip_(node)) { ++kept; return; }
+                if (skip_(node, leaves)) { ++kept; return; }
                 if (NSL::Stop::requested()) { return; }
                 prepare();
                 compute();
@@ -399,7 +469,7 @@ void FermionPropagator<Type,LatticeType,FermionMatrixType>::measureProjected_(co
             if (tsrc == 0) {
                 const std::string nodeD = node_(block, free, cfgID, "invM[t,t]");
                 const std::string nodeQ = node_(block, free, cfgID, "Q");
-                const bool needD = !skip_(nodeD), needQ = !skip_(nodeQ);
+                const bool needD = !skip_(nodeD, leaves), needQ = !skip_(nodeQ);
                 kept += !needD + !needQ;
                 if ((needD || needQ) && !NSL::Stop::requested()) {
                     prepare();

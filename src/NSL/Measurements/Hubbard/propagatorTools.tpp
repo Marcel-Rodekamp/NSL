@@ -93,6 +93,28 @@ inline void configureAllocator(){
 #endif
 }
 
+/*! true if the stored propagator component at `full` was written completely, so that a rerun may keep it.
+ *  NSL::H5IO::write(tensor) writes the data, then the attributes 'shape' and 'type', in this order: a tensor dataset
+ *  is complete when it has 'type'. A scalar dataset (Q) has no attributes and counts as complete. A group (one dataset
+ *  per pair of wall sources) is complete when it holds `leaves` datasets (if leaves > 0), each complete.
+ *  A write interrupted by an error (e.g. a full disk quota) leaves the dataset without its attributes, and its values
+ *  are then wrong (seen on JURECA, 2026-11-24): such a component must be measured again, not kept.
+ */
+inline bool complete(HighFive::File & file, const std::string & full, std::size_t leaves = 0){
+    if (file.getObjectType(full) == HighFive::ObjectType::Dataset) {
+        HighFive::DataSet ds = file.getDataSet(full);
+        if (ds.getElementCount() <= 1 && !ds.hasAttribute("shape")) { return true; }   // a scalar (Q)
+        return ds.hasAttribute("type");
+    }
+    HighFive::Group g = file.getGroup(full);
+    const std::vector<std::string> names = g.listObjectNames();
+    if (names.empty() || (leaves > 0 && names.size() != leaves)) { return false; }
+    for (const std::string & n: names) {
+        if (g.getObjectType(n) != HighFive::ObjectType::Dataset || !g.getDataSet(n).hasAttribute("type")) { return false; }
+    }
+    return true;
+}
+
 //! All projections of corr (Nt x Nx x Nx) on the sources w (K x B x Nx) at once:
 //! P(t, kSink, sigmaSink, kSrc, sigmaSrc) = sum_xy conj(w(kSink,sigmaSink,x)) corr(t,x,y) w(kSrc,sigmaSrc,y)
 template<NSL::Concept::isNumber Type>

@@ -171,11 +171,18 @@ class FermionPropagatorSpinBasis: public Measurement {
     }
 
     //! true if the node exists and is kept; with params["overwrite"] an existing node is
-    //! deleted (and false returned) so that it is computed and written again
-    bool skip_(const std::string & node){
+    //! deleted (and false returned) so that it is computed and written again. An incomplete node
+    //! (PropagatorTools::complete; `leaves` datasets expected in a group, 0: any number) is
+    //! deleted and measured again as well.
+    bool skip_(const std::string & node, std::size_t leaves = 0){
         const std::string full = std::string(basenode_) + node;
         if (!this->h5_.exist(full)) { return false; }
         if (this->params_["overwrite"].template to<bool>()) {
+            this->h5_.deleteData(full);
+            return false;
+        }
+        if (!PropagatorTools::complete(this->h5_.getFile(), full, leaves)) {
+            NSL::Logger::warn("{} is incomplete (an interrupted write?): measured again", full);
             this->h5_.deleteData(full);
             return false;
         }
@@ -370,6 +377,8 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureProj
     const NSL::size_t Nt = this->params_["Nt"].template to<NSL::size_t>();
     const NSL::size_t tsrcStep = ceil((Nt+0.0)/NumberTimeSources);
     NSL::size_t kept = 0;
+    // a momentum component is a group with one dataset per (kSink, kSrc) pair of the wall sources w
+    const std::size_t leaves = block == "momentum" ? std::size_t(w.shape(0) * w.shape(0)) : 0;
 
     corr_ = Type(0);
     for (const NSL::Hubbard::Spin spin: {NSL::Hubbard::Up, NSL::Hubbard::Down}) {
@@ -386,7 +395,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureProj
             };
             auto component = [&](const std::string & name, auto && compute){
                 const std::string node = node_(block, free, cfgID, name);
-                if (skip_(node)) { ++kept; return; }
+                if (skip_(node, leaves)) { ++kept; return; }
                 if (NSL::Stop::requested()) { return; }
                 prepare();
                 compute();
@@ -399,7 +408,7 @@ void FermionPropagatorSpinBasis<Type,LatticeType,FermionMatrixType>::measureProj
             if (tsrc == 0) {
                 const std::string nodeD = node_(block, free, cfgID, "invM[t,t]");
                 const std::string nodeQ = node_(block, free, cfgID, "Q");
-                const bool needD = !skip_(nodeD), needQ = !skip_(nodeQ);
+                const bool needD = !skip_(nodeD, leaves), needQ = !skip_(nodeQ);
                 kept += !needD + !needQ;
                 if ((needD || needQ) && !NSL::Stop::requested()) {
                     prepare();
