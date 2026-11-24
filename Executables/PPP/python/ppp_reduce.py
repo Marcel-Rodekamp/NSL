@@ -292,12 +292,13 @@ def logdet_particle(K, phi, delta, eK=None):
 # bridge link (notes deck 7; src/NSL/MarkovChain/bridgeLink.tpp)
 # ----------------------------------------------------------------------------------------------
 
-def bridge_settings(yml, meta=None):
+def bridge_settings(yml, meta=None, warn=True):
     """(theta, slice) of a chain generated with the bridge link, or None.
 
     Sources: `meta`, the group <name>/Meta/bridge of the ensemble file written by autotune_RadialMCMC_PPP (None if
     absent), and `HMC: bridge:` of the yml (defaults theta = pi/2, slice 0, as in the driver). The record in the
-    ensemble file wins; a yml that disagrees with it is an error, because it is not the yml of this chain."""
+    ensemble file wins; a yml that disagrees with it is an error, because it is not the yml of this chain.
+    warn=False: no warning for a bridge in the yml without a record (an empty file written before the chain)."""
     hmc = yml.get("HMC") or {}
     from_yml = None
     if "bridge" in hmc:
@@ -309,7 +310,7 @@ def bridge_settings(yml, meta=None):
             raise SystemExit(f"the ensemble was generated with the bridge link theta = {from_h5[0]}, slice "
                              f"{from_h5[1]} (Meta/bridge), but the yml says {from_yml or 'no bridge'}")
         return from_h5
-    if from_yml is not None:
+    if from_yml is not None and warn:
         print(f"# warning: `HMC: bridge` in the yml but no Meta/bridge in the ensemble file (generated before it "
               f"was recorded?); using theta = {from_yml[0]}, slice {from_yml[1]} from the yml")
     return from_yml
@@ -323,6 +324,123 @@ def bridge_lambda(Gbb, theta):
     n = 1.0 - np.diagonal(Gbb)
     lam = 0.5 * np.mean(np.abs(1 + (np.exp(1j * theta) - 1) * n) ** 2 + np.abs(1 + (np.exp(-1j * theta) - 1) * n) ** 2)
     return float(lam), float(np.max(np.abs(n.real - 0.5) / np.maximum(1.0, np.abs(n))))
+
+
+# ----------------------------------------------------------------------------------------------
+# what does not depend on the configurations (shared by main and write_skeleton)
+# ----------------------------------------------------------------------------------------------
+
+def static_setup(yml, n_orbitals=0):
+    """Lattice, interaction, orbital basis and orbital classes of a run: everything of the reduction that does not
+    depend on the configurations. n_orbitals > 0 keeps only that many orbitals closest to the Fermi level."""
+    sysyml = yml["system"]
+    Nt, beta = int(sysyml["Nt"]), float(sysyml["beta"])
+    Nx, mu = int(sysyml["nions"]), float(sysyml.get("mu", 0.0))
+    offset = float(sysyml.get("offset", 0.0))
+    K = ppp_ed.hopping_matrix(sysyml)
+    V = interaction(yml, Nx)
+    pos = np.array(sysyml["positions"], float)
+    orb = orbital_basis(K, V, pos, mu)
+    keep = np.arange(Nx)
+    if 0 < n_orbitals < Nx:
+        keep = np.sort(np.argsort(np.abs(orb["eps"]), kind="stable")[:n_orbitals])
+    classes = {}
+    for k in keep:
+        classes.setdefault(orb["class_names"][orb["cls"][k]], []).append(int(k))
+    lamV, QV = np.linalg.eigh(V)
+    order = np.argsort(lamV)[::-1]
+    do_sign = abs(mu) < 1e-12 and abs(offset) < 1e-12 and orb["sublattice"] is not None
+    return dict(name=sysyml["name"], Nt=Nt, beta=beta, delta=beta / Nt, Nx=Nx, mu=mu, offset=offset, K=K, V=V,
+                pos=pos, orb=orb, keep=keep, classes=classes, lamV=lamV[order], QV=QV[:, order], do_sign=do_sign)
+
+
+def write_static(fo, st, **attrs):
+    """The attributes (those of static_setup and `attrs`) and the groups lattice/ and orbitals/ of a stage-1 file"""
+    orb = st["orb"]
+    fo.attrs.update(dict(name=st["name"], Nt=st["Nt"], beta=st["beta"], delta=st["delta"], Nx=st["Nx"], mu=st["mu"],
+                         offset=st["offset"], **attrs))
+    fo["lattice/K"], fo["lattice/V"], fo["lattice/positions"] = st["K"], st["V"], st["pos"]
+    fo["lattice/V_eigenvalues"], fo["lattice/V_eigenvectors"] = st["lamV"], st["QV"]
+    if orb["sublattice"] is not None:
+        fo["lattice/sublattice"] = orb["sublattice"]
+    fo["orbitals/U"], fo["orbitals/eps"], fo["orbitals/class"] = orb["U"], orb["eps"], orb["cls"]
+    fo["orbitals/partner"] = orb["partner"]
+    fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
+    fo["orbitals/symmetry_operations"] = np.array(orb["operations"] or ["none"], dtype="S")
+    fo["orbitals/kept"] = st["keep"]
+
+
+def source_times(Nt, n):
+    """The source times of Executables/Hubbard/propagator for `Number Time Sources: n`: 0, step, 2 step, ... < Nt with
+    step = ceil(Nt / n) (FermionPropagator::sourceTimes)"""
+    step = -(-Nt // max(1, n))
+    return list(range(0, Nt, step))
+
+
+def write_skeleton(yml_text, yml, out, B=1, single=False, probe_slices="4,8,16,32", n_orbitals=0, h5in=None,
+                   yml_path=None):
+    """An empty stage-1 file for the measurement on the fly (src/NSL/Measurements/Hubbard/reducedObservables.tpp).
+
+    The same attributes, lattice/ and orbitals/ as main() writes (n_configs = n_bins = 0), and every per-configuration
+    and per-bin dataset with length 0, extendible along its first axis. The C++ appends complete bins of B
+    configurations, then updates n_configs, n_bins and checks/attrs; it also writes noninteracting/ (the propagators
+    at phi = 0). The sources are those of `measurements: Number Time Sources` (default 1, as for the propagator
+    program), the bridge link that of `HMC: bridge` (the C++ checks it against Meta/bridge of the chain)."""
+    st = static_setup(yml, n_orbitals)
+    Nt, Nx, classes = st["Nt"], st["Nx"], st["classes"]
+    meas = yml.get("measurements") or {}
+    sources = source_times(Nt, int(meas.get("Number Time Sources", 1)))
+    bridge = bridge_settings(yml, None, warn=False)
+    if bridge is not None and not st["do_sign"]:
+        raise SystemExit("the bridge link needs mu = 0, offset = 0 and a bipartite lattice")
+    probe = np.array(sorted({int(x) for x in probe_slices.split(",") if x.strip() and 0 <= int(x) < Nt}), int)
+    ctype = np.complex64 if single else np.complex128
+    rtype = np.float32 if single else np.float64
+    h5in = h5in or yml["fileIO"]["h5file"]
+    tmp = out + ".tmp"
+    with h5py.File(tmp, "w") as fo:
+        write_static(fo, st, sources=np.array(sources), n_configs=0, input_h5=os.path.abspath(h5in),
+                     input_yml=os.path.abspath(yml_path) if yml_path else "", input_yml_text=yml_text,
+                     version=VERSION, on_the_fly=1,
+                     created=datetime.datetime.now().isoformat(timespec="seconds"),
+                     precision="single" if single else "double", bin=B, n_bins=0,
+                     bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
+                     bridge_slice=bridge[1] if bridge else -1)
+
+        def grow(path, shape, dtype, chunk=256):        # length 0, extendible along the first axis
+            return fo.create_dataset(path, (0,) + tuple(shape), dtype, maxshape=(None,) + tuple(shape),
+                                     chunks=(chunk,) + tuple(shape))
+        grow("config/id", (), np.int64)
+        grow("config/S", (), complex)
+        for key in ("acceptanceProbability", "markovTime", "S_gauge", "detsign_residual"):
+            grow(f"config/{key}", (), float)
+        grow("config/field_modes", (Nx,), float)
+        grow("config/detsign", (), np.int8)
+        if st["do_sign"]:
+            grow("config/S_fermion_phi", (), float)
+        if bridge:
+            grow("config/bridge_lambda", (), float)
+        grow("weights", (), float)
+        for c, idx in classes.items():
+            m = len(idx)
+            fo[f"onebody/{c}/orbitals"] = np.array(idx)
+            grow(f"onebody/{c}/forward", (Nt, m, m), ctype, chunk=1)
+            grow(f"onebody/{c}/backward", (Nt, m, m), ctype, chunk=1)
+            grow(f"onebody/{c}/addition_probe", (len(probe), m), rtype)
+        fo["onebody"].attrs["probe_slices"] = probe
+        for key in ("G", "ss", "qq"):
+            grow(f"equaltime/{key}", (Nx, Nx), ctype, chunk=1)
+        chk = fo.create_group("checks")
+        chk.attrs["hole_relation_max_dev"] = 0.0
+        chk.attrs["hole_relation_configs"] = 0
+        chk.attrs["detsign_max_residual"] = 0.0 if st["do_sign"] else np.nan
+        chk.attrs["bridge_re_n_max_dev"] = 0.0 if bridge else np.nan
+        chk.attrs["S_fermion_phi_max_dev"] = 0.0 if st["do_sign"] and not bridge else np.nan
+    os.replace(tmp, out)
+    print(f"wrote the empty stage-1 file {out}: {st['name']}, Nt = {Nt}, Nx = {Nx}, sources {sources}, bins of {B}, "
+          f"orbital classes {', '.join(f'{c} ({len(v)})' for c, v in classes.items())}"
+          + (f"; bridge link theta = {bridge[0]:.6g}, slice {bridge[1]}" if bridge else ""))
+    return 0
 
 
 def read_tensor(ds):
@@ -386,41 +504,30 @@ def main(argv=None):
     p.add_argument("--max-configs", type=int, default=0, help="reduce only the first N configurations (tests)")
     p.add_argument("--check-hole", type=int, default=2, help="configurations used to check the hole relation")
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--skeleton", action="store_true",
+                   help="write only the empty file for the measurement on the fly (write_skeleton); no ensemble needed")
     args = p.parse_args(argv)
 
     with open(args.yml) as fy:
         yml_text = fy.read()
     yml = yaml.safe_load(yml_text)
-    sysyml = yml["system"]
-    name, Nt, beta = sysyml["name"], int(sysyml["Nt"]), float(sysyml["beta"])
-    Nx, mu = int(sysyml["nions"]), float(sysyml.get("mu", 0.0))
-    offset = float(sysyml.get("offset", 0.0))
-    delta = beta / Nt
     h5in = args.h5 or yml["fileIO"]["h5file"]
     out = args.output or os.path.join("reduced", os.path.splitext(os.path.basename(args.yml))[0] + ".h5")
     if os.path.exists(out) and not args.overwrite:
         print(f"{out} exists; skipped (use --overwrite to redo)")
         return 0
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    if args.skeleton:
+        return write_skeleton(yml_text, yml, out, max(1, args.bin), args.single, args.probe_slices, args.orbitals, h5in,
+                              args.yml)
 
-    K = ppp_ed.hopping_matrix(sysyml)
-    V = interaction(yml, Nx)
-    pos = np.array(sysyml["positions"], float)
-    orb = orbital_basis(K, V, pos, mu)
-    U, eps, cls, partner = orb["U"], orb["eps"], orb["cls"], orb["partner"]
-    keep = np.arange(Nx)
-    if 0 < args.orbitals < Nx:
-        keep = np.sort(np.argsort(np.abs(eps), kind="stable")[: args.orbitals])
-    classes = {}
-    for k in keep:
-        classes.setdefault(orb["class_names"][cls[k]], []).append(int(k))
-
-    lamV, QV = np.linalg.eigh(V)
-    order = np.argsort(lamV)[::-1]
-    lamV, QV = lamV[order], QV[:, order]
+    st = static_setup(yml, args.orbitals)
+    name, Nt, beta, delta, Nx, mu, offset = (st[k] for k in ("name", "Nt", "beta", "delta", "Nx", "mu", "offset"))
+    K, V, pos, orb, keep, classes = (st[k] for k in ("K", "V", "pos", "orb", "keep", "classes"))
+    lamV, QV, do_sign = st["lamV"], st["QV"], st["do_sign"]
+    U = orb["U"]
     Ainv = np.linalg.inv(delta * V)
     ctype = np.complex64 if args.single else np.complex128
-    do_sign = abs(mu) < 1e-12 and abs(offset) < 1e-12 and orb["sublattice"] is not None
     eK = sla.expm(delta * K)
 
     t_start = time.time()
@@ -455,23 +562,12 @@ def main(argv=None):
 
         tmp = out + ".tmp"
         with h5py.File(tmp, "w") as fo:
-            a = fo.attrs
-            a.update(dict(name=name, Nt=Nt, beta=beta, delta=delta, Nx=Nx, mu=mu, offset=offset,
-                          sources=np.array(sources), n_configs=nc, input_h5=os.path.abspath(h5in),
-                          input_yml=os.path.abspath(args.yml), input_yml_text=yml_text, version=VERSION,
-                          created=datetime.datetime.now().isoformat(timespec="seconds"),
-                          precision="single" if args.single else "double", bin=B, n_bins=nb,
-                          bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
-                          bridge_slice=bridge[1] if bridge else -1))
-            fo["lattice/K"], fo["lattice/V"], fo["lattice/positions"] = K, V, pos
-            fo["lattice/V_eigenvalues"], fo["lattice/V_eigenvectors"] = lamV, QV
-            if orb["sublattice"] is not None:
-                fo["lattice/sublattice"] = orb["sublattice"]
-            fo["orbitals/U"], fo["orbitals/eps"], fo["orbitals/class"] = U, eps, cls
-            fo["orbitals/partner"] = partner
-            fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
-            fo["orbitals/symmetry_operations"] = np.array(orb["operations"] or ["none"], dtype="S")
-            fo["orbitals/kept"] = keep
+            write_static(fo, st, sources=np.array(sources), n_configs=nc, input_h5=os.path.abspath(h5in),
+                         input_yml=os.path.abspath(args.yml), input_yml_text=yml_text, version=VERSION,
+                         created=datetime.datetime.now().isoformat(timespec="seconds"),
+                         precision="single" if args.single else "double", bin=B, n_bins=nb,
+                         bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
+                         bridge_slice=bridge[1] if bridge else -1)
 
             cfg = fo.create_group("config")
             cfg["id"] = np.array(ids)

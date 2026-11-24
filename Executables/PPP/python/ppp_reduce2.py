@@ -103,6 +103,94 @@ def cross_correlation(o, ob):
     return np.fft.ifft(np.fft.fft(o, axis=0)[:, :, None] * np.fft.ifft(ob, axis=0)[:, None, :], axis=0)
 
 
+def static_setup(yml, window_energy):
+    """Orbital basis (as stage 1), window and operator bases of a run: everything of stage 2 that does not depend on
+    the configurations"""
+    sysyml = yml["system"]
+    Nt, beta = int(sysyml["Nt"]), float(sysyml["beta"])
+    Nx, mu = int(sysyml["nions"]), float(sysyml.get("mu", 0.0))
+    if abs(mu) > 1e-12:
+        raise SystemExit("stage 2 assumes mu = 0 (particle-hole partners of the orbitals)")
+    K = ppp_ed.hopping_matrix(sysyml)
+    V = r1.interaction(yml, Nx)
+    pos = np.array(sysyml["positions"], float)
+    orb = r1.orbital_basis(K, V, pos, mu)
+    window, exc, pps, ppt = operator_bases(orb, window_energy)
+    return dict(name=sysyml["name"], Nt=Nt, beta=beta, delta=beta / Nt, Nx=Nx, mu=mu, offset=float(sysyml.get("offset", 0.0)),
+                orb=orb, window=window, exc=exc, pps=pps, ppt=ppt)
+
+
+def write_static(fo, st, **attrs):
+    """The attributes (those of static_setup and `attrs`), orbitals/ and the operator pairs of a stage-2 file"""
+    orb = st["orb"]
+    fo.attrs.update(dict(name=st["name"], Nt=st["Nt"], beta=st["beta"], delta=st["delta"], Nx=st["Nx"], mu=st["mu"],
+                         stage=2, version=VERSION, contact_terms=1, **attrs))
+    fo["orbitals/U"], fo["orbitals/eps"], fo["orbitals/class"] = orb["U"], orb["eps"], orb["cls"]
+    fo["orbitals/partner"], fo["orbitals/window"] = orb["partner"], st["window"]
+    fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
+    for s, pairs in st["exc"].items():
+        fo[f"exciton/{s}/pairs"] = pairs
+    for kind, basis in (("pp_singlet", st["pps"]), ("pp_triplet", st["ppt"])):
+        for s, pairs in basis.items():
+            fo[f"{kind}/{s}/pairs"] = pairs
+
+
+def check_pairs(st):
+    """the orbital pairs (c, v) and (a, b) of the check against the general contractions (main: first configurations)"""
+    c0, v0 = next(iter(st["exc"].values()))[0]
+    a0, b0 = next(iter(st["pps"].values()))[-1]
+    return (int(c0), int(v0)), (int(a0), int(b0))
+
+
+def write_skeleton(yml_text, yml, out, B=1, single=False, window_energy=1.0, h5in=None, yml_path=None):
+    """An empty stage-2 file for the measurement on the fly (src/NSL/Measurements/Hubbard/reducedObservables.tpp):
+    the attributes, orbitals/ and operator pairs of main(), and every per-bin dataset with length 0, extendible along
+    its first axis (n_configs = n_bins = 0). checks/attrs also hold the orbital pairs of the check against the general
+    contractions (exciton_check_pair, pp_check_pair), which the C++ repeats on the first configurations."""
+    st = static_setup(yml, window_energy)
+    Nt = st["Nt"]
+    meas = yml.get("measurements") or {}
+    sources = r1.source_times(Nt, int(meas.get("Number Time Sources", 1)))
+    bridge = r1.bridge_settings(yml, None, warn=False)
+    if bridge is not None and abs(st["offset"]) > 1e-12:
+        raise SystemExit("the bridge link needs offset = 0")
+    ctype = np.complex64 if single else np.complex128
+    h5in = h5in or yml["fileIO"]["h5file"]
+    tmp = out + ".tmp"
+    with h5py.File(tmp, "w") as fo:
+        write_static(fo, st, sources=np.array(sources), window_energy=window_energy, bin=B, n_bins=0,
+                     bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
+                     bridge_slice=bridge[1] if bridge else -1, n_configs=0, input_h5=os.path.abspath(h5in),
+                     input_yml=os.path.abspath(yml_path) if yml_path else "", input_yml_text=yml_text,
+                     precision="single" if single else "double", on_the_fly=1,
+                     created=datetime.datetime.now().isoformat(timespec="seconds"))
+
+        def grow(path, shape, dtype, chunk=1):          # length 0, extendible along the first axis
+            return fo.create_dataset(path, (0,) + tuple(shape), dtype, maxshape=(None,) + tuple(shape),
+                                     chunks=(chunk,) + tuple(shape))
+        grow("config/first_id", (), np.int64, 256)
+        grow("weights", (), float, 256)
+        for s, pairs in st["exc"].items():
+            n = len(pairs)
+            grow(f"exciton/{s}/connected", (Nt, n, n), ctype)
+            grow(f"exciton/{s}/disconnected", (Nt, n, n), ctype)
+            grow(f"exciton/{s}/expectation", (2, n), complex, 256)
+        for kind, basis in (("pp_singlet", st["pps"]), ("pp_triplet", st["ppt"])):
+            for s, pairs in basis.items():
+                grow(f"{kind}/{s}/correlator", (Nt, len(pairs), len(pairs)), ctype)
+        chk = fo.create_group("checks")
+        chk.attrs["exciton_max_rel_dev"] = 0.0
+        chk.attrs["pp_max_rel_dev"] = 0.0
+        chk.attrs["checked_configs"] = 0
+        (c0, v0), (a0, b0) = check_pairs(st)
+        chk.attrs["exciton_check_pair"] = np.array([c0, v0])
+        chk.attrs["pp_check_pair"] = np.array([a0, b0])
+    os.replace(tmp, out)
+    print(f"wrote the empty stage-2 file {out}: window {len(st['window'])} orbitals (|eps| <= {window_energy}), "
+          f"exciton sectors {', '.join(f'{k} ({len(v)})' for k, v in st['exc'].items())}, bins of {B}")
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("yml")
@@ -115,30 +203,27 @@ def main(argv=None):
     p.add_argument("--max-configs", type=int, default=0, help="reduce only the first N configurations (tests)")
     p.add_argument("--check", type=int, default=2, help="configurations checked against the general contractions")
     p.add_argument("--overwrite", action="store_true")
+    p.add_argument("--skeleton", action="store_true",
+                   help="write only the empty file for the measurement on the fly (write_skeleton); no ensemble needed")
     args = p.parse_args(argv)
 
     with open(args.yml) as fy:
         yml_text = fy.read()
     yml = yaml.safe_load(yml_text)
     sysyml = yml["system"]
-    name, Nt, beta = sysyml["name"], int(sysyml["Nt"]), float(sysyml["beta"])
-    Nx, mu = int(sysyml["nions"]), float(sysyml.get("mu", 0.0))
-    delta = beta / Nt
     h5in = args.h5 or yml["fileIO"]["h5file"]
     out = args.output or os.path.join("reduced2", os.path.splitext(os.path.basename(args.yml))[0] + ".h5")
     if os.path.exists(out) and not args.overwrite:
         print(f"{out} exists; skipped (use --overwrite to redo)")
         return 0
-    if abs(mu) > 1e-12:
-        raise SystemExit("stage 2 assumes mu = 0 (particle-hole partners of the orbitals)")
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    if args.skeleton:
+        return write_skeleton(yml_text, yml, out, max(1, args.bin), args.single, args.window_energy, h5in, args.yml)
 
-    K = ppp_ed.hopping_matrix(sysyml)
-    V = r1.interaction(yml, Nx)
-    pos = np.array(sysyml["positions"], float)
-    orb = r1.orbital_basis(K, V, pos, mu)
+    st = static_setup(yml, args.window_energy)
+    name, Nt, beta, delta, Nx, mu = (st[k] for k in ("name", "Nt", "beta", "delta", "Nx", "mu"))
+    orb, window, exc, pps, ppt = (st[k] for k in ("orb", "window", "exc", "pps", "ppt"))
     U = orb["U"]
-    window, exc, pps, ppt = operator_bases(orb, args.window_energy)
     wpos = {int(o): k for k, o in enumerate(window)}                 # orbital index -> position in the window
     Uw = U[:, window]
     loc = lambda arr: np.array([wpos[int(o)] for o in arr])          # noqa: E731
@@ -167,16 +252,12 @@ def main(argv=None):
 
         tmp = out + ".tmp"
         with h5py.File(tmp, "w") as fo:
-            fo.attrs.update(dict(name=name, Nt=Nt, beta=beta, delta=delta, Nx=Nx, mu=mu, stage=2, version=VERSION,
-                                 sources=np.array(sources), window_energy=args.window_energy, bin=B, n_bins=nb,
-                                 contact_terms=1, bridge=int(bridge is not None),
-                                 bridge_theta=bridge[0] if bridge else np.nan, bridge_slice=bridge[1] if bridge else -1,
-                                 n_configs=nb * B, input_h5=os.path.abspath(h5in), input_yml=os.path.abspath(args.yml),
-                                 input_yml_text=yml_text, precision="single" if args.single else "double",
-                                 created=datetime.datetime.now().isoformat(timespec="seconds")))
-            fo["orbitals/U"], fo["orbitals/eps"], fo["orbitals/class"] = U, orb["eps"], orb["cls"]
-            fo["orbitals/partner"], fo["orbitals/window"] = orb["partner"], window
-            fo["orbitals/class_names"] = np.array(orb["class_names"], dtype="S")
+            write_static(fo, st, sources=np.array(sources), window_energy=args.window_energy, bin=B, n_bins=nb,
+                         bridge=int(bridge is not None), bridge_theta=bridge[0] if bridge else np.nan,
+                         bridge_slice=bridge[1] if bridge else -1, n_configs=nb * B, input_h5=os.path.abspath(h5in),
+                         input_yml=os.path.abspath(args.yml), input_yml_text=yml_text,
+                         precision="single" if args.single else "double",
+                         created=datetime.datetime.now().isoformat(timespec="seconds"))
             fo["config/first_id"] = np.array(ids[: nb * B : B])
             dW = fo.create_dataset("weights", (nb,), float)
             wsum = 0.0
@@ -184,15 +265,13 @@ def main(argv=None):
             dsets = {}
             for s, pairs in exc.items():
                 n = len(pairs)
-                g = fo.create_group(f"exciton/{s}")
-                g["pairs"] = pairs
+                g = fo[f"exciton/{s}"]
                 dsets[("exc", s)] = (g.create_dataset("connected", (nb, Nt, n, n), ctype),
                                      g.create_dataset("disconnected", (nb, Nt, n, n), ctype),
                                      g.create_dataset("expectation", (nb, 2, n), complex))
             for kind, basis in (("pp_singlet", pps), ("pp_triplet", ppt)):
                 for s, pairs in basis.items():
-                    g = fo.create_group(f"{kind}/{s}")
-                    g["pairs"] = pairs
+                    g = fo[f"{kind}/{s}"]
                     dsets[(kind, s)] = g.create_dataset("correlator", (nb, Nt, len(pairs), len(pairs)), ctype)
 
             tt = np.arange(Nt)

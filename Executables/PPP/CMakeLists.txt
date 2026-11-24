@@ -1,2 +1,4 @@
 add_executable(autotune_RadialMCMC_PPP autotune_RadialMCMC_PPP.cpp)
 target_link_libraries(autotune_RadialMCMC_PPP NSL)
+add_executable(measure_PPP measure_PPP.cpp)
+target_link_libraries(measure_PPP NSL)
