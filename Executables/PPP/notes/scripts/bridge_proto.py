@@ -8,13 +8,18 @@ Bridge: Lambda = 1/(2 Nx) sum_{i, x=+-1} e^{i theta x q_i} at slice b, i.e. the 
 c_{i,x} = theta x e_{b,i}. Joint chain on (phi, k = (i, x)): HMC on phi with |det M(phi + c_k)|^2, heat bath on k.
 Marginal in phi: e^{-S_g} |det M(phi)|^2 Lam(phi), Lam = mean_k |1 + (e^{i theta x} - 1) n_i(b)|^2, n = 1 - diag G(b, b).
 Estimator: <O> = <O / Lam> / <1 / Lam>.
+Multi-slice bridge (kind bridge_all): the same operator averaged over all slices, k = (t, i, x), 2 Nx Nt terms,
+c_k = theta x e_{t,i}; Lam_all = mean_{t,i,x} |1 + (e^{i theta x} - 1) n_i(t)|^2, the weights are 1 / Lam_all.
 
     python bridge_proto.py check                                   # the identities used by the bridge
-    python bridge_proto.py run {plain,bridge} NTRAJ SEED OUT.npz   # one chain (100000 trajectories: about 4 min)
+    python bridge_proto.py run {plain,bridge,bridge_all} NTRAJ SEED OUT.npz   # one chain (1e5 trajectories: ~4 min)
     python bridge_proto.py exact OUT.npy                           # Fock-space S_AF, S_CDW, <s^2>
+    options (any command): --beta BETA --nt NT --nmd NMD (defaults 4, 16, 6)
 
-OUT.npz holds per trajectory: obs (S_AF, S_CDW, <s^2>), lam (Lambda, also for plain chains), sign (of
-e^{-i sum phi/2} det M), acc, k (bridge term). Figures: bridge_figures.py.
+OUT.npz holds per trajectory: obs (S_AF, S_CDW, <s^2>), lam (Lambda at slice b, for every kind), lam_all (Lambda
+averaged over all slices, every kind), sign (of e^{-i sum phi/2} det M), acc, k (bridge term); and the parameters
+beta, Nt, theta, b, kind. The weights of a chain are 1/lam (bridge), 1/lam_all (bridge_all), 1 (plain).
+Figures: bridge_figures.py, bridge_multislice_figures.py.
 """
 import os
 import sys
@@ -26,7 +31,23 @@ import scipy.linalg as sla
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "python"))
 import ppp_wick as wick  # noqa: E402
 
-Nx, U, beta, Nt = 4, 4.0, 4.0, 16
+
+
+def _option(name, default, cast):
+    """--name VALUE on the command line (only when run as a script); removed from sys.argv"""
+    flag = f"--{name}"
+    if __name__ == "__main__" and flag in sys.argv:
+        i = sys.argv.index(flag)
+        value = cast(sys.argv[i + 1])
+        del sys.argv[i:i + 2]
+        return value
+    return default
+
+
+Nx, U = 4, 4.0
+beta = _option("beta", 4.0, float)
+Nt = _option("nt", 16, int)
+NMD = _option("nmd", 6, int)                                    # molecular dynamics steps per trajectory
 delta = beta / Nt
 K = np.zeros((Nx, Nx))
 for i in range(Nx - 1):
@@ -65,6 +86,17 @@ def bridge_ratios(n_b):
     return np.array([abs(1 + (np.exp(1j * THETA * x) - 1) * n_b[i]) ** 2 for i, x in shifts()])
 
 
+def all_shifts():
+    """the terms k = (t, i, x) of the multi-slice bridge, in the order of bridge_ratios_all(n).ravel()"""
+    return [(t, i, x) for t in range(Nt) for i in range(Nx) for x in (+1, -1)]
+
+
+def bridge_ratios_all(n):
+    """R_{t,i,x} = |1 + (e^{i theta x} - 1) n_i(t)|^2 for every slice, shape (Nt, Nx, 2), x = +1, -1"""
+    ph = np.exp(1j * THETA * np.array([1.0, -1.0]))
+    return np.abs(1 + (ph[None, None, :] - 1) * n[:, :, None]) ** 2
+
+
 def observables(Gt):
     """equal-time observables quadratic in G, averaged over t: S_AF, S_CDW, <s_x^2> mean"""
     _, ss, qq = wick.equal_time(Gt)
@@ -74,7 +106,7 @@ def observables(Gt):
 
 def check():
     rng = np.random.default_rng(1)
-    worst = dict(ratio=0.0, re_half=0.0, real_d=0.0, bound=np.inf)
+    worst = dict(ratio=0.0, ratio_all=0.0, re_half=0.0, real_d=0.0, bound=np.inf)
     for _ in range(50):
         phi = rng.normal(0, np.sqrt(delta * U), (Nt, Nx))
         M, Gt = green(phi)
@@ -88,9 +120,16 @@ def check():
             s2, l2 = np.linalg.slogdet(fermion_matrix(ph))
             worst["ratio"] = max(worst["ratio"], abs(np.exp(2 * (l2 - ld)) - R) / R)
         worst["bound"] = min(worst["bound"], bridge_ratios(n[BSLICE]).mean() / np.cos(THETA / 2) ** 2)
+        Rall = bridge_ratios_all(n)
+        for t, i, x in [all_shifts()[j] for j in rng.choice(2 * Nx * Nt, 4, replace=False)]:
+            ph = phi.copy(); ph[t, i] += THETA * x
+            s2, l2 = np.linalg.slogdet(fermion_matrix(ph))
+            R = Rall[t, i, 0 if x > 0 else 1]
+            worst["ratio_all"] = max(worst["ratio_all"], abs(np.exp(2 * (l2 - ld)) - R) / R)
     print(f"e^(-i sum phi/2) det M real: max |Im|/|d| {worst['real_d']:.1e}")
     print(f"Re n_x(t) = 1/2 on every configuration: max dev {worst['re_half']:.1e}")
     print(f"rank-1 ratio |det M(phi + c_k)|^2/|det M(phi)|^2 = |1 + (e^(i theta x)-1) n_i(b)|^2: max rel dev {worst['ratio']:.1e}")
+    print(f"the same at random slices t != b (multi-slice terms): max rel dev {worst['ratio_all']:.1e}")
     print(f"Lam / cos^2(theta/2) >= 1: min {worst['bound']:.4f}")
 
 
@@ -104,8 +143,9 @@ def action(phi):
     return 0.5 * np.sum(phi ** 2) / (delta * U) - 2 * np.linalg.slogdet(fermion_matrix(phi))[1]
 
 
-def hmc(phi, c, rng, nmd=6, T=np.pi / 2):
+def hmc(phi, c, rng, nmd=None, T=np.pi / 2):
     """kinetic p^2 delta U / 2, so the Gaussian part rotates with frequency 1 (exact), fermion force as kicks"""
+    nmd = NMD if nmd is None else nmd
     m = 1.0 / (delta * U)
     p = rng.normal(0, np.sqrt(m), phi.shape)
     H0 = 0.5 * np.sum(p ** 2) / m + action(phi + c) - 0.5 * np.sum((phi + c) ** 2) / (delta * U) + 0.5 * np.sum(phi ** 2) / (delta * U)
@@ -133,25 +173,32 @@ def run(kind, ntraj, seed, out):
     phi = np.zeros((Nt, Nx))
     k = 0
     zero = np.zeros((Nt, Nx))
-    obs, lam, sgn, accs, ks = [], [], [], [], []
+    obs, lam, lam_all, sgn, accs, ks = [], [], [], [], [], []
     t0 = time.time()
     for n in range(ntraj):
         c = zero
         if kind == "bridge":
             i, x = shifts()[k]
             c = zero.copy(); c[BSLICE, i] = THETA * x
+        elif kind == "bridge_all":
+            t, i, x = all_shifts()[k]
+            c = zero.copy(); c[t, i] = THETA * x
         phi, a = hmc(phi, c, rng)
         M, Gt = green(phi)
-        nb = density(Gt)[BSLICE]
-        R = bridge_ratios(nb)
+        dens = density(Gt)
+        R = bridge_ratios(dens[BSLICE])
+        Rall = bridge_ratios_all(dens).ravel()
         if kind == "bridge":                                # heat bath on the bridge term given phi
             k = int(rng.choice(len(R), p=R / R.sum()))
-        obs.append(observables(Gt)); lam.append(R.mean()); accs.append(a); ks.append(k)
+        elif kind == "bridge_all":
+            k = int(rng.choice(len(Rall), p=Rall / Rall.sum()))
+        obs.append(observables(Gt)); lam.append(R.mean()); lam_all.append(Rall.mean()); accs.append(a); ks.append(k)
         sd, _ = np.linalg.slogdet(M)
         sgn.append(np.sign((sd * np.exp(-0.5j * phi.sum())).real))
         if (n + 1) % 2000 == 0:
             print(f"{kind} {n + 1}/{ntraj} {time.time() - t0:.0f} s acc {np.mean(accs):.2f}", flush=True)
-    np.savez(out, obs=np.array(obs), lam=np.array(lam), sign=np.array(sgn), acc=np.array(accs), k=np.array(ks))
+    np.savez(out, obs=np.array(obs), lam=np.array(lam), lam_all=np.array(lam_all), sign=np.array(sgn),
+             acc=np.array(accs), k=np.array(ks), beta=beta, Nt=Nt, theta=THETA, b=BSLICE, kind=kind, nmd=NMD)
 
 
 def exact(out):
@@ -182,6 +229,8 @@ def exact(out):
 
 
 if __name__ == "__main__":
+    if kind_ok := len(sys.argv) > 2 and sys.argv[1] == "run":
+        assert sys.argv[2] in ("plain", "bridge", "bridge_all"), sys.argv[2]
     if sys.argv[1] == "check":
         check()
     elif sys.argv[1] == "exact":

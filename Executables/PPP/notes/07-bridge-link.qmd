@@ -1,7 +1,8 @@
 ---
 title: "7 · The bridge link"
-subtitle: "Finite variance for observables quadratic in the propagator: `BridgeLink`, `HubbardFermionAction::setShift`, reweighting by $1/\\Lambda$"
+subtitle: "Finite variance for observables quadratic in the propagator: `BridgeLink`, `HubbardFermionAction::setShift`, reweighting by $1/\\Lambda$; perylene results and the multi-slice bridge"
 date: 2026-11-20
+date-modified: 2026-11-25
 ---
 
 ## Overview
@@ -21,7 +22,8 @@ date: 2026-11-20
 |---|---|
 | sampler: `BridgeLink`, field shift in `HubbardFermionAction`, hook in `RadialHMC`, PPP driver option | done, tested, validated on a 4-site chain (commit 658057b) |
 | analysis: $\Lambda$ per configuration, reweighting in both reductions and in `ppp_analysis`, notebook diagnostics | done, tested, validated end to end on the 4-site chain (commit f89cf34) |
-| production | the $N_t=256$ runs were made without the bridge; a perylene test at $N_t=128$ (40 chains $\times$ 500 per interaction, `perylene_*_b32_Nt128_bridge.yml`) is set up, with the plain $N_t=128$ production as the reference |
+| production | perylene test at $\beta=32$, $N_t=128$ (40 chains $\times$ 500 per interaction), against the plain production; then the $\beta=24$ continuum set ($N_t=96$–288, three interactions, $10^5$ configurations each), all with the bridge. Results: part "Perylene with the bridge" |
+| multi-slice bridge | the same operator averaged over all time slices, proposed after the $\beta=24$ analysis (2026-11-25). Diagnosed on stored perylene configurations and tested in the Python prototype; **not yet in NSL**. Part "The multi-slice bridge" |
 
 ## Terms used in this deck
 
@@ -43,6 +45,11 @@ Several of these are my own labels.
 | sticking | many consecutive rejected trajectories at one configuration |
 | deviation $y$, tail exponent $\alpha$ | $y=\lvert X-\mathrm{median}\rvert/\mathrm{IQR}$ (as in the notebook's heavy-tail diagnostic); $P(\text{deviation}>y)\sim y^{-\alpha}$ |
 | $N_\mathrm{eff}$ | effective number of samples after reweighting, $(\sum_j w_j)^2/\sum_j w_j^2$ with $w_j=1/\Lambda_j$ |
+| single-slice bridge | the bridge of the first parts of this deck: $\hat\Lambda$ at one slice $b$ |
+| $\Lambda_t(\phi)$ | the bridge value with the operator at slice $t$; the single-slice bridge uses $\Lambda=\Lambda_b$ |
+| multi-slice bridge, $\Lambda_\mathrm{all}$ | the operator averaged over all slices, $\Lambda_\mathrm{all}=\frac1{N_t}\sum_t\Lambda_t$; weights $1/\Lambda_\mathrm{all}$ |
+| node normal $\hat g$ | at a node, the unit vector normal to it in field space, $\hat g_{t,i}=\partial_{t,i}D/\lvert\nabla D\rvert$; its weight at slice $t$ is $\lVert\hat g_t\rVert^2=\sum_i\hat g_{t,i}^2$ |
+| near-zero mode | the part of $G$ that diverges near a node; it lives at the slices where $\hat g$ has its weight |
 
 # The problem
 
@@ -294,8 +301,9 @@ The state of the chain is the pair $(\phi,k)$. Every update cycle does:
   $N_\mathrm{eff}/N=0.79$ on the 4-site chain. It has not been tuned.
 - $b$: any slice. The target is time-translation invariant, so $b$ only says where $\hat\Lambda$ sits. The default
   is 0.
-- A possible extension, not implemented: average $\hat\Lambda$ over all slices as well ($2N_xN_t$ terms). The
-  same gradient already contains every $y_i(t)$.
+- The slice does not matter for the mean, but it does for the variance in long chains: a node is seen only
+  through the weight of its normal at slice $b$. The multi-slice bridge (last part of this deck) averages $\hat\Lambda$ over all slices
+  ($2N_xN_t$ terms); the same gradient already contains every $y_i(t)$.
 
 ## Requirements
 
@@ -462,18 +470,223 @@ two-body, with the lattice convention of `ppp_ed`); `ppp_ed` (one-body).
 - The $t=0$ entries include the contact terms of deck 6, so this is also their first check against exact ensemble
   values.
 
+# Perylene with the bridge
+
+## $\beta=32$ test: bridge against plain
+
+$N_t=128$, $\theta=\pi/2$, $b=0$. Bridge: 40 chains $\times$ 500 configurations per interaction (2026-11-21).
+Plain: the production, 40 $\times$ 2500. Bins of 50 configurations.
+
+| | Ohno | MN | Hubbard |
+|---|---|---|---|
+| sign changes per 1000 configurations, plain → bridge | 0.23 → 5.9 | 0.47 → 13 | 1.1 → 44 |
+| chains visiting both signs (of 40), plain → bridge | 12 → 32 | 27 → 39 | 33 → 40 |
+| $N_\mathrm{eff}/N$ | 0.978 | 0.964 | 0.915 |
+| error of $\langle s^2\rangle$ per configuration, bridge / plain | 0.26 | **1.78** | 0.59 |
+| $\langle s^2\rangle$ tail, plain: $\alpha$; largest deviation in 400 bins | 1.31; 30 IQR | 1.85; 18 | 1.49; 30 |
+| $\langle s^2\rangle$ tail, bridge numerator: $\alpha$; largest deviation in 400 bins | 2.16; 6 | **1.35; 19** | 2.40; 5 |
+
+- **Ohno, Hubbard** looked cured: light numerator tails, errors per configuration 4× and 1.7× smaller, energies
+  within 1–1.8 σ of plain. The check $\langle1/\Lambda\rangle_\Lambda=1/\langle s^2\rangle$ holds within 1.5 σ (all three).
+- **MN** was not: heavy tails, errors per configuration 1.8–2.9× *larger*. Its extreme bins had $\Lambda\le3$, near
+  a node that the bridge did not see; the multi-slice part explains why.
+
+## $\beta=24$ production: what the bridge did and did not do
+
+All 12 runs with the bridge ($\theta=\pi/2$, $b=0$), $10^5$ configurations each (40 chains $\times$ 2500). Tails:
+the reweighted $\langle s^2\rangle$ per bin (2000 bins of 50; at $N_t=288$, 10 000 bins of 10).
+
+| run, $N_t$ = 96 / 144 / 192 / 288 | sign changes per 1000 | $N_\mathrm{eff}/N$ | check, difference / σ | $\langle s^2\rangle$ numerator: $\alpha$; largest deviation (IQR) |
+|---|---|---|---|---|
+| Ohno | 4.6 / 4.2 / 4.0 / 3.0 | 0.980–0.984 | 0.1 / 1.0 / −0.5 / 0.7 | 1.33; 82 / 1.58; 36 / 1.45; 52 / 1.43; 278 |
+| MN | 14 / 11 / 12 / 11 | 0.961–0.967 | −1.4 / 1.1 / 0.1 / 1.0 | 1.33; 42 / 1.30; 292 / 1.13; 118 / 1.31; **7689** |
+| Hubbard | 42 / 38 / 37 / 35 | 0.916–0.924 | 1.1 / −1.1 / −0.2 / −0.2 | 1.26; 137 / 1.52; 27 / 1.59; 117 / 1.31; 153 |
+
+- **Sign sectors: solved.** Every chain visits both signs (Ohno $N_t=192$: 39 of 40). Reweighted fraction at
+  $-1$: 0.07–0.14 (Ohno), 0.29–0.38 (MN), 0.48–0.50 (Hubbard).
+- **Weights: cheap.** $N_\mathrm{eff}/N\ge0.92$; the built-in check holds in every run.
+- **Heavy tails: not solved.** With 2000 bins, every quadratic observable has $\alpha\approx1.1$–1.6 (variance
+  probably infinite); the $\beta=32$ test, with 400 bins, did not reach that far. Linear observables are fine
+  ($A_\mathrm{LUMO}$: $\alpha$ = 4.2–6.2).
+- **MN $N_t=288$:** one bin (c25, configurations 1980–1989) lies 7700 IQR from the median; its quadratic
+  observables were left out of the continuum fits.
+
+# The multi-slice bridge
+
+## The outlier: its near-zero mode avoids the bridge slice
+
+![](images/bridge_ms_profile.png){fig-align="center" width="100%"}
+
+MN, $\beta=24$, $N_t=288$, chain c25. $G(t,t)$ at every slice was recomputed from the stored $\phi$
+(`bridge_multislice_diag.py`, on Jureca): configurations 1975–1994, and 200 random configurations of the chain.
+
+## The outlier, read off
+
+- **(a)** In the outlier window, $\Lambda_t$ peaks at $\tau\approx8.3$ (slice 100 of 288), up to $1.1\cdot10^5$
+  (configuration 1980). At the bridge slice $\tau=0$ it is 0.6, the value of a typical configuration (3.5 for 1980,
+  where the tail of the profile wraps around $\beta$).
+  - Near this node the chain therefore sampled the plain weight. It stuck: configurations 1977 = 1978,
+    1980 = 1981 and 1984 = 1985.
+  - The weights $1/\Lambda_0$ did not suppress these configurations. The numerator of $\langle s^2\rangle$,
+    $\langle s^2\rangle_\phi/\Lambda_0$, reaches 1303 at configuration 1980; it is about 1 on a typical
+    configuration.
+- **(b)** On random configurations $\Lambda_0$ and $\Lambda_\mathrm{all}$ scatter around the same value (medians
+  0.61 and 0.62). In the outlier window they differ by up to three orders of magnitude.
+
+## Why one slice is not enough
+
+Near a node, at distance $s$ along its unit normal $\hat g$ in field space:
+
+$$
+y_i(t)=-\frac{\partial_{t,i}D}{D}\approx-\frac{\hat g_{t,i}}{s},\quad\sum_{t,i}\hat g_{t,i}^2=1
+\quad\Rightarrow\quad
+\Lambda_b\approx\cos^2\tfrac\theta2+\frac{4\sin^2\tfrac\theta2}{N_x}\,\frac{\lVert\hat g_b\rVert^2}{s^2},
+\quad
+\Lambda_\mathrm{all}\approx\cos^2\tfrac\theta2+\frac{4\sin^2\tfrac\theta2}{N_xN_t}\,\frac{1}{s^2}.
+$$
+
+- **Single slice.** It sees a node only through $\lVert\hat g_b\rVert^2$, the share of the normal at slice $b$.
+  - On average the share is $1/N_t$. But a near-zero mode is localized in $\tau$ (the outlier's: $\tau\approx2$–15
+    of 24), so for a node away from $b$ it is exponentially small.
+  - $\Lambda_b$ then stays at its floor until $s$ is tiny, and near the node the chain samples the plain weight
+    $\propto s^2$.
+  - $O/\Lambda_b$ can reach $C_O/\lVert\hat g_b\rVert^2$, where $O\approx C_O/s^2$.
+- **All slices.** Every node contributes $1/(N_xN_ts^2)$, wherever its normal points.
+- **The earlier power counting** ("Why the variance is now finite") assumed $\lVert\hat g_b\rVert\neq0$, the
+  generic case. The bound it gives is not uniform over the nodes, and the $\beta=24$ tails show that.
+- **Expected:** the effect grows with $\beta$ in units of the width of a mode, not with $N_t$. The prototype
+  (Test 2) shows the growth from $\beta=4$ to 8.
+
+## The multi-slice bridge
+
+$$
+\hat\Lambda_\mathrm{all}=\frac1{N_t}\sum_t\hat\Lambda(t)=\frac1{2N_xN_t}\sum_{t,i}\sum_{x=\pm1}e^{\,i\theta x\,q_i(t)},
+\qquad
+\Lambda_\mathrm{all}(\phi)=\cos^2\tfrac\theta2+\frac{4\sin^2\tfrac\theta2}{N_xN_t}\sum_{t,i}y_i(t)^2 .
+$$
+
+- **Terms.** There are $2N_xN_t$ terms $k=(t,i,x)$, with shifts $c_k=\theta x\,e_{t,i}$. The joint weight, the
+  marginal and the reweighting are those of the single-slice bridge, with $\Lambda\to\Lambda_\mathrm{all}$.
+  It is exact on the lattice: every term is an operator inserted at an existing slice.
+- **Heat bath.** It draws $(t,i,x)$ with probability $R_k/\sum R$. Every ratio comes from
+  $y=\tfrac12\partial S_f/\partial\phi$. The single-slice heat bath already computes that gradient, then uses only
+  slice $b$. **There is no extra cost.**
+- **Unchanged.** The bound $1/\Lambda_\mathrm{all}\le1/\cos^2(\theta/2)$ and the requirements (charge basis,
+  $\mu=0$, bipartite, real field). $\hat\Lambda_\mathrm{all}$ is time-translation invariant, so
+  $\langle\hat\Lambda_\mathrm{all}\rangle=\langle\hat\Lambda\rangle$.
+
+## At $\theta=\pi/2$, $\Lambda_\mathrm{all}$ is the configuration's local moment
+
+$$
+\Lambda_\mathrm{all}(\phi)=\frac1{N_xN_t}\sum_{t,i}\Big(\tfrac12+2\,y_i(t)^2\Big)=\langle s^2\rangle_\phi
+\qquad(\theta=\pi/2),
+$$
+
+This is the per-configuration estimator of $\langle s^2\rangle$, averaged over all slices and sites, as in the
+notebook.
+
+- **The local moment has no fluctuating numerator.** $\langle s^2\rangle_\phi/\Lambda_\mathrm{all}=1$ on every
+  configuration. So $\langle s^2\rangle=1/\langle1/\Lambda_\mathrm{all}\rangle_{\Lambda_\mathrm{all}}$, an average
+  of weights in $(0,2]$. The identity was checked on 220 perylene configurations (to $3\cdot10^{-16}$) and, relative
+  to $\Lambda_\mathrm{all}$, on every trajectory of the prototype (to $7\cdot10^{-16}$, with $\Lambda_\mathrm{all}$ up
+  to $3\cdot10^8$).
+- **The built-in check becomes an identity.** Checks that remain:
+  - each slice separately: $\langle\Lambda_t/\Lambda_\mathrm{all}\rangle/\langle1/\Lambda_\mathrm{all}\rangle=\langle s^2\rangle$
+    for every $t$, by time-translation invariance;
+  - the single-slice production;
+  - exact values on small systems.
+- **Other quadratic observables.** $S_\mathrm{AF}$, $S_\mathrm{CDW}$ and the other equal-time quadratic observables
+  diverge at the same slices as $y$, so their numerators $O/\Lambda_\mathrm{all}$ should stay bounded. The
+  prototype test below measures this. For two-body correlators, $G(t,t_0)\,G(t_0,t)$, I have only the power counting.
+
+## Test 1: perylene configurations
+
+MN, $\beta=24$, $N_t=288$, chain c25 (single-slice production); `bridge_multislice_diag.py`.
+
+| | single slice, $\Lambda_0$ | all slices, $\Lambda_\mathrm{all}$ |
+|---|---|---|
+| 200 random configurations: median / 99th percentile / maximum | 0.608 / 1.78 / 19.5 | 0.622 / 1.47 / 6.4 |
+| $\langle s^2\rangle$ numerator, the same configurations | 0.075 … 9.75 | 1 (to $3\cdot10^{-16}$) |
+| $\langle s^2\rangle$ numerator, outlier window 1975–1994 | up to 1303 | 1 |
+| $N_\mathrm{eff}/N$ | 0.970 (these 200); 0.967 (whole run) | about 0.95 (estimated) |
+
+- **Checks of the diagnostic.**
+  - Recomputed from $\phi$, $\Lambda_0$ equals the stored `config/bridge_lambda` to $2\cdot10^{-11}$.
+  - $\mathrm{Re}\,n=\tfrac12$ at every slice, to $4\cdot10^{-12}$.
+  - On random configurations the peak of $\Lambda_t$ falls anywhere in $\tau$ (quartiles 4.7, 9.4, 16.2), as time
+    translation invariance requires.
+- **$N_\mathrm{eff}/N$ of a multi-slice run** cannot be measured from a single-slice chain. Reweighting the 200
+  configurations by $\Lambda_\mathrm{all}/\Lambda_0$ gives 0.95. That reweighting itself keeps only 71 % of the
+  sample, so the estimate is rough. Either way, the weights cost about 5 %.
+
+## Test 2: 4-site chain, Python prototype
+
+$U=4$. Two settings: $\beta=4$, $N_t=16$, $N_\mathrm{md}=6$ (the chains of the earlier slides) and $\beta=8$,
+$N_t=32$, $N_\mathrm{md}=10$ (acceptance 0.70). Per kind, 2 chains of $10^5$ trajectories, combined; bins of 500.
+
+| | plain | single slice | multi-slice | exact |
+|---|---|---|---|---|
+| $\beta=4$: $S_\mathrm{AF}$ / $S_\mathrm{CDW}$ / $\langle s^2\rangle$ | 1.882(81) / 0.219(87) / 0.897(47) | 1.8516(67) / 0.2516(74) / 0.8616(26) | 1.8522(49) / 0.2517(54) / 0.8620(19) | 1.8540 / 0.2521 / 0.8626 |
+| $\beta=4$: $S_\mathrm{AF}$ numerator, $\alpha$; largest deviation | sticks (542 rejections); 68 IQR | 2.5; 47 | 5.4; 12 | |
+| $\beta=8$: $S_\mathrm{AF}$ / $S_\mathrm{CDW}$ / $\langle s^2\rangle$ | **1.953(13) / 0.333(12) / 0.8350(46)** | 1.9997(83) / 0.2748(82) / 0.8529(30) | 2.0037(40) / 0.2737(40) / 0.8543(14) | 2.0064 / 0.2709 / 0.8551 |
+| $\beta=8$: numerator $\alpha$; largest deviation, $S_\mathrm{AF}$ \| $S_\mathrm{CDW}$ | 2.8; 77 \| 2.8; 74 | **1.9; 103** \| 2.0; 88 | 6.9; 15 \| 27; 3 | |
+| $N_\mathrm{eff}/N$ at $\beta=4$ / 8 | | 0.79 / 0.79 | 0.84 / 0.87 | |
+
+- **Unbiased:** every multi-slice estimate is within 1.2 σ of the exact value, per chain and combined.
+- **Errors:** at equal cost per trajectory, the multi-slice errors are 0.73× (β = 4) and 0.48× (β = 8) the
+  single-slice ones, i.e. 1.9× and 4.3× fewer trajectories for the same error.
+- **Tails:** $S_\mathrm{AF}$ numerator $\alpha$ from $\beta=4$ to 8: single slice 2.5 → 1.9 (infinite variance
+  below 2), multi-slice 5.4 → 6.9. The $\langle s^2\rangle$ numerator is 1 to $2\cdot10^{-15}$.
+
+## Test 2: the numerator tails
+
+![](images/bridge_ms_tails.png){fig-align="center" width="100%"}
+
+The distribution of the per-trajectory quantity that is averaged, for $S_\mathrm{AF}$. The plain chain follows the
+target's $y^{-3/2}$ until it sticks ($\beta=4$) or stays away from the nodes. The single-slice numerator has a
+heavier tail at $\beta=8$ than at $\beta=4$. The multi-slice numerator falls off fast at both.
+
+- **Plain at $\beta=8$** is 4–5 σ off (low for $S_\mathrm{AF}$ and $\langle s^2\rangle$) with 36–40 sign changes per
+  chain; both bridges change sign about 6500 times.
+- **Checks:** $\Lambda_\mathrm{all}=\langle s^2\rangle_\phi$ to $8\cdot10^{-16}$ (relative) on every trajectory.
+  The per-slice check at slice 0 gives 0.8609(24) (β = 4) and 0.8531(27) (β = 8), against the exact 0.8626 and
+  0.8551.
+
+## What implementing it would change
+
+| part | change |
+|---|---|
+| `MarkovChain/bridgeLink.tpp` | `slice: all`: the ratios of all $(t,i,x)$ from the same gradient, the heat bath over $2N_xN_t$ terms, the shift at $(t,i)$ |
+| PPP driver | yml `HMC: bridge: {theta: ..., slice: all}`; recorded in `Meta/bridge/slice` (for example as $-1$); a chain keeps it for life, as now |
+| `ReducedObservables` (`measure_PPP`, on the fly) | $\Lambda_\mathrm{all}$ per configuration. It already holds $G(t,t)$ at every slice for the equal-time observables and takes $\Lambda$ from slice $b$ |
+| `ppp_reduce.py` | the same from the stored diagonal propagators; only for chains that still have them |
+| `ppp_analysis`, notebook | unchanged: they read `weights` and `config/bridge_lambda` |
+| tests | C++ ratios at random slices against determinant ratios; the 4-site chain through the driver against the prototype and exact values; a short MN $N_t=288$ run against the single-slice production |
+
+- The existing single-slice chains cannot be converted: their configurations were drawn from $w\Lambda_0$, and the
+  configurations near nodes that $\Lambda_0$ does not see are exactly the ones that cause the tails. A multi-slice
+  ensemble needs new production.
+
+# Outlook
+
 ## Open questions
 
-- **Perylene.** How $1/\Lambda$ is distributed there ($N_\mathrm{eff}$), and whether $\theta=\pi/2$ is a good
-  choice, has not been tested.
-- **Excursions.** Does the bridge also remove the slow excursions of $S_f$ and the stuck stretches seen in the
-  perylene production? It removes sticking on the 4-site chain, but this is untested on perylene.
+- **Perylene weights (answered).** $N_\mathrm{eff}/N=0.92$–0.98 at $\theta=\pi/2$ in every run, so the weights are
+  cheap.
+- **Excursions (partly answered).**
+  - The sign sectors are solved: every chain visits both signs.
+  - The chain-to-chain $\chi^2$ of $s_F$ in the $\beta=32$ test fell from 15 to 4.6 (Ohno) and from 12 to 6 (MN).
+    That is still above 1.
 - **Spikes in $\Delta H$** are not reduced on the 4-site chain (spike fraction 0.28 vs 0.25), because every term
   still has nodes. The bridge removes sticking, not spikes.
-- **The $N_t=256$ ensembles are plain.** Their two-body correlators carry the infinite-variance problem;
-  their single-particle correlators do not. Wan & Zhang's retrospective error correction needs only $\alpha$,
-  which the notebook's tail diagnostic estimates, so it could be applied to them.
-- **A time-averaged bridge** (over all slices $b$) would probably give a smoother $\Lambda$. Not tried.
+- **Multi-slice bridge.**
+  - Does it remove the perylene tails? Only new production can show that.
+  - Are the numerators of the two-body correlators bounded? So far there is only power counting.
+  - Is $\theta=\pi/2$ the right choice? It is the natural one, since it makes $\langle s^2\rangle$ exact per
+    configuration.
+- **The plain $N_t=256$ ensembles and the single-slice $\beta=24$ ensembles** both have quadratic tails with
+  $\alpha\approx1.1$–1.8. Wan & Zhang's retrospective error correction needs only $\alpha$, which the notebook's tail
+  diagnostic estimates, so it could be applied to both.
 
 ## Reproducing the figures
 
@@ -488,7 +701,24 @@ python bridge_proto.py exact CHAINS/exact.npy
 python bridge_figures.py CHAINS                    # images/bridge_*.png and the numbers in this deck
 ```
 
+Multi-slice part:
+
+```sh
+for s in 1 2; do for k in plain bridge bridge_all; do
+    python bridge_proto.py run $k 100000 $s B4/${k}_$s.npz                                  # beta 4, Nt 16
+    python bridge_proto.py run $k 100000 $s B8/${k}_$s.npz --beta 8 --nt 32 --nmd 10
+done; done
+python bridge_proto.py exact B4/exact.npy
+python bridge_proto.py exact B8/exact.npy --beta 8 --nt 32
+python bridge_multislice_figures.py --chains B4 B8     # images/bridge_ms_tails.png and the numbers of "Test 2"
+# on Jureca, in b24_Nt288/ (needs only phi, so it works on the stripped chain files):
+c=perylene_mataga-nishimoto_b24_Nt288_c25
+python bridge_multislice_diag.py perylene_mataga-nishimoto_b24_Nt288/$c.yml reduced_b10/$c.h5 1975 1994 -o mn288_c25_outlier.npz
+python bridge_multislice_diag.py perylene_mataga-nishimoto_b24_Nt288/$c.yml reduced_b10/$c.h5 --random 200 --seed 1 -o mn288_c25_random.npz
+python bridge_multislice_figures.py --diag .           # images/bridge_ms_profile.png and the numbers of "Test 1"
+```
+
 - `bridge_proto.py` is independent of NSL: it is a dense-matrix HMC with exact Fourier acceleration and
-  $N_\mathrm{md}=6$, $T=\pi/2$.
+  $N_\mathrm{md}=6$, $T=\pi/2$ (the $\beta=8$ chains use $N_\mathrm{md}=10$).
 - The chains are not kept in git. Without `CHAINS`, only `bridge_ratios.png` and `bridge_node_cut.png` are
   made.
