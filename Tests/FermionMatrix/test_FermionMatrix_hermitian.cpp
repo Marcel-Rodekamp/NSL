@@ -2,6 +2,22 @@
 #include <iomanip>
 #include <limits>
 
+//! A is Hermitian up to rounding: max |A - A^H| <= 10^(1 - matchingDigits) * max(1, max |A|).
+/*!
+ * The tolerance is relative to the largest entry, not to each entry: the rounding errors of the products in
+ * M M^dagger and M^dagger M are relative to the largest terms. E.g. on the complete lattice at delta = beta/nt = 1,
+ * e^{delta K} has entries up to e^{nx - 1}, and the small entries of M^dagger M carry absolute errors of
+ * u e^{2(nx - 1)}, far above u times their own size.
+ * */
+template<typename Type>
+bool hermitian(const NSL::Tensor<Type> & A, const NSL::Tensor<Type> & AH, int matchingDigits){
+    const double diff  = NSL::LinAlg::max(NSL::LinAlg::abs(A - AH));
+    const double scale = std::max(1.0, double(NSL::LinAlg::max(NSL::LinAlg::abs(A))));
+    UNSCOPED_INFO(fmt::format("max |A - A^H| = {:.3e}, max |A| = {:.3e}, tolerance {:.1e} * max(1, max |A|)",
+                              diff, scale, std::pow(10., 1 - matchingDigits)));
+    return diff <= std::pow(10., 1 - matchingDigits) * scale;
+}
+
 // We rely on the accuracy of the application of M for testing.
 // If M is implemented correctly and M_dense is implemented correctly we can
 // use the dense implementation to check that Mdagger is implemented correctly.
@@ -78,7 +94,7 @@ void test_FermionMatrix_MMdagger_hermitian(const NSL::size_t nt, LatticeType & L
 	NSL::Tensor<Type> MMdaggerH = MMdagger.T(0,2).H(1,3);
 
     REQUIRE(MMdaggerH.data() != MMdagger.data());
-	REQUIRE(almost_equal(MMdagger, MMdaggerH, std::numeric_limits<Type>::digits10).all());
+	REQUIRE(hermitian(MMdagger, MMdaggerH, std::numeric_limits<Type>::digits10));
 }
 
 
@@ -123,7 +139,7 @@ void test_FermionMatrix_MdaggerM_hermitian(const NSL::size_t nt, LatticeType & L
         )
     );
 
-	REQUIRE(almost_equal(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10-2).all());
+	REQUIRE(hermitian(MdaggerM, MdaggerMH, std::numeric_limits<Type>::digits10-2));
     REQUIRE(MdaggerMH.data() != MdaggerM.data());
 }
 

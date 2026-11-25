@@ -161,14 +161,19 @@ void test_CG_randomMatrix(const typename NSL::RT_extractor<Type>::type eps, NSL:
 
     NSL::Tensor<Type> b(V);b.rand();
 
+    // CG needs a Hermitian (symmetric) positive-definite matrix: R^dagger R / V + 1 has its eigenvalues in
+    // [1, ~V/4 + 1]. (The Hermitian part (R + R^dagger)/2 of a random R, used before, is indefinite: one
+    // eigenvalue ~V/2, the others spread around 0; CG then failed in about half of the runs.)
     NSL::Tensor<Type> mat(V,V);mat.rand();
     if (NSL::is_complex<Type>()){
         // hermitian => transpose and complex conjugate
-        mat = 0.5*(mat.H() + mat);
+        mat = NSL::LinAlg::mat_mul(mat.H(), mat);
     } else {
         // symmetric => transpose
-        mat = 0.5*(mat.T() + mat);
+        mat = NSL::LinAlg::mat_mul(mat.T(), mat);
     }
+    mat /= static_cast<NSL::RealTypeOf<Type>>(V);
+    mat += NSL::Matrix::Identity<Type>(V);
 
     NSL::LinAlg::CG<Type> cg( 
         [&mat](const NSL::Tensor<Type> & x) -> NSL::Tensor<Type> {

@@ -52,6 +52,16 @@ NSL::Tensor<Type> BiCGStab<Type>::solve_(const NSL::Tensor<Type> & b){
         w_ = r_;
         w_ -= omega * As_; 
         
+        // the intermediate residual w = b - M(x + omega s) may already be small enough; then x + omega s is the
+        // solution and the stabilizing step below is skipped: it divides by (Aw, Aw), which is 0 when w vanishes
+        // (e.g. a 1x1 system, solved exactly by the first half step)
+        const NSL::RealTypeOf<Type> wsqr = NSL::real( NSL::LinAlg::inner_product(w_,w_) );
+        if (wsqr <= errSq_) {
+            x_ += omega * s_;
+            NSL::Logger::info("BiCGStab Converged with precision: {} < {} after {} steps", NSL::LinAlg::sqrt(wsqr),NSL::LinAlg::sqrt(errSq_),count);
+            return x_;
+        }
+
 	Aw_ = this->M_(w_); 
         Type chi = NSL::LinAlg::inner_product(Aw_, w_) / NSL::real( NSL::LinAlg::inner_product(Aw_,Aw_) );
         r_ = w_;

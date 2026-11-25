@@ -17,8 +17,10 @@ std::tuple<NSL::Tensor<Type>,NSL::Tensor<Type>,NSL::Tensor<Type>> udt(const NSL:
     // Avoid pre-allocating zeros_like(t) — qr() already allocates its own output tensors.
     auto [Q, R] = NSL::LinAlg::qr( t );
     NSL::Tensor<Type> D = NSL::LinAlg::diagonal(R);
-    // R <- diag(1/D) R, the V of the QDV decomposition, without forming diag(1/D)
-    R *= (1./D).expand_view(D.shape(D.dim()-1), R.dim()-1);
+    // R <- diag(1/D) R, the V of the QDV decomposition, without forming diag(1/D). The 1 has the precision of Type:
+    // a double 1. makes 1/D a complex<double> tensor for Type = complex<float>, and R *= of a wider type leaves R
+    // unchanged (Tensor's compound operators compute in a converted copy then)
+    R *= (NSL::RealTypeOf<Type>(1)/D).expand_view(D.shape(D.dim()-1), R.dim()-1);
     return std::make_tuple( std::move(Q), std::move(D), std::move(R) );
 }
 

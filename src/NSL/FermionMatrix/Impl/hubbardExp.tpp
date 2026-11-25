@@ -347,8 +347,9 @@ NSL::Tensor<Type> NSL::FermionMatrix::HubbardExp<Type,LatticeType>::gradLogDetM(
     
       // this gives (1+A^-1)^-1  (see eq. 2.31 of Jan-Lukas' notes in hubbardFermionAction.pdf)
       std::tie( invAp1 , V ) = NSL::LinAlg::eig(Fkt(NSL::size_t(std::pow(2,N)-1),NSL::Ellipsis()));  // calculate eigenvalue decomposition of A^{-1}
-      invAp1 += 1.;
-      invAp1 = 1./invAp1;
+      // the 1 has the precision of Type (a double 1. would leave a complex<float> invAp1 unchanged, see LinAlg::udt)
+      invAp1 += NSL::RealTypeOf<Type>(1);
+      invAp1 = NSL::RealTypeOf<Type>(1)/invAp1;
       invAp1F_(0,NSL::Ellipsis()) = NSL::LinAlg::mat_mul( V , NSL::LinAlg::solve( V,NSL::LinAlg::diag(invAp1),false ) );  // V * (1/(1+A^{-1})) * V^{-1}       
 
       // first do t=Nt-1 case

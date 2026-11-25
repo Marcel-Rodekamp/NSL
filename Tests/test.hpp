@@ -56,15 +56,19 @@
  *  \param a,b: Arguments which are compared
  *  \param factor: optional factor with which the machine precision can be scaled. Default is 1.
  *
- *  This is a relative compare. This means it checks for 
+ *  This is a relative compare. This means it checks for
  *  \f[
- *      \left\vert 1 - \frac{a}{b} \right\vert \leq \text{factor} \cdot \epsilon<T>
+ *      \left\vert a - b \right\vert \leq \text{factor} \cdot \epsilon<T> \left\vert b \right\vert
  *  \f]
+ *  or a == b. The product form (instead of |1 - a/b|) and a == b accept b = 0 and infinite b: Tensor::rand draws an
+ *  exact 0 with probability 2^-24 per float element, which made 0/0 or inf/inf fail a few percent of the runs of
+ *  test_Tensor_operatorMultiplication.
  *
  * */
 template<NSL::Concept::isFloatingPoint T>
 bool compare_floating_point(T a, T b, typename NSL::RT_extractor<T>::type factor = 10){
-    return std::abs(static_cast<T>(1) - a/b) <= factor*std::numeric_limits<typename NSL::RT_extractor<T>::type>::epsilon();
+    return a == b
+        || std::abs(a - b) <= factor*std::numeric_limits<typename NSL::RT_extractor<T>::type>::epsilon()*std::abs(b);
 }
 
 //! compare two integer numbers a,b
@@ -128,15 +132,27 @@ bool almost_equal(NSL::complex<Type> x, NSL::complex<Type> y, int matchingDigits
             || std::fabs(x.imag()-y.imag()) < std::numeric_limits<Type>::min() );
 }
 
+//! The elements of t in row-major order: a contiguous copy with lazy conjugation and negation resolved.
+/*!
+ * Tensor::operator[](i) addresses the underlying memory. A view or a copy that keeps the strides of its source
+ * (e.g. Tensor::T(d0,d1) and Tensor::H(d0,d1) clone the transposed view, keeping its strides) stores its elements
+ * in another order than its shape suggests, so the tensors are first brought into the same layout.
+ * */
+template<typename Type>
+NSL::Tensor<Type> rowMajor(const NSL::Tensor<Type> & t){
+    return NSL::Tensor<Type>(torch::Tensor(t).resolve_conj().resolve_neg().contiguous());
+}
+
+//! Element-wise almost_equal of two tensors of the same shape (logical elements, whatever the memory layout)
 template<typename Type>
 NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int matchingDigits = std::numeric_limits<Type>::digits10){
     assertm( y.shape() == x.shape(), "To be almost equal two tensors must be the same shape.");
 
-    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
-    result = false;
-    NSL::size_t elements = x.numel();
+    const NSL::Tensor<Type> xr = rowMajor(x), yr = rowMajor(y);
+    NSL::Tensor<bool> result(torch::zeros(torch::Tensor(xr).sizes(), torch::TensorOptions().dtype(torch::kBool)));
+    NSL::size_t elements = xr.numel();
     for(NSL::size_t i = 0; i < elements; i++){
-        result[i] = almost_equal(x[i], y[i], matchingDigits);
+        result[i] = almost_equal(xr[i], yr[i], matchingDigits);
     }
 
     return result;
@@ -144,11 +160,11 @@ NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, NSL::Tensor<Type> y, int mat
 
 template<typename Type>
 NSL::Tensor<bool> almost_equal(NSL::Tensor<Type> x, Type y, int matchingDigits = std::numeric_limits<Type>::digits10){
-    NSL::Tensor<bool> result(static_cast<NSL::Tensor<typename NSL::RT_extractor<Type>::value_type>>(x));
-    result = false;
-    NSL::size_t elements = x.numel();
+    const NSL::Tensor<Type> xr = rowMajor(x);
+    NSL::Tensor<bool> result(torch::zeros(torch::Tensor(xr).sizes(), torch::TensorOptions().dtype(torch::kBool)));
+    NSL::size_t elements = xr.numel();
     for(NSL::size_t i = 0; i < elements; i++){
-        result[i] = almost_equal(x[i], y, matchingDigits);
+        result[i] = almost_equal(xr[i], y, matchingDigits);
     }
 
     return result;

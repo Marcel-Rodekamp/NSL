@@ -21,11 +21,14 @@ COMPLEX_NSL_TEST_CASE("Tensor 2D Pauli-Matrix Exponentiation", "[Tensor,2D,Pauli
 template<NSL::Concept::isComplex Type>
 void test_Tensor_mat_exp(NSL::size_t Nx){
 
-    // This tests to see if exp(A)*exp(-A) = I
-    INFO(fmt::format("This case is expected to fail if Nx > 30; (Nx={}), see documentation of Tensor::mat_exp",Nx));
+    // This tests to see if exp(A)*exp(-A) = I for a random Hermitian A normalized to a norm of order 1.
+    // Without the 1/Nx the largest eigenvalue of (R + R^H)/2 (entries of R uniform in [0,1)) is ~Nx/2: then
+    // exp(A)*exp(-A) cancels terms of size exp(Nx/2) down to 1, which no floating-point product can do for Nx >~ 30
+    // (cond(exp(A)) = exp(2||A||)); that is not a property of mat_exp.
+    INFO(fmt::format("Nx={}",Nx));
     NSL::Tensor<Type> A(Nx,Nx); A.rand();
     A += A.H();
-    A/=2;
+    A /= static_cast<NSL::RealTypeOf<Type>>(2*Nx);
  
     NSL::Tensor<Type> B(-1*A,true);
 
