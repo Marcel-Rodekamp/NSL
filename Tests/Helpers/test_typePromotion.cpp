@@ -38,8 +38,36 @@ NSL_TEST_CASE("Tensor Copy Construct Type Conversion", "[Copy Constructor, Tenso
     typeConversionCopyConstructTensor<TestType,NSL::complex<double>>();
 }
 
+// whether NSL::Tensor<Left> op= Right compiles (a requires-expression is a test only in a template)
+template<typename Left, typename Right> constexpr bool addAssignable = requires(NSL::Tensor<Left> a, Right b){ a += b; };
+template<typename Left, typename Right> constexpr bool mulAssignable = requires(NSL::Tensor<Left> a, Right b){ a *= b; };
+template<typename Left, typename Right> constexpr bool divAssignable = requires(NSL::Tensor<Left> a, Right b){ a /= b; };
+
+TEST_CASE("Tensor compound assignment: bool and integral tensors", "[Operator, Tensor, Type, Type Conversion]"){
+    // a bool tensor takes only bool operands and cannot be divided
+    STATIC_REQUIRE( addAssignable<bool, NSL::Tensor<bool>> );
+    STATIC_REQUIRE( !addAssignable<bool, NSL::Tensor<int>> );
+    STATIC_REQUIRE( !mulAssignable<bool, int> );
+    STATIC_REQUIRE( !divAssignable<bool, bool> );
+    STATIC_REQUIRE( !divAssignable<bool, NSL::Tensor<bool>> );
+    STATIC_REQUIRE( !divAssignable<int, double> );
+    // integral tensors divide as in C++, truncated towards zero
+    NSL::Tensor<int> T(4);
+    T[0] = 7; T[1] = -7; T[2] = 6; T[3] = -6;
+    T /= 2;
+    REQUIRE( T[0] == 3 );
+    REQUIRE( T[1] == -3 );
+    REQUIRE( T[2] == 3 );
+    REQUIRE( T[3] == -3 );
+    NSL::Tensor<std::int64_t> D(4);
+    D = 4;
+    T /= D;
+    REQUIRE( T[0] == 0 );
+    REQUIRE( T[1] == 0 );
+}
+
 NSL_TEST_CASE("Tensor Operator Type Conversion", "[Operator, Tensor, Type, Type Conversion]"){
-    if (!std::is_same_v<TestType,bool>){
+    if constexpr (!std::is_same_v<TestType,bool>){
         typeConversionTensorOperators<TestType, int>();
         typeConversionTensorOperators<TestType, float>();
         typeConversionTensorOperators<TestType, double>();
@@ -188,23 +216,45 @@ class Tester {
 
     }
 
-    template<NSL::Concept::isNumber ReturnType = NSL::CommonTypeOf<Type1,Type2> >
-    void testOpEq(auto callable){
-        NSL::Tensor<Type1> T1(1);
-        T1[0] = static_cast<Type1>(1); 
-        
-        NSL::Tensor<Type2> T2(1);
-        T2[0] = static_cast<Type2>(1); 
+    //! Compound assignment `op` (a op= b) in both directions, Type1 op= Type2 and Type2 op= Type1
+    /*!
+     * Compound assignments work in place: the result is the left tensor, of the left tensor's type and sharing
+     * its data, which hold the value `exact(a, b)` of a op b computed in the left type (6 op 4 for all types; an
+     * integral tensor divides as in C++, truncated). A right operand of a higher kind than the left one
+     * (bool < integral < floating point < complex, `NSL::Concept::isKindPreserving`) does not compile, as a
+     * tensor or as a scalar. `op` must be SFINAE friendly (trailing decltype return type).
+     * */
+    void testOpEq(auto op, auto exact){
+        this->checkOpEq<Type1,Type2>(op, exact);
+        this->checkOpEq<Type2,Type1>(op, exact);
+    }
 
-        Type1 V1 = static_cast<Type1>(1);
-        Type2 V2 = static_cast<Type2>(1);
+    template<NSL::Concept::isNumber Left, NSL::Concept::isNumber Right>
+    void checkOpEq(auto op, auto exact){
+        INFO(std::string("left type: ") + typeid(Left).name() + ", right type: " + typeid(Right).name());
+        constexpr bool allowed = NSL::Concept::isKindPreserving<Right,Left>;
+        REQUIRE( std::is_invocable_v<decltype(op), NSL::Tensor<Left>&, const NSL::Tensor<Right>&> == allowed );
+        REQUIRE( std::is_invocable_v<decltype(op), NSL::Tensor<Left>&, const Right&> == allowed );
 
-        this->testConversion<NSL::Tensor<ReturnType>>( callable(T1,T2) ); 
-        this->testConversion<NSL::Tensor<ReturnType>>( callable(T2,T1) ); 
-                                                   
-        this->testConversion<NSL::Tensor<ReturnType>>( callable(T2,V1) );
-        this->testConversion<NSL::Tensor<ReturnType>>( callable(T1,V2) );
+        if constexpr (allowed) {
+            const Left expected = exact(static_cast<Left>(6), static_cast<Left>(4));
 
+            NSL::Tensor<Left> T1(1);
+            T1[0] = static_cast<Left>(6);
+            NSL::Tensor<Right> T2(1);
+            T2[0] = static_cast<Right>(4);
+            auto resultTensor = op(T1, T2);
+            this->testConversion<NSL::Tensor<Left>>( resultTensor );
+            REQUIRE( resultTensor.data() == T1.data() );
+            REQUIRE( T1[0] == expected );
+
+            NSL::Tensor<Left> S1(1);
+            S1[0] = static_cast<Left>(6);
+            auto resultScalar = op(S1, static_cast<Right>(4));
+            this->testConversion<NSL::Tensor<Left>>( resultScalar );
+            REQUIRE( resultScalar.data() == S1.data() );
+            REQUIRE( S1[0] == expected );
+        }
     }
 
     void testLinAlg(){
@@ -261,13 +311,11 @@ void typeConversionTensorOperators(){
         [](auto T1, auto T2){return T1/T2;}
     );
 
-    tester.testOpEq([](auto T1, auto T2){return T1+=T2;});
-    tester.testOpEq([](auto T1, auto T2){return T1-=T2;});
-    tester.testOpEq([](auto T1, auto T2){return T1*=T2;});
-    // devision comes with atleast float 
-    tester.template testOpEq<NSL::CommonTypeOf<NSL::CommonTypeOf<Type1,Type2>, float>>(
-        [](auto T1, auto T2){return T1/=T2;}
-    );
+    // compound assignments keep the type of the left operand
+    tester.testOpEq([](auto & a, const auto & b) -> decltype(a += b) {return a += b;}, [](auto a, auto b){return a + b;});
+    tester.testOpEq([](auto & a, const auto & b) -> decltype(a -= b) {return a -= b;}, [](auto a, auto b){return a - b;});
+    tester.testOpEq([](auto & a, const auto & b) -> decltype(a *= b) {return a *= b;}, [](auto a, auto b){return a * b;});
+    tester.testOpEq([](auto & a, const auto & b) -> decltype(a /= b) {return a /= b;}, [](auto a, auto b){return a / b;});
     
     tester.testLinAlg();
 

@@ -82,6 +82,29 @@ concept isFloatingPoint = requires(T t) {
     requires isComplex<T> || std::is_floating_point_v<T>;
 };
 
+namespace Detail {
+//! The kind of a number type: 0 bool, 1 integral, 2 floating point, 3 complex
+template<typename T>
+constexpr int numberKind(){
+    if constexpr (std::is_same_v<T,bool>) return 0;
+    else if constexpr (std::is_integral_v<T>) return 1;
+    else if constexpr (std::is_floating_point_v<T>) return 2;
+    else return 3;
+}
+} // namespace Detail
+
+//! Concept to check that a number of type `From` can be stored in a `To` without losing its kind
+/*!
+ * The kinds are ordered bool < integral < floating point < complex. `From` satisfies the concept if its kind is
+ * not higher than the kind of `To`: no imaginary part, fractional part or integer value is discarded. Precision
+ * may be lost within a kind (double to float, complex<double> to complex<float>).
+ * This is the rule for the right operand of the compound assignments (+=, -=, *=, /=) of `NSL::Tensor<To>`
+ * (and torch's `canCast`).
+ * */
+template<typename From, typename To>
+concept isKindPreserving = isNumber<From> && isNumber<To>
+    && (Detail::numberKind<From>() <= Detail::numberKind<To>());
+
 //! Concept to check that `D` is derived from `B`
 /*!
  * All kind of inheritances (public,protected,private) is allowed.

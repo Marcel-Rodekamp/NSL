@@ -89,8 +89,8 @@ struct TypePromotion<TypeLeft,NSL::Tensor<TypeRight>>{
  *  |<B>bool           </B>|`      bool     `|`      int      `|`     float     `|`     double    `|` complex<float>`|`complex<double>`|
  *  |<B>int            </B>|`     int       `|`      int      `|`     float     `|`     double    `|` complex<float>`|`complex<double>`| 
  *  |<B>float          </B>|`     float     `|`     float     `|`     float     `|`     double    `|` complex<float>`|`complex<double>`|
- *  |<B>double         </B>|`     double    `|`     double    `|`     double    `|`     double    `|` complex<float>`|`complex<double>`|
- *  |<B>complex<float> </B>|` complex<float>`|` complex<float>`|` complex<float>`|` complex<float>`|` complex<float>`|`complex<double>`|
+ *  |<B>double         </B>|`     double    `|`     double    `|`     double    `|`     double    `|`complex<double>`|`complex<double>`|
+ *  |<B>complex<float> </B>|` complex<float>`|` complex<float>`|` complex<float>`|`complex<double>`|` complex<float>`|`complex<double>`|
  *  |<B>complex<double></B>|`complex<double>`|`complex<double>`|`complex<double>`|`complex<double>`|`complex<double>`|`complex<double>`|
  * 
  * This table can be read in the following way. Choose the two operating 
@@ -103,6 +103,10 @@ struct TypePromotion<TypeLeft,NSL::Tensor<TypeRight>>{
  *
  * It is also applied for `NSL::Tensor` where the common type of two tensors 
  * is the tensor of common scalar type.
+ *
+ * The binary operators (+, -, *, /) of `NSL::Tensor` return the common type. The compound assignments (+=, -=, *=,
+ * /=) work in place and keep the type of the left tensor; their right operand must not be of a higher kind
+ * (`NSL::Concept::isKindPreserving`).
  *
  * The struct `NSL::TypePromotion<TypeLeft,TypeRight>` encodes this rules.
  * */
