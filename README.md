@@ -390,3 +390,9 @@ NSL can now simulate at room temperature!!!  To perform such simulations, one ne
 stability: QR
 ```
 If no stability flag is given in the yaml file, then the default stability method will be **QR**. Note that the **QR** method is a factor of 7-8 slower than **DIRECTINVERSE**.  **SVD** is even slower. When in doubt, it is recommended to always use **QR**.
+
+## Conventions
+
+* [Particle/hole basis and the sublattice sign](Documentation/Conventions/ParticleHoleBasis.md): how NSL defines
+  holes, which of spin and isospin carries the sublattice sign as a result, and the two-fermion operators of definite
+  isospin and spin.
