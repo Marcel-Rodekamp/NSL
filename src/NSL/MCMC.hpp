@@ -6,5 +6,6 @@
 #include "MarkovChain/RadialHMC.tpp"
 #include "MarkovChain/autotune.tpp"
 #include "MarkovChain/bridgeLink.tpp"
+#include "MarkovChain/modeFlip.tpp"
 
 #endif // NSL_MARKOV_STATE_HPP

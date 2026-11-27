@@ -33,7 +33,16 @@
  *  `slice: all` is the multi-slice bridge (the bridge averaged over all time slices, Lambda from the equal-time
  *  propagator at every slice): it also bounds the weights of configurations whose near-zero mode avoids slice 0.
  *  The chain records the setting in <name>/Meta/bridge/{theta, slice}, with slice the string "all" for the
- *  multi-slice bridge, and keeps it for life.
+ *  multi-slice bridge, and keeps it for life. Without `HMC: bridge:` there is no bridge.
+ *
+ *  Mode flips (optional): `HMC: mode flips: N` adds N Metropolis proposals per combined update step, after the
+ *  radial updates and before the HMC trajectory, each reversing one eigenvector of V on every time slice
+ *  (NSL::MCMC::ModeFlip, src/NSL/MarkovChain/modeFlip.tpp). They leave the gauge action unchanged and change the
+ *  sign sector of det M_p far more often per unit cost than HMC. For Hubbard (V = U 1) the modes are the sites
+ *  (the global moves of Scalettar, Noack and Singh). Exact for every N, with or without the bridge link (with it,
+ *  the flips are accepted on the shifted action); no reweighting. 0 or no entry: off, and the chain is the same as
+ *  without the option. The setting is recorded in <name>/Meta/modeFlips/{proposals, modes} and may change between
+ *  runs of a chain (the target does not); the acceptance is logged at the end of a run.
  *
  *  Measurements: Executables/Hubbard/propagator with `measurements: basis: charge`
  *  (position-space and/or momentum-projected propagators).
@@ -288,6 +297,37 @@ static int runPPP(int argc, char* argv[]){
 
     NSL::Action::Action S = S_gauge + S_fermion;
 
+    // Mode flips (optional, `HMC: mode flips: N`): N Metropolis flips of an eigenvector of V per update step, after the
+    // radial updates (src/NSL/MarkovChain/modeFlip.tpp). N = 0 is off: no random numbers are drawn.
+    const NSL::size_t modeFlips = yml["HMC"]["mode flips"] ? yml["HMC"]["mode flips"].as<NSL::size_t>() : NSL::size_t(0);
+    NSL::MCMC::ModeFlip<Type> flips(NSL::MCMC::interactionModes(V), modeFlips);
+    params["mode flips"] = modeFlips;
+    if (modeFlips > 0) {
+        const bool sites = torch::equal(flips.modes(), torch::eye(flips.modes().size(0), torch::kDouble));
+        NSL::Logger::info("Mode flips: {} proposals per update step; modes: {}", modeFlips,
+                          sites ? "the sites (V is a multiple of the identity)" : "the eigenvectors of V, largest eigenvalue first");
+    }
+    {
+        NSL::Stop::WriteGuard writing;
+        const std::string node = BASENODE + "/Meta/modeFlips";
+        h5.deleteData(node);
+        HighFive::File h5file = h5.getFile();
+        h5file.createDataSet<NSL::size_t>(node + "/proposals", HighFive::DataSpace::From(modeFlips)).write(modeFlips);
+        NSL::Tensor<double> modes(flips.modes());
+        h5.write(modes, node + "/modes");
+    }
+    // the acceptance of the flips of this run (the counts are shared by the copy inside the HMC)
+    auto logFlips = [&flips]() {
+        const auto & st = flips.stats();
+        if (st.proposed == 0) { return; }
+        std::string perMode;
+        for (std::size_t k = 0; k < st.proposedPerMode.size(); ++k) {
+            perMode += fmt::format(" {:.2f}", st.proposedPerMode[k] ? double(st.acceptedPerMode[k]) / double(st.proposedPerMode[k]) : NAN);
+        }
+        NSL::Logger::info("Mode flips: {} proposed, acceptance {:.4f}, {} failed; per mode:{}", st.proposed,
+                          st.acceptance(), st.failed, perMode);
+    };
+
     // seed (not for the legacy protocol: autotuner.py calls this executable once per
     // trajectory, a fixed seed would repeat the same momenta every time)
     if (yml["HMC"]["seed"]) {
@@ -317,7 +357,7 @@ static int runPPP(int argc, char* argv[]){
 
     // Everything below only depends on the type of the integrator
     auto simulate = [&](auto & integrator, auto preTrajectory) -> int {
-        NSL::MCMC::RadialHMC hmc(integrator, S, h5, preTrajectory);
+        NSL::MCMC::RadialHMC hmc(integrator, S, h5, preTrajectory, NSL::MCMC::NoPostStore{}, flips);
         NSL::Logger::stop_profile(init_time);
 
         // Wraps the initial configuration into a Markov state (no update is performed).
@@ -333,7 +373,9 @@ static int runPPP(int argc, char* argv[]){
                 params["save frequency"].to<NSL::size_t>(), params["Nradial"].to<NSL::size_t>(), params["Nhmc"].to<NSL::size_t>(),
                 params["radial scale"].to<double>()
             };
-            return NSL::MCMC::Autotune::run(hmc, start_state, h5, BASENODE, rp, tuneOptions, mode == Mode::Tune);
+            const int rc = NSL::MCMC::Autotune::run(hmc, start_state, h5, BASENODE, rp, tuneOptions, mode == Mode::Tune);
+            logFlips();
+            return rc;
         }
 
         // ----------------------------------------------------------------------
@@ -372,6 +414,7 @@ static int runPPP(int argc, char* argv[]){
         NSL::Logger::info("Acceptance Rate: {}%",
             NSL::MCMC::getAcceptanceRate(markovChain) * 100
         );
+        logFlips();
 
         return NSL::Stop::requested() ? NSL::Stop::exitCode : EXIT_SUCCESS;  // 75: stopped early on a signal, resumable
     }; // simulate

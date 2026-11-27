@@ -59,6 +59,13 @@ HMC:
   radial scale: 0.10206207261596577    # width of log r for the radial update [1/sqrt(Nt*Nx)]; here 1/sqrt(16*6)
                                        # (arXiv:2504.01575: start there, aim at ~30% radial acceptance)
   Nhmc: 1                       # HMC trajectories per update [1]
+  # bridge:                     # PPP program, optional [no bridge]; needs mu = 0, offset = 0, a bipartite lattice.
+  #   theta: 1.5707963267948966 #   The bridge link (src/NSL/MarkovChain/bridgeLink.tpp, notes deck 07): finite variance
+  #   slice: all                #   for observables quadratic in the propagator; the analysis reweights by 1/Lambda.
+  #                             #   slice: all = multi-slice bridge (recommended), or one time slice b [0]; theta [pi/2]
+  # mode flips: 4               # PPP program, optional [0 = off]: Metropolis flips of one eigenvector of V on all
+  #                             #   time slices per update, before the trajectory (src/NSL/MarkovChain/modeFlip.tpp);
+  #                             #   they change the sign sector of det M_p often; exact, no reweighting
 
 Leapfrog:
   trajectory length: 1.5707963267948966   # required; pi/2 with Fourier acceleration, else e.g. 1

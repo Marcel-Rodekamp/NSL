@@ -45,24 +45,40 @@ struct NoPostStore {
     void operator()(NSL::size_t, const StateType &) {}
 };
 
+//! The default extra update of every combined update step: none.
+/*!
+ * An extra update is a callable `MarkovState<Type>(const MarkovState<Type> & state, ActionType & action)` run in every
+ * combined update step after the radial updates and before the HMC trajectories, with the action of the HMC. It may
+ * change the configuration (and must then return the action value of the new configuration); it must leave the
+ * target distribution invariant, e.g. a Metropolis update such as NSL::MCMC::ModeFlip. The acceptance probability
+ * and flag of the returned state are those of the input (the HMC sets them again).
+ * */
+struct NoExtraUpdate {
+    template<typename StateType, typename ActionType>
+    StateType operator()(const StateType & state, ActionType &) { return state; }
+};
+
 template< NSL::Concept::isTemplateDerived<NSL::Integrator::Integrator> IntegratorType,
           NSL::Concept::isTemplateDerived<NSL::Action::Action> ActionType,
           typename PreTrajectoryType = NoPreTrajectory,
-          typename PostStoreType = NoPostStore
+          typename PostStoreType = NoPostStore,
+          typename ExtraUpdateType = NoExtraUpdate
 >
 class RadialHMC{
     public:
 
     RadialHMC(const IntegratorType& integrator, const ActionType& action, NSL::H5IO & h5,
               PreTrajectoryType preTrajectory = PreTrajectoryType{},
-              PostStoreType postStore = PostStoreType{}):
+              PostStoreType postStore = PostStoreType{},
+              ExtraUpdateType extraUpdate = ExtraUpdateType{}):
         r_(1),
         rscaleTensor_(1),
         integrator_(integrator),
         action_(action),
 	    h5_(h5),
         preTrajectory_(std::move(preTrajectory)),
-        postStore_(std::move(postStore))
+        postStore_(std::move(postStore)),
+        extraUpdate_(std::move(extraUpdate))
     {}
 
     //! Generate a single Markov Chain element from the input state 
@@ -169,6 +185,7 @@ class RadialHMC{
                         tmp = this->radialgenerate_(tmp, volume, radialScale);
                         runningRadialAcceptance += static_cast<double>(tmp.accepted);
                     }
+                    tmp = extraUpdate_(tmp, action_);
                     // HMC steps in a single combined step
                     for (NSL::size_t n_hmc = 0; n_hmc < Nhmc; ++n_hmc){
                         tmp = this->generate_(tmp);
@@ -182,6 +199,7 @@ class RadialHMC{
                     tmp = this->radialgenerate_(tmp, volume, radialScale);
                     runningRadialAcceptance += static_cast<double>(tmp.accepted);
                 }
+                tmp = extraUpdate_(tmp, action_);
                 // HMC steps in a single combined step
                 for (NSL::size_t n_hmc = 0; n_hmc < Nhmc - 1; ++n_hmc){
                     tmp = this->generate_(tmp);
@@ -226,6 +244,7 @@ class RadialHMC{
                 for (NSL::size_t n_radial = 0; n_radial < Nradial; ++n_radial){
                     newState = this->radialgenerate_(newState, volume, radialScale);
                 }
+                newState = extraUpdate_(newState, action_);
                 // HMC steps in a single combined step
                 for (NSL::size_t n_hmc = 0; n_hmc < Nhmc; ++n_hmc){
                     newState = this->generate_(newState);
@@ -289,8 +308,8 @@ class RadialHMC{
 
     
 
-    //! One combined update, as one step of generate: Nradial radial updates followed by Nhmc
-    //! HMC trajectories. If hmcAcceptance is given, e^{-dH} of each HMC trajectory is appended.
+    //! One combined update, as one step of generate: Nradial radial updates, the extra update (e.g. mode flips)
+    //! and Nhmc HMC trajectories. If hmcAcceptance is given, e^{-dH} of each HMC trajectory is appended.
     template<NSL::Concept::isNumber Type>
     NSL::MCMC::MarkovState<Type> step(NSL::MCMC::MarkovState<Type> state, NSL::size_t Nradial, NSL::size_t Nhmc,
                                       NSL::RealTypeOf<Type> radialScale, std::vector<double> * hmcAcceptance = nullptr){
@@ -298,6 +317,7 @@ class RadialHMC{
         for (NSL::size_t n_radial = 0; n_radial < Nradial; ++n_radial){
             state = this->radialgenerate_(state, volume, radialScale);
         }
+        state = extraUpdate_(state, action_);
         for (NSL::size_t n_hmc = 0; n_hmc < std::max<NSL::size_t>(Nhmc, 1); ++n_hmc){
             state = this->generate_(state);
             if (hmcAcceptance) { hmcAcceptance->push_back(static_cast<double>(state.acceptanceProbability)); }
@@ -498,6 +518,7 @@ class RadialHMC{
     NSL::H5IO h5_;
     PreTrajectoryType preTrajectory_;
     PostStoreType postStore_;
+    ExtraUpdateType extraUpdate_;
 
     //! combined update steps of the last generate<Chain::LastState> call
     NSL::size_t completedSteps_ = 0;
