@@ -74,6 +74,24 @@ class ReducedObservables {
     template<typename T> static T attr_(HighFive::File & f, const std::string & name) {
         T v; f.getAttribute(name).read(v); return v;
     }
+    //! the bridge slice of a file attribute or a chain dataset: a slice number, or allSlices for the string "all"
+    static constexpr NSL::size_t allSlices = std::numeric_limits<NSL::size_t>::max();
+    template<typename H> static NSL::size_t bridgeSlice_(const H & obj, const std::string & where) {
+        if (obj.getDataType().getClass() == HighFive::DataTypeClass::String) {
+            std::string name;
+            obj.read(name);
+            if (name != "all") {
+                throw std::runtime_error(fmt::format("{}: bridge slice \"{}\"; expected a number or \"all\"", where, name));
+            }
+            return allSlices;
+        }
+        int64_t v;
+        obj.read(v);
+        return NSL::size_t(v);
+    }
+    static std::string sliceName_(NSL::size_t slice) {
+        return slice == allSlices ? std::string("all") : std::to_string(slice);
+    }
     torch::Tensor readMatrix_(HighFive::File & f, const std::string & path) const;   // real 2D dataset -> double tensor
     std::vector<std::array<int64_t, 2>> readPairs_(HighFive::File & f, const std::string & path) const;
     void openStage2_(const std::string & stage2, NSL::size_t Nt, NSL::size_t Nx);
@@ -194,19 +212,23 @@ ReducedObservables<Type, LatticeType>::ReducedObservables(LatticeType & lattice,
 
     // bridge link: the record of the chain (if any) must agree with the file
     bridge_ = attr_<int64_t>(out_, "bridge") != 0;
-    if (bridge_) { theta_ = attr_<double>(out_, "bridge_theta"); slice_ = NSL::size_t(attr_<int64_t>(out_, "bridge_slice")); }
+    if (bridge_) { theta_ = attr_<double>(out_, "bridge_theta"); slice_ = bridgeSlice_(out_.getAttribute("bridge_slice"), where); }
     const std::string meta = params["name"].template to<std::string>() + "/Meta/bridge";
     if (chain.exist(meta + "/theta")) {
-        double theta; NSL::size_t slice;
+        double theta;
         chain.read(theta, meta + "/theta");
-        chain.read(slice, meta + "/slice");
+        const NSL::size_t slice = bridgeSlice_(chain.getFile().getDataSet(meta + "/slice"), meta + "/slice");
         if (!bridge_ || std::abs(theta - theta_) > 1e-12 || slice != slice_) {
             throw std::runtime_error(fmt::format("the chain was generated with the bridge link theta = {}, slice {}, but {} "
-                "has {}", theta, slice, where, bridge_ ? fmt::format("theta = {}, slice {}", theta_, slice_) : std::string("none")));
+                "has {}", theta, sliceName_(slice), where,
+                bridge_ ? fmt::format("theta = {}, slice {}", theta_, sliceName_(slice_)) : std::string("none")));
         }
     } else if (bridge_) {
         NSL::Logger::warn("{} has the bridge link, but the chain has no record of it ({}); using theta = {}, slice {}",
-            stage1, meta, theta_, slice_);
+            stage1, meta, theta_, sliceName_(slice_));
+    }
+    if (bridge_ && slice_ != allSlices && slice_ >= Nt_) {
+        throw std::runtime_error(fmt::format("{}: bridge slice {} outside 0..{}", where, slice_, Nt_ - 1));
     }
     doSign_ = out_.exist("config/S_fermion_phi");
 
@@ -275,7 +297,7 @@ void ReducedObservables<Type, LatticeType>::openStage2_(const std::string & stag
         throw std::runtime_error(fmt::format("{}: Nt, Nx, bin, sources or the bridge link differ from the stage-1 file", where));
     }
     if (bridge_ && (std::abs(attr_<double>(f, "bridge_theta") - theta_) > 1e-12
-                    || NSL::size_t(attr_<int64_t>(f, "bridge_slice")) != slice_)) {
+                    || bridgeSlice_(f.getAttribute("bridge_slice"), where) != slice_)) {
         throw std::runtime_error(fmt::format("{}: the bridge link differs from the stage-1 file", where));
     }
     nBins2_ = NSL::size_t(attr_<int64_t>(f, "n_bins"));
@@ -568,10 +590,12 @@ void ReducedObservables<Type, LatticeType>::add(NSL::size_t cfgID, const NSL::Te
         }
     }
 
-    // bridge link: Lambda from the generalized density at the bridge slice (ppp_reduce.bridge_lambda)
+    // bridge link: Lambda from the generalized density at the bridge slice, or averaged over all slices for the
+    // multi-slice bridge (ppp_reduce.bridge_lambda)
     double w = 1.0, lam = std::numeric_limits<double>::quiet_NaN();
     if (bridge_) {
-        const torch::Tensor n = 1.0 - torch::diagonal(ob.Gtt[int64_t(slice_)]);
+        const torch::Tensor n = slice_ == allSlices ? 1.0 - torch::diagonal(ob.Gtt, 0, -2, -1)        // (Nt, Nx)
+                                                    : 1.0 - torch::diagonal(ob.Gtt[int64_t(slice_)]);  // (Nx)
         const std::complex<double> e(std::cos(theta_), std::sin(theta_));
         const torch::Tensor a = n.mul(c10::Scalar(c10::complex<double>(e.real() - 1, e.imag()))).add(1.0).abs().pow(2);
         const torch::Tensor b = n.mul(c10::Scalar(c10::complex<double>(e.real() - 1, -e.imag()))).add(1.0).abs().pow(2);

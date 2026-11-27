@@ -80,3 +80,97 @@ TEST_CASE("BridgeLink: ratios, bound, shared shift and heat bath", "[MarkovChain
         REQUIRE(std::abs(count[k] - draws * p) <= 5 * sigma + 1);
     }
 }
+
+// The multi-slice bridge (slice = BridgeLink::AllSlices): terms k = 2 (t Nx + i) + (x < 0) at every time slice.
+//  - R_k from the force equals the determinant ratio at the field shifted at (t, i), for every k;
+//  - the single-slice ratios are the slice-b block of the multi-slice ones;
+//  - Lambda >= cos^2(theta/2); the heat bath shifts (t, i) in every copy and draws k with probability R_k / sum R.
+TEST_CASE("BridgeLink: all time slices", "[MarkovChain,bridge]") {
+    typedef NSL::complex<double> Type;
+    const NSL::size_t Nt = 8, Nx = 4;
+    NSL::Lattice::Ring<Type> lattice(Nx);
+    NSL::Parameter params;
+    params["beta"] = Type(2.);
+    params["U"] = Type(4.);
+    params["mu"] = 0.;
+    params["Nt"] = Nt;
+
+    using FermionAction = NSL::Action::HubbardFermionAction<Type, decltype(lattice),
+                                                             NSL::FermionMatrix::HubbardExp<Type, decltype(lattice)>>;
+    using Bridge = NSL::MCMC::BridgeLink<Type, FermionAction>;
+    NSL::Action::HubbardGaugeAction<Type> S_gauge(params);
+    FermionAction S_fermion(lattice, params);
+    FermionAction S_one(lattice, params);
+    FermionAction unshifted(lattice, params);
+
+    const double theta = M_PI / 2;
+    Bridge bridge(S_fermion, Nt, Nx, theta, Bridge::AllSlices);
+    Bridge one(S_one, Nt, Nx, theta, 5);
+    NSL::Action::Action S = S_gauge + S_fermion;
+    REQUIRE(bridge.allSlices());
+    REQUIRE(!one.allSlices());
+    REQUIRE(bridge.terms() == 2 * Nx * Nt);
+    REQUIRE(one.terms() == 2 * Nx);
+    REQUIRE_THROWS(Bridge(S_one, Nt, Nx, theta, Nt));
+
+    auto shifted = [&](const NSL::Tensor<Type> & phi, NSL::size_t k) {
+        NSL::Tensor<Type> p(phi, true);
+        p(bridge.termSlice(k), bridge.termSite(k)) += Type(theta * bridge.termSign(k));
+        return p;
+    };
+    auto random_phi = [&]() {
+        NSL::Tensor<Type> phi(Nt, Nx);
+        phi.randn();
+        phi.imag() = 0;
+        phi *= std::sqrt(2. / Nt * 4.);
+        return phi;
+    };
+
+    for (int sample = 0; sample < 3; ++sample) {
+        const NSL::Tensor<Type> phi = random_phi();
+        const std::vector<double> R = bridge.ratios(phi);
+        REQUIRE(R.size() == bridge.terms());
+        const double S0 = NSL::real(unshifted.eval(phi));
+        double mean = 0;
+        for (NSL::size_t k = 0; k < R.size(); ++k) {
+            const double ratio = std::exp(-(NSL::real(unshifted.eval(shifted(phi, k))) - S0));
+            INFO("sample " << sample << ", k = " << k << " (t " << bridge.termSlice(k) << ", i " << bridge.termSite(k)
+                 << "): R = " << R[k] << ", determinant ratio = " << ratio);
+            REQUIRE(std::abs(R[k] - ratio) <= 1e-8 * ratio);
+            mean += R[k] / R.size();
+        }
+        REQUIRE(mean >= std::cos(theta / 2) * std::cos(theta / 2) * (1 - 1e-12));
+        REQUIRE(std::abs(bridge.lambda(phi) - mean) <= 1e-12 * mean);
+
+        const std::vector<double> R1 = one.ratios(phi);
+        for (NSL::size_t k = 0; k < R1.size(); ++k) {
+            REQUIRE(std::abs(R1[k] - R[2 * 5 * Nx + k]) <= 1e-14 * R1[k]);
+        }
+
+        NSL::Configuration<Type> config{{"phi", phi}};
+        REQUIRE(bridge(config));
+        const NSL::size_t k = bridge.term();
+        const double Sk = NSL::real(unshifted.eval(shifted(phi, k)));
+        REQUIRE(std::abs(NSL::real(S_fermion.eval(phi)) - Sk) <= 1e-10 * std::abs(Sk));
+        REQUIRE(std::abs(NSL::real(S(config)) - (NSL::real(S_gauge.eval(phi)) + Sk)) <= 1e-10 * std::abs(Sk));
+        REQUIRE(std::abs(bridge.lastLambda() - mean) <= 1e-12 * mean);
+    }
+
+    // heat-bath frequencies over all 2 Nx Nt terms at one configuration
+    const NSL::Tensor<Type> phi = random_phi();
+    const std::vector<double> R = bridge.ratios(phi);
+    double total = 0;
+    for (double r : R) total += r;
+    const int draws = 20000;
+    std::vector<int> count(R.size(), 0);
+    NSL::Configuration<Type> config{{"phi", phi}};
+    for (int d = 0; d < draws; ++d) {
+        bridge(config);
+        ++count[bridge.term()];
+    }
+    for (NSL::size_t k = 0; k < R.size(); ++k) {
+        const double p = R[k] / total, sigma = std::sqrt(draws * p * (1 - p));
+        INFO("k = " << k << ": " << count[k] << " draws, expected " << draws * p);
+        REQUIRE(std::abs(count[k] - draws * p) <= 5 * sigma + 1);
+    }
+}

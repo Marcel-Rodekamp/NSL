@@ -19,7 +19,8 @@ Bridge link (chains generated with `HMC: bridge:`, notes deck 7): the configurat
 w(phi) Lambda(phi) instead of the target w(phi). Every per-configuration quantity O is multiplied by the weight
 1/Lambda before it is binned, and the bins of the weight are stored in `weights`: the estimate of <O> is
 sum_b O_b / sum_b weights_b (ppp_analysis does this). Lambda = 1/(2 Nx) sum_{i, x = +-1}
-|1 + (e^{i theta x} - 1) n_i(b)|^2 with n_i(b) = 1 - G_ii(b, b) at the bridge slice b. theta and b come from
+|1 + (e^{i theta x} - 1) n_i(b)|^2 with n_i(b) = 1 - G_ii(b, b) at the bridge slice b; for the multi-slice bridge
+(`slice: all`) the same mean also runs over all time slices b. theta and b come from
 <name>/Meta/bridge of the ensemble file (written by autotune_RadialMCMC_PPP) or `HMC: bridge` of the yml.
 Without the bridge every weight is 1 and the stored bins are plain averages, as before. The Monte Carlo history (config/...) and the probes stay
 per configuration, for autocorrelation times. Two-body (exciton, pp, hh) correlators need products of
@@ -28,7 +29,8 @@ propagators of different times and come with stage 2 (ppp_reduce2.py).
 Output (plain h5py; c = configuration index, b = bin index (= c for --bin 1), t = Nt time separations,
 sizes in the attributes):
   attrs                          name, Nt, beta, delta, Nx, mu, sources, n_configs, bin, n_bins, input_h5,
-                                 input_yml_text, bridge (0/1), bridge_theta, bridge_slice, ...
+                                 input_yml_text, bridge (0/1), bridge_theta, bridge_slice (int, -1 without the
+                                 bridge link, or the string "all" for the multi-slice bridge), ...
                                  (n_configs = n_bins * bin: a remainder is not reduced)
   weights                        (b,) bin averages of the weight 1/Lambda (all 1 without the bridge link); the
                                  binned datasets below (onebody, equaltime) are bin averages of weight * O
@@ -292,8 +294,22 @@ def logdet_particle(K, phi, delta, eK=None):
 # bridge link (notes deck 7; src/NSL/MarkovChain/bridgeLink.tpp)
 # ----------------------------------------------------------------------------------------------
 
+ALL_SLICES = "all"      # the bridge slice of the multi-slice bridge (all time slices)
+
+
+def bridge_slice(v):
+    """a bridge slice from the yml, an HDF5 attribute or dataset: an int, or ALL_SLICES (the string all)"""
+    if isinstance(v, np.ndarray) and v.ndim == 0:
+        v = v[()]
+    if isinstance(v, bytes):
+        v = v.decode()
+    if isinstance(v, str) and v.strip() == ALL_SLICES:
+        return ALL_SLICES
+    return int(v)
+
+
 def bridge_settings(yml, meta=None, warn=True):
-    """(theta, slice) of a chain generated with the bridge link, or None.
+    """(theta, slice) of a chain generated with the bridge link, or None; slice is an int or ALL_SLICES.
 
     Sources: `meta`, the group <name>/Meta/bridge of the ensemble file written by autotune_RadialMCMC_PPP (None if
     absent), and `HMC: bridge:` of the yml (defaults theta = pi/2, slice 0, as in the driver). The record in the
@@ -303,8 +319,8 @@ def bridge_settings(yml, meta=None, warn=True):
     from_yml = None
     if "bridge" in hmc:
         b = hmc["bridge"] or {}
-        from_yml = (float(b.get("theta", np.pi / 2)), int(b.get("slice", 0)))
-    from_h5 = None if meta is None else (float(np.real(meta["theta"][()])), int(meta["slice"][()]))
+        from_yml = (float(b.get("theta", np.pi / 2)), bridge_slice(b.get("slice", 0)))
+    from_h5 = None if meta is None else (float(np.real(meta["theta"][()])), bridge_slice(meta["slice"][()]))
     if from_h5 is not None:
         if from_yml is None or abs(from_yml[0] - from_h5[0]) > 1e-12 or from_yml[1] != from_h5[1]:
             raise SystemExit(f"the ensemble was generated with the bridge link theta = {from_h5[0]}, slice "
@@ -316,12 +332,19 @@ def bridge_settings(yml, meta=None, warn=True):
     return from_yml
 
 
+def bridge_block(Gtt, slc):
+    """the equal-time propagators that enter Lambda: G(b, b) (Nx, Nx) at the bridge slice, or all of Gtt (Nt, Nx, Nx)
+    for the multi-slice bridge"""
+    return Gtt if slc == ALL_SLICES else Gtt[slc]
+
+
 def bridge_lambda(Gbb, theta):
     """Lambda = 1/(2 Nx) sum_{i, x = +-1} |1 + (e^{i theta x} - 1) n_i|^2 of one configuration, n_i = 1 - G_ii(b, b)
     the generalized density at the bridge slice (G = M_p^-1, particles), and max_i |Re n_i - 1/2| / max(1, |n_i|),
     which vanishes up to rounding at mu = 0 on a bipartite lattice (a check of the conventions; relative, because
-    |n| grows like 1/det near a zero of the determinant)."""
-    n = 1.0 - np.diagonal(Gbb)
+    |n| grows like 1/det near a zero of the determinant). Gbb (Nt, Nx, Nx), all equal-time propagators: the
+    multi-slice bridge, the mean also over the time slices (bridge_block)."""
+    n = 1.0 - np.diagonal(Gbb, axis1=-2, axis2=-1)
     lam = 0.5 * np.mean(np.abs(1 + (np.exp(1j * theta) - 1) * n) ** 2 + np.abs(1 + (np.exp(-1j * theta) - 1) * n) ** 2)
     return float(lam), float(np.max(np.abs(n.real - 0.5) / np.maximum(1.0, np.abs(n))))
 
@@ -646,7 +669,7 @@ def main(argv=None):
                 _, ss, qq = wick.equal_time(Gtt)
                 w = 1.0
                 if bridge:
-                    lam, dev = bridge_lambda(Gtt[bridge[1]], bridge[0])
+                    lam, dev = bridge_lambda(bridge_block(Gtt, bridge[1]), bridge[0])
                     dLam[n], w, re_n_dev = lam, 1.0 / lam, max(re_n_dev, dev)
                 wsum = w if n % B == 0 else wsum + w
                 cur = {("eq", 0): w * Gtt.mean(axis=0), ("eq", 1): w * ss.mean(axis=0), ("eq", 2): w * qq.mean(axis=0)}

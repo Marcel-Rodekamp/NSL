@@ -30,6 +30,10 @@
  *  a weight without the zeros of det M_p, which makes the variance of observables quadratic in the propagator
  *  (equal-time correlations, two-body correlators) finite; every measurement must then be reweighted by
  *  1/Lambda, computed from the equal-time propagator at the bridge slice (src/NSL/MarkovChain/bridgeLink.tpp).
+ *  `slice: all` is the multi-slice bridge (the bridge averaged over all time slices, Lambda from the equal-time
+ *  propagator at every slice): it also bounds the weights of configurations whose near-zero mode avoids slice 0.
+ *  The chain records the setting in <name>/Meta/bridge/{theta, slice}, with slice the string "all" for the
+ *  multi-slice bridge, and keeps it for life.
  *
  *  Measurements: Executables/Hubbard/propagator with `measurements: basis: charge`
  *  (position-space and/or momentum-projected propagators).
@@ -213,19 +217,28 @@ static int runPPP(int argc, char* argv[]){
     // sampled weight has no zeros where det M_p vanishes; measurements are reweighted by 1/Lambda in the
     // analysis (see src/NSL/MarkovChain/bridgeLink.tpp). It must be set up before S_fermion is copied into S.
     using FermionActionType = decltype(S_fermion);
-    std::optional<NSL::MCMC::BridgeLink<Type, FermionActionType>> bridge;
+    using BridgeType = NSL::MCMC::BridgeLink<Type, FermionActionType>;
+    std::optional<BridgeType> bridge;
+    // the slice as written to Meta/bridge/slice and logged: the slice number, or "all"
+    auto sliceName = [](NSL::size_t slice) {
+        return slice == BridgeType::AllSlices ? std::string("all") : std::to_string(slice);
+    };
     if (yml["HMC"]["bridge"]) {
         const YAML::Node b = yml["HMC"]["bridge"];
         const double theta = b["theta"] ? b["theta"].as<double>() : M_PI / 2;
-        const NSL::size_t slice = b["slice"] ? b["slice"].as<NSL::size_t>() : NSL::size_t(0);
+        NSL::size_t slice = 0;
+        if (b["slice"]) {
+            slice = b["slice"].as<std::string>() == "all" ? BridgeType::AllSlices : b["slice"].as<NSL::size_t>();
+        }
         if (!lattice.bipartite() || params["mu"].to<double>() != 0.0 || params["offset"].to<double>() != 0.0) {
             throw std::runtime_error("`HMC: bridge` needs a bipartite lattice, mu = 0 and offset = 0 "
                                      "(there |det M_p|^2 is the sign-free fermion weight)");
         }
         bridge.emplace(S_fermion, params["Nt"].to<NSL::size_t>(), params["Nx"].to<NSL::size_t>(), theta, slice);
         params["bridge theta"] = theta;
-        params["bridge slice"] = slice;
-        NSL::Logger::info("Bridge link: theta = {}, time slice {}; reweight measurements by 1/Lambda", theta, slice);
+        params["bridge slice"] = sliceName(slice);
+        NSL::Logger::info("Bridge link: theta = {}, time slice {}; reweight measurements by 1/Lambda", theta,
+                          sliceName(slice));
     }
 
     // Record the bridge settings with the chain: the analysis (ppp_reduce.py) reweights by them. A chain keeps
@@ -238,11 +251,21 @@ static int runPPP(int argc, char* argv[]){
             double theta = 0;
             NSL::size_t slice = 0;
             h5file.getDataSet(node + "/theta").read(theta);
-            h5file.getDataSet(node + "/slice").read(slice);
+            HighFive::DataSet ds = h5file.getDataSet(node + "/slice");
+            if (ds.getDataType().getClass() == HighFive::DataTypeClass::String) {
+                std::string name;
+                ds.read(name);
+                if (name != "all") {
+                    throw std::runtime_error(fmt::format("{}/slice is \"{}\"; expected a number or \"all\"", node, name));
+                }
+                slice = BridgeType::AllSlices;
+            } else {
+                ds.read(slice);
+            }
             if (!bridge || theta != bridge->theta() || slice != bridge->slice()) {
                 throw std::runtime_error(fmt::format(
                     "{} was generated with the bridge link (theta = {}, slice {}); continue it with the same "
-                    "`HMC: bridge` settings", BASENODE, theta, slice));
+                    "`HMC: bridge` settings", BASENODE, theta, sliceName(slice)));
             }
         } else if (bridge) {
             if (hasChain) {
@@ -251,9 +274,15 @@ static int runPPP(int argc, char* argv[]){
                     "ensembles (start a new chain)", BASENODE));
             }
             const double theta = bridge->theta();
-            const NSL::size_t slice = bridge->slice();
             h5file.createDataSet<double>(node + "/theta", HighFive::DataSpace::From(theta)).write(theta);
-            h5file.createDataSet<NSL::size_t>(node + "/slice", HighFive::DataSpace::From(slice)).write(slice);
+            if (bridge->allSlices()) {
+                // a string, so that readers that expect a slice number fail instead of using a wrong slice
+                const std::string all = "all";
+                h5file.createDataSet<std::string>(node + "/slice", HighFive::DataSpace::From(all)).write(all);
+            } else {
+                const NSL::size_t slice = bridge->slice();
+                h5file.createDataSet<NSL::size_t>(node + "/slice", HighFive::DataSpace::From(slice)).write(slice);
+            }
         }
     }
 

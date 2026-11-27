@@ -322,7 +322,7 @@ def main(argv=None):
                         Pf = wick.pp_pairs(Fo1, loc([a0]), loc([b0]), +1)[0, 0]
                         worst["pp"] = max(worst["pp"], abs(Pg - Pf) / abs(Pg))
 
-                w = 1.0 / r1.bridge_lambda(Gtt[bridge[1]], bridge[0])[0] if bridge else 1.0
+                w = 1.0 / r1.bridge_lambda(r1.bridge_block(Gtt, bridge[1]), bridge[0])[0] if bridge else 1.0
                 if acc is None:
                     acc = {k: np.zeros_like(v) for k, v in res.items()}
                     wsum = 0.0

@@ -164,22 +164,39 @@ def main(argv):
     import ppp_reduce
     Nx, Nt_b, delta_b, theta, b_sl = 4, 8, 0.25, np.pi / 2, 3
     Kc = np.diag(np.ones(Nx - 1), 1) + np.diag(np.ones(Nx - 1), -1)
-    worst, worst_re = 0.0, 0.0
+    worst, worst_re, worst_all = 0.0, 0.0, 0.0
     for _ in range(3):
         phi = rng.normal(0, 1.0, (Nt_b, Nx))
         M = ppp_ed.fermion_matrix(Kc, phi, delta_b, "particle")
-        Gbb = np.linalg.inv(M).reshape(Nt_b, Nx, Nt_b, Nx)[b_sl, :, b_sl, :]
-        lam, dev = ppp_reduce.bridge_lambda(Gbb, theta)
+        Ginv = np.linalg.inv(M).reshape(Nt_b, Nx, Nt_b, Nx)
+        Gtt = np.stack([Ginv[t, :, t, :] for t in range(Nt_b)])
+        lam, dev = ppp_reduce.bridge_lambda(ppp_reduce.bridge_block(Gtt, b_sl), theta)
+        lam_all, dev_all = ppp_reduce.bridge_lambda(ppp_reduce.bridge_block(Gtt, ppp_reduce.ALL_SLICES), theta)
         ld = np.linalg.slogdet(M)[1]
-        ratios = []
-        for i in range(Nx):
-            for x in (1, -1):
-                ph = phi.copy()
-                ph[b_sl, i] += theta * x
-                ratios.append(np.exp(2 * (np.linalg.slogdet(ppp_ed.fermion_matrix(Kc, ph, delta_b, "particle"))[1] - ld)))
-        worst, worst_re = max(worst, abs(lam / np.mean(ratios) - 1)), max(worst_re, dev)
+        ratios = np.zeros((Nt_b, Nx, 2))
+        for t in range(Nt_b):
+            for i in range(Nx):
+                for j, x in enumerate((1, -1)):
+                    ph = phi.copy()
+                    ph[t, i] += theta * x
+                    ratios[t, i, j] = np.exp(2 * (np.linalg.slogdet(ppp_ed.fermion_matrix(Kc, ph, delta_b, "particle"))[1] - ld))
+        worst = max(worst, abs(lam / ratios[b_sl].mean() - 1))
+        worst_all = max(worst_all, abs(lam_all / ratios.mean() - 1))
+        worst_re = max(worst_re, dev, dev_all)
     check(res, "bridge_lambda = mean determinant ratio (NSL convention)", worst, 1e-10)
+    check(res, "bridge_lambda, all slices = mean of all 2 Nx Nt determinant ratios", worst_all, 1e-10)
     check(res, "bridge: Re n = 1/2 (open chain, mu = 0)", worst_re, 1e-12)
+    yml_all = {"HMC": {"bridge": {"theta": 1.0, "slice": "all"}}}
+    check(res, "bridge_settings: slice all (yml; Meta record as HighFive writes it)",
+          float(ppp_reduce.bridge_settings(yml_all, warn=False) != (1.0, "all"))
+          + float(ppp_reduce.bridge_settings(yml_all, {"theta": np.float64(1.0), "slice": np.array(b"all")}) != (1.0, "all"))
+          + float(pa.bridge_slice(np.str_("all")) != "all") + float(pa.bridge_slice(np.int64(3)) != 3), 0.5)
+    try:
+        ppp_reduce.bridge_settings(yml_all, {"theta": np.float64(1.0), "slice": np.int64(0)})
+        mismatch = 1.0
+    except SystemExit:
+        mismatch = 0.0
+    check(res, "bridge_settings: yml slice all vs Meta slice 0 is an error", mismatch, 0.5)
     check(res, "bridge_settings: yml defaults", abs(ppp_reduce.bridge_settings({"HMC": {"bridge": None}})[0] - np.pi / 2)
           + ppp_reduce.bridge_settings({"HMC": {"bridge": None}})[1] + (ppp_reduce.bridge_settings({"HMC": {}}) is not None), 1e-15)
 
@@ -200,7 +217,7 @@ def main(argv):
             with h5py.File(path1, "w") as f:
                 f.attrs.update(dict(name="r", Nt=Ntf, Nx=nx, beta=1.0, delta=0.25, mu=0.0, sources=[0], bin=1,
                                     n_bins=nbins, n_configs=nbins, input_yml_text="", bridge=1,
-                                    bridge_theta=theta, bridge_slice=0))
+                                    bridge_theta=theta, bridge_slice="all"))
                 for q in ("K", "V", "positions", "V_eigenvalues"):
                     f[f"lattice/{q}"] = np.eye(nx)
                 f["orbitals/U"], f["orbitals/eps"], f["orbitals/partner"] = np.eye(nx), [-1.0, 1.0], [1, 0]
@@ -217,7 +234,7 @@ def main(argv):
                 f.create_group("checks")
             with h5py.File(path2, "w") as f:
                 f.attrs.update(dict(Nt=Ntf, delta=0.25, bin=1, window_energy=1.0, sources=[0], contact_terms=1,
-                                    bridge=1, bridge_theta=theta, bridge_slice=0))
+                                    bridge=1, bridge_theta=theta, bridge_slice="all"))
                 f["orbitals/U"], f["orbitals/eps"], f["orbitals/partner"] = np.eye(nx), [-1.0, 1.0], [1, 0]
                 f["orbitals/class_names"], f["orbitals/class"] = np.array([b"all"]), [0, 0]
                 f["config/first_id"], f["weights"] = np.arange(nbins), wk
@@ -245,6 +262,7 @@ def main(argv):
         Pb = pa.pp_bins(chains2, "pp_singlet", "all", 1)
         check(res, "bridge: pp_bins jackknife = leave-one-out ratios",
               np.abs(pa.jackknife(Pb) - (Pall.sum(0)[None] - Pall) / (W.sum() - W)[:, None, None, None]).max(), 1e-12)
+        check(res, "bridge: slice attribute all (string)", float(run.chains[0].bridge != (theta, "all")), 0.5)
         summ = pa.bridge_summary(run.chains[0])
         check(res, "bridge_summary: N_eff/N", abs(summ["neff_frac"] - data[0][0].sum() ** 2 / (data[0][0] ** 2).sum() / nbins), 1e-12)
 

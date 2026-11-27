@@ -85,6 +85,16 @@ def bin_mean(x, binsize):
     return np.asarray(x[: nb * binsize]).reshape(nb, binsize, *np.shape(x)[1:]).mean(axis=1)
 
 
+def bridge_slice(v):
+    """the bridge slice of a reduced file's attribute: an int, or "all" for the multi-slice bridge (as
+    ppp_reduce.bridge_slice)"""
+    if isinstance(v, np.ndarray) and v.ndim == 0:
+        v = v[()]
+    if isinstance(v, bytes):
+        v = v.decode()
+    return "all" if isinstance(v, str) and v.strip() == "all" else int(v)
+
+
 def reweight(num, w):
     """pseudo-bins of the reweighted estimator sum_b num_b / sum_b w_b (bridge link).
 
@@ -167,7 +177,7 @@ class Chain:
             self.acceptance = cfg["acceptanceProbability"][d:]
             self.detsign = cfg["detsign"][d:]
             self.has_weights = "weights" in f
-            self.bridge = (float(a["bridge_theta"]), int(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
+            self.bridge = (float(a["bridge_theta"]), bridge_slice(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
             self.bridge_lambda = cfg["bridge_lambda"][d:] if "bridge_lambda" in cfg else None
             self.checks = dict(f["checks"].attrs)
             self.has_noninteracting = "noninteracting" in f
@@ -429,7 +439,10 @@ def bridge_summary(chain):
 def bridge_check(run, binsize):
     """built-in check of the bridge link: the sampled ensemble has <1/Lambda> = 1 / <Lambda-op> of the target, with
     Lambda-op = cos(theta) + (1 - cos(theta)) mean_x s_x^2 (the local moment at theta = pi/2). Returns
-    ((<1/Lambda>, error), (1/<Lambda-op>, error)); the two estimates use the same data, so they are correlated."""
+    ((<1/Lambda>, error), (1/<Lambda-op>, error)); the two estimates use the same data, so they are correlated.
+    Multi-slice bridge (slice "all"): no check. Lambda_all of a configuration is Lambda-op evaluated with its
+    local moment averaged over all slices, which is what the equal-time data hold, so the two agree identically
+    (for every theta); compare <1/Lambda> with 1/<s^2> from elsewhere (exact, or another ensemble)."""
     theta = run.bridge[0]
     w = run.weights(binsize)
     direct = (float(w.mean()), float(w.std(ddof=1) / np.sqrt(len(w))))
@@ -638,7 +651,7 @@ class TwoBodyChain:
                           if ch in f for s in f[ch]}
             self.first_id = f["config/first_id"][()]
             self.has_weights = "weights" in f
-            self.bridge = (float(a["bridge_theta"]), int(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
+            self.bridge = (float(a["bridge_theta"]), bridge_slice(a["bridge_slice"])) if int(a.get("bridge", 0)) else None
         self.skip = -(-int(discard) // self.bin)            # bins dropped at the start (ceil)
         self.nbins = len(self.first_id) - self.skip
         self.onebody_path = None if self.contact_terms else onebody_path

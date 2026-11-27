@@ -29,11 +29,20 @@
  *      <O> = < O / Lambda > / < 1 / Lambda >.
  *  Lambda is computed in the analysis from the measured equal-time propagator at slice b (n = 1 - G(b,b)).
  *
+ *  Multi-slice bridge (slice = AllSlices): the same operator averaged over all time slices, k = (t, i, x),
+ *  2 Nx Nt terms, c_k = theta x e_{t,i}, and Lambda = mean_{t,i,x} R_{t,i,x}. The ratios at every slice come from
+ *  the same force, so the heat bath costs the same. Why: a zero of det M_p is seen by the single-slice bridge only
+ *  through the generalized density at slice b; a configuration whose near-zero mode lives at other times keeps a
+ *  small Lambda and an unbounded O/Lambda (deck 07 of Executables/PPP/notes). Averaged over all slices, Lambda grows
+ *  like 1/det^2 at every zero. At theta = pi/2, Lambda = mean_{t,i} (1/2 + 2 y_i(t)^2) is the configuration's
+ *  estimator of the local moment <s_x^2>.
+ *
  *  Why the variance is finite (mu = 0, bipartite lattice): on every configuration Re n_x(t) = 1/2, so with
  *  n = 1/2 + i y,  R_{i,+-} = (cos(theta/2) -+ 2 y_i sin(theta/2))^2  and
- *      Lambda = cos^2(theta/2) + (4 sin^2(theta/2) / Nx) sum_i y_i(b)^2  >=  cos^2(theta/2).
- *  So 1/Lambda <= 1/cos^2(theta/2) is bounded, and near a zero of det M_p, where y ~ 1/det, Lambda grows like
- *  1/det^2: O/Lambda stays bounded for O up to quadratic in the propagator. theta in (0, pi); pi/2 by default.
+ *      Lambda = cos^2(theta/2) + (4 sin^2(theta/2) / Nx) sum_i y_i(b)^2  >=  cos^2(theta/2)
+ *  (multi-slice: the mean over t of the same). So 1/Lambda <= 1/cos^2(theta/2) is bounded, and near a zero of
+ *  det M_p, where y ~ 1/det, Lambda grows like 1/det^2: O/Lambda stays bounded for O up to quadratic in the
+ *  propagator. theta in (0, pi); pi/2 by default.
  *
  *  Requirements: charge basis (HubbardExp), mu = 0, bipartite lattice, real field (offset 0): there
  *  |det M_p|^2 is the full fermion weight and every R_k is non-negative. Element access is on the CPU.
@@ -45,6 +54,7 @@
 #include "logger.hpp"
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -55,19 +65,23 @@ template<NSL::Concept::isNumber Type, typename FermionActionType>
 class BridgeLink {
     public:
 
+    //! the value of `slice` that selects the multi-slice bridge (all time slices)
+    static constexpr NSL::size_t AllSlices = std::numeric_limits<NSL::size_t>::max();
+
     //! \p fermionAction: the fermion action whose copies sample the chain; this class keeps its own copy for
     //! the heat bath and installs the shared shift in \p fermionAction (do this before the action is copied
-    //! into an NSL::Action::Action or an integrator). \p slice: the time slice b, \p theta: the phase.
+    //! into an NSL::Action::Action or an integrator). \p slice: the time slice b, or AllSlices for the
+    //! multi-slice bridge; \p theta: the phase.
     BridgeLink(FermionActionType & fermionAction, NSL::size_t Nt, NSL::size_t Nx, double theta, NSL::size_t slice,
                NSL::Device device = NSL::Device("CPU")) :
-        theta_(theta), slice_(slice), Nx_(Nx),
+        theta_(theta), slice_(slice), Nt_(Nt), Nx_(Nx),
         shift_(std::make_shared<NSL::Tensor<Type>>(device, Nt, Nx)),
         r_(1)
     {
         if (!(theta > 0 && theta < M_PI)) {
             throw std::invalid_argument(fmt::format("BridgeLink: theta must lie in (0, pi), got {}", theta));
         }
-        if (slice >= Nt) {
+        if (slice >= Nt && slice != AllSlices) {
             throw std::invalid_argument(fmt::format("BridgeLink: slice {} outside 0..{}", slice, Nt - 1));
         }
         (*shift_) = Type(0);
@@ -76,15 +90,28 @@ class BridgeLink {
         action_->setShift(nullptr);                        // the heat bath needs the unshifted field
     }
 
-    //! bridge ratios R_k = |det M_p(phi + c_k)|^2 / |det M_p(phi)|^2, k = 2 i + (x < 0), at the configuration phi
+    //! the number of bridge terms: 2 Nx (one slice) or 2 Nx Nt (all slices)
+    NSL::size_t terms() const { return 2 * Nx_ * (allSlices() ? Nt_ : 1); }
+    //! the time slice, site and sign x = +-1 of term k (k = 2 (t Nx + i) + (x < 0); t = slice() for one slice)
+    NSL::size_t termSlice(NSL::size_t k) const { return allSlices() ? (k / 2) / Nx_ : slice_; }
+    NSL::size_t termSite(NSL::size_t k) const { return (k / 2) % Nx_; }
+    double termSign(NSL::size_t k) const { return (k % 2) ? -1. : 1.; }
+
+    //! bridge ratios R_k = |det M_p(phi + c_k)|^2 / |det M_p(phi)|^2 of every term k at the configuration phi
     std::vector<double> ratios(const NSL::Tensor<Type> & phi) {
-        NSL::Tensor<Type> dS = action_->grad(phi).begin()->second;     // dS_F/dphi = 2 Im n
+        // y = 1/2 dS_F/dphi = Im n at every (t, x), as a contiguous double array on the CPU
+        const torch::Tensor dS = action_->grad(phi).begin()->second;
+        const torch::Tensor y = (0.5 * torch::real(dS)).to(torch::kCPU, torch::kDouble).contiguous();
+        const double * yp = y.data_ptr<double>();
         const double c = std::cos(theta_ / 2), s = std::sin(theta_ / 2);
-        std::vector<double> R(2 * Nx_);
-        for (NSL::size_t i = 0; i < Nx_; ++i) {
-            const double y = 0.5 * NSL::real(dS(slice_, i));
-            R[2 * i]     = (c - 2 * y * s) * (c - 2 * y * s);       // x = +1
-            R[2 * i + 1] = (c + 2 * y * s) * (c + 2 * y * s);       // x = -1
+        const NSL::size_t t0 = allSlices() ? 0 : slice_, nt = allSlices() ? Nt_ : 1;
+        std::vector<double> R(2 * Nx_ * nt);
+        for (NSL::size_t t = 0; t < nt; ++t) {
+            for (NSL::size_t i = 0; i < Nx_; ++i) {
+                const double yi = yp[(t0 + t) * Nx_ + i];
+                R[2 * (t * Nx_ + i)]     = (c - 2 * yi * s) * (c - 2 * yi * s);   // x = +1
+                R[2 * (t * Nx_ + i) + 1] = (c + 2 * yi * s) * (c + 2 * yi * s);   // x = -1
+            }
         }
         return R;
     }
@@ -112,19 +139,22 @@ class BridgeLink {
         st_->k = k;
         st_->lambda = total / R.size();
         (*shift_) = Type(0);
-        (*shift_)(slice_, k / 2) = Type(theta_ * ((k % 2) ? -1. : 1.));
+        (*shift_)(termSlice(k), termSite(k)) = Type(theta_ * termSign(k));
         return true;
     }
 
-    //! the current term k = 2 i + (x < 0) and Lambda of the configuration of the last heat bath
+    //! the current term k and Lambda of the configuration of the last heat bath
     NSL::size_t term() const { return st_->k; }
     double lastLambda() const { return st_->lambda; }
     double theta() const { return theta_; }
+    //! the bridge slice b, or AllSlices
     NSL::size_t slice() const { return slice_; }
+    bool allSlices() const { return slice_ == AllSlices; }
 
     private:
     double theta_;
     NSL::size_t slice_;
+    NSL::size_t Nt_;
     NSL::size_t Nx_;
     std::shared_ptr<NSL::Tensor<Type>> shift_;
     std::shared_ptr<FermionActionType> action_;
